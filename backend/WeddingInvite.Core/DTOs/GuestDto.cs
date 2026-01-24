@@ -1,0 +1,28 @@
+namespace WeddingInvite.Core.DTOs
+{
+    public class GuestDto
+    {
+        public int GuestId { get; set; }
+        public int WeddingId { get; set; }
+        public string GuestName { get; set; } = string.Empty;
+        public string Email { get; set; } = string.Empty;
+        public string PhoneNumber { get; set; } = string.Empty;
+        public string BrideOrGroomSide { get; set; } = string.Empty;
+        public int NumberOfAttendees { get; set; }
+        public string SongRequest { get; set; } = string.Empty;
+        public bool IsAttending { get; set; }
+        public DateTime? RespondedDate { get; set; }
+    }
+    
+    // For RSVP form submission
+    public class CreateGuestDto
+    {
+        public string GuestName { get; set; } = string.Empty;
+        public string Email { get; set; } = string.Empty;
+        public string PhoneNumber { get; set; } = string.Empty;
+        public string BrideOrGroomSide { get; set; } = string.Empty; // "Bride" or "Groom"
+        public int NumberOfAttendees { get; set; } = 1;
+        public string SongRequest { get; set; } = string.Empty;
+        public bool IsAttending { get; set; } = true;
+    }
+}
