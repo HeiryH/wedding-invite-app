@@ -392,7 +392,7 @@ export default function PhotoBoothPage() {
                       </p>
                     )}
                     <p className="text-xs text-gray-400">
-                      {new Date(photo.uploadedDate).toLocaleDateString()}
+                      {new Date(photo.createdDate).toLocaleDateString()}
                     </p>
                   </div>
                 </motion.div>

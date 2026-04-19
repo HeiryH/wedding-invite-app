@@ -32,6 +32,20 @@ export const weddingService = {
     return response.data;
   },
 
+  updateTemplate: async (weddingId: number, templateId: number): Promise<Wedding> => {
+    const response = await apiClient.put<Wedding>(`/wedding/${weddingId}/template`, {
+      templateId: templateId,
+    });
+    return response.data;
+  },
+
+  updatePackage: async (weddingId: number, packageId: number): Promise<Wedding> => {
+    const response = await apiClient.put<Wedding>(`/wedding/${weddingId}/package`, {
+      packageId: packageId,
+    });
+    return response.data;
+  },
+
   // Delete wedding
   delete: async (id: number): Promise<void> => {
     await apiClient.delete(`/wedding/${id}`);

@@ -9,10 +9,14 @@ namespace WeddingInvite.API.Controllers
     public class WishController : ControllerBase
     {
         private readonly IWishService _wishService;
+        private readonly IWeddingAuthorizationService _weddingAuthorizationService; // ✅ RENAMED
         
-        public WishController(IWishService wishService)
+        public WishController(
+            IWishService wishService,
+            IWeddingAuthorizationService weddingAuthorizationService) // ✅ INJECTED
         {
             _wishService = wishService;
+            _weddingAuthorizationService = weddingAuthorizationService; // ✅ ASSIGNED
         }
         
         // GET: api/wish/wedding/5

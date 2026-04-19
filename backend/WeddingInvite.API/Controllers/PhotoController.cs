@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using WeddingInvite.Core.DTOs;
 using WeddingInvite.Core.Services;
@@ -9,33 +10,31 @@ namespace WeddingInvite.API.Controllers
     public class PhotoController : ControllerBase
     {
         private readonly IPhotoService _photoService;
+        private readonly IWeddingAuthorizationService _weddingAuthorizationService; // ✅ USE SERVICE, NOT REPO
         
-        public PhotoController(IPhotoService photoService)
+        public PhotoController(
+            IPhotoService photoService,
+            IWeddingAuthorizationService weddingAuthorizationService) // ✅ INJECT SERVICE
         {
             _photoService = photoService;
+            _weddingAuthorizationService = weddingAuthorizationService;
         }
         
-        // GET: api/photo/5
-        [HttpGet("{id}")]
-        public async Task<ActionResult<PhotoDto>> GetById(int id)
-        {
-            var photo = await _photoService.GetByIdAsync(id);
-            
-            if (photo == null)
-                return NotFound(new { message = $"Photo with ID {id} not found" });
-            
-            return Ok(photo);
-        }
-        
-        // GET: api/photo/wedding/5
+        // GET: api/photo/wedding/1 (All photos - admin only)
         [HttpGet("wedding/{weddingId}")]
+        [Authorize] // Requires authentication
         public async Task<ActionResult<IEnumerable<PhotoDto>>> GetByWeddingId(int weddingId)
         {
+            // ✅ Check authorization
+            var userEmail = User.Identity?.Name;
+            if (!await _weddingAuthorizationService.CanAccessWeddingAsync(userEmail!, weddingId))
+                return Forbid(); // 403 Forbidden
+
             var photos = await _photoService.GetByWeddingIdAsync(weddingId);
             return Ok(photos);
         }
         
-        // GET: api/photo/wedding/5/visible
+        // GET: api/photo/wedding/1/visible (Public - for invitation page)
         [HttpGet("wedding/{weddingId}/visible")]
         public async Task<ActionResult<IEnumerable<PhotoDto>>> GetVisibleByWeddingId(int weddingId)
         {
@@ -43,63 +42,61 @@ namespace WeddingInvite.API.Controllers
             return Ok(photos);
         }
         
-        // GET: api/photo/wedding/5/count
-        [HttpGet("wedding/{weddingId}/count")]
-        public async Task<ActionResult<int>> GetPhotoCount(int weddingId)
+        // GET: api/photo/wedding/1/approved (Public)
+        [HttpGet("wedding/{weddingId}/approved")]
+        public async Task<ActionResult<IEnumerable<PhotoDto>>> GetApprovedByWeddingId(int weddingId)
         {
-            var count = await _photoService.GetPhotoCountAsync(weddingId);
-            return Ok(new { weddingId, photoCount = count });
+            var photos = await _photoService.GetApprovedByWeddingIdAsync(weddingId);
+            return Ok(photos);
+        }
+
+        // GET: api/photo/wedding/1/couple-media (Public - for template rendering)
+        [HttpGet("wedding/{weddingId}/couple-media")]
+        public async Task<ActionResult<IEnumerable<PhotoDto>>> GetCoupleMedia(int weddingId)
+        {
+            var photos = await _photoService.GetCoupleMediaByWeddingIdAsync(weddingId);
+            return Ok(photos);
         }
         
-        // COMMENTED OUT FOR NOW - Will be called from Next.js directly
-        // POST: api/photo/wedding/5
-        // [HttpPost("wedding/{weddingId}")]
-        // public async Task<ActionResult<PhotoDto>> Upload(
-        //     int weddingId,
-        //     [FromForm] CreatePhotoDto createDto,
-        //     [FromForm] IFormFile file)
-        // {
-        //     try
-        //     {
-        //         var photo = await _photoService.UploadPhotoAsync(weddingId, createDto, file);
-        //         return CreatedAtAction(nameof(GetById), new { id = photo.PhotoId }, photo);
-        //     }
-        //     catch (KeyNotFoundException ex)
-        //     {
-        //         return NotFound(new { message = ex.Message });
-        //     }
-        //     catch (InvalidOperationException ex)
-        //     {
-        //         return BadRequest(new { message = ex.Message });
-        //     }
-        //     catch (ArgumentException ex)
-        //     {
-        //         return BadRequest(new { message = ex.Message });
-        //     }
-        // }
-
-        // POST: api/photo/wedding/5/upload-simple
-        [HttpPost("wedding/{weddingId}/upload-simple")]
-        [Consumes("multipart/form-data")]
-        public async Task<ActionResult<PhotoDto>> UploadSimple(
-            int weddingId,
-            IFormFile file,
-            // string? guestName = null,
-            // string? caption = null
-            [FromForm] string guestName,
-            [FromForm] string caption
-            )
+        // GET: api/photo/wedding/1/pending (Admin only)
+        [HttpGet("wedding/{weddingId}/pending")]
+        [Authorize]
+        public async Task<ActionResult<IEnumerable<PhotoDto>>> GetPendingByWeddingId(int weddingId)
         {
+            // ✅ Check authorization
+            var userEmail = User.Identity?.Name;
+            if (!await _weddingAuthorizationService.CanAccessWeddingAsync(userEmail!, weddingId))
+                return Forbid();
+
+            var photos = await _photoService.GetPendingByWeddingIdAsync(weddingId);
+            return Ok(photos);
+        }
+        
+        // POST: api/photo/wedding/1 (Upload photo — guest or couple)
+        [HttpPost("wedding/{weddingId}")]
+        public async Task<ActionResult<PhotoDto>> Upload(
+            int weddingId,
+            [FromForm] PhotoUploadDto uploadDto)
+        {
+            // Couple uploads require authentication + wedding ownership
+            if (uploadDto.UploadedBy == "COUPLE")
+            {
+                if (!User.Identity?.IsAuthenticated ?? true)
+                    return Unauthorized(new { message = "Authentication required for couple uploads" });
+
+                var userEmail = User.Identity?.Name;
+                if (!await _weddingAuthorizationService.CanAccessWeddingAsync(userEmail!, weddingId))
+                    return Forbid();
+            }
+
             try
             {
-                var createDto = new CreatePhotoDto
-                {
-                    GuestName = guestName ?? "Anonymous",
-                    Caption = caption ?? ""
-                };
-                
-                var photo = await _photoService.UploadPhotoAsync(weddingId, createDto, file);
-                return CreatedAtAction(nameof(GetById), new { id = photo.PhotoId }, photo);
+                var photo = await _photoService.UploadAsync(weddingId, uploadDto);
+                return Ok(photo);
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(new { message = ex.Message });
             }
             catch (KeyNotFoundException ex)
             {
@@ -109,21 +106,32 @@ namespace WeddingInvite.API.Controllers
             {
                 return BadRequest(new { message = ex.Message });
             }
-            catch (ArgumentException ex)
-            {
-                return BadRequest(new { message = ex.Message });
-            }
-        } 
-
+        }
         
-        // PUT: api/photo/5
-        [HttpPut("{id}")]
-        public async Task<ActionResult<PhotoDto>> Update(int id, [FromBody] UpdatePhotoDto updateDto)
+        // PUT: api/photo/5/approve (Admin only)
+        [HttpPut("{id}/approve")]
+        [Authorize]
+        public async Task<ActionResult<PhotoDto>> Approve(
+            int id,
+            [FromBody] ApprovePhotoDto approveDto)
         {
             try
             {
-                var photo = await _photoService.UpdateAsync(id, updateDto);
-                return Ok(photo);
+                // Get the photo to check wedding ownership
+                var photo = await _photoService.GetByIdAsync(id);
+                if (photo == null)
+                    return NotFound(new { message = "Photo not found" });
+
+                // ✅ Check authorization
+                var userEmail = User.Identity?.Name;
+                if (!await _weddingAuthorizationService.CanAccessWeddingAsync(userEmail!, photo.WeddingId))
+                    return Forbid();
+
+                // TODO: Get actual user ID from JWT claims
+                var userId = 1;
+                
+                var updatedPhoto = await _photoService.ApproveAsync(id, approveDto, userId);
+                return Ok(updatedPhoto);
             }
             catch (KeyNotFoundException ex)
             {
@@ -131,16 +139,54 @@ namespace WeddingInvite.API.Controllers
             }
         }
         
-        // DELETE: api/photo/5
-        [HttpDelete("{id}")]
-        public async Task<ActionResult> Delete(int id)
+        // PUT: api/photo/5/featured (Admin only)
+        [HttpPut("{id}/featured")]
+        [Authorize]
+        public async Task<ActionResult<PhotoDto>> SetFeatured(
+            int id,
+            [FromBody] SetFeaturedDto featuredDto)
         {
-            var result = await _photoService.DeleteAsync(id);
-            
-            if (!result)
+            try
+            {
+                // Get the photo to check wedding ownership
+                var photo = await _photoService.GetByIdAsync(id);
+                if (photo == null)
+                    return NotFound(new { message = "Photo not found" });
+
+                // ✅ Check authorization
+                var userEmail = User.Identity?.Name;
+                if (!await _weddingAuthorizationService.CanAccessWeddingAsync(userEmail!, photo.WeddingId))
+                    return Forbid();
+
+                var updatedPhoto = await _photoService.SetFeaturedAsync(id, featuredDto.IsFeatured);
+                return Ok(updatedPhoto);
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(new { message = ex.Message });
+            }
+        }
+        
+        // DELETE: api/photo/5 (Admin only)
+        [HttpDelete("{id}")]
+        [Authorize]
+        public async Task<IActionResult> Delete(int id)
+        {
+            // Get the photo to check wedding ownership
+            var photo = await _photoService.GetByIdAsync(id);
+            if (photo == null)
+                return NotFound(new { message = "Photo not found" });
+
+            // ✅ Check authorization
+            var userEmail = User.Identity?.Name;
+            if (!await _weddingAuthorizationService.CanAccessWeddingAsync(userEmail!, photo.WeddingId))
+                return Forbid();
+
+            var success = await _photoService.DeleteAsync(id);
+            if (!success)
                 return NotFound(new { message = $"Photo with ID {id} not found" });
             
-            return NoContent();
+            return Ok(new { message = "Photo deleted successfully" });
         }
     }
 }

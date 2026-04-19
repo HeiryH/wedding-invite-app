@@ -70,13 +70,32 @@ namespace WeddingInvite.Core.Services
                 NumberOfAttendees = createDto.NumberOfAttendees,
                 SongRequest = createDto.SongRequest.Trim(),
                 IsAttending = createDto.IsAttending,
-                RespondedDate = DateTime.UtcNow
+                RespondedDate = DateTime.UtcNow,
+                TableId = createDto.IsAttending ? createDto.TableId : null,
             };
             
             var created = await _guestRepo.CreateAsync(guest);
             return MapToDto(created);
         }
         
+        public async Task<GuestDto> UpdateAsync(int id, UpdateGuestDto updateDto)
+        {
+            var guest = await _guestRepo.GetByIdAsync(id);
+            if (guest == null)
+                throw new KeyNotFoundException($"Guest with ID {id} not found");
+
+            guest.GuestName = updateDto.GuestName.Trim();
+            guest.Email = updateDto.Email.Trim();
+            guest.PhoneNumber = updateDto.PhoneNumber.Trim();
+            guest.BrideOrGroomSide = updateDto.BrideOrGroomSide;
+            guest.NumberOfAttendees = updateDto.NumberOfAttendees;
+            guest.SongRequest = updateDto.SongRequest.Trim();
+            guest.IsAttending = updateDto.IsAttending;
+
+            var updated = await _guestRepo.UpdateAsync(guest);
+            return MapToDto(updated);
+        }
+
         public async Task<bool> DeleteAsync(int id)
         {
             return await _guestRepo.DeleteAsync(id);
@@ -101,7 +120,9 @@ namespace WeddingInvite.Core.Services
                 NumberOfAttendees = guest.NumberOfAttendees,
                 SongRequest = guest.SongRequest,
                 IsAttending = guest.IsAttending,
-                RespondedDate = guest.RespondedDate
+                RespondedDate = guest.RespondedDate,
+                TableId = guest.TableId,
+                TableName = guest.Table?.TableName,
             };
         }
     }

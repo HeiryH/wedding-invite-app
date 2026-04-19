@@ -7,6 +7,8 @@ namespace WeddingInvite.Data.Repositories
         Task<Photo?> GetByIdAsync(int id);
         Task<IEnumerable<Photo>> GetByWeddingIdAsync(int weddingId);
         Task<IEnumerable<Photo>> GetVisibleByWeddingIdAsync(int weddingId);
+        Task<IEnumerable<Photo>> GetCoupleMediaByWeddingIdAsync(int weddingId);
+        Task<Photo?> GetByTemplateSlotAsync(int weddingId, int templateSlot);
         Task<Photo> CreateAsync(Photo photo);
         Task<Photo> UpdateAsync(Photo photo);
         Task<bool> DeleteAsync(int id);

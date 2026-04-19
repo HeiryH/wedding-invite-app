@@ -22,9 +22,15 @@ export const guestService = {
     return response.data.attendingCount;
   },
 
-  // Create guest (RSVP)
+  // Create guest (RSVP — public endpoint)
   create: async (weddingId: number, data: CreateGuest): Promise<Guest> => {
-    const response = await apiClient.post<Guest>(`/guest/wedding/${weddingId}`, data);
+    const response = await apiClient.post<Guest>('/guest/rsvp', { ...data, weddingId });
+    return response.data;
+  },
+
+  // Update guest
+  update: async (id: number, data: CreateGuest): Promise<Guest> => {
+    const response = await apiClient.put<Guest>(`/guest/${id}`, data);
     return response.data;
   },
 

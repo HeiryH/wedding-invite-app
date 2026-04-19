@@ -16,12 +16,14 @@ namespace WeddingInvite.Data.Repositories
         {
             return await _context.Guests
                 .Include(g => g.Wedding)
+                .Include(g => g.Table)
                 .FirstOrDefaultAsync(g => g.GuestId == id);
         }
-        
+
         public async Task<IEnumerable<Guest>> GetByWeddingIdAsync(int weddingId)
         {
             return await _context.Guests
+                .Include(g => g.Table)
                 .Where(g => g.WeddingId == weddingId)
                 .OrderBy(g => g.GuestName)
                 .ToListAsync();

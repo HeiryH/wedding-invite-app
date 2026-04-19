@@ -11,8 +11,13 @@ export interface Wedding {
   totalGuests: number;
   totalAttending: number;
   daysUntilWedding: number;
+  isActive: boolean;
   totalPhotos: number;           // NEW
   enabledFeaturesCount: number;  // NEW
+  templateId: number;
+  templateName: string;
+  packageId?: number;
+  packageName?: string;
 }
 
 export interface CreateWedding {
@@ -22,6 +27,17 @@ export interface CreateWedding {
   weddingDate: string;
   venue: string;
   venueAddress: string;
+  templateId?: number;
+  packageId?: number;
+}
+
+export interface UpdateWeddingDto {
+  brideName: string;
+  groomName: string;
+  weddingDate: string;
+  venue: string;
+  venueAddress: string;
+  templateId?: number;
 }
 
 // ========== Guest Types ==========
@@ -37,6 +53,8 @@ export interface Guest {
   songRequest: string;
   isAttending: boolean;
   respondedDate: string | null;
+  tableId?: number | null;
+  tableName?: string | null;
 }
 
 export interface CreateGuest {
@@ -47,6 +65,7 @@ export interface CreateGuest {
   numberOfAttendees: number;
   songRequest: string;
   isAttending: boolean;
+  tableId?: number | null;
 }
 
 // ========== Wish Types ==========
@@ -70,19 +89,37 @@ export interface CreateWish {
 export interface Photo {
   photoId: number;
   weddingId: number;
-  guestName: string;
-  fileName: string;
+  guestName?: string;
   photoUrl: string;
+  caption?: string;
   fileSize: number;
-  caption: string;
+  contentType: string;
+  uploadedBy: string;
+  templateSlot?: number;
   isApproved: boolean;
   isVisible: boolean;
-  uploadedDate: string;
+  isFeatured: boolean;
+  rejectionReason?: string;
+  approvedDate?: string;
+  createdDate: string;
 }
 
-export interface CreatePhoto {
-  guestName: string;
-  caption: string;
+export const PhotoUploaderRole = {
+  GUEST: 'GUEST',
+  COUPLE: 'COUPLE',
+} as const;
+
+export const TemplateSlots = {
+  GROOM_PORTRAIT: 1,
+  BRIDE_PORTRAIT: 2,
+  EXTRA_1: 3,
+  EXTRA_2: 4,
+  EXTRA_3: 5,
+} as const;
+
+export interface ApprovePhotoRequest {
+  isApproved: boolean;
+  rejectionReason?: string;
 }
 
 // ========== Feature Types ==========
@@ -117,6 +154,7 @@ export interface WeddingWithFeatures {
 
 export interface ToggleFeature {
   featureId: number;
+  featureCode: string;
   isEnabled: boolean;
   configuration?: string | null;
 }
@@ -132,12 +170,94 @@ export interface WeddingAdminView extends Wedding {
   registeredDate: string;
 }
 
+// ========== Template Types (NEW) ==========
+
 export interface Template {
   templateId: number;
-  name: string;
-  templateCode: string; // The key used by Next.js to load the UI
+  templateName: string;
+  templateCode: string;
+  description: string;
   thumbnailUrl: string;
+  primaryColor: string;
+  secondaryColor: string;
+  componentPath: string;
+  isActive: boolean;
   isPremium: boolean;
+  sortOrder: number;
+}
+
+// ========== Package Types ==========
+
+export interface Package {
+  packageId: number;
+  packageName: string;
+  packageCode: string;
+  description: string;
+  price: number;
+  isActive: boolean;
+  sortOrder: number;
+  features: Feature[];
+}
+
+export interface CreatePackage {
+  packageName: string;
+  packageCode: string;
+  description: string;
+  price: number;
+  sortOrder: number;
+  featureIds: number[];
+}
+
+export interface UpdatePackage {
+  packageName: string;
+  description: string;
+  price: number;
+  isActive: boolean;
+  sortOrder: number;
+  featureIds: number[];
+}
+
+// ========== Template Config Types ==========
+
+export interface TemplateConfigField {
+  key: string;
+  label: string;
+  defaultValue: string;
+  maxLength: number;
+  richText: boolean;
+  adminOnly: boolean;
+  section: 'invitation' | 'rsvp' | 'wishes' | 'footer' | 'navigation';
+}
+
+// ========== Seating Table Types ==========
+
+export interface TableGuest {
+  guestId: number;
+  guestName: string;
+  numberOfAttendees: number;
+}
+
+export interface SeatingTable {
+  tableId: number;
+  weddingId: number;
+  tableName: string;
+  capacity: number;
+  sortOrder: number;
+  guestCount: number;
+  guests: TableGuest[];
+}
+
+export interface CreateSeatingTable {
+  weddingId: number;
+  tableName: string;
+  capacity: number;
+  sortOrder: number;
+}
+
+export interface UpdateSeatingTable {
+  tableName: string;
+  capacity: number;
+  sortOrder: number;
 }
 
 // ========== API Response Types ==========

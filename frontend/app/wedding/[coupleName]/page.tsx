@@ -1,263 +1,269 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useParams } from 'next/navigation';
-import { motion } from 'framer-motion';
-import Link from 'next/link';
-import { weddingService, Wedding } from '@/lib/api';
+import { useParams, useSearchParams } from 'next/navigation';
+import {
+  weddingService,
+  wishService,
+  photoService,
+  weddingFeatureService,
+  templateConfigService,
+  tableService,
+  Wedding,
+  Wish,
+  Photo,
+  SeatingTable,
+  guestService,
+} from '@/lib/api';
 
-// import ClassicTheme from '@/components/templates/Classic';
-// import BohoTheme from '@/components/templates/Boho';
-
-export default function InvitationPage() {
+export default function WeddingInvitationPage() {
   const params = useParams();
+  const searchParams = useSearchParams();
   const coupleName = params.coupleName as string;
+  const previewTemplateId = searchParams.get('preview');
 
   const [wedding, setWedding] = useState<Wedding | null>(null);
+  // ❌ REMOVED: const [guests, setGuests] = useState<Guest[]>([]);
+  const [wishes, setWishes] = useState<Wish[]>([]);
+  const [photos, setPhotos] = useState<Photo[]>([]);
+  const [coupleMedia, setCoupleMedia] = useState<Photo[]>([]);
+  const [customConfig, setCustomConfig] = useState<Record<string, string>>({});
+  const [photoBoothEnabled, setPhotoBoothEnabled] = useState(false);
+  const [seatingEnabled, setSeatingEnabled] = useState(false);
+  const [tables, setTables] = useState<SeatingTable[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [currentTemplateId, setCurrentTemplateId] = useState<number | null>(null);
 
   useEffect(() => {
-    const fetchWedding = async () => {
+    const fetchData = async () => {
       try {
         setLoading(true);
-        const data = await weddingService.getByCoupleName(coupleName);
-        setWedding(data);
+
+        // Fetch wedding
+        const weddingData = await weddingService.getByCoupleName(coupleName);
+        setWedding(weddingData);
+
+        // Determine which template to use
+        const templateIdToLoad = previewTemplateId
+          ? parseInt(previewTemplateId)
+          : weddingData.templateId;
+
+        setCurrentTemplateId(templateIdToLoad);
+
+        // ❌ REMOVED: Fetch guests
+        // const guestsData = await guestService.getByWeddingId(weddingData.weddingId);
+        // setGuests(guestsData);
+
+        // Fetch wishes
+        const wishesData = await wishService.getByWeddingId(weddingData.weddingId);
+        setWishes(wishesData);
+
+        // Check photo booth
+        const photoEnabled = await weddingFeatureService.isFeatureEnabled(
+          weddingData.weddingId,
+          'PHOTO_BOOTH'
+        );
+        setPhotoBoothEnabled(photoEnabled);
+
+        if (photoEnabled) {
+          const photosData = await photoService.getVisibleByWeddingId(
+            weddingData.weddingId
+          );
+          setPhotos(photosData);
+        }
+
+        const seatingOn = await weddingFeatureService.isFeatureEnabled(
+          weddingData.weddingId,
+          'SEATING'
+        );
+        setSeatingEnabled(seatingOn);
+        if (seatingOn) {
+          const tablesData = await tableService.getByWeddingId(weddingData.weddingId);
+          setTables(tablesData);
+        }
+
+        // Fetch couple media (for templates that use portrait/extra images)
+        photoService.getCoupleMediaByWeddingId(weddingData.weddingId)
+          .then(setCoupleMedia)
+          .catch(() => {});
+
+        // Fetch template config (customized text)
+        templateConfigService.getByWeddingId(weddingData.weddingId)
+          .then(setCustomConfig)
+          .catch(() => {});
       } catch (err: any) {
-        setError(err.response?.data?.message || 'Wedding not found');
+        setError(err.response?.data?.message || 'Failed to load wedding');
       } finally {
         setLoading(false);
       }
     };
 
-    fetchWedding();
-  }, [coupleName]);
+    fetchData();
+  }, [coupleName, previewTemplateId]);
 
-//   const themes: any = {
-//   THEME_CLASSIC: ClassicTheme,
-//   THEME_BOHO: BohoTheme,
-// };
+  const handleRSVP = async (data: any) => {
+    if (!wedding) return;
+    await guestService.create(wedding.weddingId, {
+      guestName: data.guestName,
+      email: data.email,
+      phoneNumber: data.phoneNumber,
+      brideOrGroomSide: data.brideOrGroomSide,
+      numberOfAttendees: data.numberOfAttendees,
+      songRequest: data.songRequest,
+      isAttending: data.isAttending,
+      tableId: data.tableId ?? null,
+    });
+    // ❌ REMOVED: Don't refetch all guests after RSVP
+    // const updatedGuests = await guestService.getByWeddingId(wedding.weddingId);
+    // setGuests(updatedGuests);
+  };
 
-// export default function Invitation({ wedding }) {
-//   // Dynamically select the component based on the DB value
-//   const SelectedTheme = themes[wedding.templateCode] || ClassicTheme;
-  
-//   return <SelectedTheme data={wedding} />;
-// }
+  const handleSubmitWish = async (data: any) => {
+    if (!wedding) return;
+    await wishService.create(wedding.weddingId, {
+      guestName: data.guestName,
+      message: data.message,
+    });
+    const updatedWishes = await wishService.getByWeddingId(wedding.weddingId);
+    setWishes(updatedWishes);
+  };
+
+  const handleUploadPhoto = async (data: any) => {
+    if (!wedding) return;
+    await photoService.upload(
+      wedding.weddingId,
+      data.guestName,
+      data.caption,
+      data.file
+    );
+    const updatedPhotos = await photoService.getVisibleByWeddingId(wedding.weddingId);
+    setPhotos(updatedPhotos);
+  };
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <motion.div
-          initial={{ opacity: 0, scale: 0.8 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.5 }}
-          className="text-center"
-        >
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-rose-50 to-pink-50">
+        <div className="text-center">
           <div className="w-16 h-16 border-4 border-rose-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
           <p className="text-gray-600">Loading invitation...</p>
-        </motion.div>
+        </div>
       </div>
     );
   }
 
-  if (error || !wedding) {
+  if (error || !wedding || currentTemplateId === null) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="text-center"
-        >
-          <p className="text-2xl text-red-500 mb-4">😢 {error}</p>
-          <Link
-            href="/"
-            className="text-rose-600 hover:underline"
-          >
-            ← Back to home
-          </Link>
-        </motion.div>
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-rose-50 to-pink-50">
+        <div className="text-center">
+          <p className="text-2xl text-red-500 mb-4">😢 {error || 'Wedding not found'}</p>
+        </div>
       </div>
     );
   }
-
-//   const Template = dynamic(() => import(`@/components/templates/${wedding.templateCode}`));
-// return <Template data={wedding} />;
-
-  const weddingDate = new Date(wedding.weddingDate);
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-12">
-      {/* Hero Section with Animation */}
-      <motion.div
-        initial={{ opacity: 0, y: 50 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.8, ease: 'easeOut' }}
-        className="text-center mb-16"
-      >
-        {/* Decorative Elements */}
-        <motion.div
-          initial={{ scale: 0 }}
-          animate={{ scale: 1 }}
-          transition={{ delay: 0.3, type: 'spring', stiffness: 200 }}
-          className="text-6xl mb-4"
-        >
-          💍
-        </motion.div>
-
-        {/* You're Invited */}
-        <motion.p
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.5 }}
-          className="text-rose-600 text-sm uppercase tracking-widest mb-4 font-semibold"
-        >
-          You're Invited to the Wedding of
-        </motion.p>
-
-        {/* Couple Names */}
-        <motion.h1
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.7 }}
-          className="text-5xl md:text-7xl font-serif font-bold text-gray-800 mb-2"
-        >
-          {wedding.brideName}
-        </motion.h1>
-
-        <motion.div
-          initial={{ scaleX: 0 }}
-          animate={{ scaleX: 1 }}
-          transition={{ delay: 0.9, duration: 0.6 }}
-          className="text-4xl md:text-5xl text-rose-400 my-4"
-        >
-          &
-        </motion.div>
-
-        <motion.h1
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 1.1 }}
-          className="text-5xl md:text-7xl font-serif font-bold text-gray-800"
-        >
-          {wedding.groomName}
-        </motion.h1>
-      </motion.div>
-
-      {/* Wedding Details Card */}
-      <motion.div
-        initial={{ opacity: 0, y: 30 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 1.3, duration: 0.6 }}
-        className="bg-white rounded-2xl shadow-xl p-8 md:p-12 mb-8"
-      >
-        {/* Date & Time */}
-        <div className="text-center mb-8">
-          <motion.div
-            whileHover={{ scale: 1.05 }}
-            className="inline-block"
-          >
-            <p className="text-sm text-gray-500 uppercase tracking-wider mb-2">
-              Save the Date
-            </p>
-            <p className="text-3xl font-bold text-gray-800">
-              {weddingDate.toLocaleDateString('en-US', {
-                weekday: 'long',
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric',
-              })}
-            </p>
-            <p className="text-xl text-gray-600 mt-2">
-              {weddingDate.toLocaleTimeString('en-US', {
-                hour: '2-digit',
-                minute: '2-digit',
-              })}
-            </p>
-          </motion.div>
+    <>
+      {/* Preview Mode Banner */}
+      {previewTemplateId && (
+        <div className="fixed top-0 left-0 right-0 z-50 bg-yellow-500 text-white px-4 py-3 text-center font-semibold shadow-lg">
+          🔍 PREVIEW MODE - Viewing Template {currentTemplateId} (Not Saved)
         </div>
+      )}
 
-        <div className="h-px bg-gradient-to-r from-transparent via-rose-200 to-transparent mb-8" />
+      {/* Render Template */}
+      <div className={previewTemplateId ? 'pt-12' : ''}>
+        <TemplateRenderer
+          key={currentTemplateId}
+          templateId={currentTemplateId}
+          wedding={wedding}
+          onRSVP={handleRSVP}
+          onSubmitWish={handleSubmitWish}
+          onUploadPhoto={handleUploadPhoto}
+          wishes={wishes}
+          photos={photos}
+          photoBoothEnabled={photoBoothEnabled}
+          seatingEnabled={seatingEnabled}
+          tables={tables}
+          coupleMedia={coupleMedia}
+          customConfig={customConfig}
+        />
+      </div>
+    </>
+  );
+}
 
-        {/* Venue */}
-        <div className="text-center mb-8">
-          <motion.div
-            whileHover={{ scale: 1.05 }}
-            className="inline-block"
-          >
-            <p className="text-sm text-gray-500 uppercase tracking-wider mb-2">
-              Venue
-            </p>
-            <p className="text-2xl font-semibold text-gray-800 mb-1">
-              {wedding.venue}
-            </p>
-            <p className="text-gray-600">{wedding.venueAddress}</p>
-          </motion.div>
+// Separate component for template rendering
+function TemplateRenderer({
+  templateId,
+  wedding,
+  onRSVP,
+  onSubmitWish,
+  onUploadPhoto,
+  wishes,
+  photos,
+  photoBoothEnabled,
+  seatingEnabled,
+  tables,
+  coupleMedia,
+  customConfig,
+}: {
+  templateId: number;
+  wedding: Wedding;
+  onRSVP: (data: any) => Promise<void>;
+  onSubmitWish: (data: any) => Promise<void>;
+  onUploadPhoto?: (data: any) => Promise<void>;
+  wishes: Wish[];
+  photos: Photo[];
+  photoBoothEnabled: boolean;
+  seatingEnabled: boolean;
+  tables: SeatingTable[];
+  coupleMedia?: Photo[];
+  customConfig?: Record<string, string>;
+}) {
+  const [TemplateComponent, setTemplateComponent] = useState<any>(null);
+
+  useEffect(() => {
+    // Load template dynamically
+    const loadTemplate = async () => {
+      try {
+        const module = await import(`@/components/templates/Template${templateId}`);
+        setTemplateComponent(() => module.default);
+      } catch (error) {
+        console.error(`Failed to load Template${templateId}:`, error);
+        // Fallback to Template1
+        const fallback = await import(`@/components/templates/Template1`);
+        setTemplateComponent(() => fallback.default);
+      }
+    };
+
+    loadTemplate();
+  }, [templateId]);
+
+  if (!TemplateComponent) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-rose-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-gray-600">Loading template...</p>
         </div>
+      </div>
+    );
+  }
 
-        {/* Countdown */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 1.5 }}
-          className="text-center bg-gradient-to-r from-rose-50 to-pink-50 rounded-xl p-6"
-        >
-          <p className="text-sm text-gray-600 mb-2">Countdown</p>
-          <motion.p
-            key={wedding.daysUntilWedding}
-            initial={{ scale: 0.8 }}
-            animate={{ scale: 1 }}
-            className="text-4xl font-bold text-rose-600"
-          >
-            {wedding.daysUntilWedding}
-          </motion.p>
-          <p className="text-gray-600 mt-1">
-            {wedding.daysUntilWedding === 1 ? 'day' : 'days'} to go! 🎉
-          </p>
-        </motion.div>
-      </motion.div>
-
-      {/* CTA Buttons */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 1.7 }}
-        className="flex flex-col sm:flex-row gap-4 justify-center"
-      >
-        <Link href={`/wedding/${coupleName}/rsvp`}>
-          <motion.button
-            whileHover={{ scale: 1.05, boxShadow: '0 10px 30px rgba(244, 63, 94, 0.3)' }}
-            whileTap={{ scale: 0.95 }}
-            className="w-full sm:w-auto px-8 py-4 bg-gradient-to-r from-rose-500 to-pink-500 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-shadow"
-          >
-            RSVP Now 💌
-          </motion.button>
-        </Link>
-
-        <Link href={`/wedding/${coupleName}/wishes`}>
-          <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            className="w-full sm:w-auto px-8 py-4 bg-white text-rose-600 font-semibold rounded-xl border-2 border-rose-200 hover:border-rose-300 transition-colors"
-          >
-            Leave a Wish ✨
-          </motion.button>
-        </Link>
-      </motion.div>
-
-      {/* Guest Count */}
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 1.9 }}
-        className="text-center mt-12 text-gray-500 text-sm"
-      >
-        <p>
-          {wedding.totalAttending > 0
-            ? `${wedding.totalAttending} ${wedding.totalAttending === 1 ? 'guest' : 'guests'} attending`
-            : 'Be the first to RSVP!'}
-        </p>
-      </motion.div>
-    </div>
+  return (
+    <TemplateComponent
+      wedding={wedding}
+      onRSVP={onRSVP}
+      onSubmitWish={onSubmitWish}
+      onUploadPhoto={onUploadPhoto}
+      wishes={wishes}
+      photos={photos}
+      photoBoothEnabled={photoBoothEnabled}
+      seatingEnabled={seatingEnabled}
+      tables={tables}
+      coupleMedia={coupleMedia}
+      customConfig={customConfig}
+    />
   );
 }

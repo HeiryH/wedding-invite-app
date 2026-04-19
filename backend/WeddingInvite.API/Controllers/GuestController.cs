@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using WeddingInvite.Core.DTOs;
 using WeddingInvite.Core.Services;
@@ -9,12 +10,16 @@ namespace WeddingInvite.API.Controllers
     public class GuestController : ControllerBase
     {
         private readonly IGuestService _guestService;
+        private readonly IWeddingAuthorizationService _weddingAuthorizationService;
         
-        public GuestController(IGuestService guestService)
+        public GuestController(
+            IGuestService guestService,
+            IWeddingAuthorizationService weddingAuthorizationService)
         {
             _guestService = guestService;
+            _weddingAuthorizationService = weddingAuthorizationService;
         }
-        
+
         // GET: api/guest/5
         [HttpGet("{id}")]
         public async Task<ActionResult<GuestDto>> GetById(int id)
@@ -27,14 +32,19 @@ namespace WeddingInvite.API.Controllers
             return Ok(guest);
         }
         
-        // GET: api/guest/wedding/5
+        // GET: api/guest/wedding/1
         [HttpGet("wedding/{weddingId}")]
         public async Task<ActionResult<IEnumerable<GuestDto>>> GetByWeddingId(int weddingId)
         {
+            // ✅ Check authorization
+            var userEmail = User.Identity?.Name;
+            if (!await _weddingAuthorizationService.CanAccessWeddingAsync(userEmail!, weddingId))
+                return Forbid();
+
             var guests = await _guestService.GetByWeddingIdAsync(weddingId);
             return Ok(guests);
         }
-        
+
         // GET: api/guest/wedding/5/count
         [HttpGet("wedding/{weddingId}/count")]
         public async Task<ActionResult<int>> GetAttendingCount(int weddingId)
@@ -43,46 +53,89 @@ namespace WeddingInvite.API.Controllers
             return Ok(new { weddingId, attendingCount = count });
         }
         
-        // POST: api/guest/wedding/5
-        [HttpPost("wedding/{weddingId}")]
-        public async Task<ActionResult<GuestDto>> Create(
-            int weddingId, 
-            [FromBody] CreateGuestDto createDto)
+        // POST: api/guest (admin — authorized)
+        [HttpPost]
+        [Authorize]
+        public async Task<ActionResult<GuestDto>> Create([FromBody] CreateGuestDto createDto)
         {
+            // ✅ Check authorization
+            var userEmail = User.Identity?.Name;
+            if (!await _weddingAuthorizationService.CanAccessWeddingAsync(userEmail!, createDto.WeddingId))
+                return Forbid();
+
             try
             {
-                var guest = await _guestService.CreateAsync(weddingId, createDto);
-                
-                return CreatedAtAction(
-                    nameof(GetById), 
-                    new { id = guest.GuestId }, 
-                    guest
-                );
-            }
-            catch (KeyNotFoundException ex)
-            {
-                return NotFound(new { message = ex.Message });
+                var guest = await _guestService.CreateAsync(createDto.WeddingId, createDto);
+                return Ok(guest);
             }
             catch (ArgumentException ex)
             {
                 return BadRequest(new { message = ex.Message });
             }
-            catch (InvalidOperationException ex)
+        }
+
+        // POST: api/guest/rsvp (public — for wedding invitation page)
+        [HttpPost("rsvp")]
+        [AllowAnonymous]
+        public async Task<ActionResult<GuestDto>> Rsvp([FromBody] CreateGuestDto createDto)
+        {
+            try
+            {
+                var guest = await _guestService.CreateAsync(createDto.WeddingId, createDto);
+                return Ok(guest);
+            }
+            catch (ArgumentException ex)
             {
                 return BadRequest(new { message = ex.Message });
             }
         }
         
+        // PUT: api/guest/5
+        [HttpPut("{id}")]
+        [Authorize]
+        public async Task<ActionResult<GuestDto>> Update(int id, [FromBody] UpdateGuestDto updateDto)
+        {
+            // Get the guest to check wedding ownership
+            var guest = await _guestService.GetByIdAsync(id);
+            if (guest == null)
+                return NotFound(new { message = "Guest not found" });
+
+            // ✅ Check authorization
+            var userEmail = User.Identity?.Name;
+            if (!await _weddingAuthorizationService.CanAccessWeddingAsync(userEmail!, guest.WeddingId))
+                return Forbid();
+
+            try
+            {
+                var updated = await _guestService.UpdateAsync(id, updateDto);
+                return Ok(updated);
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(new { message = ex.Message });
+            }
+        }
+        
         // DELETE: api/guest/5
         [HttpDelete("{id}")]
-        public async Task<ActionResult> Delete(int id)
+        [Authorize]
+        public async Task<IActionResult> Delete(int id)
         {
-            var result = await _guestService.DeleteAsync(id);
+            // Get the guest to check wedding ownership
+            var guest = await _guestService.GetByIdAsync(id);
+            if (guest == null)
+                return NotFound(new { message = "Guest not found" });
+
+            // ✅ Check authorization
+            var userEmail = User.Identity?.Name;
+            if (!await _weddingAuthorizationService.CanAccessWeddingAsync(userEmail!, guest.WeddingId))
+                return Forbid();
+
+            var success = await _guestService.DeleteAsync(id);
+            if (!success)
+                return NotFound(new { message = "Guest not found" });
             
-            if (!result)
-                return NotFound(new { message = $"Guest with ID {id} not found" });
-            
-            return NoContent();
+            return Ok(new { message = "Guest deleted successfully" });
         }
     }
 }

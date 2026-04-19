@@ -1,5 +1,22 @@
 @import "tailwindcss";
 
+/* ── Template 5: Dreaming Floral Sky fonts ─────────────────────────────── */
+@font-face {
+  font-family: 'PlayfairDisplay';
+  src: url('/fonts/PlayfairDisplay-Variable.ttf') format('truetype');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Armelie';
+  src: url('/fonts/Armelie-Regular.otf') format('opentype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
 :root {
   --background: #ffffff;
   --foreground: #171717;

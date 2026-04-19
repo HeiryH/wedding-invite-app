@@ -565,8 +565,8 @@ export default function AdminDashboard() {
                                                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                                         <button
                                                             onClick={() => handleDeleteGuest(guest.guestId)}
-                                                            className="text-red-600 hover:text-red-900 transition-colors">
-                                                            Delete
+                                                            className="px-3 py-1 rounded-full text-red-600 hover:text-red-900 transition-colors bg-red-100">
+                                                            Delete 🗑️
                                                         </button>
                                                     </td>
                                                 </tr>

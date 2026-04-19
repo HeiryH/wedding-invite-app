@@ -1,14 +1,15 @@
+/Users/helmyheiry/wedding-invite-app/backend/WeddingInvite.Data/obj/Debug/net10.0/WeddingInvite.Data.csproj.AssemblyReference.cache
 /Users/helmyheiry/wedding-invite-app/backend/WeddingInvite.Data/bin/Debug/net10.0/WeddingInvite.Data.deps.json
 /Users/helmyheiry/wedding-invite-app/backend/WeddingInvite.Data/bin/Debug/net10.0/WeddingInvite.Data.runtimeconfig.json
 /Users/helmyheiry/wedding-invite-app/backend/WeddingInvite.Data/bin/Debug/net10.0/WeddingInvite.Data.dll
 /Users/helmyheiry/wedding-invite-app/backend/WeddingInvite.Data/bin/Debug/net10.0/WeddingInvite.Data.pdb
 /Users/helmyheiry/wedding-invite-app/backend/WeddingInvite.Data/bin/Debug/net10.0/WeddingInvite.Models.dll
 /Users/helmyheiry/wedding-invite-app/backend/WeddingInvite.Data/bin/Debug/net10.0/WeddingInvite.Models.pdb
-/Users/helmyheiry/wedding-invite-app/backend/WeddingInvite.Data/obj/Debug/net10.0/WeddingInvite.Data.csproj.AssemblyReference.cache
 /Users/helmyheiry/wedding-invite-app/backend/WeddingInvite.Data/obj/Debug/net10.0/WeddingInvite.Data.GeneratedMSBuildEditorConfig.editorconfig
 /Users/helmyheiry/wedding-invite-app/backend/WeddingInvite.Data/obj/Debug/net10.0/WeddingInvite.Data.AssemblyInfoInputs.cache
 /Users/helmyheiry/wedding-invite-app/backend/WeddingInvite.Data/obj/Debug/net10.0/WeddingInvite.Data.AssemblyInfo.cs
 /Users/helmyheiry/wedding-invite-app/backend/WeddingInvite.Data/obj/Debug/net10.0/WeddingInvite.Data.csproj.CoreCompileInputs.cache
+/Users/helmyheiry/wedding-invite-app/backend/WeddingInvite.Data/obj/Debug/net10.0/WeddingInvite.Data.sourcelink.json
 /Users/helmyheiry/wedding-invite-app/backend/WeddingInvite.Data/obj/Debug/net10.0/WeddingI.9EB53C83.Up2Date
 /Users/helmyheiry/wedding-invite-app/backend/WeddingInvite.Data/obj/Debug/net10.0/WeddingInvite.Data.dll
 /Users/helmyheiry/wedding-invite-app/backend/WeddingInvite.Data/obj/Debug/net10.0/refint/WeddingInvite.Data.dll

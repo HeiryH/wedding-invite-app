@@ -61,7 +61,7 @@ namespace WeddingInvite.Data.Migrations
                         new
                         {
                             FeatureId = 1,
-                            CreatedDate = new DateTime(2026, 1, 23, 11, 49, 19, 186, DateTimeKind.Utc).AddTicks(6290),
+                            CreatedDate = new DateTime(2026, 4, 17, 23, 45, 43, 611, DateTimeKind.Utc).AddTicks(5060),
                             Description = "Allow guests to upload and share photos from the wedding",
                             FeatureCode = "PHOTO_BOOTH",
                             FeatureName = "Photo Booth",
@@ -72,7 +72,7 @@ namespace WeddingInvite.Data.Migrations
                         new
                         {
                             FeatureId = 2,
-                            CreatedDate = new DateTime(2026, 1, 23, 11, 49, 19, 186, DateTimeKind.Utc).AddTicks(6370),
+                            CreatedDate = new DateTime(2026, 4, 17, 23, 45, 43, 611, DateTimeKind.Utc).AddTicks(5150),
                             Description = "Online gift registry with payment links",
                             FeatureCode = "E_GIFTS",
                             FeatureName = "E-Gifts Registry",
@@ -83,7 +83,7 @@ namespace WeddingInvite.Data.Migrations
                         new
                         {
                             FeatureId = 3,
-                            CreatedDate = new DateTime(2026, 1, 23, 11, 49, 19, 186, DateTimeKind.Utc).AddTicks(6370),
+                            CreatedDate = new DateTime(2026, 4, 17, 23, 45, 43, 611, DateTimeKind.Utc).AddTicks(5150),
                             Description = "Use your own domain name (e.g., johnandmary.wedding)",
                             FeatureCode = "CUSTOM_DOMAIN",
                             FeatureName = "Custom Domain",
@@ -94,7 +94,7 @@ namespace WeddingInvite.Data.Migrations
                         new
                         {
                             FeatureId = 4,
-                            CreatedDate = new DateTime(2026, 1, 23, 11, 49, 19, 186, DateTimeKind.Utc).AddTicks(6370),
+                            CreatedDate = new DateTime(2026, 4, 17, 23, 45, 43, 611, DateTimeKind.Utc).AddTicks(5150),
                             Description = "Guest RSVP and attendance tracking",
                             FeatureCode = "RSVP",
                             FeatureName = "RSVP Management",
@@ -105,13 +105,24 @@ namespace WeddingInvite.Data.Migrations
                         new
                         {
                             FeatureId = 5,
-                            CreatedDate = new DateTime(2026, 1, 23, 11, 49, 19, 186, DateTimeKind.Utc).AddTicks(6370),
+                            CreatedDate = new DateTime(2026, 4, 17, 23, 45, 43, 611, DateTimeKind.Utc).AddTicks(5160),
                             Description = "Guests can leave wishes and messages",
                             FeatureCode = "WISHES",
                             FeatureName = "Wishes & Guestbook",
                             IsActive = true,
                             IsPremium = false,
                             SortOrder = 0
+                        },
+                        new
+                        {
+                            FeatureId = 6,
+                            CreatedDate = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Assign guests to tables and manage seating arrangements",
+                            FeatureCode = "SEATING",
+                            FeatureName = "Seating Management",
+                            IsActive = true,
+                            IsPremium = true,
+                            SortOrder = 4
                         });
                 });
 
@@ -154,14 +165,147 @@ namespace WeddingInvite.Data.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("TEXT");
 
+                    b.Property<int?>("TableId")
+                        .HasColumnType("INTEGER");
+
                     b.Property<int>("WeddingId")
                         .HasColumnType("INTEGER");
 
                     b.HasKey("GuestId");
 
+                    b.HasIndex("TableId");
+
                     b.HasIndex("WeddingId");
 
                     b.ToTable("Guests");
+                });
+
+            modelBuilder.Entity("WeddingInvite.Models.Package", b =>
+                {
+                    b.Property<int>("PackageId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("CreatedDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("PackageCode")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("PackageName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("Price")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("PackageId");
+
+                    b.HasIndex("PackageCode")
+                        .IsUnique();
+
+                    b.HasIndex("PackageName")
+                        .IsUnique();
+
+                    b.ToTable("Packages");
+
+                    b.HasData(
+                        new
+                        {
+                            PackageId = 1,
+                            CreatedDate = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Basic wedding invitation with RSVP and guestbook",
+                            IsActive = true,
+                            PackageCode = "STARTER",
+                            PackageName = "Starter",
+                            Price = 0m,
+                            SortOrder = 1
+                        },
+                        new
+                        {
+                            PackageId = 2,
+                            CreatedDate = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Full-featured wedding invitation with photo booth, RSVP, and guestbook",
+                            IsActive = true,
+                            PackageCode = "PREMIUM",
+                            PackageName = "Premium",
+                            Price = 99m,
+                            SortOrder = 2
+                        });
+                });
+
+            modelBuilder.Entity("WeddingInvite.Models.PackageFeature", b =>
+                {
+                    b.Property<int>("PackageFeatureId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("FeatureId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("PackageId")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("PackageFeatureId");
+
+                    b.HasIndex("FeatureId");
+
+                    b.HasIndex("PackageId", "FeatureId")
+                        .IsUnique();
+
+                    b.ToTable("PackageFeatures");
+
+                    b.HasData(
+                        new
+                        {
+                            PackageFeatureId = 1,
+                            FeatureId = 4,
+                            PackageId = 1
+                        },
+                        new
+                        {
+                            PackageFeatureId = 2,
+                            FeatureId = 5,
+                            PackageId = 1
+                        },
+                        new
+                        {
+                            PackageFeatureId = 3,
+                            FeatureId = 1,
+                            PackageId = 2
+                        },
+                        new
+                        {
+                            PackageFeatureId = 4,
+                            FeatureId = 4,
+                            PackageId = 2
+                        },
+                        new
+                        {
+                            PackageFeatureId = 5,
+                            FeatureId = 5,
+                            PackageId = 2
+                        },
+                        new
+                        {
+                            PackageFeatureId = 6,
+                            FeatureId = 6,
+                            PackageId = 2
+                        });
                 });
 
             modelBuilder.Entity("WeddingInvite.Models.Photo", b =>
@@ -170,14 +314,22 @@ namespace WeddingInvite.Data.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER");
 
+                    b.Property<int?>("ApprovedByUserId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime?>("ApprovedDate")
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("Caption")
-                        .IsRequired()
                         .HasMaxLength(500)
                         .HasColumnType("TEXT");
 
                     b.Property<string>("ContentType")
                         .IsRequired()
                         .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedDate")
                         .HasColumnType("TEXT");
 
                     b.Property<string>("FileName")
@@ -194,27 +346,245 @@ namespace WeddingInvite.Data.Migrations
                         .HasColumnType("INTEGER");
 
                     b.Property<string>("GuestName")
-                        .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("TEXT");
 
                     b.Property<bool>("IsApproved")
                         .HasColumnType("INTEGER");
 
+                    b.Property<bool>("IsFeatured")
+                        .HasColumnType("INTEGER");
+
                     b.Property<bool>("IsVisible")
                         .HasColumnType("INTEGER");
 
-                    b.Property<DateTime>("UploadedDate")
+                    b.Property<string>("PhotoUrl")
+                        .IsRequired()
                         .HasColumnType("TEXT");
+
+                    b.Property<string>("RejectionReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int?>("TemplateSlot")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("UploadedBy")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(20)
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("GUEST");
 
                     b.Property<int>("WeddingId")
                         .HasColumnType("INTEGER");
 
                     b.HasKey("PhotoId");
 
+                    b.HasIndex("ApprovedByUserId");
+
                     b.HasIndex("WeddingId");
 
                     b.ToTable("Photos");
+                });
+
+            modelBuilder.Entity("WeddingInvite.Models.Table", b =>
+                {
+                    b.Property<int>("TableId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("Capacity")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("TableName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("WeddingId")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("TableId");
+
+                    b.HasIndex("WeddingId");
+
+                    b.ToTable("Tables");
+                });
+
+            modelBuilder.Entity("WeddingInvite.Models.Template", b =>
+                {
+                    b.Property<int>("TemplateId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("ComponentPath")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("IsPremium")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("PrimaryColor")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("SecondaryColor")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("TemplateCode")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("TemplateName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ThumbnailUrl")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("TemplateId");
+
+                    b.HasIndex("TemplateCode")
+                        .IsUnique();
+
+                    b.ToTable("Templates");
+
+                    b.HasData(
+                        new
+                        {
+                            TemplateId = 1,
+                            ComponentPath = "Template1",
+                            CreatedDate = new DateTime(2026, 4, 17, 23, 45, 43, 614, DateTimeKind.Utc).AddTicks(6320),
+                            Description = "Elegant rose and pink design with top navigation",
+                            IsActive = true,
+                            IsPremium = false,
+                            PrimaryColor = "#f43f5e",
+                            SecondaryColor = "#ec4899",
+                            SortOrder = 1,
+                            TemplateCode = "classic-rose",
+                            TemplateName = "Classic Rose",
+                            ThumbnailUrl = ""
+                        },
+                        new
+                        {
+                            TemplateId = 2,
+                            ComponentPath = "Template2",
+                            CreatedDate = new DateTime(2026, 4, 17, 23, 45, 43, 614, DateTimeKind.Utc).AddTicks(6420),
+                            Description = "Luxurious yellow and gold single-page design with floating navigation",
+                            IsActive = true,
+                            IsPremium = true,
+                            PrimaryColor = "#eab308",
+                            SecondaryColor = "#f59e0b",
+                            SortOrder = 2,
+                            TemplateCode = "golden-elegance",
+                            TemplateName = "Golden Elegance",
+                            ThumbnailUrl = ""
+                        },
+                        new
+                        {
+                            TemplateId = 3,
+                            ComponentPath = "Template3",
+                            CreatedDate = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Botanical green theme with couple portrait and extra image slots",
+                            IsActive = true,
+                            IsPremium = true,
+                            PrimaryColor = "#16a34a",
+                            SecondaryColor = "#86efac",
+                            SortOrder = 3,
+                            TemplateCode = "garden-romance",
+                            TemplateName = "Garden Romance",
+                            ThumbnailUrl = ""
+                        },
+                        new
+                        {
+                            TemplateId = 4,
+                            ComponentPath = "Template4",
+                            CreatedDate = new DateTime(2026, 3, 27, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Clean cream and black editorial design with torn-paper dividers, live countdown, and timeline schedule",
+                            IsActive = true,
+                            IsPremium = true,
+                            PrimaryColor = "#1C1C1A",
+                            SecondaryColor = "#8A8A80",
+                            SortOrder = 4,
+                            TemplateCode = "minimal-noir",
+                            TemplateName = "Minimal Noir",
+                            ThumbnailUrl = ""
+                        });
+                });
+
+            modelBuilder.Entity("WeddingInvite.Models.User", b =>
+                {
+                    b.Property<int>("UserId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("CreatedDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("PasswordHash")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Role")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int?>("WeddingId")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("UserId");
+
+                    b.HasIndex("Email")
+                        .IsUnique();
+
+                    b.HasIndex("WeddingId");
+
+                    b.ToTable("Users");
+
+                    b.HasData(
+                        new
+                        {
+                            UserId = 1,
+                            CreatedDate = new DateTime(2026, 4, 17, 23, 45, 43, 774, DateTimeKind.Utc).AddTicks(6680),
+                            Email = "admin@wedding-cms.com",
+                            IsActive = true,
+                            PasswordHash = "$2a$11$08VGDBs79qcXoOvR.cZpy.Iwu7ZCYgpyy.vmrXtAdAyQ6VHjB7aJW",
+                            Role = "SUPER_ADMIN"
+                        });
                 });
 
             modelBuilder.Entity("WeddingInvite.Models.Wedding", b =>
@@ -244,6 +614,9 @@ namespace WeddingInvite.Data.Migrations
                     b.Property<bool>("IsActive")
                         .HasColumnType("INTEGER");
 
+                    b.Property<int?>("PackageId")
+                        .HasColumnType("INTEGER");
+
                     b.Property<int>("TemplateId")
                         .HasColumnType("INTEGER");
 
@@ -264,6 +637,10 @@ namespace WeddingInvite.Data.Migrations
 
                     b.HasIndex("CoupleName")
                         .IsUnique();
+
+                    b.HasIndex("PackageId");
+
+                    b.HasIndex("TemplateId");
 
                     b.ToTable("Weddings");
                 });
@@ -299,6 +676,36 @@ namespace WeddingInvite.Data.Migrations
                     b.ToTable("WeddingFeatures");
                 });
 
+            modelBuilder.Entity("WeddingInvite.Models.WeddingTemplateConfig", b =>
+                {
+                    b.Property<int>("WeddingTemplateConfigId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("ConfigKey")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ConfigValue")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("UpdatedDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("WeddingId")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("WeddingTemplateConfigId");
+
+                    b.HasIndex("WeddingId", "ConfigKey")
+                        .IsUnique();
+
+                    b.ToTable("TemplateConfigs");
+                });
+
             modelBuilder.Entity("WeddingInvite.Models.Wish", b =>
                 {
                     b.Property<int>("WishId")
@@ -330,8 +737,63 @@ namespace WeddingInvite.Data.Migrations
 
             modelBuilder.Entity("WeddingInvite.Models.Guest", b =>
                 {
+                    b.HasOne("WeddingInvite.Models.Table", "Table")
+                        .WithMany("Guests")
+                        .HasForeignKey("TableId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
                     b.HasOne("WeddingInvite.Models.Wedding", "Wedding")
                         .WithMany("Guests")
+                        .HasForeignKey("WeddingId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Table");
+
+                    b.Navigation("Wedding");
+                });
+
+            modelBuilder.Entity("WeddingInvite.Models.PackageFeature", b =>
+                {
+                    b.HasOne("WeddingInvite.Models.Feature", "Feature")
+                        .WithMany()
+                        .HasForeignKey("FeatureId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("WeddingInvite.Models.Package", "Package")
+                        .WithMany("PackageFeatures")
+                        .HasForeignKey("PackageId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Feature");
+
+                    b.Navigation("Package");
+                });
+
+            modelBuilder.Entity("WeddingInvite.Models.Photo", b =>
+                {
+                    b.HasOne("WeddingInvite.Models.User", "ApprovedBy")
+                        .WithMany()
+                        .HasForeignKey("ApprovedByUserId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("WeddingInvite.Models.Wedding", "Wedding")
+                        .WithMany("Photos")
+                        .HasForeignKey("WeddingId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("ApprovedBy");
+
+                    b.Navigation("Wedding");
+                });
+
+            modelBuilder.Entity("WeddingInvite.Models.Table", b =>
+                {
+                    b.HasOne("WeddingInvite.Models.Wedding", "Wedding")
+                        .WithMany()
                         .HasForeignKey("WeddingId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
@@ -339,15 +801,32 @@ namespace WeddingInvite.Data.Migrations
                     b.Navigation("Wedding");
                 });
 
-            modelBuilder.Entity("WeddingInvite.Models.Photo", b =>
+            modelBuilder.Entity("WeddingInvite.Models.User", b =>
                 {
                     b.HasOne("WeddingInvite.Models.Wedding", "Wedding")
-                        .WithMany("Photos")
+                        .WithMany()
                         .HasForeignKey("WeddingId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.SetNull);
 
                     b.Navigation("Wedding");
+                });
+
+            modelBuilder.Entity("WeddingInvite.Models.Wedding", b =>
+                {
+                    b.HasOne("WeddingInvite.Models.Package", "Package")
+                        .WithMany("Weddings")
+                        .HasForeignKey("PackageId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("WeddingInvite.Models.Template", "Template")
+                        .WithMany("Weddings")
+                        .HasForeignKey("TemplateId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Package");
+
+                    b.Navigation("Template");
                 });
 
             modelBuilder.Entity("WeddingInvite.Models.WeddingFeature", b =>
@@ -369,6 +848,17 @@ namespace WeddingInvite.Data.Migrations
                     b.Navigation("Wedding");
                 });
 
+            modelBuilder.Entity("WeddingInvite.Models.WeddingTemplateConfig", b =>
+                {
+                    b.HasOne("WeddingInvite.Models.Wedding", "Wedding")
+                        .WithMany()
+                        .HasForeignKey("WeddingId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Wedding");
+                });
+
             modelBuilder.Entity("WeddingInvite.Models.Wish", b =>
                 {
                     b.HasOne("WeddingInvite.Models.Wedding", "Wedding")
@@ -383,6 +873,23 @@ namespace WeddingInvite.Data.Migrations
             modelBuilder.Entity("WeddingInvite.Models.Feature", b =>
                 {
                     b.Navigation("WeddingFeatures");
+                });
+
+            modelBuilder.Entity("WeddingInvite.Models.Package", b =>
+                {
+                    b.Navigation("PackageFeatures");
+
+                    b.Navigation("Weddings");
+                });
+
+            modelBuilder.Entity("WeddingInvite.Models.Table", b =>
+                {
+                    b.Navigation("Guests");
+                });
+
+            modelBuilder.Entity("WeddingInvite.Models.Template", b =>
+                {
+                    b.Navigation("Weddings");
                 });
 
             modelBuilder.Entity("WeddingInvite.Models.Wedding", b =>

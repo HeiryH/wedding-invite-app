@@ -1,74 +1,112 @@
 using Microsoft.EntityFrameworkCore;
-using WeddingInvite.Core.Services;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
+using System.Text;
 using WeddingInvite.Data;
 using WeddingInvite.Data.Repositories;
+using WeddingInvite.Core.Services;
+using System.Security.Claims;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// ========== ADD SERVICES TO CONTAINER ==========
-
-// Add Controllers
+// Add services to the container.
 builder.Services.AddControllers();
-
-// Add Swagger
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-// Add Database
+// Database
 builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseSqlite(
-        builder.Configuration.GetConnectionString("DefaultConnection")
-    )
-);
+    options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-// ========== EXISTING REPOSITORIES ==========
+// Repositories
 builder.Services.AddScoped<IWeddingRepository, WeddingRepository>();
 builder.Services.AddScoped<IGuestRepository, GuestRepository>();
 builder.Services.AddScoped<IWishRepository, WishRepository>();
-
-// ========== NEW REPOSITORIES (ADD THESE) ==========
 builder.Services.AddScoped<IFeatureRepository, FeatureRepository>();
 builder.Services.AddScoped<IWeddingFeatureRepository, WeddingFeatureRepository>();
 builder.Services.AddScoped<IPhotoRepository, PhotoRepository>();
+builder.Services.AddScoped<ITemplateRepository, TemplateRepository>();
+builder.Services.AddScoped<IUserRepository, UserRepository>(); // ADD THIS
+builder.Services.AddScoped<IPackageRepository, PackageRepository>();
+builder.Services.AddScoped<ITemplateConfigRepository, TemplateConfigRepository>();
+builder.Services.AddScoped<ITableRepository, TableRepository>();
 
-// ========== EXISTING SERVICES ==========
+// Services
 builder.Services.AddScoped<IWeddingService, WeddingService>();
 builder.Services.AddScoped<IGuestService, GuestService>();
 builder.Services.AddScoped<IWishService, WishService>();
-
-// ========== NEW SERVICES (ADD THESE) ==========
 builder.Services.AddScoped<IFeatureService, FeatureService>();
 builder.Services.AddScoped<IWeddingFeatureService, WeddingFeatureService>();
 builder.Services.AddScoped<IPhotoService, PhotoService>();
+builder.Services.AddScoped<ITemplateService, TemplateService>();
+builder.Services.AddScoped<IPackageService, PackageService>();
+builder.Services.AddScoped<IAuthService, AuthService>(); // ADD THIS
+builder.Services.AddScoped<IWeddingAuthorizationService, WeddingAuthorizationService>(); // ✅ RENAMED
+builder.Services.AddScoped<ITemplateConfigService, TemplateConfigService>();
+builder.Services.AddScoped<ITableService, TableService>();
 
-// Add CORS
+// JWT Authentication
+var jwtSettings = builder.Configuration.GetSection("JwtSettings");
+var secretKey = jwtSettings["SecretKey"];
+
+builder.Services.AddAuthentication(options =>
+{
+    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+})
+.AddJwtBearer(options =>
+{
+    options.TokenValidationParameters = new TokenValidationParameters
+    {
+        ValidateIssuer = true,
+        ValidateAudience = true,
+        ValidateLifetime = true,
+        ValidateIssuerSigningKey = true,
+        ValidIssuer = jwtSettings["Issuer"],
+        ValidAudience = jwtSettings["Audience"],
+        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey!)),
+        ClockSkew = TimeSpan.Zero,
+        NameClaimType = ClaimTypes.Name, // ✅ This tells JWT where to find the name
+        RoleClaimType = ClaimTypes.Role // ✅ This tells JWT where to find the role
+    };
+
+    options.Events = new JwtBearerEvents
+    {
+        OnMessageReceived = context =>
+        {
+            context.Token = context.Request.Cookies["token"]; // ✅ Make sure this matches
+            return Task.CompletedTask;
+        }
+    };
+});
+
+builder.Services.AddAuthorization();
+
+// CORS
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("AllowNextJS", policy =>
+    options.AddPolicy("AllowFrontend", policy =>
     {
         policy.WithOrigins("http://localhost:3000")
               .AllowAnyHeader()
-              .AllowAnyMethod();
+              .AllowAnyMethod()
+              .AllowCredentials();
     });
 });
 
-// ========== BUILD THE APP ==========
 var app = builder.Build();
 
-// ========== CONFIGURE HTTP REQUEST PIPELINE ==========
-
+// Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
 }
 
-// Serve static files (for photo uploads)
-app.UseStaticFiles(); // ADD THIS LINE
-
-app.UseCors("AllowNextJS");
+app.UseStaticFiles(); // ADD THIS - Must be before UseRouting
 app.UseHttpsRedirection();
+app.UseCors("AllowFrontend");
+app.UseAuthentication(); // ADD THIS - Must be before UseAuthorization
 app.UseAuthorization();
 app.MapControllers();
-
 app.Run();

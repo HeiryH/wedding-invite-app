@@ -207,7 +207,7 @@ namespace WeddingInvite.Data.Migrations
                     b.Property<bool>("IsVisible")
                         .HasColumnType("INTEGER");
 
-                    b.Property<DateTime>("UploadedDate")
+                    b.Property<DateTime>("CreatedDate")
                         .HasColumnType("TEXT");
 
                     b.Property<int>("WeddingId")

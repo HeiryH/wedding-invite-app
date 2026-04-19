@@ -5,6 +5,7 @@
 /Users/helmyheiry/wedding-invite-app/backend/WeddingInvite.Models/obj/Debug/net10.0/WeddingInvite.Models.AssemblyInfoInputs.cache
 /Users/helmyheiry/wedding-invite-app/backend/WeddingInvite.Models/obj/Debug/net10.0/WeddingInvite.Models.AssemblyInfo.cs
 /Users/helmyheiry/wedding-invite-app/backend/WeddingInvite.Models/obj/Debug/net10.0/WeddingInvite.Models.csproj.CoreCompileInputs.cache
+/Users/helmyheiry/wedding-invite-app/backend/WeddingInvite.Models/obj/Debug/net10.0/WeddingInvite.Models.sourcelink.json
 /Users/helmyheiry/wedding-invite-app/backend/WeddingInvite.Models/obj/Debug/net10.0/WeddingInvite.Models.dll
 /Users/helmyheiry/wedding-invite-app/backend/WeddingInvite.Models/obj/Debug/net10.0/refint/WeddingInvite.Models.dll
 /Users/helmyheiry/wedding-invite-app/backend/WeddingInvite.Models/obj/Debug/net10.0/WeddingInvite.Models.pdb

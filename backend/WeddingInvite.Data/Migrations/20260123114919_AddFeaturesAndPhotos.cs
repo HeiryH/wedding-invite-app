@@ -47,7 +47,7 @@ namespace WeddingInvite.Data.Migrations
                     Caption = table.Column<string>(type: "TEXT", maxLength: 500, nullable: false),
                     IsApproved = table.Column<bool>(type: "INTEGER", nullable: false),
                     IsVisible = table.Column<bool>(type: "INTEGER", nullable: false),
-                    UploadedDate = table.Column<DateTime>(type: "TEXT", nullable: false)
+                    CreatedDate = table.Column<DateTime>(type: "TEXT", nullable: false)
                 },
                 constraints: table =>
                 {

@@ -22,7 +22,11 @@ namespace WeddingInvite.Models
         public bool IsAttending { get; set; } = true; // Assume yes until they say no
         public DateTime? RespondedDate { get; set; } // Nullable - might not have responded yet
         
+        // Seating assignment (nullable - guest may not be assigned to a table)
+        public int? TableId { get; set; }
+        public Table? Table { get; set; }
+
         // Navigation property - back to Wedding
-        public Wedding Wedding { get; set; } = null!; // null! = "trust me, EF will fill this"
+        public Wedding Wedding { get; set; } = null!;
     }
 }
