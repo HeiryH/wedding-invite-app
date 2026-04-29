@@ -56,14 +56,7 @@ export default function SuperAdminDashboard() {
 
   const handleToggleActive = async (weddingId: number, currentStatus: boolean) => {
     try {
-      // We'll need to add this endpoint
-      await fetch(`${process.env.NEXT_PUBLIC_API_URL}/wedding/${weddingId}/toggle-active`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ isActive: !currentStatus }),
-      });
-
-      // Refresh weddings
+      await weddingService.toggleActive(weddingId, !currentStatus);
       await fetchWeddings();
     } catch (err) {
       alert('Failed to update wedding status');

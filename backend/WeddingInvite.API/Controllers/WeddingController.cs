@@ -20,6 +20,7 @@ namespace WeddingInvite.API.Controllers
 
         // GET: api/wedding
         [HttpGet]
+        [Authorize(Roles = "SUPER_ADMIN")]
         public async Task<ActionResult<IEnumerable<WeddingDto>>> GetAll()
         {
             var weddings = await _weddingService.GetAllAsync();

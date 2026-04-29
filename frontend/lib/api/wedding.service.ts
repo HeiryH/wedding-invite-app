@@ -46,6 +46,11 @@ export const weddingService = {
     return response.data;
   },
 
+  toggleActive: async (id: number, isActive: boolean): Promise<Wedding> => {
+    const response = await apiClient.put<Wedding>(`/wedding/${id}/toggle-active`, { isActive });
+    return response.data;
+  },
+
   // Delete wedding
   delete: async (id: number): Promise<void> => {
     await apiClient.delete(`/wedding/${id}`);

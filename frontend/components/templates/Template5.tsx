@@ -322,7 +322,8 @@ export default function Template5({
     const video = videoRef.current;
     const canvas = canvasRef.current;
     const section = envelopeSectionRef.current;
-    if (!video || !canvas || !section) return;
+    const wrapper = envelopeWrapperRef.current;
+    if (!video || !canvas || !section || !wrapper) return;
 
     const draw = () => {
       // readyState < 2 means no decoded frame yet — keep retrying every rAF
@@ -377,28 +378,53 @@ export default function Template5({
         canvas.height = video.videoHeight;
       }
 
+      // Compute where "fully open" falls within the scroll range.
+      //
+      // Scroll range:
+      //   start → wrapper CENTER at viewport BOTTOM  ('center bottom')
+      //   end   → wrapper TOP    at viewport TOP     ('top top')
+      //
+      // "Fully open" = wrapper CENTER at viewport CENTER.
+      //
+      // PIVOT = (vh/2) / (vh - wh/2)
+      //       = vh / (2*vh - wh)
+      //
+      // where vh = viewport height, wh = wrapper rendered height.
+      const vh = window.innerHeight;
+      const wh = wrapper.offsetHeight || vh * 0.68; // fallback to 68vh if not painted yet
+      const PIVOT = Math.min(0.92, vh / (2 * vh - wh));
+      const HOLD = 0.04; // hold fully open for ±4% around pivot
+
       const st = ScrollTrigger.create({
-        trigger: section,
-        start: 'top bottom',
-        end: 'bottom top',
+        trigger: wrapper,
+        // Animation begins only when envelope center hits viewport bottom —
+        // so the envelope is already half-visible before anything moves.
+        start: 'center bottom',
+        // Animation ends when envelope top reaches viewport top —
+        // envelope is fully closed by the time it's about to exit.
+        end: 'top top',
         scrub: 0.5,
         onUpdate: (self) => {
           const p = self.progress;
-          // p 0→0.50: opens, p 0.50→0.55: held, p 0.55→0.90: closes
+          const lo = PIVOT - HOLD;
+          const hi = PIVOT + HOLD;
           const tri =
-            p < 0.50 ? p / 0.50 :
-              p < 0.55 ? 1 :
-                p < 0.90 ? (0.90 - p) / 0.35 :
-                  0;
+            p < lo ? p / lo :           // opening phase
+            p < hi ? 1 :                // hold at fully open
+            (1 - p) / (1 - hi);         // closing phase
           video.currentTime = 0.5 + tri * (video.duration - 0.5);
           setEnvelopeOpen(tri > 0.85);
           scheduleDraw();
         },
         onLeave: () => {
+          // Envelope top has scrolled past viewport top — fully closed
+          video.currentTime = 0.2;
           setEnvelopeOpen(false);
+          scheduleDraw();
         },
         onLeaveBack: () => {
-          video.currentTime = 0.5;
+          // Scrolled back so envelope center is below viewport bottom — closed
+          video.currentTime = 0.2;
           setEnvelopeOpen(false);
           scheduleDraw();
         },
