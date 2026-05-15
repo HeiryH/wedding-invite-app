@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 // Base URL for your .NET API
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || '/api';
 
 // Create axios instance with default config
 export const apiClient = axios.create({
@@ -30,17 +30,14 @@ apiClient.interceptors.request.use(
 
 // Response interceptor (runs after every response)
 apiClient.interceptors.response.use(
-  (response) => {
-    return response;
-  },
+  (response) => response,
   (error) => {
-    // Handle errors globally
-    if (error.response) {
-      // Server responded with error status
-      console.error('API Error:', error.response.data);
-    } else if (error.request) {
-      // Request made but no response
-      console.error('Network Error:', error.message);
+    if (error.response?.status === 401) {
+      // Session expired or cookie missing — clear stale localStorage and redirect to login
+      localStorage.removeItem('user');
+      if (typeof window !== 'undefined' && !window.location.pathname.startsWith('/login')) {
+        window.location.href = '/login';
+      }
     }
     return Promise.reject(error);
   }

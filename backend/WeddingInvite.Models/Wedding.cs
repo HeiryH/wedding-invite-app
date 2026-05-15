@@ -36,6 +36,7 @@
 
         public ICollection<WeddingFeature> WeddingFeatures { get; set; } = new List<WeddingFeature>();
         public ICollection<Photo> Photos { get; set; } = new List<Photo>();
+        public ICollection<ItineraryItem> ItineraryItems { get; set; } = new List<ItineraryItem>();
 
     }
 }

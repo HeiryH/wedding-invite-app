@@ -77,7 +77,7 @@ function GuestModal({
               type="text"
               value={form.guestName}
               onChange={(e) => setForm({ ...form, guestName: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-rose-300 focus:outline-none"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 focus:ring-2 focus:ring-rose-300 focus:outline-none"
               required
             />
           </div>
@@ -88,7 +88,7 @@ function GuestModal({
                 type="email"
                 value={form.email}
                 onChange={(e) => setForm({ ...form, email: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-rose-300 focus:outline-none"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 focus:ring-2 focus:ring-rose-300 focus:outline-none"
               />
             </div>
             <div>
@@ -97,7 +97,7 @@ function GuestModal({
                 type="tel"
                 value={form.phoneNumber}
                 onChange={(e) => setForm({ ...form, phoneNumber: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-rose-300 focus:outline-none"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 focus:ring-2 focus:ring-rose-300 focus:outline-none"
               />
             </div>
           </div>
@@ -106,7 +106,7 @@ function GuestModal({
             <select
               value={form.brideOrGroomSide}
               onChange={(e) => setForm({ ...form, brideOrGroomSide: e.target.value as 'Bride' | 'Groom' })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-rose-300 focus:outline-none"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 focus:ring-2 focus:ring-rose-300 focus:outline-none"
             >
               <option value="Bride">Bride's Side</option>
               <option value="Groom">Groom's Side</option>
@@ -118,7 +118,7 @@ function GuestModal({
               type="text"
               value={form.songRequest}
               onChange={(e) => setForm({ ...form, songRequest: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-rose-300 focus:outline-none"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 focus:ring-2 focus:ring-rose-300 focus:outline-none"
             />
           </div>
           <div className="flex gap-3 pt-2">
@@ -190,7 +190,7 @@ function UploadPhotoModal({
               type="text"
               value={guestName}
               onChange={(e) => setGuestName(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-rose-300 focus:outline-none"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 focus:ring-2 focus:ring-rose-300 focus:outline-none"
               required
             />
           </div>
@@ -200,7 +200,7 @@ function UploadPhotoModal({
               type="text"
               value={caption}
               onChange={(e) => setCaption(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-rose-300 focus:outline-none"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 focus:ring-2 focus:ring-rose-300 focus:outline-none"
             />
           </div>
           <div>
@@ -553,26 +553,26 @@ export default function CoupleAdminDashboard() {
               <div className="flex gap-2">
                 <input value={editData.brideName} onChange={e => setEditData({ ...editData, brideName: e.target.value })}
                   placeholder="Bride's Name"
-                  className="flex-1 px-3 py-2 rounded-lg text-gray-800 text-lg font-semibold focus:outline-none focus:ring-2 focus:ring-white"
+                  className="flex-1 px-3 py-2 rounded-lg bg-white text-gray-900 text-lg font-semibold focus:outline-none focus:ring-2 focus:ring-white"
                 />
                 <span className="self-center font-bold text-xl">&</span>
                 <input value={editData.groomName} onChange={e => setEditData({ ...editData, groomName: e.target.value })}
                   placeholder="Groom's Name"
-                  className="flex-1 px-3 py-2 rounded-lg text-gray-800 text-lg font-semibold focus:outline-none focus:ring-2 focus:ring-white"
+                  className="flex-1 px-3 py-2 rounded-lg bg-white text-gray-900 text-lg font-semibold focus:outline-none focus:ring-2 focus:ring-white"
                 />
               </div>
               <div className="flex gap-2">
                 <input type="date" value={editData.weddingDate} onChange={e => setEditData({ ...editData, weddingDate: e.target.value })}
-                  className="px-3 py-2 rounded-lg text-gray-800 text-sm focus:outline-none focus:ring-2 focus:ring-white"
+                  className="px-3 py-2 rounded-lg bg-white text-gray-900 text-sm focus:outline-none focus:ring-2 focus:ring-white"
                 />
                 <input type="time" value={editData.weddingTime} onChange={e => setEditData({ ...editData, weddingTime: e.target.value })}
-                  className="px-3 py-2 rounded-lg text-gray-800 text-sm focus:outline-none focus:ring-2 focus:ring-white"
+                  className="px-3 py-2 rounded-lg bg-white text-gray-900 text-sm focus:outline-none focus:ring-2 focus:ring-white"
                 />
               </div>
               <input value={editData.venue} onChange={e => setEditData({ ...editData, venue: e.target.value })}
-                placeholder="Venue" className="w-full px-3 py-2 rounded-lg text-gray-800 text-sm focus:outline-none focus:ring-2 focus:ring-white" />
+                placeholder="Venue" className="w-full px-3 py-2 rounded-lg bg-white text-gray-900 text-sm focus:outline-none focus:ring-2 focus:ring-white" />
               <input value={editData.venueAddress} onChange={e => setEditData({ ...editData, venueAddress: e.target.value })}
-                placeholder="Venue Address" className="w-full px-3 py-2 rounded-lg text-gray-800 text-sm focus:outline-none focus:ring-2 focus:ring-white" />
+                placeholder="Venue Address" className="w-full px-3 py-2 rounded-lg bg-white text-gray-900 text-sm focus:outline-none focus:ring-2 focus:ring-white" />
               <div className="flex gap-2 pt-1">
                 <button onClick={handleSaveEdit} disabled={saving}
                   className="px-5 py-2 bg-white text-rose-600 rounded-lg font-semibold text-sm hover:bg-rose-50 disabled:opacity-60 transition-colors">

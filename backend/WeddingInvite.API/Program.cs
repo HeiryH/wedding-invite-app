@@ -30,6 +30,7 @@ builder.Services.AddScoped<IUserRepository, UserRepository>(); // ADD THIS
 builder.Services.AddScoped<IPackageRepository, PackageRepository>();
 builder.Services.AddScoped<ITemplateConfigRepository, TemplateConfigRepository>();
 builder.Services.AddScoped<ITableRepository, TableRepository>();
+builder.Services.AddScoped<IItineraryRepository, ItineraryRepository>();
 
 // Services
 builder.Services.AddScoped<IWeddingService, WeddingService>();
@@ -44,6 +45,7 @@ builder.Services.AddScoped<IAuthService, AuthService>(); // ADD THIS
 builder.Services.AddScoped<IWeddingAuthorizationService, WeddingAuthorizationService>(); // ✅ RENAMED
 builder.Services.AddScoped<ITemplateConfigService, TemplateConfigService>();
 builder.Services.AddScoped<ITableService, TableService>();
+builder.Services.AddScoped<IItineraryService, ItineraryService>();
 
 // JWT Authentication
 var jwtSettings = builder.Configuration.GetSection("JwtSettings");
@@ -83,11 +85,12 @@ builder.Services.AddAuthentication(options =>
 builder.Services.AddAuthorization();
 
 // CORS
+var corsOrigin = builder.Configuration["CorsOrigin"] ?? "http://localhost:3000";
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowFrontend", policy =>
     {
-        policy.WithOrigins("http://localhost:3000")
+        policy.WithOrigins(corsOrigin)
               .AllowAnyHeader()
               .AllowAnyMethod()
               .AllowCredentials();
@@ -95,6 +98,13 @@ builder.Services.AddCors(options =>
 });
 
 var app = builder.Build();
+
+// Auto-apply migrations on startup (creates DB on first run)
+using (var scope = app.Services.CreateScope())
+{
+    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    db.Database.Migrate();
+}
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())

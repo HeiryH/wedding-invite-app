@@ -28,6 +28,7 @@ namespace WeddingInvite.Data
         public DbSet<PackageFeature> PackageFeatures { get; set; } = null!;
         public DbSet<WeddingTemplateConfig> TemplateConfigs { get; set; } = null!;
         public DbSet<Table> Tables { get; set; } = null!;
+        public DbSet<ItineraryItem> ItineraryItems { get; set; } = null!;
 
 
         // Configure database schema
@@ -493,6 +494,24 @@ namespace WeddingInvite.Data
                     .WithMany(t => t.Guests)
                     .HasForeignKey(e => e.TableId)
                     .OnDelete(DeleteBehavior.SetNull);
+            });
+
+            // ItineraryItem configuration
+            modelBuilder.Entity<ItineraryItem>(entity =>
+            {
+                entity.HasKey(e => e.ItineraryItemId);
+
+                entity.Property(e => e.Label)
+                    .IsRequired()
+                    .HasMaxLength(200);
+
+                entity.Property(e => e.Detail)
+                    .HasMaxLength(500);
+
+                entity.HasOne(e => e.Wedding)
+                    .WithMany(w => w.ItineraryItems)
+                    .HasForeignKey(e => e.WeddingId)
+                    .OnDelete(DeleteBehavior.Cascade);
             });
 
             // WeddingTemplateConfig configuration

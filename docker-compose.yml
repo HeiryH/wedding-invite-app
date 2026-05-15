@@ -1,0 +1,27 @@
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    volumes:
+      - ./data/db:/app/data
+      - ./data/uploads:/app/wwwroot/uploads
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - JwtSettings__SecretKey=${JWT_SECRET}
+      - CorsOrigin=${CORS_ORIGIN}
+      - ConnectionStrings__DefaultConnection=Data Source=/app/data/wedding.db
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=/api
+      - BACKEND_URL=http://backend:5000
+    depends_on:
+      - backend

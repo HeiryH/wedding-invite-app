@@ -115,6 +115,10 @@ export const TemplateSlots = {
   EXTRA_1: 3,
   EXTRA_2: 4,
   EXTRA_3: 5,
+  // Section background image slots
+  WELCOME_BG: 10,
+  CEREMONY_BG: 11,
+  CELEBRATION_BG: 12,
 } as const;
 
 export interface ApprovePhotoRequest {
@@ -219,14 +223,62 @@ export interface UpdatePackage {
 
 // ========== Template Config Types ==========
 
+export type TemplateConfigSection =
+  | 'invitation'
+  | 'ceremony'
+  | 'rsvp'
+  | 'wishes'
+  | 'footer'
+  | 'navigation'
+  | 'general'
+  | 'styling';
+
+export type TemplateConfigFieldType =
+  | 'text'
+  | 'richtext'
+  | 'boolean'
+  | 'select'
+  | 'color'
+  | 'image';
+
 export interface TemplateConfigField {
   key: string;
   label: string;
   defaultValue: string;
   maxLength: number;
+  /** @deprecated use fieldType instead */
   richText: boolean;
+  fieldType: TemplateConfigFieldType;
+  /** options list for fieldType === 'select' */
+  options?: string[];
   adminOnly: boolean;
-  section: 'invitation' | 'rsvp' | 'wishes' | 'footer' | 'navigation';
+  section: TemplateConfigSection;
+}
+
+// ========== Itinerary Types ==========
+
+export interface ItineraryItem {
+  itineraryItemId: number;
+  weddingId: number;
+  label: string;
+  detail: string;
+  sortOrder: number;
+}
+
+export interface CreateItineraryItem {
+  label: string;
+  detail: string;
+  sortOrder: number;
+}
+
+export interface UpdateItineraryItem {
+  label: string;
+  detail: string;
+  sortOrder: number;
+}
+
+export interface ReorderItinerary {
+  items: { itineraryItemId: number; sortOrder: number }[];
 }
 
 // ========== Seating Table Types ==========

@@ -374,7 +374,7 @@ export default function WeddingDetailPage() {
               <div className="space-y-3 w-full max-w-2xl">
                 <div className="flex gap-2">
                   <input
-                    className="text-2xl font-bold border-2 border-gray-300 rounded px-3 py-2 w-full focus:border-rose-400 focus:outline-none"
+                    className="text-2xl font-bold border-2 border-gray-300 rounded px-3 py-2 w-full text-gray-900 focus:border-rose-400 focus:outline-none"
                     value={editWeddingData.brideName}
                     onChange={(e) =>
                       setEditWeddingData({ ...editWeddingData, brideName: e.target.value })
@@ -383,7 +383,7 @@ export default function WeddingDetailPage() {
                   />
                   <span className="text-2xl font-bold self-center">&</span>
                   <input
-                    className="text-2xl font-bold border-2 border-gray-300 rounded px-3 py-2 w-full focus:border-rose-400 focus:outline-none"
+                    className="text-2xl font-bold border-2 border-gray-300 rounded px-3 py-2 w-full text-gray-900 focus:border-rose-400 focus:outline-none"
                     value={editWeddingData.groomName}
                     onChange={(e) =>
                       setEditWeddingData({ ...editWeddingData, groomName: e.target.value })
@@ -393,14 +393,14 @@ export default function WeddingDetailPage() {
                 </div>
                 <input
                   type="date"
-                  className="block border-2 border-gray-300 rounded px-3 py-2 focus:border-rose-400 focus:outline-none"
+                  className="block border-2 border-gray-300 rounded px-3 py-2 text-gray-900 focus:border-rose-400 focus:outline-none"
                   value={editWeddingData.weddingDate}
                   onChange={(e) =>
                     setEditWeddingData({ ...editWeddingData, weddingDate: e.target.value })
                   }
                 />
                 <input
-                  className="block border-2 border-gray-300 rounded px-3 py-2 w-full focus:border-rose-400 focus:outline-none"
+                  className="block border-2 border-gray-300 rounded px-3 py-2 w-full text-gray-900 focus:border-rose-400 focus:outline-none"
                   value={editWeddingData.venue}
                   onChange={(e) =>
                     setEditWeddingData({ ...editWeddingData, venue: e.target.value })
@@ -408,7 +408,7 @@ export default function WeddingDetailPage() {
                   placeholder="Venue"
                 />
                 <input
-                  className="block border-2 border-gray-300 rounded px-3 py-2 w-full focus:border-rose-400 focus:outline-none"
+                  className="block border-2 border-gray-300 rounded px-3 py-2 w-full text-gray-900 focus:border-rose-400 focus:outline-none"
                   value={editWeddingData.venueAddress}
                   onChange={(e) =>
                     setEditWeddingData({ ...editWeddingData, venueAddress: e.target.value })

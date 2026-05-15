@@ -377,7 +377,7 @@ export default function PhotoBoothPage() {
                 >
                   <div className="relative h-64">
                     <img
-                      src={`http://localhost:5000${photo.photoUrl}`}
+                      src={photo.photoUrl}
                       alt={photo.caption || 'Wedding photo'}
                       className="w-full h-full object-cover"
                     />

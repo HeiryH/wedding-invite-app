@@ -47,6 +47,11 @@ namespace WeddingInvite.Models
         public const int Extra2 = 4;
         public const int Extra3 = 5;
 
-        public static readonly int[] All = [GroomPortrait, BridePortrait, Extra1, Extra2, Extra3];
+        // Section background image slots (10-12)
+        public const int WelcomeBg = 10;
+        public const int CeremonyBg = 11;
+        public const int CelebrationBg = 12;
+
+        public static readonly int[] All = [GroomPortrait, BridePortrait, Extra1, Extra2, Extra3, WelcomeBg, CeremonyBg, CelebrationBg];
     }
 }

@@ -107,7 +107,7 @@ export default function AccessTab({ coupleAdmin, weddingId, onRefresh }: AccessT
               value={newEmail}
               onChange={(e) => setNewEmail(e.target.value)}
               placeholder="couple@example.com"
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-rose-300 focus:border-rose-400 focus:outline-none"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 focus:ring-2 focus:ring-rose-300 focus:border-rose-400 focus:outline-none"
             />
           </div>
 
@@ -118,7 +118,7 @@ export default function AccessTab({ coupleAdmin, weddingId, onRefresh }: AccessT
               value={newPassword}
               onChange={(e) => setNewPassword(e.target.value)}
               placeholder="Choose a strong password"
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-rose-300 focus:border-rose-400 focus:outline-none"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 focus:ring-2 focus:ring-rose-300 focus:border-rose-400 focus:outline-none"
             />
           </div>
 
@@ -198,7 +198,7 @@ export default function AccessTab({ coupleAdmin, weddingId, onRefresh }: AccessT
                 value={resetPassword}
                 onChange={(e) => setResetPassword(e.target.value)}
                 placeholder="New password"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-rose-300 focus:border-rose-400 focus:outline-none"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 focus:ring-2 focus:ring-rose-300 focus:border-rose-400 focus:outline-none"
               />
               <div className="flex gap-2">
                 <button

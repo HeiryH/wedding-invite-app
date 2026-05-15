@@ -233,8 +233,7 @@ export default function PhotoManagementPage() {
                                     {/* Image */}
                                     <div className="relative aspect-square">
                                         <img
-                                            // src={getImageUrl(photo.photoUrl)}
-                                            src={`http://localhost:5000${photo.photoUrl}`}
+                                            src={photo.photoUrl}
 
                                             alt={photo.caption || 'Wedding photo'}
                                             className="w-full h-full object-cover"

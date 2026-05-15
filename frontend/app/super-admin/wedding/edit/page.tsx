@@ -215,7 +215,7 @@ export default function EditWeddingPage() {
                   onChange={(e) =>
                     setFormData({ ...formData, brideName: e.target.value })
                   }
-                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-rose-400 focus:outline-none"
+                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg text-gray-900 focus:border-rose-400 focus:outline-none"
                   required
                 />
               </div>
@@ -230,7 +230,7 @@ export default function EditWeddingPage() {
                   onChange={(e) =>
                     setFormData({ ...formData, groomName: e.target.value })
                   }
-                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-rose-400 focus:outline-none"
+                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg text-gray-900 focus:border-rose-400 focus:outline-none"
                   required
                 />
               </div>
@@ -264,7 +264,7 @@ export default function EditWeddingPage() {
                   onChange={(e) =>
                     setFormData({ ...formData, weddingDate: e.target.value })
                   }
-                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-rose-400 focus:outline-none"
+                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg text-gray-900 focus:border-rose-400 focus:outline-none"
                   required
                 />
               </div>
@@ -279,7 +279,7 @@ export default function EditWeddingPage() {
                   onChange={(e) =>
                     setFormData({ ...formData, venue: e.target.value })
                   }
-                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-rose-400 focus:outline-none"
+                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg text-gray-900 focus:border-rose-400 focus:outline-none"
                   required
                 />
               </div>
@@ -294,7 +294,7 @@ export default function EditWeddingPage() {
                     setFormData({ ...formData, venueAddress: e.target.value })
                   }
                   rows={3}
-                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-rose-400 focus:outline-none resize-none"
+                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg text-gray-900 focus:border-rose-400 focus:outline-none resize-none"
                   required
                 />
               </div>

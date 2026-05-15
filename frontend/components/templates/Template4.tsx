@@ -2,10 +2,11 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { motion, useMotionValue, useTransform, animate, AnimatePresence } from 'framer-motion';
-import { Wedding, Wish, Photo, SeatingTable, TemplateSlots } from '@/lib/api';
+import { Wedding, Wish, Photo, SeatingTable, TemplateSlots, ItineraryItem } from '@/lib/api';
 import SeatingStep from './SeatingStep';
+import { toHijriString, alignClass, headingStyle, headingAnimationProps, sectionBgStyle, resolveSectionOrder, type SectionCode } from '@/lib/templateUtils';
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL?.replace('/api', '') ?? 'http://localhost:5000';
+const API_BASE = process.env.NEXT_PUBLIC_API_URL?.replace('/api', '') ?? '';
 
 interface Template4Props {
   wedding: Wedding;
@@ -19,6 +20,7 @@ interface Template4Props {
   tables?: SeatingTable[];
   coupleMedia?: Photo[];
   customConfig?: Record<string, string>;
+  itinerary?: ItineraryItem[];
 }
 
 interface StackCard {
@@ -347,20 +349,36 @@ export default function Template4({
   tables = [],
   coupleMedia,
   customConfig,
+  itinerary = [],
 }: Template4Props) {
   const t = (key: string, fallback: string) => customConfig?.[key] || fallback;
+  const showIslamicDate = customConfig?.['general.showIslamicDate'] === 'true';
+  const hStyle = headingStyle(customConfig);
+  const hAnim = headingAnimationProps(customConfig);
   const weddingDate = new Date(wedding.weddingDate);
   const countdown = useCountdown(weddingDate);
 
+  const sectionOrder = resolveSectionOrder(
+    customConfig?.['section.order'],
+    !!customConfig?.['walimah.body'],
+    itinerary.length > 0,
+    photoBoothEnabled,
+  );
+  // Variable scroll sections (hero is always first; walimah/itinerary live in the details block)
+  const T4_SECTION_COLOR: Record<string, 'dark' | 'cream'> = {
+    rsvp: 'cream', wishes: 'dark', photobooth: 'cream',
+  };
+  const varSections = sectionOrder.filter((c) => ['rsvp', 'wishes', 'photobooth'].includes(c));
+
   // Scroll spy
-  const sections = ['hero', 'rsvp', 'wishes', ...(photoBoothEnabled ? ['photos'] : [])];
+  const sections = ['hero', ...varSections.map((c) => `t4-${c}`)];
   const [activeSection, setActiveSection] = useState('hero');
 
   useEffect(() => {
     const handler = () => {
       const scrollY = window.scrollY + window.innerHeight / 3;
       for (const id of sections) {
-        const el = document.getElementById(`t4-${id}`);
+        const el = document.getElementById(id);
         if (el) {
           const { offsetTop, offsetHeight } = el;
           if (scrollY >= offsetTop && scrollY < offsetTop + offsetHeight) {
@@ -372,10 +390,10 @@ export default function Template4({
     };
     window.addEventListener('scroll', handler, { passive: true });
     return () => window.removeEventListener('scroll', handler);
-  }, [photoBoothEnabled]);
+  }, [sections.join(',')]);
 
   const scrollTo = (id: string) => {
-    document.getElementById(`t4-${id}`)?.scrollIntoView({ behavior: 'smooth' });
+    document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' });
   };
 
   // Couple media slots
@@ -453,7 +471,7 @@ export default function Template4({
       setRsvpStep(1);
       setSelectedTableId(null);
       setRsvpData({ guestName: '', email: '', phoneNumber: '', brideOrGroomSide: 'Bride', numberOfAttendees: 1, songRequest: '' });
-      setTimeout(() => { setRsvpSuccess(false); scrollTo('wishes'); }, 2200);
+      setTimeout(() => { setRsvpSuccess(false); scrollTo('t4-wishes'); }, 2200);
     } catch { alert('Failed to submit RSVP'); }
     finally { setRsvpSubmitting(false); }
   };
@@ -511,11 +529,11 @@ export default function Template4({
           <button
             key={id}
             onClick={() => scrollTo(id)}
-            aria-label={id}
+            aria-label={id.replace('t4-', '')}
             className="group flex items-center gap-2 justify-end"
           >
             <span className="text-[9px] text-[#1C1C1A] tracking-widest uppercase opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap bg-white/80 px-1.5 py-0.5 rounded">
-              {id}
+              {id.replace('t4-', '')}
             </span>
             <span
               className={`block rounded-full border transition-all duration-300 ${
@@ -531,7 +549,7 @@ export default function Template4({
       {/* ══════════════════════════════════════
           SECTION 1 — HERO
       ══════════════════════════════════════ */}
-      <section id="t4-hero" className="relative min-h-screen flex flex-col">
+      <section id="hero" className="relative min-h-screen flex flex-col">
         {/* Full-bleed hero photo */}
         {heroPhoto ? (
           <div className="absolute inset-0">
@@ -545,18 +563,18 @@ export default function Template4({
         {/* Hero text */}
         <div className="relative z-10 flex flex-col items-center justify-end flex-1 text-center pb-16 px-6">
           <motion.p
-            className="text-white/70 text-[10px] tracking-[0.4em] uppercase mb-4"
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.4 }}
+            className={`text-white/70 text-[10px] tracking-[0.4em] uppercase mb-4 ${alignClass(customConfig?.['invite.heading.align'])}`}
+            {...hAnim}
+            style={hStyle}
           >
             {t('invite.heading', 'We\'re getting married')}
           </motion.p>
           <motion.h1
             className="text-white text-5xl md:text-6xl italic font-normal leading-tight mb-3"
-            initial={{ opacity: 0, y: 14 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.6 }}
+            initial={Object.keys(hAnim.initial).length ? hAnim.initial : { opacity: 0, y: 14 }}
+            animate={Object.keys(hAnim.animate).length ? hAnim.animate : { opacity: 1, y: 0 }}
+            transition={{ ...(Object.keys(hAnim.transition).length ? hAnim.transition : {}), delay: 0.6 }}
+            style={hStyle}
           >
             {wedding.brideName} &amp; {wedding.groomName}
           </motion.h1>
@@ -573,7 +591,7 @@ export default function Template4({
 
           {/* Scroll hint */}
           <motion.button
-            onClick={() => scrollTo('rsvp')}
+            onClick={() => scrollTo(varSections[0] ? `t4-${varSections[0]}` : 'hero')}
             className="flex flex-col items-center gap-1 text-white/40 hover:text-white/70 transition-colors"
             animate={{ y: [0, 6, 0] }}
             transition={{ repeat: Infinity, duration: 2, ease: 'easeInOut' }}
@@ -626,15 +644,48 @@ export default function Template4({
                 <p className="text-[9px] tracking-widest uppercase text-[#8A8A80]">{monthName}</p>
               </div>
             </div>
+            {showIslamicDate && (
+              <p className="text-[10px] tracking-widest text-[#8A8A80] mt-4 text-center">{toHijriString(weddingDate)}</p>
+            )}
           </div>
 
           {/* Invite body */}
           <p
-            className="text-center text-[#4A4A44] text-sm leading-relaxed mb-12"
+            className={`text-[#4A4A44] text-sm leading-relaxed mb-12 ${alignClass(customConfig?.['invite.body.align'])}`}
             dangerouslySetInnerHTML={{
               __html: t('invite.body', 'We joyfully invite you to share in the celebration of our wedding day. Your presence will make this moment unforgettable.'),
             }}
           />
+
+          {/* Walimah / Ceremony details */}
+          {customConfig?.['walimah.body'] && sectionOrder.includes('walimah') && (
+            <div className={`border border-[#E0DFD9] rounded p-6 mb-10 ${alignClass(customConfig?.['walimah.body.align'])}`}>
+              <p className="text-[10px] tracking-[0.35em] uppercase text-[#8A8A80] mb-3">Ceremony Details</p>
+              <div className="text-[#4A4A44] text-sm leading-relaxed prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: customConfig['walimah.body'] }} />
+            </div>
+          )}
+
+          {/* Itinerary */}
+          {itinerary.length > 0 && sectionOrder.includes('itinerary') && (() => {
+            const iAlign = customConfig?.['walimah.body.align'] ?? 'left';
+            return (
+              <div className="border border-[#E0DFD9] rounded p-6 mb-10">
+                <p className={`text-[10px] tracking-[0.35em] uppercase text-[#8A8A80] mb-4 ${alignClass(iAlign)}`}>Schedule</p>
+                <ol className="space-y-4">
+                  {itinerary.map((item) => (
+                    <li key={item.itineraryItemId}
+                      className={`flex gap-4 items-start ${iAlign === 'center' ? 'justify-center' : iAlign === 'right' ? 'justify-end' : ''}`}>
+                      {iAlign === 'left' && <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-[#8A8A80] shrink-0" />}
+                      <div className={alignClass(iAlign)}>
+                        <p className="text-sm text-[#1C1C1A] font-medium">{item.label}</p>
+                        {item.detail && <p className="text-xs text-[#8A8A80] mt-0.5">{item.detail}</p>}
+                      </div>
+                    </li>
+                  ))}
+                </ol>
+              </div>
+            );
+          })()}
 
           {/* Ceremony */}
           <div className="text-center border-t border-[#E0DFD9] pt-10 pb-10">
@@ -699,288 +750,146 @@ export default function Template4({
       </div>
 
       {/* ══════════════════════════════════════
-          SECTION 2 — RSVP (cream)
+          VARIABLE SECTIONS — order driven by section.order
       ══════════════════════════════════════ */}
-      <section id="t4-rsvp" className="bg-[#F7F6F1] py-20 px-6">
-        <div className="max-w-lg mx-auto">
-          <motion.div
-            initial={{ opacity: 0, y: 24 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.5 }}
-          >
-            <div className="text-center mb-10">
-              <p className="text-[10px] tracking-[0.35em] uppercase text-[#8A8A80] mb-2">Kindly reply</p>
-              <h2 className="text-4xl italic font-normal text-[#1C1C1A]">RSVP</h2>
-              <p className="text-sm text-[#8A8A80] mt-2">{t('rsvp.subtitle', 'Will you be joining us?')}</p>
-            </div>
+      {varSections.map((code, idx) => {
+        const prevColor = idx === 0 ? 'dark' : T4_SECTION_COLOR[varSections[idx - 1]];
+        const thisColor = T4_SECTION_COLOR[code];
+        const needsTornEdge = prevColor === 'dark' && thisColor === 'cream';
 
-            <AnimatePresence mode="wait">
-              {rsvpSuccess ? (
-                <motion.div
-                  key="success"
-                  initial={{ opacity: 0, scale: 0.95 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0 }}
-                  className="border border-[#E0DFD9] bg-white p-10 text-center"
-                >
-                  <p className="text-2xl italic text-[#1C1C1A] mb-2">Thank you!</p>
-                  <p className="text-sm text-[#8A8A80]">Your RSVP has been received.</p>
-                </motion.div>
-              ) : rsvpStep === 2 ? (
-                <div key="seating" className="border border-[#E0DFD9] bg-white p-6">
-                  <SeatingStep
-                    tables={tables}
-                    numberOfAttendees={rsvpData.numberOfAttendees}
-                    selectedTableId={selectedTableId}
-                    onSelect={setSelectedTableId}
-                    onBack={() => setRsvpStep(1)}
-                    onSubmit={submitRSVP}
-                    submitting={rsvpSubmitting}
-                    accentClass="bg-[#1C1C1A] hover:bg-[#333]"
-                    accentBorderClass="border-[#1C1C1A] bg-gray-50"
-                  />
+        if (code === 'rsvp') return (
+          <section key="rsvp" id="t4-rsvp" className="bg-[#F7F6F1] py-20 px-6" style={sectionBgStyle(customConfig?.['section.ceremony.bg'], API_BASE)}>
+            {needsTornEdge && <TornEdge fromDark />}
+            <div className="max-w-lg mx-auto">
+              <motion.div initial={{ opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.5 }}>
+                <div className="text-center mb-10">
+                  <p className="text-[10px] tracking-[0.35em] uppercase text-[#8A8A80] mb-2">Kindly reply</p>
+                  <h2 className="text-4xl italic font-normal text-[#1C1C1A]">RSVP</h2>
+                  <p className="text-sm text-[#8A8A80] mt-2">{t('rsvp.subtitle', 'Will you be joining us?')}</p>
                 </div>
-              ) : (
-                <motion.form
-                  key="form"
-                  onSubmit={handleRSVPSubmit}
-                  className="border border-[#E0DFD9] bg-white p-6 space-y-3"
-                >
-                  {/* Attending toggle */}
-                  <div className="flex gap-3">
-                    {[true, false].map((v) => (
-                      <button
-                        key={String(v)}
-                        type="button"
-                        onClick={() => setIsAttending(v)}
-                        className={`flex-1 py-3 text-[10px] tracking-widest uppercase border transition-all ${
-                          isAttending === v
-                            ? 'bg-[#1C1C1A] text-white border-[#1C1C1A]'
-                            : 'text-[#8A8A80] border-[#E0DFD9] hover:border-[#1C1C1A]'
-                        }`}
-                      >
-                        {v ? 'Attending' : 'Not Attending'}
-                      </button>
-                    ))}
-                  </div>
-
-                  {['guestName', 'email', 'phoneNumber'].map((field) => (
-                    <input
-                      key={field}
-                      type={field === 'email' ? 'email' : field === 'phoneNumber' ? 'tel' : 'text'}
-                      placeholder={field === 'guestName' ? 'Your name *' : field === 'email' ? 'Email' : 'Phone'}
-                      required={field === 'guestName'}
-                      value={(rsvpData as any)[field]}
-                      onChange={(e) => setRsvpData({ ...rsvpData, [field]: e.target.value })}
-                      className="w-full border border-[#E0DFD9] px-4 py-3 text-sm text-[#1C1C1A] placeholder-[#B0AFA8] focus:outline-none focus:border-[#1C1C1A] transition-colors"
-                    />
-                  ))}
-
-                  {isAttending && (
-                    <motion.div
-                      initial={{ opacity: 0, height: 0 }}
-                      animate={{ opacity: 1, height: 'auto' }}
-                      className="space-y-3 overflow-hidden"
-                    >
+                <AnimatePresence mode="wait">
+                  {rsvpSuccess ? (
+                    <motion.div key="success" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }} className="border border-[#E0DFD9] bg-white p-10 text-center">
+                      <p className="text-2xl italic text-[#1C1C1A] mb-2">Thank you!</p>
+                      <p className="text-sm text-[#8A8A80]">Your RSVP has been received.</p>
+                    </motion.div>
+                  ) : rsvpStep === 2 ? (
+                    <div key="seating" className="border border-[#E0DFD9] bg-white p-6">
+                      <SeatingStep tables={tables} numberOfAttendees={rsvpData.numberOfAttendees} selectedTableId={selectedTableId} onSelect={setSelectedTableId} onBack={() => setRsvpStep(1)} onSubmit={submitRSVP} submitting={rsvpSubmitting} accentClass="bg-[#1C1C1A] hover:bg-[#333]" accentBorderClass="border-[#1C1C1A] bg-gray-50" />
+                    </div>
+                  ) : (
+                    <motion.form key="form" onSubmit={handleRSVPSubmit} className="border border-[#E0DFD9] bg-white p-6 space-y-3">
                       <div className="flex gap-3">
-                        {['Bride', 'Groom'].map((side) => (
-                          <button
-                            key={side}
-                            type="button"
-                            onClick={() => setRsvpData({ ...rsvpData, brideOrGroomSide: side as 'Bride' | 'Groom' })}
-                            className={`flex-1 py-2.5 text-[10px] tracking-widest uppercase border transition-all ${
-                              rsvpData.brideOrGroomSide === side
-                                ? 'bg-[#1C1C1A] text-white border-[#1C1C1A]'
-                                : 'text-[#8A8A80] border-[#E0DFD9] hover:border-[#1C1C1A]'
-                            }`}
-                          >
-                            {side}&apos;s side
+                        {[true, false].map((v) => (
+                          <button key={String(v)} type="button" onClick={() => setIsAttending(v)} className={`flex-1 py-3 text-[10px] tracking-widest uppercase border transition-all ${isAttending === v ? 'bg-[#1C1C1A] text-white border-[#1C1C1A]' : 'text-[#8A8A80] border-[#E0DFD9] hover:border-[#1C1C1A]'}`}>
+                            {v ? 'Attending' : 'Not Attending'}
                           </button>
                         ))}
                       </div>
-                      <input
-                        type="number" min={1} max={10}
-                        placeholder="Number of guests"
-                        value={rsvpData.numberOfAttendees}
-                        onChange={(e) => setRsvpData({ ...rsvpData, numberOfAttendees: Number(e.target.value) })}
-                        className="w-full border border-[#E0DFD9] px-4 py-3 text-sm text-[#1C1C1A] placeholder-[#B0AFA8] focus:outline-none focus:border-[#1C1C1A] transition-colors"
-                      />
-                      <input
-                        type="text"
-                        placeholder="Song request (optional)"
-                        value={rsvpData.songRequest}
-                        onChange={(e) => setRsvpData({ ...rsvpData, songRequest: e.target.value })}
-                        className="w-full border border-[#E0DFD9] px-4 py-3 text-sm text-[#1C1C1A] placeholder-[#B0AFA8] focus:outline-none focus:border-[#1C1C1A] transition-colors"
-                      />
-                    </motion.div>
-                  )}
-
-                  <button
-                    type="submit"
-                    disabled={rsvpSubmitting}
-                    className="w-full py-3 bg-[#1C1C1A] text-white text-[10px] tracking-widest uppercase hover:bg-[#333] transition-colors disabled:opacity-40 mt-1"
-                  >
-                    {rsvpSubmitting ? 'Sending…' : isAttending && seatingEnabled ? 'Continue →' : 'Send RSVP'}
-                  </button>
-                </motion.form>
-              )}
-            </AnimatePresence>
-          </motion.div>
-        </div>
-      </section>
-
-      {/* ══════════════════════════════════════
-          SECTION 3 — WISHES (dark)
-      ══════════════════════════════════════ */}
-      <section id="t4-wishes" className="bg-[#1C1C1A] py-20 px-6">
-        <div className="max-w-4xl mx-auto">
-          <motion.div
-            initial={{ opacity: 0, y: 24 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.5 }}
-          >
-            <div className="text-center mb-12">
-              <p className="text-[10px] tracking-[0.35em] uppercase text-[#6A6A64] mb-2">Leave a message</p>
-              <h2 className="text-4xl italic font-normal text-white">Wishes</h2>
-              <p className="text-sm text-[#6A6A64] mt-2">{t('wish.prompt', 'Share your love with the happy couple')}</p>
-            </div>
-
-            <div className="grid md:grid-cols-2 gap-8">
-              {/* Submit form */}
-              <div>
-                <AnimatePresence mode="wait">
-                  {wishSuccess ? (
-                    <motion.div
-                      key="sent"
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      exit={{ opacity: 0 }}
-                      className="border border-white/10 p-10 text-center"
-                    >
-                      <p className="text-xl italic text-white">Wish sent!</p>
-                    </motion.div>
-                  ) : (
-                    <motion.form
-                      key="wishform"
-                      onSubmit={handleWishSubmit}
-                      className="space-y-3"
-                    >
-                      <input
-                        type="text"
-                        placeholder="Your name *"
-                        required
-                        value={wishData.guestName}
-                        onChange={(e) => setWishData({ ...wishData, guestName: e.target.value })}
-                        className={inp}
-                      />
-                      <textarea
-                        placeholder="Write your wishes… *"
-                        required
-                        rows={5}
-                        value={wishData.message}
-                        onChange={(e) => setWishData({ ...wishData, message: e.target.value })}
-                        className={`${inp} resize-none`}
-                      />
-                      <button
-                        type="submit"
-                        disabled={wishSubmitting}
-                        className="w-full py-3 border border-white/30 text-white text-[10px] tracking-widest uppercase hover:bg-white hover:text-[#1C1C1A] transition-colors disabled:opacity-40"
-                      >
-                        {wishSubmitting ? 'Sending…' : 'Send Wishes'}
+                      {['guestName', 'email', 'phoneNumber'].map((field) => (
+                        <input key={field} type={field === 'email' ? 'email' : field === 'phoneNumber' ? 'tel' : 'text'} placeholder={field === 'guestName' ? 'Your name *' : field === 'email' ? 'Email' : 'Phone'} required={field === 'guestName'} value={(rsvpData as any)[field]} onChange={(e) => setRsvpData({ ...rsvpData, [field]: e.target.value })} className="w-full border border-[#E0DFD9] px-4 py-3 text-sm text-[#1C1C1A] placeholder-[#B0AFA8] focus:outline-none focus:border-[#1C1C1A] transition-colors" />
+                      ))}
+                      {isAttending && (
+                        <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="space-y-3 overflow-hidden">
+                          <div className="flex gap-3">
+                            {['Bride', 'Groom'].map((side) => (
+                              <button key={side} type="button" onClick={() => setRsvpData({ ...rsvpData, brideOrGroomSide: side as 'Bride' | 'Groom' })} className={`flex-1 py-2.5 text-[10px] tracking-widest uppercase border transition-all ${rsvpData.brideOrGroomSide === side ? 'bg-[#1C1C1A] text-white border-[#1C1C1A]' : 'text-[#8A8A80] border-[#E0DFD9] hover:border-[#1C1C1A]'}`}>
+                                {side}&apos;s side
+                              </button>
+                            ))}
+                          </div>
+                          <input type="number" min={1} max={10} placeholder="Number of guests" value={rsvpData.numberOfAttendees} onChange={(e) => setRsvpData({ ...rsvpData, numberOfAttendees: Number(e.target.value) })} className="w-full border border-[#E0DFD9] px-4 py-3 text-sm text-[#1C1C1A] placeholder-[#B0AFA8] focus:outline-none focus:border-[#1C1C1A] transition-colors" />
+                          <input type="text" placeholder="Song request (optional)" value={rsvpData.songRequest} onChange={(e) => setRsvpData({ ...rsvpData, songRequest: e.target.value })} className="w-full border border-[#E0DFD9] px-4 py-3 text-sm text-[#1C1C1A] placeholder-[#B0AFA8] focus:outline-none focus:border-[#1C1C1A] transition-colors" />
+                        </motion.div>
+                      )}
+                      <button type="submit" disabled={rsvpSubmitting} className="w-full py-3 bg-[#1C1C1A] text-white text-[10px] tracking-widest uppercase hover:bg-[#333] transition-colors disabled:opacity-40 mt-1">
+                        {rsvpSubmitting ? 'Sending…' : isAttending && seatingEnabled ? 'Continue →' : 'Send RSVP'}
                       </button>
                     </motion.form>
                   )}
                 </AnimatePresence>
-              </div>
+              </motion.div>
+            </div>
+          </section>
+        );
 
-              {/* Wishes wall */}
-              <div className="space-y-4 max-h-96 overflow-y-auto pr-1" style={{ scrollbarWidth: 'none' }}>
-                {wishes.length === 0 && (
-                  <p className="text-[#6A6A64] text-sm text-center pt-10">Be the first to leave a wish.</p>
-                )}
-                {wishes.map((wish) => (
-                  <motion.div
-                    key={wish.wishId}
-                    initial={{ opacity: 0, x: 12 }}
-                    whileInView={{ opacity: 1, x: 0 }}
-                    viewport={{ once: true }}
-                    className="border border-white/10 p-5"
-                  >
-                    <p className="text-white/80 text-sm italic leading-relaxed">&ldquo;{wish.message}&rdquo;</p>
-                    <p className="text-[#6A6A64] text-[10px] tracking-widest uppercase mt-3">— {wish.guestName}</p>
-                  </motion.div>
-                ))}
+        if (code === 'wishes') return (
+          <section key="wishes" id="t4-wishes" className="bg-[#1C1C1A] py-20 px-6" style={sectionBgStyle(customConfig?.['section.celebration.bg'], API_BASE)}>
+            {needsTornEdge && <TornEdge fromDark={false} />}
+            <div className="max-w-4xl mx-auto">
+              <motion.div initial={{ opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.5 }}>
+                <div className="text-center mb-12">
+                  <p className="text-[10px] tracking-[0.35em] uppercase text-[#6A6A64] mb-2">Leave a message</p>
+                  <h2 className="text-4xl italic font-normal text-white">Wishes</h2>
+                  <p className="text-sm text-[#6A6A64] mt-2">{t('wish.prompt', 'Share your love with the happy couple')}</p>
+                </div>
+                <div className="grid md:grid-cols-2 gap-8">
+                  <div>
+                    <AnimatePresence mode="wait">
+                      {wishSuccess ? (
+                        <motion.div key="sent" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="border border-white/10 p-10 text-center">
+                          <p className="text-xl italic text-white">Wish sent!</p>
+                        </motion.div>
+                      ) : (
+                        <motion.form key="wishform" onSubmit={handleWishSubmit} className="space-y-3">
+                          <input type="text" placeholder="Your name *" required value={wishData.guestName} onChange={(e) => setWishData({ ...wishData, guestName: e.target.value })} className={inp} />
+                          <textarea placeholder="Write your wishes… *" required rows={5} value={wishData.message} onChange={(e) => setWishData({ ...wishData, message: e.target.value })} className={`${inp} resize-none`} />
+                          <button type="submit" disabled={wishSubmitting} className="w-full py-3 border border-white/30 text-white text-[10px] tracking-widest uppercase hover:bg-white hover:text-[#1C1C1A] transition-colors disabled:opacity-40">
+                            {wishSubmitting ? 'Sending…' : 'Send Wishes'}
+                          </button>
+                        </motion.form>
+                      )}
+                    </AnimatePresence>
+                  </div>
+                  <div className="space-y-4 max-h-96 overflow-y-auto pr-1" style={{ scrollbarWidth: 'none' }}>
+                    {wishes.length === 0 && <p className="text-[#6A6A64] text-sm text-center pt-10">Be the first to leave a wish.</p>}
+                    {wishes.map((wish) => (
+                      <motion.div key={wish.wishId} initial={{ opacity: 0, x: 12 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }} className="border border-white/10 p-5">
+                        <p className="text-white/80 text-sm italic leading-relaxed">&ldquo;{wish.message}&rdquo;</p>
+                        <p className="text-[#6A6A64] text-[10px] tracking-widest uppercase mt-3">— {wish.guestName}</p>
+                      </motion.div>
+                    ))}
+                  </div>
+                </div>
+              </motion.div>
+            </div>
+          </section>
+        );
+
+        if (code === 'photobooth' && photoBoothEnabled) return (
+          <section key="photobooth" id="t4-photobooth" className="bg-[#F7F6F1]">
+            {needsTornEdge && <TornEdge fromDark />}
+            <div className="py-20 px-6">
+              <div className="max-w-lg mx-auto">
+                <motion.div initial={{ opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.5 }}>
+                  <div className="text-center mb-12">
+                    <p className="text-[10px] tracking-[0.35em] uppercase text-[#8A8A80] mb-2">Capture the moment</p>
+                    <h2 className="text-4xl italic font-normal text-[#1C1C1A]">Photo Booth</h2>
+                    <p className="text-[10px] text-[#B0AFA8] tracking-wider mt-2 uppercase">Swipe left or right to browse</p>
+                  </div>
+                  <div className="flex flex-col items-center">
+                    <CardStack cards={cards} onSwipe={handleSwipe} />
+                    {cards.length > 1 && (
+                      <div className="flex items-center gap-6 mt-8">
+                        <button onClick={swipeRight} className="w-10 h-10 border border-[#D0CFC8] flex items-center justify-center text-[#8A8A80] hover:border-[#1C1C1A] hover:text-[#1C1C1A] transition-colors"><IcoChevronLeft /></button>
+                        <span className="text-[10px] tracking-widest text-[#B0AFA8] uppercase">{cards.length} photo{cards.length !== 1 ? 's' : ''}</span>
+                        <button onClick={swipeLeft} className="w-10 h-10 border border-[#D0CFC8] flex items-center justify-center text-[#8A8A80] hover:border-[#1C1C1A] hover:text-[#1C1C1A] transition-colors"><IcoChevronRight /></button>
+                      </div>
+                    )}
+                    {onUploadPhoto && (
+                      <button onClick={() => setShowUpload(true)} className="mt-8 flex items-center gap-2 border border-[#1C1C1A] px-6 py-2.5 text-[10px] tracking-widest uppercase text-[#1C1C1A] hover:bg-[#1C1C1A] hover:text-white transition-colors">
+                        <IcoCamera /> Add your photo
+                      </button>
+                    )}
+                  </div>
+                </motion.div>
               </div>
             </div>
-          </motion.div>
-        </div>
-      </section>
+          </section>
+        );
 
-      {/* ══════════════════════════════════════
-          SECTION 4 — PHOTO BOOTH (cream)
-      ══════════════════════════════════════ */}
-      {photoBoothEnabled && (
-        <section id="t4-photos" className="bg-[#F7F6F1]">
-          {/* TornEdge outside padding so the transition is flush with the dark section above */}
-          <TornEdge fromDark />
-          <div className="py-20 px-6">
-          <div className="max-w-lg mx-auto">
-            <motion.div
-              initial={{ opacity: 0, y: 24 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.5 }}
-            >
-              <div className="text-center mb-12">
-                <p className="text-[10px] tracking-[0.35em] uppercase text-[#8A8A80] mb-2">Capture the moment</p>
-                <h2 className="text-4xl italic font-normal text-[#1C1C1A]">Photo Booth</h2>
-                <p className="text-[10px] text-[#B0AFA8] tracking-wider mt-2 uppercase">
-                  Swipe left or right to browse
-                </p>
-              </div>
-
-              {/* Card Stack */}
-              <div className="flex flex-col items-center">
-                <CardStack cards={cards} onSwipe={handleSwipe} />
-
-                {/* Navigation arrows + counter */}
-                {cards.length > 1 && (
-                  <div className="flex items-center gap-6 mt-8">
-                    <button
-                      onClick={swipeRight}
-                      className="w-10 h-10 border border-[#D0CFC8] flex items-center justify-center text-[#8A8A80] hover:border-[#1C1C1A] hover:text-[#1C1C1A] transition-colors"
-                    >
-                      <IcoChevronLeft />
-                    </button>
-                    <span className="text-[10px] tracking-widest text-[#B0AFA8] uppercase">
-                      {cards.length} photo{cards.length !== 1 ? 's' : ''}
-                    </span>
-                    <button
-                      onClick={swipeLeft}
-                      className="w-10 h-10 border border-[#D0CFC8] flex items-center justify-center text-[#8A8A80] hover:border-[#1C1C1A] hover:text-[#1C1C1A] transition-colors"
-                    >
-                      <IcoChevronRight />
-                    </button>
-                  </div>
-                )}
-
-                {/* Upload button */}
-                {onUploadPhoto && (
-                  <button
-                    onClick={() => setShowUpload(true)}
-                    className="mt-8 flex items-center gap-2 border border-[#1C1C1A] px-6 py-2.5 text-[10px] tracking-widest uppercase text-[#1C1C1A] hover:bg-[#1C1C1A] hover:text-white transition-colors"
-                  >
-                    <IcoCamera /> Add your photo
-                  </button>
-                )}
-              </div>
-            </motion.div>
-          </div>
-          </div>
-        </section>
-      )}
+        return null;
+      })}
 
       {/* Footer */}
       <div className="bg-[#F7F6F1] border-t border-[#E0DFD9] py-10 text-center">

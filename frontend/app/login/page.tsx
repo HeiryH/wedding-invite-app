@@ -94,7 +94,7 @@ export default function LoginPage() {
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-rose-400 focus:outline-none transition-colors"
+              className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg text-gray-900 focus:border-rose-400 focus:outline-none transition-colors"
               placeholder="admin@wedding-cms.com"
               required
               disabled={loading}
@@ -109,7 +109,7 @@ export default function LoginPage() {
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-rose-400 focus:outline-none transition-colors"
+              className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg text-gray-900 focus:border-rose-400 focus:outline-none transition-colors"
               placeholder="••••••••"
               required
               disabled={loading}

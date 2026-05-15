@@ -2,22 +2,25 @@
 
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Wedding, Wish, Photo, SeatingTable } from '@/lib/api';
+import { Wedding, Guest, Wish, Photo, SeatingTable, ItineraryItem } from '@/lib/api';
 import SeatingStep from './SeatingStep';
+import { toHijriString, alignClass, headingStyle, headingAnimationProps, sectionBgStyle, resolveSectionOrder, type SectionCode } from '@/lib/templateUtils';
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL?.replace('/api', '') ?? 'http://localhost:5000';
+const API_BASE = process.env.NEXT_PUBLIC_API_URL?.replace('/api', '') ?? '';
 
 interface Template2Props {
     wedding: Wedding;
     onRSVP: (data: any) => Promise<void>;
     onSubmitWish: (data: any) => Promise<void>;
     onUploadPhoto?: (data: any) => Promise<void>;
+    guests?: Guest[];
     wishes: Wish[];
     photos: Photo[];
     photoBoothEnabled: boolean;
     seatingEnabled?: boolean;
     tables?: SeatingTable[];
     customConfig?: Record<string, string>;
+    itinerary?: ItineraryItem[];
 }
 
 export default function Template2({
@@ -31,11 +34,31 @@ export default function Template2({
     seatingEnabled = false,
     tables = [],
     customConfig,
+    itinerary = [],
 }: Template2Props) {
     const t = (key: string, fallback: string) => customConfig?.[key] || fallback;
-    const [activeSection, setActiveSection] = useState<
-        'invitation' | 'rsvp' | 'wishes' | 'photos'
-    >('invitation');
+    const showIslamicDate = customConfig?.['general.showIslamicDate'] === 'true';
+    const hStyle = headingStyle(customConfig);
+    const hAnim = headingAnimationProps(customConfig);
+    const sectionOrder = resolveSectionOrder(
+        customConfig?.['section.order'],
+        !!customConfig?.['walimah.body'],
+        itinerary.length > 0,
+        photoBoothEnabled,
+    );
+    const NAV_ICONS: Record<SectionCode, string> = {
+        welcome: '💍', walimah: '🕌', rsvp: '✉️',
+        itinerary: '📋', wishes: '✨', photobooth: '📸',
+    };
+    const NAV_LABELS: Record<SectionCode, string> = {
+        welcome: t('nav.invite', 'Invite'),
+        walimah: t('nav.walimah', 'Ceremony'),
+        rsvp: t('nav.rsvp', 'RSVP'),
+        itinerary: t('nav.itinerary', 'Schedule'),
+        wishes: t('nav.wishes', 'Wishes'),
+        photobooth: t('nav.photos', 'Photos'),
+    };
+    const [activeSection, setActiveSection] = useState<SectionCode>('welcome');
     const [showNav, setShowNav] = useState(true);
 
     const weddingDate = new Date(wedding.weddingDate);
@@ -74,33 +97,29 @@ export default function Template2({
     const [photoSuccess, setPhotoSuccess] = useState(false);
 
     // Scroll to section
-    const scrollToSection = (section: typeof activeSection) => {
-        setActiveSection(section);
-        const element = document.getElementById(section);
-        element?.scrollIntoView({ behavior: 'smooth' });
+    const scrollToSection = (code: SectionCode) => {
+        setActiveSection(code);
+        document.getElementById(code)?.scrollIntoView({ behavior: 'smooth' });
     };
 
     // Handle scroll spy
     useEffect(() => {
         const handleScroll = () => {
-            const sections = ['invitation', 'rsvp', 'wishes', 'photos'];
             const scrollPosition = window.scrollY + 200;
-
-            for (const section of sections) {
-                const element = document.getElementById(section);
+            for (const code of sectionOrder) {
+                const element = document.getElementById(code);
                 if (element) {
                     const { offsetTop, offsetHeight } = element;
                     if (scrollPosition >= offsetTop && scrollPosition < offsetTop + offsetHeight) {
-                        setActiveSection(section as any);
+                        setActiveSection(code);
                         break;
                     }
                 }
             }
         };
-
         window.addEventListener('scroll', handleScroll);
         return () => window.removeEventListener('scroll', handleScroll);
-    }, []);
+    }, [sectionOrder.join(',')]);
 
     const submitRSVP = async () => {
         setRsvpSubmitting(true);
@@ -185,7 +204,7 @@ export default function Template2({
 
     return (
         <>
-        <div className="min-h-screen bg-gradient-to-br from-yellow-50 via-amber-50 to-orange-50">
+        <div className="flex flex-col bg-gradient-to-br from-yellow-50 via-amber-50 to-orange-50">
             {/* Floating Navigation */}
             <AnimatePresence>
                 {showNav && (
@@ -195,15 +214,10 @@ export default function Template2({
                         exit={{ opacity: 0, x: 50 }}
                         className="fixed right-8 top-1/2 transform -translate-y-1/2 z-50 flex flex-col gap-4"
                     >
-                        {[
-                            { id: 'invitation', label: '💍', name: t('nav.invite', 'Invite') },
-                            { id: 'rsvp', label: '✉️', name: t('nav.rsvp', 'RSVP') },
-                            { id: 'wishes', label: '✨', name: t('nav.wishes', 'Wishes') },
-                            ...(photoBoothEnabled ? [{ id: 'photos', label: '📸', name: t('nav.photos', 'Photos') }] : []),
-                        ].map((item) => (
+                        {sectionOrder.map((code) => ({ id: code, label: NAV_ICONS[code], name: NAV_LABELS[code] })).map((item) => (
                             <motion.button
                                 key={item.id}
-                                onClick={() => scrollToSection(item.id as any)}
+                                onClick={() => scrollToSection(item.id as SectionCode)}
                                 whileHover={{ scale: 1.1 }}
                                 whileTap={{ scale: 0.9 }}
                                 className={`group relative w-14 h-14 rounded-full shadow-lg transition-all ${activeSection === item.id
@@ -221,10 +235,11 @@ export default function Template2({
                 )}
             </AnimatePresence>
 
-            {/* Section 1: Invitation */}
+            {/* Section: Welcome */}
             <section
-                id="invitation"
+                id="welcome"
                 className="min-h-screen flex items-center justify-center px-4 py-20"
+                style={{ order: sectionOrder.indexOf('welcome'), ...sectionBgStyle(customConfig?.['section.welcome.bg'], API_BASE) }}
             >
                 <motion.div
                     initial={{ opacity: 0, y: 50 }}
@@ -244,19 +259,18 @@ export default function Template2({
 
                     {/* You're Invited */}
                     <motion.p
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        transition={{ delay: 0.5 }}
-                        className="text-amber-700 text-sm uppercase tracking-widest mb-6 font-semibold"
+                        {...hAnim}
+                        className={`text-amber-700 text-sm uppercase tracking-widest mb-6 font-semibold ${alignClass(customConfig?.['invite.heading.align'])}`}
+                        style={hStyle}
                     >
                         {t('invite.heading', "You're Cordially Invited to Celebrate")}
                     </motion.p>
 
                     {/* Couple Names */}
                     <motion.h1
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.7 }}
+                        initial={Object.keys(hAnim.initial).length ? hAnim.initial : { opacity: 0, y: 20 }}
+                        animate={Object.keys(hAnim.animate).length ? hAnim.animate : { opacity: 1, y: 0 }}
+                        transition={{ ...(Object.keys(hAnim.transition).length ? hAnim.transition : {}), delay: 0.7 }}
                         className="text-6xl md:text-8xl font-serif font-bold bg-gradient-to-r from-yellow-600 via-amber-600 to-orange-600 bg-clip-text text-transparent mb-4"
                     >
                         {wedding.brideName}
@@ -272,9 +286,9 @@ export default function Template2({
                     </motion.div>
 
                     <motion.h1
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 1.1 }}
+                        initial={Object.keys(hAnim.initial).length ? hAnim.initial : { opacity: 0, y: 20 }}
+                        animate={Object.keys(hAnim.animate).length ? hAnim.animate : { opacity: 1, y: 0 }}
+                        transition={{ ...(Object.keys(hAnim.transition).length ? hAnim.transition : {}), delay: 1.1 }}
                         className="text-6xl md:text-8xl font-serif font-bold bg-gradient-to-r from-yellow-600 via-amber-600 to-orange-600 bg-clip-text text-transparent mb-8"
                     >
                         {wedding.groomName}
@@ -284,7 +298,7 @@ export default function Template2({
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         transition={{ delay: 1.2 }}
-                        className="text-gray-600 text-lg mb-12 max-w-md mx-auto"
+                        className={`text-gray-600 text-lg mb-12 max-w-md mx-auto ${alignClass(customConfig?.['invite.body.align'])}`}
                         dangerouslySetInnerHTML={{ __html: t('invite.body', 'We joyfully invite you to share in the celebration of our wedding') }}
                     />
 
@@ -313,6 +327,11 @@ export default function Template2({
                                     minute: '2-digit',
                                 })}
                             </p>
+                            {showIslamicDate && (
+                                <p className="text-sm text-amber-500 mt-1 tracking-wide">
+                                    {toHijriString(weddingDate)}
+                                </p>
+                            )}
                         </div>
 
                         <div className="h-px bg-gradient-to-r from-transparent via-amber-300 to-transparent mb-8" />
@@ -339,7 +358,6 @@ export default function Template2({
                         </div>
                     </motion.div>
 
-                    {/* Scroll Indicator */}
                     <motion.div
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
@@ -358,10 +376,78 @@ export default function Template2({
                 </motion.div>
             </section>
 
-            {/* Section 2: RSVP */}
+            {/* Section: Walimah */}
+            {sectionOrder.includes('walimah') && (
+                <section
+                    id="walimah"
+                    className="flex items-center justify-center px-4 py-20"
+                    style={{ order: sectionOrder.indexOf('walimah') }}
+                >
+                    <motion.div
+                        initial={{ opacity: 0, y: 50 }}
+                        whileInView={{ opacity: 1, y: 0 }}
+                        viewport={{ once: true }}
+                        transition={{ duration: 0.6 }}
+                        className={`w-full max-w-2xl bg-white/80 backdrop-blur-sm rounded-3xl border-2 border-amber-200 p-8 ${alignClass(customConfig?.['walimah.body.align'])}`}
+                    >
+                        <h2 className="text-3xl font-bold bg-gradient-to-r from-yellow-600 to-amber-600 bg-clip-text text-transparent mb-4">
+                            Ceremony Details
+                        </h2>
+                        <div
+                            className="text-gray-600 prose prose-sm max-w-none"
+                            dangerouslySetInnerHTML={{ __html: customConfig?.['walimah.body'] ?? '' }}
+                        />
+                    </motion.div>
+                </section>
+            )}
+
+            {/* Section: Itinerary */}
+            {sectionOrder.includes('itinerary') && (
+                <section
+                    id="itinerary"
+                    className="flex items-center justify-center px-4 py-20"
+                    style={{ order: sectionOrder.indexOf('itinerary') }}
+                >
+                    <motion.div
+                        initial={{ opacity: 0, y: 50 }}
+                        whileInView={{ opacity: 1, y: 0 }}
+                        viewport={{ once: true }}
+                        transition={{ duration: 0.6 }}
+                        className="w-full max-w-2xl bg-white/80 backdrop-blur-sm rounded-3xl border-2 border-amber-200 p-8"
+                    >
+                        {(() => {
+                            const iAlign = customConfig?.['walimah.body.align'] ?? 'left';
+                            return (
+                                <>
+                                    <h2 className={`text-3xl font-bold bg-gradient-to-r from-yellow-600 to-amber-600 bg-clip-text text-transparent mb-6 ${alignClass(iAlign)}`}>
+                                        Schedule
+                                    </h2>
+                                    <ol className="space-y-3">
+                                        {itinerary.map((item) => (
+                                            <li
+                                                key={item.itineraryItemId}
+                                                className={`flex gap-4 items-start ${iAlign === 'center' ? 'justify-center' : iAlign === 'right' ? 'justify-end' : ''}`}
+                                            >
+                                                {iAlign === 'left' && <span className="mt-1.5 w-2 h-2 rounded-full bg-amber-400 shrink-0" />}
+                                                <div className={alignClass(iAlign)}>
+                                                    <p className="font-semibold text-gray-800">{item.label}</p>
+                                                    {item.detail && <p className="text-sm text-gray-500">{item.detail}</p>}
+                                                </div>
+                                            </li>
+                                        ))}
+                                    </ol>
+                                </>
+                            );
+                        })()}
+                    </motion.div>
+                </section>
+            )}
+
+            {/* Section: RSVP */}
             <section
                 id="rsvp"
                 className="min-h-screen flex items-center justify-center px-4 py-20"
+                style={{ order: sectionOrder.indexOf('rsvp'), ...sectionBgStyle(customConfig?.['section.ceremony.bg'], API_BASE) }}
             >
                 <motion.div
                     initial={{ opacity: 0, y: 50 }}
@@ -572,10 +658,11 @@ export default function Template2({
                 </motion.div>
             </section>
 
-            {/* Section 3: Wishes */}
+            {/* Section: Wishes */}
             <section
                 id="wishes"
                 className="min-h-screen flex items-center justify-center px-4 py-20"
+                style={{ order: sectionOrder.indexOf('wishes'), ...sectionBgStyle(customConfig?.['section.celebration.bg'], API_BASE) }}
             >
                 <motion.div
                     initial={{ opacity: 0, y: 50 }}
@@ -677,11 +764,12 @@ export default function Template2({
                 </motion.div>
             </section>
 
-            {/* Section 4: Photos (if enabled) */}
-            {photoBoothEnabled && (
+            {/* Section: Photos (if enabled) */}
+            {photoBoothEnabled && sectionOrder.includes('photobooth') && (
                 <section
-                    id="photos"
+                    id="photobooth"
                     className="min-h-screen flex items-center justify-center px-4 py-20"
+                    style={{ order: sectionOrder.indexOf('photobooth') }}
                 >
                     <motion.div
                         initial={{ opacity: 0, y: 50 }}

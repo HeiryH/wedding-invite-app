@@ -3,10 +3,11 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
-import { Wedding, Wish, Photo, SeatingTable } from '@/lib/api';
+import { Wedding, Wish, Photo, SeatingTable, ItineraryItem } from '@/lib/api';
 import SeatingStep from './SeatingStep';
+import { toHijriString, alignClass, headingStyle, headingAnimationProps, sectionBgStyle, resolveSectionOrder, type SectionCode } from '@/lib/templateUtils';
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL?.replace('/api', '') ?? 'http://localhost:5000';
+const API_BASE = process.env.NEXT_PUBLIC_API_URL?.replace('/api', '') ?? '';
 
 interface Template1Props {
   wedding: Wedding;
@@ -19,9 +20,8 @@ interface Template1Props {
   seatingEnabled?: boolean;
   tables?: SeatingTable[];
   customConfig?: Record<string, string>;
+  itinerary?: ItineraryItem[];
 }
-
-type Section = 'invitation' | 'rsvp' | 'wishes' | 'photos';
 
 export default function Template1({
   wedding,
@@ -34,9 +34,27 @@ export default function Template1({
   seatingEnabled = false,
   tables = [],
   customConfig,
+  itinerary = [],
 }: Template1Props) {
   const t = (key: string, fallback: string) => customConfig?.[key] || fallback;
-  const [activeSection, setActiveSection] = useState<Section>('invitation');
+  const showIslamicDate = customConfig?.['general.showIslamicDate'] === 'true';
+  const hStyle = headingStyle(customConfig);
+  const hAnim = headingAnimationProps(customConfig);
+  const sectionOrder = resolveSectionOrder(
+    customConfig?.['section.order'],
+    !!customConfig?.['walimah.body'],
+    itinerary.length > 0,
+    photoBoothEnabled,
+  );
+  const NAV_LABELS: Record<SectionCode, string> = {
+    welcome: t('nav.invite', 'Invitation'),
+    walimah: t('nav.walimah', 'Ceremony'),
+    rsvp: t('nav.rsvp', 'RSVP'),
+    itinerary: t('nav.itinerary', 'Schedule'),
+    wishes: t('nav.wishes', 'Wishes'),
+    photobooth: t('nav.photos', 'Photos'),
+  };
+  const [activeSection, setActiveSection] = useState<SectionCode>('welcome');
 
   // RSVP Form State
   const [rsvpStep, setRsvpStep] = useState<1 | 2>(1);
@@ -73,13 +91,7 @@ export default function Template1({
 
   const weddingDate = new Date(wedding.weddingDate);
 
-  // Navigation items
-  const navItems: { name: string; section: Section }[] = [
-    { name: t('nav.invite', 'Invitation'), section: 'invitation' },
-    { name: t('nav.rsvp', 'RSVP'), section: 'rsvp' },
-    { name: t('nav.wishes', 'Wishes'), section: 'wishes' },
-    ...(photoBoothEnabled ? [{ name: t('nav.photos', 'Photos'), section: 'photos' as Section }] : []),
-  ];
+  const navItems = sectionOrder.map((code) => ({ name: NAV_LABELS[code], section: code }));
 
   const goToSeating = () => setRsvpStep(2);
   const goBackToForm = () => setRsvpStep(1);
@@ -242,17 +254,19 @@ export default function Template1({
       {/* Content */}
       <main className="max-w-4xl mx-auto px-4 py-12">
         <AnimatePresence mode="wait">
-          {/* Invitation Section */}
-          {activeSection === 'invitation' && (
+          {/* Welcome Section */}
+          {activeSection === 'welcome' && (
             <motion.div
               key="invitation"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
               transition={{ duration: 0.3 }}
+              style={sectionBgStyle(customConfig?.['section.welcome.bg'], API_BASE)}
+              className="rounded-2xl"
             >
               {/* Hero Section */}
-              <div className="text-center mb-16">
+              <div className={`mb-16 ${alignClass(customConfig?.['invite.heading.align'])}`}>
                 <motion.div
                   initial={{ scale: 0 }}
                   animate={{ scale: 1 }}
@@ -262,21 +276,35 @@ export default function Template1({
                   💍
                 </motion.div>
 
-                <p className="text-rose-600 text-sm uppercase tracking-widest mb-4 font-semibold">
+                <motion.p
+                  {...hAnim}
+                  className="text-rose-600 text-sm uppercase tracking-widest mb-4 font-semibold"
+                  style={hStyle}
+                >
                   {t('invite.heading', "You're Invited to the Wedding of")}
-                </p>
+                </motion.p>
 
-                <h1 className="text-5xl md:text-7xl font-serif font-bold text-gray-800 mb-2">
+                <motion.h1
+                  {...hAnim}
+                  transition={{ ...hAnim.transition, delay: Number(hAnim.transition?.delay ?? 0) + 0.2 }}
+                  className="text-5xl md:text-7xl font-serif font-bold text-gray-800 mb-2"
+                  style={hStyle}
+                >
                   {wedding.brideName}
-                </h1>
+                </motion.h1>
 
                 <div className="text-4xl md:text-5xl text-rose-400 my-4">&</div>
 
-                <h1 className="text-5xl md:text-7xl font-serif font-bold text-gray-800">
+                <motion.h1
+                  {...hAnim}
+                  transition={{ ...hAnim.transition, delay: Number(hAnim.transition?.delay ?? 0) + 0.4 }}
+                  className="text-5xl md:text-7xl font-serif font-bold text-gray-800"
+                  style={hStyle}
+                >
                   {wedding.groomName}
-                </h1>
+                </motion.h1>
                 <p
-                  className="text-gray-600 text-lg mt-6 max-w-md mx-auto"
+                  className={`text-gray-600 text-lg mt-6 max-w-md mx-auto ${alignClass(customConfig?.['invite.body.align'])}`}
                   dangerouslySetInnerHTML={{ __html: t('invite.body', 'We joyfully invite you to share in the celebration of our wedding') }}
                 />
               </div>
@@ -301,6 +329,11 @@ export default function Template1({
                       minute: '2-digit',
                     })}
                   </p>
+                  {showIslamicDate && (
+                    <p className="text-sm text-rose-400 mt-1 tracking-wide">
+                      {toHijriString(weddingDate)}
+                    </p>
+                  )}
                 </div>
 
                 <div className="h-px bg-gradient-to-r from-transparent via-rose-200 to-transparent mb-8" />
@@ -358,6 +391,59 @@ export default function Template1({
             </motion.div>
           )}
 
+          {/* Walimah Section */}
+          {activeSection === 'walimah' && (
+            <motion.div
+              key="walimah"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              transition={{ duration: 0.3 }}
+              className={`bg-white rounded-2xl shadow-md p-8 ${alignClass(customConfig?.['walimah.body.align'])}`}
+            >
+              <h2 className="text-3xl font-bold text-rose-500 mb-6">Ceremony Details</h2>
+              <div
+                className="text-gray-600 prose prose-sm max-w-none"
+                dangerouslySetInnerHTML={{ __html: customConfig?.['walimah.body'] ?? '' }}
+              />
+            </motion.div>
+          )}
+
+          {/* Itinerary Section */}
+          {activeSection === 'itinerary' && (
+            <motion.div
+              key="itinerary"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              transition={{ duration: 0.3 }}
+              className="bg-white rounded-2xl shadow-md p-8"
+            >
+              {(() => {
+                const iAlign = customConfig?.['walimah.body.align'] ?? 'left';
+                return (
+                  <>
+                    <h2 className={`text-3xl font-bold text-rose-500 mb-6 ${alignClass(iAlign)}`}>Schedule</h2>
+                    <ol className="space-y-3">
+                      {itinerary.map((item) => (
+                        <li
+                          key={item.itineraryItemId}
+                          className={`flex gap-4 items-start ${iAlign === 'center' ? 'justify-center' : iAlign === 'right' ? 'justify-end' : ''}`}
+                        >
+                          {iAlign === 'left' && <span className="mt-1 w-2 h-2 rounded-full bg-rose-400 shrink-0" />}
+                          <div className={alignClass(iAlign)}>
+                            <p className="font-semibold text-gray-800">{item.label}</p>
+                            {item.detail && <p className="text-sm text-gray-500">{item.detail}</p>}
+                          </div>
+                        </li>
+                      ))}
+                    </ol>
+                  </>
+                );
+              })()}
+            </motion.div>
+          )}
+
           {/* RSVP Section */}
           {activeSection === 'rsvp' && (
             <motion.div
@@ -366,7 +452,8 @@ export default function Template1({
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
               transition={{ duration: 0.3 }}
-              className="max-w-2xl mx-auto"
+              className="max-w-2xl mx-auto rounded-2xl"
+              style={sectionBgStyle(customConfig?.['section.ceremony.bg'], API_BASE)}
             >
               <div className="text-center mb-8">
                 <h2 className="text-4xl font-bold text-gray-800 mb-2">RSVP</h2>
@@ -576,6 +663,8 @@ export default function Template1({
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
               transition={{ duration: 0.3 }}
+              style={sectionBgStyle(customConfig?.['section.celebration.bg'], API_BASE)}
+              className="rounded-2xl"
             >
               <div className="text-center mb-12">
                 <h2 className="text-4xl font-bold text-gray-800 mb-2">
@@ -673,7 +762,7 @@ export default function Template1({
           )}
 
           {/* Photos Section */}
-      {activeSection === 'photos' && photoBoothEnabled && (
+      {activeSection === 'photobooth' && photoBoothEnabled && (
         <motion.div
           key="photos"
           initial={{ opacity: 0, y: 20 }}

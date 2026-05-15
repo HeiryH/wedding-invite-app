@@ -9,10 +9,12 @@ import {
   weddingFeatureService,
   templateConfigService,
   tableService,
+  itineraryService,
   Wedding,
   Wish,
   Photo,
   SeatingTable,
+  ItineraryItem,
   guestService,
 } from '@/lib/api';
 
@@ -31,6 +33,7 @@ export default function WeddingInvitationPage() {
   const [photoBoothEnabled, setPhotoBoothEnabled] = useState(false);
   const [seatingEnabled, setSeatingEnabled] = useState(false);
   const [tables, setTables] = useState<SeatingTable[]>([]);
+  const [itinerary, setItinerary] = useState<ItineraryItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [currentTemplateId, setCurrentTemplateId] = useState<number | null>(null);
@@ -91,6 +94,11 @@ export default function WeddingInvitationPage() {
         // Fetch template config (customized text)
         templateConfigService.getByWeddingId(weddingData.weddingId)
           .then(setCustomConfig)
+          .catch(() => {});
+
+        // Fetch itinerary (public endpoint)
+        itineraryService.getByWeddingId(weddingData.weddingId)
+          .then(setItinerary)
           .catch(() => {});
       } catch (err: any) {
         setError(err.response?.data?.message || 'Failed to load wedding');
@@ -187,6 +195,7 @@ export default function WeddingInvitationPage() {
           tables={tables}
           coupleMedia={coupleMedia}
           customConfig={customConfig}
+          itinerary={itinerary}
         />
       </div>
     </>
@@ -207,6 +216,7 @@ function TemplateRenderer({
   tables,
   coupleMedia,
   customConfig,
+  itinerary,
 }: {
   templateId: number;
   wedding: Wedding;
@@ -220,6 +230,7 @@ function TemplateRenderer({
   tables: SeatingTable[];
   coupleMedia?: Photo[];
   customConfig?: Record<string, string>;
+  itinerary?: ItineraryItem[];
 }) {
   const [TemplateComponent, setTemplateComponent] = useState<any>(null);
 
@@ -264,6 +275,7 @@ function TemplateRenderer({
       tables={tables}
       coupleMedia={coupleMedia}
       customConfig={customConfig}
+      itinerary={itinerary}
     />
   );
 }

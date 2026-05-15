@@ -11,14 +11,14 @@ export default function Home() {
     const user = getUser();
     
     if (user) {
-      // Already logged in, redirect to dashboard
       if (user.role === 'SUPER_ADMIN') {
         router.push('/super-admin');
-      } else if (user.role === 'COUPLE_ADMIN' || 'SUPER_ADMIN') {
-        router.push(`/admin/wedding/${user.weddingId}`);
+      } else if (user.role === 'COUPLE_ADMIN') {
+        router.push('/couple-admin');
+      } else {
+        router.push('/login');
       }
     } else {
-      // Not logged in, go to login
       router.push('/login');
     }
   }, [router]);

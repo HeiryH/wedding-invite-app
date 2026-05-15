@@ -124,7 +124,7 @@ export default function CreateWeddingPage() {
                   onChange={(e) =>
                     setFormData({ ...formData, brideName: e.target.value })
                   }
-                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-rose-400 focus:outline-none"
+                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg text-gray-900 focus:border-rose-400 focus:outline-none"
                   placeholder="e.g., Sarah Johnson"
                   required
                 />
@@ -140,7 +140,7 @@ export default function CreateWeddingPage() {
                   onChange={(e) =>
                     setFormData({ ...formData, groomName: e.target.value })
                   }
-                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-rose-400 focus:outline-none"
+                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg text-gray-900 focus:border-rose-400 focus:outline-none"
                   placeholder="e.g., Michael Smith"
                   required
                 />
@@ -174,7 +174,7 @@ export default function CreateWeddingPage() {
                   onChange={(e) =>
                     setFormData({ ...formData, weddingDate: e.target.value })
                   }
-                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-rose-400 focus:outline-none"
+                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg text-gray-900 focus:border-rose-400 focus:outline-none"
                   required
                 />
               </div>
@@ -189,7 +189,7 @@ export default function CreateWeddingPage() {
                   onChange={(e) =>
                     setFormData({ ...formData, venue: e.target.value })
                   }
-                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-rose-400 focus:outline-none"
+                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg text-gray-900 focus:border-rose-400 focus:outline-none"
                   placeholder="e.g., Grand Ballroom Hotel"
                   required
                 />
@@ -205,7 +205,7 @@ export default function CreateWeddingPage() {
                     setFormData({ ...formData, venueAddress: e.target.value })
                   }
                   rows={3}
-                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-rose-400 focus:outline-none resize-none"
+                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg text-gray-900 focus:border-rose-400 focus:outline-none resize-none"
                   placeholder="e.g., 123 Main Street, City, State 12345"
                   required
                 />

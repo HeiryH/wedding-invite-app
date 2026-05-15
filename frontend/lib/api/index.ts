@@ -11,3 +11,4 @@ export * from './package.service';
 export * from './auth.service';
 export * from './templateConfig.service';
 export * from './table.service';
+export * from './itinerary.service';

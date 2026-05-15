@@ -1,6 +1,6 @@
 'use client';
 
-import { Wedding, Guest, Wish, Photo } from '@/lib/api';
+import { Wedding, Guest, Wish, Photo, ItineraryItem } from '@/lib/api';
 import Template1 from './Template1';
 import Template2 from './Template2';
 import Template3 from './Template3';
@@ -18,6 +18,7 @@ interface TemplateWrapperProps {
   photoBoothEnabled: boolean;
   coupleMedia?: Photo[];
   customConfig?: Record<string, string>;
+  itinerary?: ItineraryItem[];
 }
 
 export default function TemplateWrapper({
@@ -31,6 +32,7 @@ export default function TemplateWrapper({
   photoBoothEnabled,
   coupleMedia,
   customConfig,
+  itinerary,
 }: TemplateWrapperProps) {
   // Map templateId to component
   const getTemplate = () => {
@@ -64,6 +66,7 @@ export default function TemplateWrapper({
       photoBoothEnabled={photoBoothEnabled}
       coupleMedia={coupleMedia}
       customConfig={customConfig}
+      itinerary={itinerary}
     />
   );
 }
