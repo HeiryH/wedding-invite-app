@@ -244,14 +244,14 @@ export default function AdminShell({
                 <button
                   onClick={() => router.push(fabHref!)}
                   style={{
-                    flex: '0 0 auto', width: 40, height: 40, borderRadius: 13, marginTop: -14,
+                    flex: '0 0 auto', width: 36, height: 36, borderRadius: 11,
                     background: 'var(--lavender-grey-ink)', color: 'var(--floral)',
                     display: 'grid', placeItems: 'center', border: 'none', cursor: 'pointer',
-                    boxShadow: '0 6px 20px rgba(74,68,86,.25), inset 0 1px 0 rgba(255,255,255,.12)',
+                    boxShadow: '0 2px 8px rgba(74,68,86,.18), inset 0 1px 0 rgba(255,255,255,.12)',
                   }}
                   aria-label="Create"
                 >
-                  <Icon name="plus" size={17} />
+                  <Icon name="plus" size={16} />
                 </button>
               )}
               <button
