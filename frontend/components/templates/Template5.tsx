@@ -152,17 +152,18 @@ function RSVPModal({ onRSVP, onClose, seatingEnabled, tables, t }: RSVPModalProp
                   ))}
                 </div>
 
+                <input type="text" placeholder="Your Name *" required
+                  value={rsvpData.guestName}
+                  onChange={(e) => setRsvpData({ ...rsvpData, guestName: e.target.value })}
+                  className={styles.rsvpFormInput}
+                />
+
                 {isAttending && (
                   <motion.div
                     initial={{ opacity: 0, height: 0 }}
                     animate={{ opacity: 1, height: 'auto' }}
                     className={styles.rsvpFormStack}
                   >
-                    <input type="text" placeholder="Your Name *" required
-                      value={rsvpData.guestName}
-                      onChange={(e) => setRsvpData({ ...rsvpData, guestName: e.target.value })}
-                      className={styles.rsvpFormInput}
-                    />
                     <input type="email" placeholder="Email"
                       value={rsvpData.email}
                       onChange={(e) => setRsvpData({ ...rsvpData, email: e.target.value })}
@@ -259,14 +260,24 @@ export default function Template5({
   const [activeNavSection, setActiveNavSection] = useState<string>('welcome');
 
   const [wishData, setWishData] = useState({ guestName: '', message: '' });
+  const [wishSide, setWishSide] = useState<'Bride' | 'Groom'>('Bride');
   const [wishSubmitting, setWishSubmitting] = useState(false);
   const [wishSuccess, setWishSuccess] = useState(false);
+  const [wishExpanded, setWishExpanded] = useState(false);
+  const [photoExpanded, setPhotoExpanded] = useState(false);
 
   const [photoData, setPhotoData] = useState({ guestName: '', caption: '' });
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [photoSubmitting, setPhotoSubmitting] = useState(false);
   const [photoSuccess, setPhotoSuccess] = useState(false);
+  const [lightboxPhoto, setLightboxPhoto] = useState<Photo | null>(null);
+  const [photoLayout, setPhotoLayout] = useState<'stack' | 'grid'>('stack');
+  const [stackIndex, setStackIndex] = useState(0);
+  const [stackDirection, setStackDirection] = useState(1);
+  const autoShuffleRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const userInteractingRef = useRef(false);
+  const interactTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const envelopeSectionRef = useRef<HTMLDivElement>(null);
   const envelopeWrapperRef = useRef<HTMLDivElement>(null);
@@ -437,16 +448,58 @@ const NAV_EMOJIS: Record<string, string> = {
     };
   }, []);
 
+  useEffect(() => {
+    if (photoLayout !== 'stack' || photos.length <= 1) return;
+    const id = setInterval(() => {
+      if (!userInteractingRef.current) {
+        setStackDirection(1);
+        setStackIndex(i => (i + 1) % photos.length);
+      }
+    }, 350000000);
+    autoShuffleRef.current = id;
+    return () => { clearInterval(id); autoShuffleRef.current = null; };
+  }, [photoLayout, photos.length]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const markInteraction = () => {
+    userInteractingRef.current = true;
+    if (interactTimerRef.current) clearTimeout(interactTimerRef.current);
+    interactTimerRef.current = setTimeout(() => { userInteractingRef.current = false; }, 6000);
+  };
+
+  const goNext = () => {
+    markInteraction();
+    setStackDirection(1);
+    setStackIndex(i => (i + 1) % photos.length);
+  };
+
+  const goPrev = () => {
+    markInteraction();
+    setStackDirection(-1);
+    setStackIndex(i => (i - 1 + photos.length) % photos.length);
+  };
+
+  const stackVariants = {
+    enter: (dir: number) => ({ x: dir > 0 ? 260 : -260, rotate: dir > 0 ? 10 : -10, opacity: 0, scale: 0.85 }),
+    center: { x: 0, rotate: 0, opacity: 1, scale: 1 },
+    exit: (dir: number) => ({ x: dir > 0 ? -260 : 260, rotate: dir > 0 ? -10 : 10, opacity: 0, scale: 0.85 }),
+  };
+
   const handleWishSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setWishSubmitting(true);
     try {
-      await onSubmitWish(wishData);
+      await onSubmitWish({ ...wishData, brideOrGroomSide: wishSide });
       setWishSuccess(true);
       setWishData({ guestName: '', message: '' });
+      setWishExpanded(false);
       setTimeout(() => setWishSuccess(false), 3000);
     } catch { alert('Failed to submit wish'); }
     finally { setWishSubmitting(false); }
+  };
+
+  const handleRemovePhoto = () => {
+    setSelectedFile(null);
+    setPreviewUrl(null);
   };
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -470,6 +523,7 @@ const NAV_EMOJIS: Record<string, string> = {
       setPhotoData({ guestName: '', caption: '' });
       setSelectedFile(null);
       setPreviewUrl(null);
+      setPhotoExpanded(false);
       setTimeout(() => setPhotoSuccess(false), 3000);
     } catch { alert('Failed to upload photo'); }
     finally { setPhotoSubmitting(false); }
@@ -494,12 +548,15 @@ const NAV_EMOJIS: Record<string, string> = {
               <motion.button
                 key={item.id}
                 onClick={() => scrollToSection(item.ref)}
-                whileHover={{ scale: 1.12 }}
+                whileHover={{ scale: 1.06 }}
                 whileTap={{ scale: 0.9 }}
                 className={`${styles.sideNavBtn} ${isActive ? styles.sideNavBtnActive : ''}`}
               >
                 <span className={styles.sideNavEmoji}>{NAV_EMOJIS[item.id] ?? '•'}</span>
                 <span className={styles.sideNavTooltip}>{item.label}</span>
+                {item.id === 'wishes' && wishes.length > 0 && (
+                  <span className={styles.sideNavBadge} />
+                )}
               </motion.button>
             );
           })}
@@ -533,7 +590,7 @@ const NAV_EMOJIS: Record<string, string> = {
             </text>
           </motion.svg> */}
 
-          <motion.svg viewBox="0 150 500 100" width={500}>
+          <motion.svg viewBox="0 150 500 100" width="100%" style={{ maxWidth: 500 }}>
             <defs>
               {/* 1. Define the shadow filter */}
               <filter id="text-shadow" x="-20%" y="-20%" width="140%" height="140%">
@@ -558,7 +615,7 @@ const NAV_EMOJIS: Record<string, string> = {
             <text
               fill="rgba(255,255,255,0.9)"
               filter="url(#text-shadow)"
-              style={{ fontFamily: 'PlayfairDisplay, serif', fontSize: '1.5rem', letterSpacing: '0.3em' }}
+              style={{ fontFamily: 'PlayfairDisplay, serif', fontSize: '1.75rem', letterSpacing: '0.3em' }}
             >
               <textPath href="#path" startOffset="50%" textAnchor="middle">
                 {t('invite.heading', 'The Wedding of')}
@@ -613,11 +670,11 @@ const NAV_EMOJIS: Record<string, string> = {
 
           <motion.svg
             viewBox="0 0 500 72"
-            width={400}
+            width="100%"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.7, duration: 0.8 }}
-            style={{ overflow: 'visible' }} // Removed the inline CSS drop-shadow filter
+            style={{ maxWidth: 400, overflow: 'visible' }}
           >
             <defs>
               {/* Define the shadow filter */}
@@ -644,7 +701,7 @@ const NAV_EMOJIS: Record<string, string> = {
             <text
               fill="rgba(255,255,255,0.9)"
               filter="url(#date-text-shadow)" // 👈 Applies the defined shadow filter
-              style={{ fontFamily: 'PlayfairDisplay, serif', fontSize: '2em', letterSpacing: '0.25em' }}
+              style={{ fontFamily: 'PlayfairDisplay, serif', fontSize: '1.75em', letterSpacing: '0.25em' }}
             >
               <textPath href="#dateCurve" startOffset="50%" textAnchor="middle">
                 {weddingDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}
@@ -674,61 +731,68 @@ const NAV_EMOJIS: Record<string, string> = {
             />
           )} */}
 
-          <motion.div
-            animate={{ y: [0, 8, 0] }}
-            transition={{ repeat: Infinity, duration: 2, ease: 'easeInOut' }}
-            className={styles.scrollCue}
-          >
+          <div className={styles.scrollCue}>
             <span>scroll</span>
             <span className={styles.scrollCueArrow}>↓</span>
-          </motion.div>
+          </div>
         </motion.div>
       </section>
 
       {/* ── Section 2: Ceremony ──────────────────────────────────────── */}
       <section ref={ceremonyRef} id="ceremony" className={styles.sectionCeremony}>
         <p className={styles.ceremonyTitle}>Walimatul Urus</p>
-        {customConfig?.['walimah.body'] && (
-          <div
-            className={styles.walimahBody}
-            dangerouslySetInnerHTML={{ __html: customConfig['walimah.body'] }}
-          />
-        )}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 1.1, duration: 0.9 }}
-          className={styles.dateInner}
-        >
-          <p className={styles.dateText}>{formatOrdinalDate(weddingDate)}</p>
-          <p className={styles.dayText}>{weddingDate.toLocaleDateString('en-GB', { weekday: 'long' })}</p>
-          {t('general.showIslamicDate', 'false') === 'true' && (
-            <p className={styles.hijriText}>{toHijriMalay(weddingDate)}</p>
-          )}
-          <div className={styles.locationBlock}>
-            <p className={styles.locationLabel}>Location</p>
-            {wedding.venueAddress && (
-              <p className={styles.locationAddress}>{wedding.venueAddress}</p>
-            )}
-          </div>
-        </motion.div>
 
+        {/* Glassmorphism card: walimah body + date + location */}
+        <div className={styles.ceremonyCard}>
+          {customConfig?.['walimah.body'] && (
+            <div
+              className={styles.walimahBody}
+              dangerouslySetInnerHTML={{ __html: customConfig['walimah.body'] }}
+            />
+          )}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 1.1, duration: 0.9 }}
+            className={styles.dateInner}
+          >
+            <div className={styles.dateBlock}>
+              <p className={styles.dateText}>{formatOrdinalDate(weddingDate)}</p>
+              <p className={styles.dayText}>{weddingDate.toLocaleDateString('en-GB', { weekday: 'long' })}</p>
+              {t('general.showIslamicDate', 'false') === 'true' && (
+                <p className={styles.hijriText}>{toHijriMalay(weddingDate)}</p>
+              )}
+            </div>
+            <div className={styles.locationBlock}>
+              <p className={styles.locationLabel}>Location</p>
+              {wedding.venueAddress && (
+                <p className={styles.locationAddress}>{wedding.venueAddress}</p>
+              )}
+            </div>
+          </motion.div>
+        </div>
+
+        {/* Separate card for itinerary */}
         {itinerary.length > 0 && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 1.3, duration: 0.9 }}
             className={styles.aturcaraInner}
-            style={{ marginTop: '3rem' }}
+            style={{ marginTop: '2rem' }}
           >
-            <p className={styles.aturcaraTitle}>Aturcara Majlis</p>
-            {itinerary.map((item) => (
-              <div key={item.itineraryItemId} className={styles.itineraryRow}>
-                <div className={styles.itineraryTime}>{item.detail}</div>
-                <div className={styles.itineraryDivider} />
-                <div className={styles.itineraryEvent}>{item.label}</div>
-              </div>
-            ))}
+            <div className={styles.aturcaraCard}>
+              <p className={styles.aturcaraTitle}>Aturcara Majlis</p>
+              {itinerary.map((item) => (
+                <div key={item.itineraryItemId} className={styles.itineraryRow}>
+                  <div className={styles.itineraryTime}>{item.detail}</div>
+                  <div className={styles.itineraryEvent}>
+                    <span className={styles.itineraryDot} />
+                    {item.label}
+                  </div>
+                </div>
+              ))}
+            </div>
           </motion.div>
         )}
       </section>
@@ -801,30 +865,75 @@ const NAV_EMOJIS: Record<string, string> = {
             </p>
           </div>
 
+          <div
+            onBlur={(e) => {
+              if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+                setWishExpanded(false);
+              }
+            }}
+          >
           <div className={styles.glassCard}>
-            {wishSuccess && (
-              <div className={styles.successMsg}>✅ Your wish was submitted!</div>
-            )}
             <form onSubmit={handleWishSubmit} className={styles.formStack}>
-              <input
-                type="text" placeholder="Your Name *" required
-                value={wishData.guestName}
-                onChange={(e) => setWishData({ ...wishData, guestName: e.target.value })}
-                className={styles.formInput}
-              />
-              <textarea
-                placeholder="Your wishes for the couple..." required rows={4}
-                value={wishData.message}
-                onChange={(e) => setWishData({ ...wishData, message: e.target.value })}
-                className={styles.formTextarea}
-              />
-              <button
-                type="submit" disabled={wishSubmitting}
-                className={wishSubmitting ? styles.submitBtnDisabled : styles.submitBtn}
-              >
-                {wishSubmitting ? 'Submitting...' : 'Send Wish ✨'}
-              </button>
+              {/* Message field — always visible, collapses to one line until focused */}
+              <div className={styles.wishField} style={{ alignItems: wishExpanded ? 'flex-start' : 'center' }}>
+                <span className={styles.wishFieldIcon} style={{ paddingTop: wishExpanded ? 2 : 0 }}>💬</span>
+                <textarea
+                  placeholder="Leave a wish for the couple... ✨"
+                  required
+                  rows={wishExpanded ? 3 : 1}
+                  value={wishData.message}
+                  onChange={(e) => setWishData({ ...wishData, message: e.target.value })}
+                  onFocus={() => setWishExpanded(true)}
+                  className={`${styles.formTextarea} ${wishExpanded ? styles.formTextareaExpanded : styles.formTextareaCollapsed}`}
+                />
+              </div>
+
+              {/* Secondary fields — slide in on expand */}
+              <AnimatePresence>
+                {wishExpanded && (
+                  <motion.div
+                    key="wish-extras"
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    exit={{ opacity: 0, height: 0 }}
+                    transition={{ duration: 0.28, ease: [0.25, 0.46, 0.45, 0.94] }}
+                    style={{ overflow: 'hidden' }}
+                    className={styles.wishExtras}
+                  >
+                    {wishSuccess && (
+                      <div className={styles.successMsg}>✅ Your wish was submitted!</div>
+                    )}
+                    <div className={styles.wishField}>
+                      <span className={styles.wishFieldIcon}>👤</span>
+                      <input
+                        type="text" placeholder="Your Name *" required
+                        value={wishData.guestName}
+                        onChange={(e) => setWishData({ ...wishData, guestName: e.target.value })}
+                        className={styles.formInput}
+                      />
+                    </div>
+                    <div className={styles.wishChips}>
+                      {(['Bride', 'Groom'] as const).map((side) => (
+                        <button
+                          key={side} type="button"
+                          onClick={() => setWishSide(side)}
+                          className={`${styles.wishChip} ${wishSide === side ? styles.wishChipActive : ''}`}
+                        >
+                          {side === 'Bride' ? "Bride's Side" : "Groom's Side"}
+                        </button>
+                      ))}
+                    </div>
+                    <button
+                      type="submit" disabled={wishSubmitting}
+                      className={wishSubmitting ? styles.submitBtnDisabled : styles.submitBtn}
+                    >
+                      {wishSubmitting ? 'Submitting...' : 'Send Wish ✨'}
+                    </button>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </form>
+          </div>
           </div>
 
           {wishes.length > 0 && (
@@ -849,55 +958,204 @@ const NAV_EMOJIS: Record<string, string> = {
               <p className={styles.sectionSubheading}>Share your favourite moments 📸</p>
             </div>
 
+            <div
+              onBlur={(e) => {
+                if (
+                  !selectedFile &&
+                  e.relatedTarget !== null &&
+                  !e.currentTarget.contains(e.relatedTarget as Node)
+                ) {
+                  setPhotoExpanded(false);
+                }
+              }}
+            >
             <div className={styles.glassCard}>
-              {photoSuccess && (
-                <div className={styles.successMsg}>✅ Photo uploaded!</div>
-              )}
               <form onSubmit={handlePhotoSubmit} className={styles.formStack}>
-                <label className={styles.fileDropzone}>
+                {/* Always visible: full dropzone */}
+                <label className={styles.fileDropzone} onClick={() => setPhotoExpanded(true)}>
                   <input type="file" accept="image/*" onChange={handleFileSelect} className={styles.fileInput} />
                   {previewUrl ? (
-                    <img src={previewUrl} alt="Preview" className={styles.photoPreview} />
+                    <div className={styles.photoPreviewWrapper}>
+                      <img src={previewUrl} alt="Preview" className={styles.photoPreview} />
+                      <button
+                        type="button"
+                        onClick={(e) => { e.preventDefault(); handleRemovePhoto(); }}
+                        className={styles.removePhotoBtn}
+                      >
+                        ×
+                      </button>
+                    </div>
                   ) : (
                     <div className={styles.photoPlaceholder}>
-                      <div className={styles.photoPlaceholderIcon}>📷</div>
+                      <span className={styles.photoPlaceholderIcon}>📷</span>
                       Tap to select a photo
                     </div>
                   )}
                 </label>
-                <input type="text" placeholder="Your Name *" required
-                  value={photoData.guestName}
-                  onChange={(e) => setPhotoData({ ...photoData, guestName: e.target.value })}
-                  className={styles.formInput}
-                />
-                <input type="text" placeholder="Caption (optional)"
-                  value={photoData.caption}
-                  onChange={(e) => setPhotoData({ ...photoData, caption: e.target.value })}
-                  className={styles.formInput}
-                />
-                <button
-                  type="submit" disabled={photoSubmitting || !selectedFile}
-                  className={photoSubmitting || !selectedFile ? styles.submitBtnDisabled : styles.submitBtn}
-                >
-                  {photoSubmitting ? 'Uploading...' : 'Upload Photo 📤'}
-                </button>
+
+                {/* Secondary fields — slide in when expanded */}
+                <AnimatePresence>
+                  {photoExpanded && (
+                    <motion.div
+                      key="photo-extras"
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: 'auto' }}
+                      exit={{ opacity: 0, height: 0 }}
+                      transition={{ duration: 0.28, ease: [0.25, 0.46, 0.45, 0.94] }}
+                      style={{ overflow: 'hidden' }}
+                      className={styles.wishExtras}
+                    >
+                      {photoSuccess && (
+                        <div className={styles.successMsg}>✅ Photo uploaded!</div>
+                      )}
+                      <div className={styles.photoField}>
+                        <span className={styles.wishFieldIcon}>👤</span>
+                        <input type="text" placeholder="Your Name *" required
+                          value={photoData.guestName}
+                          onChange={(e) => setPhotoData({ ...photoData, guestName: e.target.value })}
+                          className={styles.formInput}
+                        />
+                      </div>
+                      <div className={styles.photoField}>
+                        <span className={styles.wishFieldIcon}>✏️</span>
+                        <input type="text" placeholder="Caption (optional)"
+                          value={photoData.caption}
+                          onChange={(e) => setPhotoData({ ...photoData, caption: e.target.value })}
+                          className={styles.formInput}
+                        />
+                      </div>
+                      <button
+                        type="submit" disabled={photoSubmitting || !selectedFile}
+                        className={photoSubmitting || !selectedFile ? styles.submitBtnDisabled : styles.submitBtn}
+                      >
+                        {photoSubmitting ? 'Uploading...' : 'Upload Photo 📤'}
+                      </button>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </form>
+            </div>
             </div>
 
             {photos.length > 0 && (
-              <div className={styles.photoGrid}>
-                {photos.map((photo) => (
-                  <div key={photo.photoId} className={styles.photoCard}>
-                    <img src={`${API_BASE}${photo.photoUrl}`} alt={photo.caption} className={styles.photoCardImg} />
-                    {(photo.guestName || photo.caption) && (
-                      <div className={styles.photoCardCaption}>
-                        <p className={styles.photoCardName}>{photo.guestName}</p>
-                        {photo.caption && <p className={styles.photoCardText}>"{photo.caption}"</p>}
+              <>
+                {/* Layout toggle */}
+                <div className={styles.galleryHeader}>
+                  <div className={styles.layoutToggle}>
+                    <button
+                      className={`${styles.layoutBtn} ${photoLayout === 'stack' ? styles.layoutBtnActive : ''}`}
+                      onClick={() => setPhotoLayout('stack')}
+                    >Stack</button>
+                    <button
+                      className={`${styles.layoutBtn} ${photoLayout === 'grid' ? styles.layoutBtnActive : ''}`}
+                      onClick={() => setPhotoLayout('grid')}
+                    >Grid</button>
+                  </div>
+                </div>
+
+                {photoLayout === 'stack' ? (
+                  <div className={styles.stackContainer}>
+                    {/* Ghost cards peeking behind */}
+                    {photos.length > 2 && (
+                      <div className={styles.stackGhost2}>
+                        <div className={styles.stackPolaroid}>
+                          <img
+                            src={`${API_BASE}${photos[(stackIndex + 2) % photos.length].photoUrl}`}
+                            className={styles.stackPhoto} alt="" draggable={false}
+                          />
+                        </div>
+                      </div>
+                    )}
+                    {photos.length > 1 && (
+                      <div className={styles.stackGhost1}>
+                        <div className={styles.stackPolaroid}>
+                          <img
+                            src={`${API_BASE}${photos[(stackIndex + 1) % photos.length].photoUrl}`}
+                            className={styles.stackPhoto} alt="" draggable={false}
+                          />
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Active draggable card */}
+                    <AnimatePresence custom={stackDirection} mode="sync">
+                      <motion.div
+                        key={stackIndex}
+                        className={styles.stackCard}
+                        custom={stackDirection}
+                        variants={stackVariants}
+                        initial="enter"
+                        animate="center"
+                        exit="exit"
+                        transition={{ type: 'spring', stiffness: 340, damping: 32 }}
+                        drag="x"
+                        dragConstraints={{ left: 0, right: 0 }}
+                        dragElastic={0.22}
+                        onDragStart={() => markInteraction()}
+                        onDragEnd={(_, info) => {
+                          if (info.offset.x < -55 || info.velocity.x < -400) goNext();
+                          else if (info.offset.x > 55 || info.velocity.x > 400) goPrev();
+                        }}
+                        onClick={() => setLightboxPhoto(photos[stackIndex])}
+                      >
+                        <div className={styles.stackPolaroid}>
+                          <div className={styles.polaroidTape} />
+                          <img
+                            src={`${API_BASE}${photos[stackIndex].photoUrl}`}
+                            alt={photos[stackIndex].caption ?? ''}
+                            className={styles.stackPhoto}
+                            draggable={false}
+                          />
+                          {photos[stackIndex].caption && (
+                            <span className={styles.polaroidCaption}>{photos[stackIndex].caption}</span>
+                          )}
+                          {photos[stackIndex].guestName && (
+                            <span className={styles.polaroidBy}>— {photos[stackIndex].guestName}</span>
+                          )}
+                        </div>
+                      </motion.div>
+                    </AnimatePresence>
+
+                    {/* Prev / Next arrows */}
+                    {photos.length > 1 && (
+                      <>
+                        <button className={`${styles.stackNav} ${styles.stackNavPrev}`} onClick={goPrev}>‹</button>
+                        <button className={`${styles.stackNav} ${styles.stackNavNext}`} onClick={goNext}>›</button>
+                      </>
+                    )}
+
+                    {/* Dot indicators */}
+                    {photos.length > 1 && (
+                      <div className={styles.stackDots}>
+                        {photos.map((_, i) => (
+                          <span
+                            key={i}
+                            className={`${styles.stackDot} ${i === stackIndex ? styles.stackDotActive : ''}`}
+                            onClick={() => { markInteraction(); setStackDirection(i > stackIndex ? 1 : -1); setStackIndex(i); }}
+                          />
+                        ))}
                       </div>
                     )}
                   </div>
-                ))}
-              </div>
+                ) : (
+                  <div className={styles.polaroidGrid}>
+                    {photos.map((photo) => (
+                      <div key={photo.photoId} className={styles.polaroid}
+                        onClick={() => setLightboxPhoto(photo)}>
+                        <div className={styles.polaroidTape} />
+                        <img src={`${API_BASE}${photo.photoUrl}`} alt={photo.caption ?? ''}
+                          className={styles.polaroidPhoto} />
+                        {photo.caption && (
+                          <span className={styles.polaroidCaption}>{photo.caption}</span>
+                        )}
+                        {photo.guestName && (
+                          <span className={styles.polaroidBy}>— {photo.guestName}</span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </>
             )}
           </div>
         </section>
@@ -907,6 +1165,36 @@ const NAV_EMOJIS: Record<string, string> = {
       <footer className={styles.footer}>
         <p>{t('footer.tagline', 'Made with love for our special day')}</p>
       </footer>
+
+      {/* ── Lightbox ─────────────────────────────────────────────────── */}
+      <AnimatePresence>
+        {lightboxPhoto && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className={styles.lightboxOverlay}
+            onClick={() => setLightboxPhoto(null)}
+          >
+            <div className={styles.lightboxCard} onClick={(e) => e.stopPropagation()}>
+              <img
+                src={`${API_BASE}${lightboxPhoto.photoUrl}`}
+                alt={lightboxPhoto.caption ?? ''}
+                className={styles.lightboxPhoto}
+              />
+              {lightboxPhoto.caption && (
+                <p className={styles.lightboxCaption}>{lightboxPhoto.caption}</p>
+              )}
+              <button
+                className={styles.lightboxClose}
+                onClick={() => setLightboxPhoto(null)}
+              >
+                ×
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* ── RSVP Modal ───────────────────────────────────────────────── */}
       <AnimatePresence>

@@ -1,52 +1,84 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { motion } from 'framer-motion';
 import { weddingService, Wedding } from '@/lib/api';
+import WeddingCard from '@/components/admin/WeddingCard';
+import Icon from '@/components/admin/Icon';
 
+type Filter = 'all' | 'upcoming' | 'active' | 'inactive';
+
+// ── Inline stat card ───────────────────────────────────────────────────────────
+function StatCard({ label, value, icon, tint, delta }: { label: string; value: number; icon: string; tint?: 1 | 2 | 3; delta?: string }) {
+  const tintStyle: React.CSSProperties = tint === 1
+    ? { background: 'linear-gradient(170deg, var(--lavender) 0%, white 90%)', borderColor: 'var(--lavender-deep)' }
+    : tint === 2
+    ? { background: 'linear-gradient(170deg, var(--veil) 0%, white 90%)', borderColor: 'var(--veil-deep)' }
+    : tint === 3
+    ? { background: 'linear-gradient(170deg, var(--thistle-soft) 0%, white 90%)', borderColor: 'var(--thistle)' }
+    : {};
+
+  return (
+    <div style={{ background: 'white', border: '1px solid var(--line)', borderRadius: 'var(--radius-md)', padding: 16, position: 'relative', overflow: 'hidden', ...tintStyle }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--muted)' }}>
+        <Icon name={icon} size={13} /> {label}
+      </div>
+      <div style={{ fontFamily: 'var(--serif)', fontSize: 38, lineHeight: 1, marginTop: 10, letterSpacing: '-0.01em', color: 'var(--ink)' }}>
+        {value}
+      </div>
+      {delta && (
+        <div style={{ marginTop: 6, fontSize: 12, color: 'var(--lavender-grey-deep)', display: 'flex', alignItems: 'center', gap: 4 }}>
+          <Icon name="arrow-up" size={12} /> {delta}
+        </div>
+      )}
+      <div style={{ position: 'absolute', top: 12, right: 12, width: 28, height: 28, borderRadius: 10, background: 'rgba(255,255,255,.7)', display: 'grid', placeItems: 'center', color: 'var(--lavender-grey-deep)', border: '1px solid rgba(255,255,255,.9)' }}>
+        <Icon name={icon} size={15} />
+      </div>
+    </div>
+  );
+}
+
+// ── Chip filter ────────────────────────────────────────────────────────────────
+function Chip({ active, onClick, children, count }: { active: boolean; onClick: () => void; children: React.ReactNode; count: number }) {
+  return (
+    <button
+      onClick={onClick}
+      style={{
+        display: 'inline-flex', alignItems: 'center', gap: 6,
+        padding: '8px 12px', borderRadius: 999,
+        background: active ? 'var(--lavender-grey-ink)' : 'white',
+        border: `1px solid ${active ? 'var(--lavender-grey-ink)' : 'var(--line-2)'}`,
+        color: active ? 'white' : 'var(--ink-2)',
+        fontSize: 13, whiteSpace: 'nowrap', cursor: 'pointer',
+        transition: 'all .15s ease',
+      }}
+    >
+      {children}
+      <span style={{
+        fontFamily: 'var(--mono)', fontSize: 11,
+        background: active ? 'rgba(255,255,255,.15)' : 'var(--floral-deep)',
+        color: active ? 'white' : 'var(--muted)',
+        padding: '2px 6px', borderRadius: 999,
+      }}>{count}</span>
+    </button>
+  );
+}
+
+// ── Main dashboard ─────────────────────────────────────────────────────────────
 export default function SuperAdminDashboard() {
   const router = useRouter();
   const [weddings, setWeddings] = useState<Wedding[]>([]);
-  const [filteredWeddings, setFilteredWeddings] = useState<Wedding[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [filter, setFilter] = useState<'all' | 'active' | 'inactive'>('all');
+  const [filter, setFilter] = useState<Filter>('all');
   const [searchTerm, setSearchTerm] = useState('');
 
-  useEffect(() => {
-    fetchWeddings();
-  }, []);
-
-  useEffect(() => {
-    // Apply filters
-    let filtered = weddings;
-
-    // Filter by active status
-    if (filter === 'active') {
-      filtered = filtered.filter((w) => w.isActive);
-    } else if (filter === 'inactive') {
-      filtered = filtered.filter((w) => !w.isActive);
-    }
-
-    // Search filter
-    if (searchTerm) {
-      filtered = filtered.filter(
-        (w) =>
-          w.brideName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          w.groomName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          w.coupleName.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-    }
-
-    setFilteredWeddings(filtered);
-  }, [weddings, filter, searchTerm]);
+  useEffect(() => { fetchWeddings(); }, []);
 
   const fetchWeddings = async () => {
     try {
       setLoading(true);
-      const data = await weddingService.getAll();
-      setWeddings(data);
+      setWeddings(await weddingService.getAll());
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to load weddings');
     } finally {
@@ -54,382 +86,134 @@ export default function SuperAdminDashboard() {
     }
   };
 
-  const handleToggleActive = async (weddingId: number, currentStatus: boolean) => {
-    try {
-      await weddingService.toggleActive(weddingId, !currentStatus);
-      await fetchWeddings();
-    } catch (err) {
-      alert('Failed to update wedding status');
+  const counts = useMemo(() => ({
+    all: weddings.length,
+    upcoming: weddings.filter(w => w.isActive && new Date(w.weddingDate) > new Date()).length,
+    active: weddings.filter(w => w.isActive && new Date(w.weddingDate) <= new Date()).length,
+    inactive: weddings.filter(w => !w.isActive).length,
+  }), [weddings]);
+
+  const filtered = useMemo(() => weddings.filter(w => {
+    if (filter === 'upcoming' && !(w.isActive && new Date(w.weddingDate) > new Date())) return false;
+    if (filter === 'active' && !(w.isActive && new Date(w.weddingDate) <= new Date())) return false;
+    if (filter === 'inactive' && w.isActive) return false;
+    if (searchTerm) {
+      const s = `${w.brideName} ${w.groomName} ${w.coupleName} ${w.venue}`.toLowerCase();
+      if (!s.includes(searchTerm.toLowerCase())) return false;
     }
+    return true;
+  }), [weddings, filter, searchTerm]);
+
+  const handleToggleActive = async (id: number, current: boolean) => {
+    try { await weddingService.toggleActive(id, !current); await fetchWeddings(); }
+    catch { alert('Failed to update wedding status'); }
   };
 
-  const handleDelete = async (weddingId: number, coupleName: string) => {
-    if (!confirm(`Are you sure you want to delete ${coupleName}? This cannot be undone!`)) {
-      return;
-    }
-
-    try {
-      await weddingService.delete(weddingId);
-      await fetchWeddings();
-    } catch (err) {
-      alert('Failed to delete wedding');
-    }
+  const handleDelete = async (id: number, coupleName: string) => {
+    if (!confirm(`Delete ${coupleName}? This cannot be undone.`)) return;
+    try { await weddingService.delete(id); await fetchWeddings(); }
+    catch { alert('Failed to delete wedding'); }
   };
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="text-center">
-          <div className="w-16 h-16 border-4 border-rose-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-          <p className="text-gray-600">Loading dashboard...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="text-center">
-          <p className="text-2xl text-red-500 mb-4">😢 {error}</p>
-          <button
-            onClick={() => window.location.reload()}
-            className="text-rose-600 hover:underline"
-          >
-            Try again
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  const totalWeddings = weddings.length;
-  const activeWeddings = weddings.filter((w) => w.isActive).length;
-  const inactiveWeddings = weddings.filter((w) => !w.isActive).length; // ADD THIS!
-  const upcomingWeddings = weddings.filter(
-    (w) => new Date(w.weddingDate) > new Date() && w.isActive
-  ).length;
-  const totalGuests = weddings.reduce((sum, w) => sum + w.totalAttending, 0);
-  const totalPhotos = weddings.reduce((sum, w) => sum + w.totalPhotos, 0);
-
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
-      {/* Header */}
-      <div className="bg-white border-b border-gray-200 shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 py-6">
-          <div className="flex justify-between items-center">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-800">
-                Super Admin Dashboard
-              </h1>
-              <p className="text-gray-600 mt-1">
-                Manage all wedding invitations
-              </p>
-            </div>
-            <div className="flex gap-3">
-              <button
-                onClick={() => router.push('/super-admin/wedding/create')}
-                className="px-6 py-3 bg-gradient-to-r from-rose-500 to-pink-500 text-white rounded-lg hover:shadow-lg transition-all font-semibold"
-              >
-                + Create Wedding
-              </button>
-              <button
-                onClick={() => router.push('/super-admin/packages')}
-                className="px-4 py-2 bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200 transition-colors font-medium"
-              >
-                📦 Packages
-              </button>
-              <button
-                onClick={() => router.push('/')}
-                className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
-              >
-                ← Back to Home
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div className="max-w-7xl mx-auto px-4 py-8">
-        {/* Statistics Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-6 mb-8">
-          <StatCard
-            title="Total Weddings"
-            value={totalWeddings}
-            icon="💍"
-            color="purple"
-          />
-          <StatCard
-            title="Active"
-            value={activeWeddings}
-            icon="✅"
-            color="green"
-          />
-          <StatCard
-            title="Upcoming"
-            value={upcomingWeddings}
-            icon="📅"
-            color="blue"
-          />
-          {/* <StatCard
-            title="Total Guests"
-            value={totalGuests}
-            icon="👥"
-            color="orange"
-          />
-          <StatCard
-            title="Photos"
-            value={totalPhotos}
-            icon="📸"
-            color="pink"
-          /> */}
-        </div>
-
-        {/* Filters and Search */}
-        <div className="bg-white rounded-xl shadow-md p-6 mb-6">
-          <div className="flex flex-col md:flex-row gap-4 justify-between items-center">
-            {/* Search */}
-            <input
-              type="text"
-              placeholder="Search by couple name..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full md:w-96 px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-rose-400 focus:outline-none text-black"
-            />
-
-            {/* Filter Buttons */}
-            <div className="flex gap-2">
-              <button
-                onClick={() => setFilter('all')}
-                className={`px-4 py-2 rounded-lg font-medium transition-colors ${filter === 'all'
-                    ? 'bg-rose-500 text-white'
-                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                  }`}
-              >
-                All ({totalWeddings})
-              </button>
-              <button
-                onClick={() => setFilter('active')}
-                className={`px-4 py-2 rounded-lg font-medium transition-colors ${filter === 'active'
-                    ? 'bg-green-500 text-white'
-                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                  }`}
-              >
-                Active ({activeWeddings})
-              </button>
-              <button
-                onClick={() => setFilter('inactive')}
-                className={`px-4 py-2 rounded-lg font-medium transition-colors ${filter === 'inactive'
-                    ? 'bg-gray-500 text-white'
-                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                  }`}
-              >
-                Inactive ({inactiveWeddings})
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* Weddings List */}
-        <div className="bg-white rounded-xl shadow-md">
-          <div className="p-6 border-b border-gray-200">
-            <h2 className="text-xl font-semibold text-gray-800">
-              All Weddings ({filteredWeddings.length})
-            </h2>
-          </div>
-
-          {filteredWeddings.length === 0 ? (
-            <div className="p-12 text-center text-gray-500">
-              {searchTerm
-                ? 'No weddings match your search.'
-                : filter === 'inactive'
-                  ? 'No inactive weddings found. All weddings are currently active!'
-                  : 'No weddings yet. Create one to get started!'}
-            </div>
-          ) : (
-            <div className="divide-y divide-gray-200">
-              {filteredWeddings.map((wedding, index) => (
-                <motion.div
-                  key={wedding.weddingId}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: index * 0.05 }}
-                  className={`p-6 transition-colors ${!wedding.isActive
-                      ? 'bg-gray-100 hover:bg-gray-150' // Different background for inactive
-                      : 'hover:bg-gray-50'
-                    }`}
-                >
-                  <div className="flex justify-between items-start">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-2">
-                        <h3 className={`text-lg font-semibold ${!wedding.isActive ? 'text-gray-500' : 'text-gray-800'
-                          }`}>
-                          {wedding.brideName} & {wedding.groomName}
-                        </h3>
-
-                        {/* Status Badges */}
-                        {!wedding.isActive && (
-                          <span className="text-xs bg-red-100 text-red-700 px-3 py-1 rounded-full font-semibold">
-                            ⛔ INACTIVE
-                          </span>
-                        )}
-
-                        {wedding.isActive && new Date(wedding.weddingDate) < new Date() && (
-                          <span className="text-xs bg-purple-100 text-purple-700 px-3 py-1 rounded-full font-semibold">
-                            ✅ COMPLETED
-                          </span>
-                        )}
-
-                        {wedding.isActive && new Date(wedding.weddingDate) > new Date() && (
-                          <span className="text-xs bg-green-100 text-green-700 px-3 py-1 rounded-full font-semibold">
-                            🔔 UPCOMING
-                          </span>
-                        )}
-                      </div>
-
-                      <p className={`text-sm mb-2 ${!wedding.isActive ? 'text-gray-400' : 'text-gray-600'
-                        }`}>
-                        /{wedding.coupleName}
-                      </p>
-
-                      <div className={`flex flex-wrap gap-4 text-sm ${!wedding.isActive ? 'text-gray-400' : 'text-gray-500'
-                        }`}>
-                        <span>
-                          📅{' '}
-                          {new Date(wedding.weddingDate).toLocaleDateString()}
-                        </span>
-                        <span>📍 {wedding.venue}</span>
-                        <span>👥 {wedding.totalAttending} attending</span>
-                        <span>💬 {wedding.totalGuests} RSVPs</span>
-                        {wedding.totalPhotos > 0 && (
-                          <span>📸 {wedding.totalPhotos} photos</span>
-                        )}
-                      </div>
-
-                      <div className="mt-3 flex gap-2">
-                        <span className={`text-xs px-2 py-1 rounded ${!wedding.isActive
-                            ? 'bg-gray-200 text-gray-500'
-                            : 'bg-purple-100 text-purple-700'
-                          }`}>
-                          {wedding.enabledFeaturesCount} features
-                        </span>
-                        <span className={`text-xs px-2 py-1 rounded ${!wedding.isActive
-                            ? 'bg-gray-200 text-gray-500'
-                            : 'bg-blue-100 text-blue-700'
-                          }`}>
-                          Template: {wedding.templateName || wedding.templateId}
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Action Buttons */}
-                    <div className="flex flex-col gap-2 ml-4">
-                      {/* <button
-                        onClick={() =>
-                          router.push(
-                            `/super-admin/wedding/${wedding.weddingId}/edit`
-                          )
-                        }
-                        className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors font-medium text-sm"
-                      >
-                        ✏️ Edit
-                      </button> */}
-
-                      {/* <button
-                        onClick={() =>
-                          router.push(
-                            `/super-admin/wedding/${wedding.weddingId}`
-                          )
-                        }
-                        className="px-4 py-2 bg-rose-500 text-white rounded-lg hover:bg-rose-600 transition-colors font-medium text-sm"
-                      >
-                        🎨 Features
-                      </button> */}
-
-                      <button
-                        onClick={() => router.push(`/super-admin/wedding/${wedding.weddingId}`)} // Changed from /edit
-                        className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-rose-600 transition-colors font-medium text-sm"
-                      >
-                        📊 Manage Wedding
-                      </button>
-
-                      <button
-                        onClick={() =>
-                          window.open(`/wedding/${wedding.coupleName}`, '_blank')
-                        }
-                        className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors font-medium text-sm"
-                      >
-                        👁️ Preview
-                      </button>
-
-                      <button
-                        onClick={() =>
-                          handleToggleActive(wedding.weddingId, wedding.isActive)
-                        }
-                        className={`px-4 py-2 rounded-lg transition-colors font-medium text-sm ${wedding.isActive
-                            ? 'bg-yellow-500 text-white hover:bg-yellow-600'
-                            : 'bg-green-500 text-white hover:bg-green-600'
-                          }`}
-                      >
-                        {wedding.isActive ? '🔒 Deactivate' : '✅ Activate'}
-                      </button>
-
-                      <button
-                        onClick={() =>
-                          handleDelete(wedding.weddingId, wedding.coupleName)
-                        }
-                        className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors font-medium text-sm"
-                      >
-                        🗑️ Delete
-                      </button>
-                    </div>
-                  </div>
-                </motion.div>
-              ))}
-            </div>
-          )}
-        </div>
+  if (loading) return (
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '60vh' }}>
+      <div style={{ textAlign: 'center' }}>
+        <div style={{ width: 48, height: 48, border: '3px solid var(--lavender-grey-ink)', borderTopColor: 'transparent', borderRadius: '50%', margin: '0 auto 14px', animation: 'spin 0.8s linear infinite' }} />
+        <p style={{ color: 'var(--muted)', fontSize: 14 }}>Loading dashboard…</p>
+        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
       </div>
     </div>
   );
-}
 
-// Stats Card Component
-function StatCard({
-  title,
-  value,
-  subtitle,
-  icon,
-  color,
-}: {
-  title: string;
-  value: number;
-  subtitle?: string;
-  icon: string;
-  color: 'purple' | 'blue' | 'green' | 'pink' | 'orange';
-}) {
-  const colorClasses = {
-    purple: 'from-purple-500 to-purple-600',
-    blue: 'from-blue-500 to-blue-600',
-    green: 'from-green-500 to-green-600',
-    pink: 'from-pink-500 to-pink-600',
-    orange: 'from-orange-500 to-orange-600',
-  };
+  if (error) return (
+    <div style={{ textAlign: 'center', padding: '60px 20px' }}>
+      <p style={{ color: 'var(--danger)', marginBottom: 12 }}>{error}</p>
+      <button onClick={fetchWeddings} style={{ color: 'var(--lavender-grey-ink)', cursor: 'pointer', background: 'none', border: 'none', textDecoration: 'underline' }}>Try again</button>
+    </div>
+  );
+
+  const totalRsvps = weddings.reduce((s, w) => s + w.totalGuests, 0);
 
   return (
-    <motion.div
-      whileHover={{ scale: 1.02 }}
-      className={`bg-gradient-to-br ${colorClasses[color]} rounded-xl shadow-md p-6 text-white`}
-    >
-      <div className="flex justify-between items-start">
+    <div>
+      {/* Page header */}
+      <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 16, marginBottom: 20 }}>
         <div>
-          <p className="text-sm opacity-90 mb-1">{title}</p>
-          <p className="text-3xl font-bold">
-            {value} {subtitle && <span className="text-lg font-normal">{subtitle}</span>}
-          </p>
+          <h1 style={{ margin: 0, fontFamily: 'var(--serif)', fontSize: 'clamp(30px, 5vw, 42px)', fontWeight: 400, letterSpacing: '-0.02em', lineHeight: 1, color: 'var(--ink)' }}>
+            All <em style={{ fontStyle: 'italic', color: 'var(--lavender-grey-deep)' }}>weddings</em>
+          </h1>
+          <p style={{ margin: '6px 0 0', color: 'var(--muted)', fontSize: 13 }}>Manage every invitation in one place.</p>
         </div>
-        <div className="text-4xl opacity-80">{icon}</div>
+        <button
+          onClick={() => router.push('/super-admin/wedding/create')}
+          className="hidden lg:inline-flex"
+          style={{ display: 'none', alignItems: 'center', gap: 7, padding: '10px 14px', borderRadius: 12, background: 'var(--lavender-grey-ink)', color: 'var(--floral)', border: 'none', cursor: 'pointer', fontSize: 13.5, fontWeight: 500, boxShadow: '0 1px 0 rgba(255,255,255,.12) inset, 0 1px 2px rgba(0,0,0,.08)' }}
+        >
+          <Icon name="plus" size={16} /> New wedding
+        </button>
       </div>
-    </motion.div>
+
+      {/* Stat cards */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 10, marginBottom: 18 }} className="sm:grid-cols-4">
+        <StatCard label="Total" value={counts.all} icon="heart" tint={1} delta="+2 this month" />
+        <StatCard label="Live now" value={counts.active} icon="cast-out" tint={2} />
+        <StatCard label="Upcoming" value={counts.upcoming} icon="calendar" tint={3} />
+        <StatCard label="RSVPs" value={totalRsvps} icon="user-plus" />
+      </div>
+
+      {/* Toolbar */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 14 }} className="md:flex-row md:items-center">
+        <div style={{ position: 'relative', flex: '1 1 auto' }}>
+          <div style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--muted)', pointerEvents: 'none' }}>
+            <Icon name="search" size={17} />
+          </div>
+          <input
+            placeholder="Search couple, slug or venue…"
+            value={searchTerm}
+            onChange={e => setSearchTerm(e.target.value)}
+            style={{ width: '100%', padding: '12px 14px 12px 38px', borderRadius: 12, background: 'white', border: '1px solid var(--line-2)', outline: 'none', fontSize: 14, color: 'var(--ink)', boxSizing: 'border-box' }}
+            onFocus={e => { e.currentTarget.style.borderColor = 'var(--lavender-grey)'; e.currentTarget.style.boxShadow = '0 0 0 4px var(--lavender)'; }}
+            onBlur={e => { e.currentTarget.style.borderColor = 'var(--line-2)'; e.currentTarget.style.boxShadow = 'none'; }}
+          />
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, overflowX: 'auto', scrollbarWidth: 'none', paddingBottom: 2 }}>
+          <Chip active={filter === 'all'} onClick={() => setFilter('all')} count={counts.all}>All</Chip>
+          <Chip active={filter === 'upcoming'} onClick={() => setFilter('upcoming')} count={counts.upcoming}>Upcoming</Chip>
+          <Chip active={filter === 'active'} onClick={() => setFilter('active')} count={counts.active}>Live</Chip>
+          <Chip active={filter === 'inactive'} onClick={() => setFilter('inactive')} count={counts.inactive}>Drafts</Chip>
+        </div>
+      </div>
+
+      {/* Section heading */}
+      <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 14, margin: '22px 0 12px' }}>
+        <h2 style={{ margin: 0, fontFamily: 'var(--serif)', fontSize: 24, letterSpacing: '-0.01em', fontWeight: 400, color: 'var(--ink)' }}>
+          {filter === 'all' ? 'Every couple' : filter === 'upcoming' ? 'Coming soon' : filter === 'active' ? 'Live invitations' : 'In draft'}
+        </h2>
+        <span style={{ fontFamily: 'var(--mono)', fontSize: 12, color: 'var(--muted)', whiteSpace: 'nowrap', flexShrink: 0 }}>
+          {filtered.length} of {weddings.length}
+        </span>
+      </div>
+
+      {/* Wedding cards grid */}
+      {filtered.length > 0 ? (
+        <div style={{ display: 'grid', gap: 12 }} className="md:grid-cols-2 xl:grid-cols-3">
+          {filtered.map(w => (
+            <WeddingCard
+              key={w.weddingId}
+              wedding={w}
+              onManage={id => router.push(`/super-admin/wedding/${id}`)}
+              onPreview={name => window.open(`/wedding/${name}`, '_blank')}
+              onToggleActive={handleToggleActive}
+              onDelete={handleDelete}
+            />
+          ))}
+        </div>
+      ) : (
+        <div style={{ padding: '32px 16px', textAlign: 'center', color: 'var(--muted)', fontSize: 13, border: '1px dashed var(--line-2)', borderRadius: 12, background: 'var(--floral)' }}>
+          <Icon name="search" size={28} style={{ color: 'var(--thistle)', display: 'block', margin: '0 auto 8px' }} />
+          {searchTerm ? 'No weddings match those filters.' : 'No weddings yet. Create one to get started!'}
+        </div>
+      )}
+    </div>
   );
 }

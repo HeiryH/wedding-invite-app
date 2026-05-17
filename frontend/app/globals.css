@@ -20,6 +20,41 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
+
+  /* ── Admin design system tokens ───────────────────────────────────────── */
+  --lavender-grey: #8e9aaf;
+  --lavender-grey-deep: #6d7a92;
+  --lavender-grey-ink: #3b4456;
+  --thistle: #cbc0d3;
+  --thistle-soft: #e4dce9;
+  --floral: #FFFCF2;
+  --floral-deep: #f6f1e4;
+  --veil: #feeafa;
+  --veil-deep: #f9d8ee;
+  --lavender: #dee2ff;
+  --lavender-deep: #c4cbff;
+  --ink: #2a2a35;
+  --ink-2: #4a4a58;
+  --muted: #8b8a96;
+  --line: #ece6e7;
+  --line-2: #e1d9e2;
+  --success: #4a7d5f;
+  --warn: #a8743a;
+  --danger: #a14a52;
+
+  --radius-xs: 8px;
+  --radius-sm: 10px;
+  --radius-md: 14px;
+  --radius-lg: 20px;
+  --radius-xl: 28px;
+
+  --shadow-sm: 0 1px 2px rgba(74,68,86,.04), 0 1px 1px rgba(74,68,86,.03);
+  --shadow-md: 0 4px 14px rgba(74,68,86,.06), 0 1px 3px rgba(74,68,86,.04);
+  --shadow-lg: 0 16px 40px rgba(74,68,86,.12), 0 4px 12px rgba(74,68,86,.06);
+
+  --serif: var(--font-instrument-serif), 'Instrument Serif', ui-serif, Georgia, serif;
+  --sans: 'Geist', ui-sans-serif, system-ui, sans-serif;
+  --mono: 'Geist Mono', ui-monospace, monospace;
 }
 
 @theme inline {

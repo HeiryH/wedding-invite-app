@@ -1,40 +1,55 @@
 'use client';
 
-import { motion } from 'framer-motion';
+import Icon from '@/components/admin/Icon';
+
+const KNOWN_ICONS = new Set([
+  'home-simple','calendar','map-pin','user-plus','check-circle','heart','eye','more-horiz',
+  'search','filter','bell','menu','nav-arrow-left','nav-arrow-right','design-nib','gift',
+  'lock-square','share-android','plus','trash','settings','sparks','group','puzzle','cast-out',
+  'user-circle','clock','xmark-circle','arrow-up','sort','copy','pause','play','share-android',
+]);
 
 interface StatCardProps {
   title: string;
-  value: number;
+  value: number | string;
   subtitle?: string;
   icon: string;
-  color: 'blue' | 'green' | 'red' | 'purple' | 'yellow' | 'orange' | 'pink';
+  tint?: 1 | 2 | 3;
+  color?: string;
 }
 
-export default function StatCard({ title, value, subtitle, icon, color }: StatCardProps) {
-  const colorClasses = {
-    blue: 'from-blue-500 to-blue-600',
-    green: 'from-green-500 to-green-600',
-    red: 'from-red-500 to-red-600',
-    purple: 'from-purple-500 to-purple-600',
-    yellow: 'from-yellow-500 to-yellow-600',
-    orange: 'from-orange-500 to-orange-600',
-    pink: 'from-pink-500 to-pink-600',
-  };
+export default function StatCard({ title, value, subtitle, icon, tint }: StatCardProps) {
+  const tintStyle: React.CSSProperties = tint === 1
+    ? { background: 'linear-gradient(170deg, var(--lavender) 0%, white 90%)', borderColor: 'var(--lavender-deep)' }
+    : tint === 2
+    ? { background: 'linear-gradient(170deg, var(--veil) 0%, white 90%)', borderColor: 'var(--veil-deep)' }
+    : tint === 3
+    ? { background: 'linear-gradient(170deg, var(--thistle-soft) 0%, white 90%)', borderColor: 'var(--thistle)' }
+    : {};
+
+  const isIconName = KNOWN_ICONS.has(icon);
 
   return (
-    <motion.div
-      whileHover={{ scale: 1.02 }}
-      className={`bg-gradient-to-br ${colorClasses[color]} rounded-xl shadow-md p-6 text-white`}
-    >
-      <div className="flex justify-between items-start">
-        <div>
-          <p className="text-sm opacity-90 mb-1">{title}</p>
-          <p className="text-3xl font-bold">
-            {value} {subtitle && <span className="text-lg font-normal">{subtitle}</span>}
-          </p>
-        </div>
-        <div className="text-4xl opacity-80">{icon}</div>
+    <div style={{
+      background: 'white',
+      border: '1px solid var(--line)',
+      borderRadius: 'var(--radius-md)',
+      padding: 16,
+      position: 'relative',
+      overflow: 'hidden',
+      ...tintStyle,
+    }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--muted)' }}>
+        {isIconName ? <Icon name={icon} size={13} /> : <span style={{ fontSize: 13 }}>{icon}</span>}
+        {title}
       </div>
-    </motion.div>
+      <div style={{ fontFamily: 'var(--serif)', fontSize: 38, lineHeight: 1, marginTop: 10, letterSpacing: '-0.01em', color: 'var(--ink)' }}>
+        {value}
+        {subtitle && <span style={{ fontSize: 16, fontFamily: 'var(--sans)', color: 'var(--ink-2)', marginLeft: 6 }}>{subtitle}</span>}
+      </div>
+      <div style={{ position: 'absolute', top: 12, right: 12, width: 28, height: 28, borderRadius: 10, background: 'rgba(255,255,255,.7)', display: 'grid', placeItems: 'center', color: 'var(--lavender-grey-deep)', border: '1px solid rgba(255,255,255,.9)', fontSize: 14 }}>
+        {isIconName ? <Icon name={icon} size={15} /> : icon}
+      </div>
+    </div>
   );
 }

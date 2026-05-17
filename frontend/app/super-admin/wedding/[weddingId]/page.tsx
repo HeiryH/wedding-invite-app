@@ -33,6 +33,7 @@ import TemplatesTab from './components/TemplatesTab';
 import PackagesTab from './components/PackagesTab';
 import AccessTab from './components/AccessTab';
 import SeatingTab from './components/SeatingTab';
+import Icon from '@/components/admin/Icon';
 
 type Tab = 'overview' | 'guests' | 'wishes' | 'photos' | 'features' | 'templates' | 'packages' | 'access' | 'seating';
 
@@ -339,10 +340,11 @@ export default function WeddingDetailPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-16 h-16 border-4 border-rose-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-          <p className="text-gray-600">Loading wedding...</p>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '60vh' }}>
+        <div style={{ textAlign: 'center' }}>
+          <div style={{ width: 48, height: 48, border: '3px solid var(--lavender-grey-ink)', borderTopColor: 'transparent', borderRadius: '50%', margin: '0 auto 14px', animation: 'spin 0.8s linear infinite' }} />
+          <p style={{ color: 'var(--muted)', fontSize: 14 }}>Loading wedding…</p>
+          <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
         </div>
       </div>
     );
@@ -350,155 +352,103 @@ export default function WeddingDetailPage() {
 
   if (error || !wedding) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <p className="text-2xl text-red-500 mb-4">😢 {error || 'Wedding not found'}</p>
-          <button
-            onClick={() => router.push('/super-admin')}
-            className="text-rose-600 hover:underline"
-          >
-            ← Back to dashboard
-          </button>
-        </div>
+      <div style={{ textAlign: 'center', padding: '60px 20px' }}>
+        <p style={{ color: 'var(--danger)', marginBottom: 12 }}>{error || 'Wedding not found'}</p>
+        <button onClick={() => router.push('/super-admin')} style={{ color: 'var(--lavender-grey-ink)', cursor: 'pointer', background: 'none', border: 'none', textDecoration: 'underline' }}>
+          ← Back to dashboard
+        </button>
       </div>
     );
   }
 
-  return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div className="bg-white border-b border-gray-200 shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 py-6">
-          <div className="flex justify-between items-center">
-            {isEditingWedding ? (
-              <div className="space-y-3 w-full max-w-2xl">
-                <div className="flex gap-2">
-                  <input
-                    className="text-2xl font-bold border-2 border-gray-300 rounded px-3 py-2 w-full text-gray-900 focus:border-rose-400 focus:outline-none"
-                    value={editWeddingData.brideName}
-                    onChange={(e) =>
-                      setEditWeddingData({ ...editWeddingData, brideName: e.target.value })
-                    }
-                    placeholder="Bride's Name"
-                  />
-                  <span className="text-2xl font-bold self-center">&</span>
-                  <input
-                    className="text-2xl font-bold border-2 border-gray-300 rounded px-3 py-2 w-full text-gray-900 focus:border-rose-400 focus:outline-none"
-                    value={editWeddingData.groomName}
-                    onChange={(e) =>
-                      setEditWeddingData({ ...editWeddingData, groomName: e.target.value })
-                    }
-                    placeholder="Groom's Name"
-                  />
-                </div>
-                <input
-                  type="date"
-                  className="block border-2 border-gray-300 rounded px-3 py-2 text-gray-900 focus:border-rose-400 focus:outline-none"
-                  value={editWeddingData.weddingDate}
-                  onChange={(e) =>
-                    setEditWeddingData({ ...editWeddingData, weddingDate: e.target.value })
-                  }
-                />
-                <input
-                  className="block border-2 border-gray-300 rounded px-3 py-2 w-full text-gray-900 focus:border-rose-400 focus:outline-none"
-                  value={editWeddingData.venue}
-                  onChange={(e) =>
-                    setEditWeddingData({ ...editWeddingData, venue: e.target.value })
-                  }
-                  placeholder="Venue"
-                />
-                <input
-                  className="block border-2 border-gray-300 rounded px-3 py-2 w-full text-gray-900 focus:border-rose-400 focus:outline-none"
-                  value={editWeddingData.venueAddress}
-                  onChange={(e) =>
-                    setEditWeddingData({ ...editWeddingData, venueAddress: e.target.value })
-                  }
-                  placeholder="Venue Address"
-                />
-                <div className="flex gap-2 mt-2">
-                  <button
-                    onClick={handleUpdateWedding}
-                    className="bg-green-500 text-white px-6 py-2 rounded-lg hover:bg-green-600 font-semibold"
-                  >
-                    ✓ Save
-                  </button>
-                  <button
-                    onClick={() => setIsEditingWedding(false)}
-                    className="bg-gray-200 px-6 py-2 rounded-lg hover:bg-gray-300 font-semibold"
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <div>
-                <div className="flex items-center gap-3">
-                  <h1 className="text-3xl font-bold text-gray-800">
-                    {wedding.brideName} & {wedding.groomName}
-                  </h1>
-                  <button
-                    onClick={() => setIsEditingWedding(true)}
-                    className="text-gray-400 hover:text-rose-500 transition-colors text-xl"
-                    title="Edit wedding details"
-                  >
-                    ✏️
-                  </button>
-                </div>
-                <p className="text-gray-600 mt-1">
-                  📅 {new Date(wedding.weddingDate).toLocaleDateString('en-US', {
-                    weekday: 'long',
-                    year: 'numeric',
-                    month: 'long',
-                    day: 'numeric',
-                  })}
-                </p>
-                <p className="text-gray-500 text-sm mt-1">📍 {wedding.venue} • {wedding.venueAddress}</p>
-              </div>
-            )}
+  const daysToGo = Math.ceil((new Date(wedding.weddingDate).getTime() - Date.now()) / 86400000);
+  const weddingDateStr = new Date(wedding.weddingDate).toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+  const weddingTimeStr = new Date(wedding.weddingDate).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+  const weddingStatus = !wedding.isActive ? 'Draft' : daysToGo > 0 ? 'Upcoming' : 'Live';
+  const statusStyle: React.CSSProperties = weddingStatus === 'Upcoming'
+    ? { background: 'var(--lavender)', color: 'var(--lavender-grey-ink)' }
+    : weddingStatus === 'Live' ? { background: '#e5f1ea', color: 'var(--success)' }
+    : { background: 'var(--floral-deep)', color: 'var(--muted)' };
 
-            <div className="flex gap-3">
-              <button
-                onClick={() => router.push('/super-admin')}
-                className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors font-medium"
-              >
-                ← Back
+  const inpEdit: React.CSSProperties = { padding: '8px 12px', border: '1px solid rgba(255,255,255,.5)', borderRadius: 10, background: 'rgba(255,255,255,.85)', color: 'var(--ink)', fontSize: 14, outline: 'none' };
+
+  return (
+    <div>
+      {/* ── Back link (mobile) ───────────────────────────────────────────── */}
+      <button onClick={() => router.push('/super-admin')} className="lg:hidden"
+        style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13, color: 'var(--lavender-grey-deep)', marginBottom: 14, padding: '6px 10px 6px 6px', borderRadius: 999, background: 'white', border: '1px solid var(--line-2)', cursor: 'pointer' }}>
+        <Icon name="nav-arrow-left" size={16} /> All weddings
+      </button>
+
+      {/* ── Detail Hero ──────────────────────────────────────────────────── */}
+      <div style={{ background: 'linear-gradient(150deg, var(--veil) 0%, var(--lavender) 100%)', borderRadius: 'var(--radius-lg)', padding: '22px 22px 26px', position: 'relative', overflow: 'hidden', border: '1px solid var(--veil-deep)', marginBottom: 18 }}>
+        <div style={{ position: 'absolute', right: -50, top: -50, width: 220, height: 220, borderRadius: '50%', background: 'radial-gradient(circle, rgba(255,255,255,.6), transparent 70%)', pointerEvents: 'none' }} />
+
+        {isEditingWedding ? (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10, maxWidth: 560, position: 'relative', zIndex: 1 }}>
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+              <input value={editWeddingData.brideName} onChange={e => setEditWeddingData({ ...editWeddingData, brideName: e.target.value })} placeholder="Bride's Name" style={{ ...inpEdit, flex: 1, fontSize: 16 }} />
+              <span style={{ color: 'var(--lavender-grey-deep)', fontFamily: 'var(--serif)', fontStyle: 'italic', fontSize: 20 }}>&amp;</span>
+              <input value={editWeddingData.groomName} onChange={e => setEditWeddingData({ ...editWeddingData, groomName: e.target.value })} placeholder="Groom's Name" style={{ ...inpEdit, flex: 1, fontSize: 16 }} />
+            </div>
+            <input type="date" value={editWeddingData.weddingDate} onChange={e => setEditWeddingData({ ...editWeddingData, weddingDate: e.target.value })} style={inpEdit} />
+            <input value={editWeddingData.venue} onChange={e => setEditWeddingData({ ...editWeddingData, venue: e.target.value })} placeholder="Venue" style={{ ...inpEdit, width: '100%', boxSizing: 'border-box' }} />
+            <input value={editWeddingData.venueAddress} onChange={e => setEditWeddingData({ ...editWeddingData, venueAddress: e.target.value })} placeholder="Venue Address" style={{ ...inpEdit, width: '100%', boxSizing: 'border-box' }} />
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button onClick={handleUpdateWedding} style={{ padding: '9px 18px', background: 'var(--lavender-grey-ink)', color: 'var(--floral)', border: 'none', borderRadius: 10, fontSize: 13.5, fontWeight: 500, cursor: 'pointer' }}>Save</button>
+              <button onClick={() => setIsEditingWedding(false)} style={{ padding: '9px 18px', background: 'rgba(255,255,255,.5)', border: '1px solid rgba(255,255,255,.6)', borderRadius: 10, fontSize: 13.5, fontWeight: 500, cursor: 'pointer', color: 'var(--ink)' }}>Cancel</button>
+            </div>
+          </div>
+        ) : (
+          <div style={{ position: 'relative', zIndex: 1 }}>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 14 }}>
+              <span style={{ display: 'inline-flex', alignItems: 'baseline', gap: 6, background: 'rgba(255,255,255,.7)', border: '1px solid rgba(255,255,255,.9)', padding: '6px 10px', borderRadius: 999, fontSize: 11, letterSpacing: '0.06em', textTransform: 'uppercase' as const, color: 'var(--lavender-grey-ink)' }}>
+                <b style={{ fontFamily: 'var(--serif)', fontSize: 16, letterSpacing: '-0.01em', textTransform: 'none' as const, fontWeight: 400 }}>{Math.max(0, daysToGo)}</b> days to go
+              </span>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '4px 9px', borderRadius: 999, fontSize: 10.5, letterSpacing: '0.06em', textTransform: 'uppercase' as const, fontWeight: 500, ...statusStyle }}>
+                <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'currentColor', display: 'inline-block' }} /> {weddingStatus}
+              </span>
+            </div>
+            <h2 style={{ margin: 0, fontFamily: 'var(--serif)', fontSize: 'clamp(28px, 5vw, 48px)', fontWeight: 400, lineHeight: 1, letterSpacing: '-0.02em', color: 'var(--ink)' }}>
+              {wedding.brideName} <em style={{ fontStyle: 'italic', color: 'var(--lavender-grey-deep)', margin: '0 6px' }}>&amp;</em> {wedding.groomName}
+            </h2>
+            <div style={{ marginTop: 14, color: 'var(--ink-2)', fontSize: 13.5, display: 'flex', flexWrap: 'wrap', gap: '6px 16px' }}>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}><Icon name="calendar" size={14} style={{ color: 'var(--lavender-grey-deep)' }} /> {weddingDateStr}</span>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}><Icon name="clock" size={14} style={{ color: 'var(--lavender-grey-deep)' }} /> {weddingTimeStr}</span>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}><Icon name="map-pin" size={14} style={{ color: 'var(--lavender-grey-deep)' }} /> {wedding.venue}{wedding.venueAddress ? ` · ${wedding.venueAddress}` : ''}</span>
+            </div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 18 }}>
+              <button onClick={() => window.open(`/wedding/${wedding.coupleName}`, '_blank')} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '9px 14px', background: 'var(--lavender-grey-ink)', color: 'var(--floral)', border: 'none', borderRadius: 12, fontSize: 13.5, fontWeight: 500, cursor: 'pointer' }}>
+                <Icon name="eye" size={15} /> View invitation
               </button>
-              <button                
-                onClick={() =>
-                          window.open(`/wedding/${wedding.coupleName}`, '_blank')
-                        }
-                className="px-4 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition-colors font-medium"
-              >
-                👁️ View Invitation
+              <button onClick={() => navigator.clipboard?.writeText(`${window.location.origin}/wedding/${wedding.coupleName}`)} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '9px 14px', background: 'rgba(255,255,255,.7)', border: '1px solid rgba(255,255,255,.9)', borderRadius: 12, fontSize: 13.5, fontWeight: 500, color: 'var(--lavender-grey-ink)', cursor: 'pointer' }}>
+                <Icon name="share-android" size={15} /> Share link
+              </button>
+              <button onClick={() => setIsEditingWedding(true)} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '9px 14px', background: 'rgba(255,255,255,.7)', border: '1px solid rgba(255,255,255,.9)', borderRadius: 12, fontSize: 13.5, fontWeight: 500, color: 'var(--lavender-grey-ink)', cursor: 'pointer' }}>
+                <Icon name="settings" size={15} /> Edit details
               </button>
             </div>
           </div>
-
-          {/* Navigation Tabs */}
-          <div className="flex gap-4 mt-6 border-b border-gray-200">
-            {availableTabs.map((tab) => (
-              <button
-                key={tab.key}
-                onClick={() => setActiveTab(tab.key)}
-                className={`px-4 py-2 font-medium transition-colors relative ${activeTab === tab.key
-                  ? 'text-rose-600 border-b-2 border-rose-600'
-                  : 'text-gray-600 hover:text-gray-800'
-                  }`}
-              >
-                {tab.label}
-                {tab.key === 'photos' && stats.pendingPhotos > 0 && (
-                  <span className="ml-2 inline-flex items-center justify-center w-5 h-5 text-xs font-bold text-white bg-red-500 rounded-full">
-                    {stats.pendingPhotos}
-                  </span>
-                )}
-              </button>
-            ))}
-          </div>
-        </div>
+        )}
       </div>
 
-      {/* Tab Content */}
-      <div className="max-w-7xl mx-auto px-4 py-8">
+      {/* ── Tab bar ──────────────────────────────────────────────────────── */}
+      <div style={{ display: 'flex', gap: 4, borderBottom: '1px solid var(--line)', overflowX: 'auto', scrollbarWidth: 'none', marginBottom: 22 }}>
+        {availableTabs.map((tab) => (
+          <button key={tab.key} onClick={() => setActiveTab(tab.key)}
+            style={{ padding: '12px 14px', fontSize: 13.5, color: activeTab === tab.key ? 'var(--ink)' : 'var(--muted)', borderBottom: `2px solid ${activeTab === tab.key ? 'var(--lavender-grey-ink)' : 'transparent'}`, marginBottom: -1, whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center', gap: 6, fontWeight: 500, background: 'none', border: 'none', borderBottomWidth: 2, borderBottomStyle: 'solid', borderBottomColor: activeTab === tab.key ? 'var(--lavender-grey-ink)' : 'transparent', cursor: 'pointer', transition: 'color .15s ease' }}>
+            {tab.label}
+            {tab.key === 'photos' && stats.pendingPhotos > 0 && (
+              <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 18, height: 18, fontSize: 10, fontWeight: 700, background: 'var(--danger)', color: 'white', borderRadius: '50%' }}>
+                {stats.pendingPhotos}
+              </span>
+            )}
+          </button>
+        ))}
+      </div>
+
+      {/* ── Tab Content ─────────────────────────────────────────────────── */}
+      <div>
         {activeTab === 'overview' && <OverviewTab stats={stats} guests={guests} />}
 
         {activeTab === 'guests' && (
