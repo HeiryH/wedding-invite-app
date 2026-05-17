@@ -89,32 +89,32 @@
   background-repeat: no-repeat;
 }
 
-/* ── Side Navigation ─────────────────────────────────────────────── */
+/* ── Bottom Navigation ───────────────────────────────────────────── */
 .sideNav {
   position: fixed;
-  right: 12px;
-  top: 50%;
-  transform: translateY(-50%);
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
   z-index: 50;
 }
 
 .sideNavList {
   display: flex;
-  flex-direction: column;
-  gap: 6px;
-  padding: 8px 6px;
+  flex-direction: row;
+  gap: 4px;
+  padding: 6px 8px;
   border-radius: 999px;
-  background: #fffbf44a;
-  backdrop-filter: blur(14px) saturate(140%);
-  -webkit-backdrop-filter: blur(14px) saturate(140%);
-  border: 1px solid rgba(255, 255, 255, 0.55);
-  box-shadow: var(--t5-card-shadow-soft);
+  background: rgba(255, 251, 244, 0.72);
+  backdrop-filter: blur(20px) saturate(160%);
+  -webkit-backdrop-filter: blur(20px) saturate(160%);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  box-shadow: var(--t5-card-shadow);
 }
 
 .sideNavBtn {
   position: relative;
-  width: 38px;
-  height: 38px;
+  width: 42px;
+  height: 42px;
   border-radius: 50%;
   border: none;
   background: transparent;
@@ -127,7 +127,7 @@
 }
 
 .sideNavBtn:hover {
-  background: rgba(255, 251, 244, 0.5);
+  background: rgba(255, 251, 244, 0.6);
 }
 
 .sideNavBtnActive {
@@ -142,16 +142,16 @@
 }
 
 .sideNavEmoji {
-  font-size: 1rem;
+  font-size: 1.1rem;
   line-height: 1;
 }
 
 .sideNavTooltip {
   position: absolute;
-  right: calc(100% + 10px);
-  top: 50%;
-  transform: translateY(-50%) translateX(6px);
-  background: rgba(255, 251, 244, 0.92);
+  bottom: calc(100% + 10px);
+  left: 50%;
+  transform: translateX(-50%) translateY(6px);
+  background: rgba(255, 251, 244, 0.95);
   color: var(--t5-ink);
   font-size: 11px;
   font-family: var(--t5-font-display);
@@ -161,12 +161,13 @@
   white-space: nowrap;
   opacity: 0;
   pointer-events: none;
+  box-shadow: var(--t5-card-shadow-soft);
   transition: opacity 200ms, transform 200ms;
 }
 
 .sideNavBtn:hover .sideNavTooltip {
   opacity: 1;
-  transform: translateY(-50%) translateX(0);
+  transform: translateX(-50%) translateY(0);
 }
 
 .sideNavBadge {
@@ -181,8 +182,9 @@
 }
 
 @media (max-width: 440px) {
-  .sideNav { right: 8px; }
-  .sideNavBtn { width: 34px; height: 34px; }
+  .sideNav { bottom: 14px; }
+  .sideNavBtn { width: 38px; height: 38px; }
+  .sideNavList { gap: 2px; padding: 5px 6px; }
 }
 
 /* ── Section: Welcome ───────────────────────────────────────────── */
@@ -190,11 +192,11 @@
   position: relative;
   min-height: 100vh;
   display: flex;
-  align-items: start;
+  align-items: center;
   justify-content: center;
-  padding: 0 1.5rem;
+  padding: 0rem 1.5rem;
   overflow-x: hidden;
-  top: 10em;
+  /* top: 10em; */
 }
 
 .invitationContent {
@@ -208,13 +210,21 @@
 .inviteLabel {
   font-family: var(--t5-font-display);
   font-weight: 500;
-  font-size: 1.125rem;
-  letter-spacing: 0.5em;
+  font-size: 0.75rem;
+  letter-spacing: 0.45em;
   text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.75);
-  text-shadow: var(--t5-text-glow);
-  filter: var(--t5-shadow-body);
+  color: var(--t5-ink);
+  text-shadow: none;
+  filter: none;
   margin-bottom: 0.5rem;
+  padding: 7px 20px;
+  border-radius: 999px;
+  background: rgba(255, 251, 244, 0.72);
+  backdrop-filter: blur(18px) saturate(150%);
+  -webkit-backdrop-filter: blur(18px) saturate(150%);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  box-shadow: var(--t5-card-shadow-soft);
+  display: inline-block;
 }
 
 .coupleName {
@@ -274,7 +284,7 @@
 
 .scrollCue {
   position: absolute;
-  bottom: 11rem;
+  bottom: 5.5rem;
   left: 50%;
   transform: translateX(-50%);
   animation: t5-bounce 2.2s ease-in-out infinite;
@@ -804,31 +814,26 @@
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
-  max-height: 740px;
-  overflow-y: auto;
-  padding: 1rem;
-  scroll-behavior: smooth;
-  border-radius: 22px;
-  border: 1px solid #ffffff8c;
-  -webkit-backdrop-filter: blur(24px) saturate(160%);
-box-shadow: var(--t5-card-shadow);
 }
 
-.wishList::-webkit-scrollbar {
-  width: 3px;
-}
-
-.wishList::-webkit-scrollbar-track {
+.wishLoadMore {
+  width: 100%;
+  margin-top: 0.25rem;
+  padding: 10px;
+  border-radius: 14px;
+  border: 1px dashed rgba(217, 123, 134, 0.4);
   background: transparent;
+  font-family: var(--t5-font-display);
+  font-style: italic;
+  font-size: 13px;
+  color: var(--t5-rose);
+  cursor: pointer;
+  transition: background 150ms, border-color 150ms;
 }
 
-.wishList::-webkit-scrollbar-thumb {
-  background: rgba(217, 123, 134, 0.35);
-  border-radius: 999px;
-}
-
-.wishList::-webkit-scrollbar-thumb:hover {
-  background: var(--t5-rose);
+.wishLoadMore:hover {
+  background: rgba(217, 123, 134, 0.06);
+  border-color: var(--t5-rose);
 }
 
 .wishCard {

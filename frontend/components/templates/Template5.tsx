@@ -264,6 +264,7 @@ export default function Template5({
   const [wishSubmitting, setWishSubmitting] = useState(false);
   const [wishSuccess, setWishSuccess] = useState(false);
   const [wishExpanded, setWishExpanded] = useState(false);
+  const [displayedWishes, setDisplayedWishes] = useState(10);
   const [photoExpanded, setPhotoExpanded] = useState(false);
 
   const [photoData, setPhotoData] = useState({ guestName: '', caption: '' });
@@ -537,8 +538,8 @@ const NAV_EMOJIS: Record<string, string> = {
       {/* ── Side Navigation ──────────────────────────────────────────── */}
       <nav className={styles.sideNav}>
         <motion.div
-          initial={{ opacity: 0, x: 50 }}
-          animate={{ opacity: 1, x: 0 }}
+          initial={{ opacity: 0, y: 50 }}
+          animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.6, duration: 0.6, ease: 'easeOut' }}
           className={styles.sideNavList}
         >
@@ -938,12 +939,20 @@ const NAV_EMOJIS: Record<string, string> = {
 
           {wishes.length > 0 && (
             <div className={styles.wishList}>
-              {wishes.map((wish) => (
+              {wishes.slice(0, displayedWishes).map((wish) => (
                 <div key={wish.wishId} className={styles.wishCard}>
                   <p className={styles.wishAuthor}>{wish.guestName}</p>
                   <p className={styles.wishMessage}>"{wish.message}"</p>
                 </div>
               ))}
+              {wishes.length > displayedWishes && (
+                <button
+                  className={styles.wishLoadMore}
+                  onClick={() => setDisplayedWishes(n => n + 10)}
+                >
+                  Load more ({wishes.length - displayedWishes} remaining)
+                </button>
+              )}
             </div>
           )}
         </div>
