@@ -231,8 +231,8 @@ export default function AdminShell({
         backdropFilter: 'blur(20px) saturate(140%)',
         WebkitBackdropFilter: 'blur(20px) saturate(140%)',
         borderTop: '1px solid var(--line)',
-        padding: `10px 16px calc(10px + env(safe-area-inset-bottom))`,
-        gap: 6, zIndex: 50,
+        padding: `6px 12px calc(6px + env(safe-area-inset-bottom))`,
+        gap: 4, zIndex: 50,
       }}>
         {navItems.map((item, idx) => {
           const isActive = item.id === activeId;
@@ -244,20 +244,20 @@ export default function AdminShell({
                 <button
                   onClick={() => router.push(fabHref!)}
                   style={{
-                    flex: '0 0 auto', width: 48, height: 48, borderRadius: 16, marginTop: -20,
+                    flex: '0 0 auto', width: 40, height: 40, borderRadius: 13, marginTop: -14,
                     background: 'var(--lavender-grey-ink)', color: 'var(--floral)',
                     display: 'grid', placeItems: 'center', border: 'none', cursor: 'pointer',
                     boxShadow: '0 6px 20px rgba(74,68,86,.25), inset 0 1px 0 rgba(255,255,255,.12)',
                   }}
                   aria-label="Create"
                 >
-                  <Icon name="plus" size={20} />
+                  <Icon name="plus" size={17} />
                 </button>
               )}
               <button
                 onClick={() => router.push(item.href)}
                 style={{
-                  flex: 1, height: 44, borderRadius: 14,
+                  flex: 1, height: 40, borderRadius: 12,
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   color: isActive ? 'var(--lavender-grey-ink)' : 'var(--muted)',
                   background: isActive ? 'var(--lavender)' : 'transparent',
@@ -265,7 +265,7 @@ export default function AdminShell({
                   transition: 'background .15s ease, color .15s ease',
                 }}
               >
-                <Icon name={item.icon} size={22} />
+                <Icon name={item.icon} size={19} />
               </button>
             </div>
           );

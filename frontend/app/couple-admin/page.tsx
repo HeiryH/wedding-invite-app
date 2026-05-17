@@ -455,28 +455,28 @@ export default function CoupleAdminDashboard() {
       {tabs.length > 0 ? (
         <div style={{ background: 'white', border: '1px solid var(--line)', borderRadius: 'var(--radius-md)' }}>
           {/* Tab bar */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid var(--line)', paddingLeft: 4, paddingRight: 16 }}>
-            <div style={{ display: 'flex', overflowX: 'auto', scrollbarWidth: 'none' }}>
-              {tabs.map(tab => (
-                <button key={tab.key} onClick={() => setActiveTab(tab.key)}
-                  style={{ padding: '12px 14px', fontSize: 13.5, color: activeTab === tab.key ? 'var(--ink)' : 'var(--muted)', borderBottom: `2px solid ${activeTab === tab.key ? 'var(--lavender-grey-ink)' : 'transparent'}`, marginBottom: -1, whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center', gap: 6, fontWeight: 500, background: 'none', border: 'none', cursor: 'pointer', transition: 'color .15s ease' }}>
-                  <Icon name={tab.icon} size={16} /> {tab.label}
-                  {tab.key === 'photos' && pendingPhotos > 0 && (
-                    <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 16, height: 16, fontSize: 10, fontWeight: 700, background: 'var(--danger)', color: 'white', borderRadius: '50%' }}>{pendingPhotos}</span>
-                  )}
-                </button>
-              ))}
-            </div>
-            {activeTab === 'guests' && (
-              <button onClick={() => { setEditingGuest(null); setShowGuestModal(true); }}
-                style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '7px 12px', background: 'var(--lavender-grey-ink)', color: 'var(--floral)', border: 'none', borderRadius: 10, fontSize: 12.5, fontWeight: 500, cursor: 'pointer' }}>
-                <Icon name="plus" size={13} /> Add Guest
+          <div style={{ display: 'flex', borderBottom: '1px solid var(--line)', paddingLeft: 4, overflowX: 'auto', scrollbarWidth: 'none' }}>
+            {tabs.map(tab => (
+              <button key={tab.key} onClick={() => setActiveTab(tab.key)}
+                style={{ padding: '12px 14px', fontSize: 13.5, color: activeTab === tab.key ? 'var(--ink)' : 'var(--muted)', borderBottom: `2px solid ${activeTab === tab.key ? 'var(--lavender-grey-ink)' : 'transparent'}`, marginBottom: -1, whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center', gap: 6, fontWeight: 500, background: 'none', border: 'none', cursor: 'pointer', transition: 'color .15s ease' }}>
+                <Icon name={tab.icon} size={16} /> {tab.label}
+                {tab.key === 'photos' && pendingPhotos > 0 && (
+                  <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 16, height: 16, fontSize: 10, fontWeight: 700, background: 'var(--danger)', color: 'white', borderRadius: '50%' }}>{pendingPhotos}</span>
+                )}
               </button>
-            )}
+            ))}
           </div>
 
           {/* Content */}
           <div style={{ padding: 20 }}>
+            {activeTab === 'guests' && (
+              <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 12 }}>
+                <button onClick={() => { setEditingGuest(null); setShowGuestModal(true); }}
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '7px 12px', background: 'var(--lavender-grey-ink)', color: 'var(--floral)', border: 'none', borderRadius: 10, fontSize: 12.5, fontWeight: 500, cursor: 'pointer' }}>
+                  <Icon name="plus" size={13} /> Add Guest
+                </button>
+              </div>
+            )}
             <AnimatePresence mode="wait">
               {activeTab === 'guests' && <GuestsTab key="guests" guests={filteredGuests} allGuests={guests} searchTerm={searchTerm} setSearchTerm={setSearchTerm} filterSide={filterSide} setFilterSide={setFilterSide} filterAttending={filterAttending} setFilterAttending={setFilterAttending} onDelete={handleDeleteGuest} onEdit={g => { setEditingGuest(g); setShowGuestModal(true); }} onExport={exportGuestsCSV} />}
               {activeTab === 'wishes' && <WishesTab key="wishes" wishes={wishes} onDelete={handleDeleteWish} onExport={exportWishesCSV} />}
