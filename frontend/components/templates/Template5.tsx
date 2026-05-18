@@ -365,19 +365,23 @@ const NAV_EMOJIS: Record<string, string> = {
       if (!ctx) return;
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-      const d = imageData.data;
-      const THRESHOLD = 30;
-      const FADE = 20;
-      for (let i = 0; i < d.length; i += 4) {
-        const lum = d[i] * 0.299 + d[i + 1] * 0.587 + d[i + 2] * 0.114;
-        if (lum < THRESHOLD) {
-          d[i + 3] = 0;
-        } else if (lum < THRESHOLD + FADE) {
-          d[i + 3] = Math.round(((lum - THRESHOLD) / FADE) * 255);
+      try {
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const d = imageData.data;
+        const THRESHOLD = 30;
+        const FADE = 20;
+        for (let i = 0; i < d.length; i += 4) {
+          const lum = d[i] * 0.299 + d[i + 1] * 0.587 + d[i + 2] * 0.114;
+          if (lum < THRESHOLD) {
+            d[i + 3] = 0;
+          } else if (lum < THRESHOLD + FADE) {
+            d[i + 3] = Math.round(((lum - THRESHOLD) / FADE) * 255);
+          }
         }
+        ctx.putImageData(imageData, 0, 0);
+      } catch {
+        // canvas tainted — video frame is still visible without chromakey
       }
-      ctx.putImageData(imageData, 0, 0);
     };
 
     const scheduleDraw = () => {
@@ -814,7 +818,7 @@ const NAV_EMOJIS: Record<string, string> = {
           </AnimatePresence>
 
           <video ref={videoRef} className={styles.hiddenVideo} muted playsInline preload="auto"
-            disablePictureInPicture crossOrigin="anonymous">
+            disablePictureInPicture>
             <source src="/templates/t5/envelope_keyed.mp4" type="video/mp4" />
           </video>
 
