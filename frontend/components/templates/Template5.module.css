@@ -83,7 +83,9 @@
   position: fixed;
   inset: 0;
   z-index: -10;
-  background-image: url('/templates/t5/flowerbg.png');
+  background-image:
+    linear-gradient(to bottom, transparent 70%, rgba(255, 255, 255, 0.85) 90%, white 100%),
+    url('/templates/t5/flowerbg.png');
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
@@ -92,7 +94,7 @@
 /* ── Bottom Navigation ───────────────────────────────────────────── */
 .sideNav {
   position: fixed;
-  bottom: 10px;
+  bottom: 5px;
   left: 50%;
   transform: translateX(-50%);
   z-index: 50;
@@ -193,7 +195,7 @@
 /* ── Section: Welcome ───────────────────────────────────────────── */
 .sectionWelcome {
   position: relative;
-  min-height: 100vh;
+  min-height: 80vh;
   display: flex;
   flex-direction: column;
   align-items: center;
