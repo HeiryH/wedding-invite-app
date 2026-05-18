@@ -616,6 +616,17 @@ const NAV_EMOJIS: Record<string, string> = {
 
             <path id="path" d="M 100,250 A 200,200 0 0, 1 400, 250" fill="transparent" />
 
+            {/* Glass bands — outer diffuse, inner cream, edge highlight */}
+            <path d="M 100,250 A 200,200 0 0, 1 400, 250"
+              fill="none" stroke="rgba(255,251,244,0.15)"
+              strokeWidth="40" strokeLinecap="round" />
+            <path d="M 100,250 A 200,200 0 0, 1 400, 250"
+              fill="none" stroke="rgba(255,251,244,0.27)"
+              strokeWidth="28" strokeLinecap="round" />
+            <path d="M 100,250 A 200,200 0 0, 1 400, 250"
+              fill="none" stroke="rgba(255,255,255,0.45)"
+              strokeWidth="1.5" strokeLinecap="round" />
+
             {/* 2. Apply filter attribute to text */}
             <text
               fill="rgba(255,255,255,0.9)"
@@ -703,9 +714,20 @@ const NAV_EMOJIS: Record<string, string> = {
 
             <path id="dateCurve" d="M 80,0 A 250,250 0 0,0 420,0" fill="transparent" />
 
+            {/* Glass bands — outer diffuse, inner cream, edge highlight */}
+            <path d="M 80,0 A 250,250 0 0,0 420,0"
+              fill="none" stroke="rgba(255,251,244,0.15)"
+              strokeWidth="40" strokeLinecap="round" />
+            <path d="M 80,0 A 250,250 0 0,0 420,0"
+              fill="none" stroke="rgba(255,251,244,0.27)"
+              strokeWidth="28" strokeLinecap="round" />
+            <path d="M 80,0 A 250,250 0 0,0 420,0"
+              fill="none" stroke="rgba(255,255,255,0.45)"
+              strokeWidth="1.5" strokeLinecap="round" />
+
             <text
               fill="rgba(255,255,255,0.9)"
-              filter="url(#date-text-shadow)" // 👈 Applies the defined shadow filter
+              filter="url(#date-text-shadow)"
               style={{ fontFamily: 'PlayfairDisplay, serif', fontSize: '1.75em', letterSpacing: '0.25em' }}
             >
               <textPath href="#dateCurve" startOffset="50%" textAnchor="middle">
