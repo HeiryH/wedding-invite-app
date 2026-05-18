@@ -204,7 +204,7 @@
   flex-direction: column;
   align-items: center;
   text-align: center;
-  gap: 2rem;
+  gap: 1rem;
 }
 
 .inviteLabel {
@@ -233,6 +233,7 @@
   font-family: var(--t5-font-script);
   font-size: 1.5rem;
   line-height: 2;
+  margin-top: 1rem;
   /* word-spacing: -20px; */
   /* filter: none; */
   filter: var(--t5-shadow-heading);
@@ -246,7 +247,7 @@
   font-size: 1.5rem;
   line-height: 2;
   word-spacing: normal;
-  margin-bottom: 1.5rem;
+  margin-bottom: 1rem;
   /* filter: none; */
 }
 
