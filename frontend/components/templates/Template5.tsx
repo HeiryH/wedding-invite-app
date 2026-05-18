@@ -348,6 +348,17 @@ const NAV_EMOJIS: Record<string, string> = {
     const wrapper = envelopeWrapperRef.current;
     if (!video || !canvas || !section || !wrapper) return;
 
+    // iOS Safari blocks video decode until a user gesture — unlock on first touch/scroll
+    const unlockiOS = () => {
+      video.load();
+      video.play().then(() => {
+        video.pause();
+        video.currentTime = 0.5;
+      }).catch(() => {});
+    };
+    document.addEventListener('touchstart', unlockiOS, { once: true });
+    document.addEventListener('scroll', unlockiOS, { once: true, passive: true } as AddEventListenerOptions);
+
     const draw = () => {
       // readyState < 2 means no decoded frame yet — keep retrying until HAVE_CURRENT_DATA
       if (!video.videoWidth || video.readyState < 2) {
@@ -446,6 +457,8 @@ const NAV_EMOJIS: Record<string, string> = {
     }
 
     return () => {
+      document.removeEventListener('touchstart', unlockiOS);
+      document.removeEventListener('scroll', unlockiOS);
       cleanup?.();
       video.removeEventListener('seeked', onSeeked);
       if (rafRef.current) cancelAnimationFrame(rafRef.current);

@@ -84,7 +84,7 @@
   inset: 0;
   z-index: -10;
   background-image:
-    linear-gradient(to bottom, transparent 70%, rgba(255, 255, 255, 0.85) 90%, white 100%),
+    linear-gradient(to bottom, transparent 93%, white 100%),
     url('/templates/t5/flowerbg.png');
   background-size: cover;
   background-position: center;
@@ -283,7 +283,13 @@
 }
 
 .hiddenVideo {
-  display: none;
+  position: fixed;
+  top: -9999px;
+  left: -9999px;
+  width: 128px;
+  height: 128px;
+  opacity: 0;
+  pointer-events: none;
 }
 
 .inviteBody {
