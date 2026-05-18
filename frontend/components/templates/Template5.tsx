@@ -578,7 +578,7 @@ const NAV_EMOJIS: Record<string, string> = {
             transition={{ delay: 0.3, duration: 1 }}
             className={styles.inviteLabel}
           >
-            Invitation
+            You're invited
           </motion.p>
 
           {/* <motion.svg viewBox="0 150 500 100" width={500}>

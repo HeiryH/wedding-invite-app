@@ -192,9 +192,9 @@
   position: relative;
   min-height: 100vh;
   display: flex;
-  align-items: center;
+  align-items: start;
   justify-content: center;
-  padding: 0rem 1.5rem;
+  padding: 6rem 2.5rem;
   overflow-x: hidden;
   /* top: 10em; */
 }
@@ -231,10 +231,10 @@
   color: white;
   text-shadow: var(--t5-text-glow);
   font-family: var(--t5-font-script);
-  font-size: 3rem;
-  line-height: 1.5;
-  word-spacing: -20px;
-  filter: none;
+  font-size: 1.5rem;
+  line-height: 2;
+  /* word-spacing: -20px; */
+  /* filter: none; */
   filter: var(--t5-shadow-heading);
 }
 
@@ -243,8 +243,8 @@
   text-shadow: var(--t5-text-glow);
   filter: var(--t5-shadow-heading);
   font-family: var(--t5-font-script);
-  font-size: 3rem;
-  line-height: 0.95;
+  font-size: 1.5rem;
+  line-height: 2;
   word-spacing: normal;
   margin-bottom: 1.5rem;
   /* filter: none; */
@@ -254,7 +254,7 @@
   color: white;
   text-shadow: var(--t5-text-glow);
   font-family: var(--t5-font-script);
-  font-size: 30px;
+  font-size: 2rem;
   margin: -0.5rem 0;
   filter: var(--t5-shadow-heading);
   /* filter: none; */
@@ -284,7 +284,7 @@
 
 .scrollCue {
   position: absolute;
-  bottom: 5.5rem;
+  bottom: 8.5rem;
   left: 50%;
   transform: translateX(-50%);
   animation: t5-bounce 2.2s ease-in-out infinite;
