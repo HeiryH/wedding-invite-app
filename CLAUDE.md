@@ -161,3 +161,15 @@ Each template refactored to:
 
 ### Phase 5 — Template 5 (discuss after Phase 4)
 T5 envelope/canvas/GSAP structure is fundamentally different — planned separately.
+
+## Quick Deploy ("again")
+When the user says **"again"**, **"deploy"**, or **"push it"**:
+1. Run `git diff HEAD` to check for uncommitted changes
+2. If changes exist: `bash scripts/deploy-frontend.sh "<short description>"`
+3. If nothing changed: tell the user everything is already up to date
+
+The script handles: `git add frontend/` → commit → push to GitHub → SSH to VPS → `docker compose build frontend && docker compose up -d frontend`.
+
+- Branch: `frontend-design-fix`
+- VPS: `root@139.180.154.175`, app at `/opt/wedding-app`
+- Password: in `.env.deploy` at repo root (never committed — load with `source .env.deploy`)
