@@ -570,21 +570,21 @@ const NAV_EMOJIS: Record<string, string> = {
 
       {/* ── Section 1: Welcome ───────────────────────────────────────── */}
       <section ref={welcomeRef} id="welcome" className={styles.sectionWelcome}>
+        <motion.p
+          initial={{ opacity: 0, letterSpacing: '0.1em' }}
+          animate={{ opacity: 1, letterSpacing: '0.25em' }}
+          transition={{ delay: 0.3, duration: 1 }}
+          className={styles.inviteLabel}
+        >
+          You're invited
+        </motion.p>
+
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 1, ease: 'easeOut' }}
           className={styles.invitationContent}
         >
-          <motion.p
-            initial={{ opacity: 0, letterSpacing: '0.1em' }}
-            animate={{ opacity: 1, letterSpacing: '0.25em' }}
-            transition={{ delay: 0.3, duration: 1 }}
-            className={styles.inviteLabel}
-          >
-            You're invited
-          </motion.p>
-
           {/* <motion.svg viewBox="0 150 500 100" width={500}>
             <path id="path" d="M 100,250 A 200,200 0 0, 1 400, 250" fill="transparent" />
             <text fill="rgba(255,255,255,0.9)">
