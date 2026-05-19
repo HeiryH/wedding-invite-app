@@ -5,8 +5,10 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <DisableOpenApiSourceGenerator>true</DisableOpenApiSourceGenerator>
-    <!-- SDK 10.0.300 bug: **/*.resx glob fails in Docker on Linux when no .resx files exist -->
+    <!-- SDK 10.0.300 bug: glob expansion fails in Docker on Linux (Web SDK adds Razor globs too) -->
     <EnableDefaultEmbeddedResourceItems>false</EnableDefaultEmbeddedResourceItems>
+    <EnableDefaultRazorGenerateItems>false</EnableDefaultRazorGenerateItems>
+    <EnableDefaultRazorComponentItems>false</EnableDefaultRazorComponentItems>
   </PropertyGroup>
 
   <ItemGroup>
