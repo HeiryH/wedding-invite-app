@@ -6,6 +6,7 @@ import { getUser } from '@/lib/auth';
 import {
   weddingService,
   photoService,
+  audioService,
   templateConfigService,
   weddingFeatureService,
   itineraryService,
@@ -45,24 +46,30 @@ const PORTRAIT_SLOTS_T4 = [
 
 // ── Tab / section-order types ─────────────────────────────────────────────────
 
-type Tab = 'welcome' | 'ceremony' | 'celebration';
+type Tab = 'welcome' | 'ceremony' | 'celebration' | 'music';
 
-const TABS: { id: Tab; label: string }[] = [
+// Music tab is fixed (not reorderable) — only these 3 go into tabOrder
+const REORDERABLE_TABS: { id: Tab; label: string }[] = [
   { id: 'welcome', label: 'Welcome' },
   { id: 'ceremony', label: 'Ceremony' },
   { id: 'celebration', label: 'Celebration' },
 ];
 
+// Keep TABS alias so existing code (buildSectionOrder, parseTabOrder) works unchanged
+const TABS = REORDERABLE_TABS;
+
 const TAB_SECTION_CODES: Record<Tab, string[]> = {
   welcome: ['welcome'],
   ceremony: ['walimah', 'rsvp', 'itinerary'],
   celebration: ['wishes', 'photobooth'],
+  music: [],
 };
 
 const TAB_SCROLL_FRACTION: Record<Tab, number> = {
   welcome: 0,
   ceremony: 0.35,
   celebration: 0.7,
+  music: 0,
 };
 
 function buildSectionOrder(order: Tab[]): string {
@@ -298,6 +305,94 @@ function ItineraryEditor({ weddingId, onItemsChange }: { weddingId: number; onIt
           + Add schedule item
         </button>
       )}
+    </div>
+  );
+}
+
+// ── Music Tab ─────────────────────────────────────────────────────────────────
+
+function MusicTab({ url, loop, weddingId, onUrlChange, onLoopChange }: {
+  url: string; loop: boolean; weddingId: number;
+  onUrlChange: (v: string) => void; onLoopChange: (v: boolean) => void;
+}) {
+  const [uploading, setUploading] = useState(false);
+  const [dragOver, setDragOver] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const handleFile = async (file: File) => {
+    setUploading(true);
+    try {
+      const audioUrl = await audioService.upload(weddingId, file);
+      onUrlChange(audioUrl);
+    } catch {
+      alert('Upload failed. Make sure the file is a valid audio format (mp3, wav, ogg, aac, m4a, flac) under 20 MB.');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      <section className="space-y-3">
+        <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Upload Audio</h3>
+        <div
+          onClick={() => inputRef.current?.click()}
+          onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+          onDragLeave={() => setDragOver(false)}
+          onDrop={(e) => {
+            e.preventDefault(); setDragOver(false);
+            const f = e.dataTransfer.files[0];
+            if (f?.type.startsWith('audio/')) handleFile(f);
+          }}
+          className={`rounded-xl border-2 border-dashed p-6 flex flex-col items-center justify-center gap-2 cursor-pointer transition-colors ${dragOver ? 'border-rose-400 bg-rose-50' : 'border-gray-300 hover:border-rose-300 bg-gray-50'}`}
+        >
+          {uploading ? (
+            <p className="text-sm text-gray-400">Uploading…</p>
+          ) : (
+            <>
+              <span className="text-3xl">🎵</span>
+              <p className="text-sm font-medium text-gray-600">Drop audio file here or click to browse</p>
+              <p className="text-xs text-gray-400">MP3, WAV, OGG, AAC, M4A, FLAC · max 20 MB</p>
+            </>
+          )}
+        </div>
+        <input ref={inputRef} type="file" accept="audio/*" className="hidden"
+          onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f); e.target.value = ''; }} />
+      </section>
+
+      <section className="space-y-3">
+        <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Or Paste a URL</h3>
+        <TextField value={url} onChange={onUrlChange} maxLength={500} />
+        <p className="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 leading-relaxed">
+          Must be a <strong>direct link</strong> to an audio file (ending in .mp3, .wav, etc.).
+          YouTube, Spotify, and SoundCloud links won&apos;t work — they don&apos;t expose raw audio streams.
+          Use file hosting like Dropbox (direct download link) or upload above instead.
+        </p>
+      </section>
+
+      {url && (
+        <section className="space-y-2">
+          <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Preview</h3>
+          <audio
+            key={url}
+            controls
+            src={url.startsWith('/') ? (process.env.NEXT_PUBLIC_API_URL?.replace('/api', '') ?? '') + url : url}
+            className="w-full rounded-lg"
+          />
+          <button type="button" onClick={() => onUrlChange('')}
+            className="text-xs text-red-500 hover:text-red-700 font-medium">
+            Remove music
+          </button>
+        </section>
+      )}
+
+      <section className="space-y-2">
+        <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Settings</h3>
+        <div className="flex items-center justify-between gap-3">
+          <FieldLabel hint="Music will restart from the beginning when it ends">Loop Music</FieldLabel>
+          <ToggleSwitch value={loop} onChange={onLoopChange} />
+        </div>
+      </section>
     </div>
   );
 }
@@ -675,7 +770,7 @@ export default function CustomizePage() {
         {/* LEFT: 3-tab editor */}
         <div className="w-[420px] shrink-0 overflow-y-auto h-[calc(100vh-56px)] sticky top-14 border-r border-gray-200 bg-white">
 
-          {/* Tab headers with reorder arrows */}
+          {/* Tab headers — reorderable tabs + fixed Music tab */}
           <div className="flex border-b border-gray-200">
             {tabOrder.map((tab, idx) => (
               <div key={tab} className="flex-1 relative">
@@ -696,6 +791,13 @@ export default function CustomizePage() {
                 </div>
               </div>
             ))}
+            {/* Music — fixed, non-reorderable */}
+            <div className="flex-1 relative">
+              <button onClick={() => handleTabChange('music')}
+                className={`w-full py-3 text-sm font-medium transition-colors ${activeTab === 'music' ? 'text-rose-600 border-b-2 border-rose-500' : 'text-gray-500 hover:text-gray-700'}`}>
+                Music
+              </button>
+            </div>
           </div>
 
           <div className="p-5 space-y-7">
@@ -778,6 +880,7 @@ export default function CustomizePage() {
                 <BgImageField configKey="section.welcome.bg" label="Welcome" value={draftConfig['section.welcome.bg'] ?? ''} weddingId={weddingId!} onChange={(url) => setConfig('section.welcome.bg', url)} />
               </section>
 
+
             </>}
 
             {/* ═══════════════ CEREMONY TAB ═══════════════ */}
@@ -854,6 +957,18 @@ export default function CustomizePage() {
               </section>
 
             </>}
+
+            {/* ═══════════════ MUSIC TAB ═══════════════ */}
+            {activeTab === 'music' && (
+              <MusicTab
+                url={draftConfig['music.url'] ?? ''}
+                loop={draftConfig['music.loop'] !== 'false'}
+                weddingId={weddingId!}
+                onUrlChange={(v) => setConfig('music.url', v)}
+                onLoopChange={(v) => setConfig('music.loop', v ? 'true' : 'false')}
+              />
+            )}
+
           </div>
         </div>
 

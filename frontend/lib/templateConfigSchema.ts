@@ -231,6 +231,28 @@ const COMMON_FIELDS: TemplateConfigField[] = [
     adminOnly: true,
     section: 'navigation',
   },
+
+  // ── Music ───────────────────────────────────────────────────────────────────
+  {
+    key: 'music.url',
+    label: 'Background Music URL',
+    fieldType: 'text',
+    defaultValue: '',
+    maxLength: 500,
+    richText: false,
+    adminOnly: false,
+    section: 'music',
+  },
+  {
+    key: 'music.loop',
+    label: 'Loop Music',
+    fieldType: 'boolean',
+    defaultValue: 'true',
+    maxLength: 5,
+    richText: false,
+    adminOnly: false,
+    section: 'music',
+  },
 ];
 
 const TEMPLATE3_EXTRA_FIELDS: TemplateConfigField[] = [

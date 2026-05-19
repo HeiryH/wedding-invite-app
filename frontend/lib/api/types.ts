@@ -231,7 +231,8 @@ export type TemplateConfigSection =
   | 'footer'
   | 'navigation'
   | 'general'
-  | 'styling';
+  | 'styling'
+  | 'music';
 
 export type TemplateConfigFieldType =
   | 'text'

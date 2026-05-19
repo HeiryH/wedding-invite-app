@@ -1578,3 +1578,77 @@
   margin-top: 0.25rem;
   font-size: 0.875rem;
 }
+
+/* ── Music Bubble ─────────────────────────────────────────────────────── */
+.musicBubble {
+  position: fixed;
+  top: 1rem;
+  right: 1rem;
+  z-index: 9999;
+  height: 44px;
+  min-width: 44px;
+  background: var(--t5-glass);
+  backdrop-filter: blur(20px) saturate(140%);
+  -webkit-backdrop-filter: blur(20px) saturate(140%);
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  box-shadow: var(--t5-card-shadow);
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.musicNowPlaying {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-left: 14px;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.musicNowPlayingText {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.88);
+}
+
+.musicWave {
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 14px;
+}
+
+.musicBar {
+  width: 3px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.88);
+  transform-origin: bottom center;
+  animation: t5MusicBar 0.75s ease-in-out infinite alternate;
+}
+
+.musicBar:nth-child(1) { height: 6px;  animation-delay: 0s; }
+.musicBar:nth-child(2) { height: 14px; animation-delay: 0.15s; }
+.musicBar:nth-child(3) { height: 9px;  animation-delay: 0.3s; }
+.musicBar:nth-child(4) { height: 12px; animation-delay: 0.08s; }
+
+@keyframes t5MusicBar {
+  from { transform: scaleY(0.25); }
+  to   { transform: scaleY(1); }
+}
+
+.musicToggleBtn {
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: rgba(255, 255, 255, 0.9);
+}

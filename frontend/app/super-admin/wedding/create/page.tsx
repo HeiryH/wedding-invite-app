@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { weddingService, templateService, packageService, Template, Package } from '@/lib/api';
 import Icon from '@/components/admin/Icon';
+import { TemplatePreview } from '@/components/templates/TemplatePreview';
 
 const inputStyle: React.CSSProperties = {
   width: '100%', padding: '10px 12px',
@@ -212,26 +213,25 @@ export default function CreateWeddingPage() {
                   key={template.templateId}
                   onClick={() => setFormData({ ...formData, templateId: template.templateId })}
                   style={{
-                    padding: 18, borderRadius: 12, cursor: 'pointer',
+                    borderRadius: 12, cursor: 'pointer', overflow: 'hidden',
                     border: `2px solid ${formData.templateId === template.templateId ? 'var(--lavender-grey-ink)' : 'var(--line-2)'}`,
-                    background: formData.templateId === template.templateId ? 'var(--lavender)' : 'white',
+                    background: 'white',
                     transition: 'all .15s ease',
+                    boxShadow: formData.templateId === template.templateId ? '0 0 0 3px var(--lavender)' : 'none',
                   }}
                 >
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 6 }}>
-                    <div>
-                      <h3 style={{ margin: '0 0 4px', fontSize: 15, fontFamily: 'var(--serif)', fontWeight: 400, color: 'var(--ink)', letterSpacing: '-0.01em' }}>{template.templateName}</h3>
-                      {template.isPremium && (
-                        <span style={{ fontSize: 11, background: 'var(--thistle-soft)', color: 'var(--ink-2)', padding: '2px 8px', borderRadius: 999, border: '1px solid var(--thistle)' }}>Premium</span>
-                      )}
+                  <TemplatePreview templateCode={template.templateCode} />
+                  <div style={{ padding: '10px 14px 14px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 4 }}>
+                      <div>
+                        <h3 style={{ margin: '0 0 4px', fontSize: 15, fontFamily: 'var(--serif)', fontWeight: 400, color: 'var(--ink)', letterSpacing: '-0.01em' }}>{template.templateName}</h3>
+                        {template.isPremium && (
+                          <span style={{ fontSize: 11, background: 'var(--thistle-soft)', color: 'var(--ink-2)', padding: '2px 8px', borderRadius: 999, border: '1px solid var(--thistle)' }}>Premium</span>
+                        )}
+                      </div>
+                      {formData.templateId === template.templateId && <Icon name="check-circle" size={16} style={{ color: 'var(--lavender-grey-ink)' }} />}
                     </div>
-                    {formData.templateId === template.templateId && <Icon name="check-circle" size={16} style={{ color: 'var(--lavender-grey-ink)' }} />}
-                  </div>
-                  <p style={{ fontSize: 12.5, color: 'var(--ink-2)', margin: '0 0 10px' }}>{template.description}</p>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <span style={{ fontSize: 11, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Colors</span>
-                    <div style={{ width: 20, height: 20, borderRadius: '50%', border: '2px solid rgba(255,255,255,.8)', boxShadow: '0 1px 3px rgba(0,0,0,.1)', background: template.primaryColor }} />
-                    <div style={{ width: 20, height: 20, borderRadius: '50%', border: '2px solid rgba(255,255,255,.8)', boxShadow: '0 1px 3px rgba(0,0,0,.1)', background: template.secondaryColor }} />
+                    <p style={{ fontSize: 12, color: 'var(--ink-2)', margin: 0 }}>{template.description}</p>
                   </div>
                 </div>
               ))}

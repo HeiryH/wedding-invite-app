@@ -221,6 +221,128 @@ function RSVPModal({ onRSVP, onClose, seatingEnabled, tables, t }: RSVPModalProp
   );
 }
 
+// ── Music Bubble ──────────────────────────────────────────────────────────────
+
+function MusicBubble({ url, loop }: { url: string; loop: boolean }) {
+  const [isPlaying, setIsPlaying] = useState(true);
+  const [expanded, setExpanded] = useState(true);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const collapseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    const audio = new Audio(url);
+    audio.loop = loop;
+    audioRef.current = audio;
+
+    const startCollapseTimer = () => {
+      if (collapseTimerRef.current) clearTimeout(collapseTimerRef.current);
+      collapseTimerRef.current = setTimeout(() => setExpanded(false), 3500);
+    };
+
+    const onPlay = () => {
+      setIsPlaying(true);
+      setExpanded(true);
+      startCollapseTimer();
+    };
+    const onPause = () => {
+      setIsPlaying(false);
+      setExpanded(false);
+      if (collapseTimerRef.current) clearTimeout(collapseTimerRef.current);
+    };
+    const onEnded = () => {
+      setIsPlaying(false);
+      setExpanded(false);
+      if (collapseTimerRef.current) clearTimeout(collapseTimerRef.current);
+    };
+
+    audio.addEventListener('play',  onPlay);
+    audio.addEventListener('pause', onPause);
+    audio.addEventListener('ended', onEnded);
+
+    audio.play().catch(() => setIsPlaying(false));
+
+    // Initial load — start the collapse timer now; onPlay will reset it once audio fires
+    startCollapseTimer();
+
+    return () => {
+      if (collapseTimerRef.current) clearTimeout(collapseTimerRef.current);
+      audio.removeEventListener('play',  onPlay);
+      audio.removeEventListener('pause', onPause);
+      audio.removeEventListener('ended', onEnded);
+      audio.pause();
+      audio.src = '';
+    };
+  }, [url, loop]);
+
+  const toggle = () => {
+    const audio = audioRef.current;
+    if (!audio) return;
+    if (isPlaying) {
+      audio.pause();
+    } else {
+      audio.play().catch(() => {});
+    }
+  };
+
+  return (
+    <motion.div
+      layout
+      className={styles.musicBubble}
+      style={{ borderRadius: expanded ? 22 : '50%' }}
+      initial={{ opacity: 0, x: 20 }}
+      animate={{ opacity: 1, x: 0 }}
+      transition={{
+        delay: 0.8,
+        duration: 0.5,
+        ease: 'easeOut',
+        layout: { duration: 0.5, ease: [0.4, 0, 0.2, 1] },
+      }}
+    >
+      <AnimatePresence>
+        {expanded && (
+          <motion.div
+            className={styles.musicNowPlaying}
+            initial={{ opacity: 0, width: 0 }}
+            animate={{ opacity: 1, width: 'auto' }}
+            exit={{ opacity: 0, width: 0 }}
+            transition={{ duration: 0.4, ease: 'easeInOut' }}
+          >
+            <div className={styles.musicWave}>
+              <span className={styles.musicBar} />
+              <span className={styles.musicBar} />
+              <span className={styles.musicBar} />
+              <span className={styles.musicBar} />
+            </div>
+            <span className={styles.musicNowPlayingText}>Now Playing</span>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <motion.button
+        onClick={toggle}
+        className={styles.musicToggleBtn}
+        title={isPlaying ? 'Mute music' : 'Play music'}
+        whileHover={{ scale: 1.12 }}
+        whileTap={{ scale: 0.9 }}
+      >
+        {isPlaying ? (
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+            <path d="M19.07 4.93a10 10 0 0 1 0 14.14"/>
+            <path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>
+          </svg>
+        ) : (
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+            <line x1="23" y1="9" x2="17" y2="15"/>
+            <line x1="17" y1="9" x2="23" y2="15"/>
+          </svg>
+        )}
+      </motion.button>
+    </motion.div>
+  );
+}
+
 // ── Main Template ─────────────────────────────────────────────────────────────
 
 export default function Template5({
@@ -311,7 +433,14 @@ const NAV_EMOJIS: Record<string, string> = {
       : []),
   ];
 
-  const scrollToSection = (ref: React.RefObject<HTMLElement | HTMLDivElement | null>) => {
+  const scrollToSection = (ref: React.RefObject<HTMLElement | HTMLDivElement | null>, id?: string) => {
+    if (id === 'rsvp' && envelopeWrapperRef.current) {
+      // Place wrapper center at viewport center = GSAP PIVOT (progress 0.5 = fully open)
+      const rect = envelopeWrapperRef.current.getBoundingClientRect();
+      const wrapperCenter = rect.top + rect.height / 2;
+      window.scrollTo({ top: window.scrollY + wrapperCenter - window.innerHeight / 2, behavior: 'smooth' });
+      return;
+    }
     ref.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
 
@@ -565,7 +694,7 @@ const NAV_EMOJIS: Record<string, string> = {
             return (
               <motion.button
                 key={item.id}
-                onClick={() => scrollToSection(item.ref)}
+                onClick={() => scrollToSection(item.ref, item.id)}
                 whileHover={{ scale: 1.06 }}
                 whileTap={{ scale: 0.9 }}
                 className={`${styles.sideNavBtn} ${isActive ? styles.sideNavBtnActive : ''}`}
@@ -617,7 +746,7 @@ const NAV_EMOJIS: Record<string, string> = {
                 {/* Shift the shadow down and right */}
                 <feOffset dx="2" dy="2" result="offsetblur" />
                 {/* Change shadow color and opacity */}
-                <feFlood flood-color="#000000" flood-opacity="0.8" />
+                <feFlood floodColor="#000000" floodOpacity="0.8" />
                 <feComposite in2="offsetblur" operator="in" />
                 {/* Merge shadow with original text */}
                 <feMerge>
@@ -715,7 +844,7 @@ const NAV_EMOJIS: Record<string, string> = {
                 <feOffset dx="2" dy="3" result="offsetblur" />
 
                 {/* 2. ADJUST DARKNESS HERE (e.g., 0.85 for darker) */}
-                <feFlood flood-color="#000000" flood-opacity="0.85" />
+                <feFlood floodColor="#000000" floodOpacity="0.85" />
 
                 <feComposite in2="offsetblur" operator="in" />
                 <feMerge>
@@ -1257,6 +1386,14 @@ const NAV_EMOJIS: Record<string, string> = {
           />
         )}
       </AnimatePresence>
+
+      {/* ── Music Bubble ─────────────────────────────────────────────── */}
+      {customConfig?.['music.url'] && (
+        <MusicBubble
+          url={customConfig['music.url']}
+          loop={customConfig['music.loop'] !== 'false'}
+        />
+      )}
     </>
   );
 }

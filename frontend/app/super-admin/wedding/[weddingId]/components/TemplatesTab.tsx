@@ -2,6 +2,7 @@
 
 import { motion } from 'framer-motion';
 import { Template } from '@/lib/api';
+import { TemplatePreview } from '@/components/templates/TemplatePreview';
 
 interface TemplatesTabProps {
   templates: Template[];
@@ -74,36 +75,7 @@ export default function TemplatesTab({
                   )}
 
                   {/* Template Preview */}
-                  <div className="aspect-video bg-gray-100 overflow-hidden relative">
-                    {template.thumbnailUrl ? (
-                      <img
-                        src={template.thumbnailUrl}
-                        alt={template.templateName}
-                        className="w-full h-full object-cover"
-                        onError={(e) => {
-                          e.currentTarget.style.display = 'none';
-                          e.currentTarget.nextElementSibling?.classList.remove('hidden');
-                        }}
-                      />
-                    ) : null}
-                    
-                    {/* Fallback gradient */}
-                    <div 
-                      className={`absolute inset-0 bg-gradient-to-br flex items-center justify-center ${
-                        template.thumbnailUrl ? 'hidden' : ''
-                      }`}
-                      style={{
-                        background: `linear-gradient(135deg, ${template.primaryColor}40, ${template.secondaryColor}40)`
-                      }}
-                    >
-                      <div className="text-center">
-                        <p className="text-4xl font-bold" style={{ color: template.primaryColor }}>
-                          {template.templateCode}
-                        </p>
-                        <p className="text-gray-600 mt-2">{template.templateName}</p>
-                      </div>
-                    </div>
-                  </div>
+                  <TemplatePreview templateCode={template.templateCode} />
 
                   {/* Template Info */}
                   <div className="p-4">
@@ -113,20 +85,6 @@ export default function TemplatesTab({
                     <p className="text-sm text-gray-600 mb-4 line-clamp-2">
                       {template.description}
                     </p>
-
-                    {/* Color Palette */}
-                    <div className="flex gap-2 mb-4">
-                      <div
-                        className="w-8 h-8 rounded-full border-2 border-gray-200"
-                        style={{ backgroundColor: template.primaryColor }}
-                        title="Primary Color"
-                      />
-                      <div
-                        className="w-8 h-8 rounded-full border-2 border-gray-200"
-                        style={{ backgroundColor: template.secondaryColor }}
-                        title="Secondary Color"
-                      />
-                    </div>
 
                     {/* Actions */}
                     <div className="space-y-2">
