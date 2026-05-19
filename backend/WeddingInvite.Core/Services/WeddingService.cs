@@ -138,7 +138,13 @@ namespace WeddingInvite.Core.Services
 
         public async Task<bool> DeleteAsync(int id)
         {
-            return await _weddingRepo.DeleteAsync(id);
+            var wedding = await _weddingRepo.GetByIdAsync(id);
+            if (wedding == null) return false;
+
+            wedding.IsActive = false;
+            await _weddingRepo.UpdateAsync(wedding);
+
+            return true;
         }
 
         public async Task<WeddingDto> UpdateTemplateAsync(int id, int templateId)
