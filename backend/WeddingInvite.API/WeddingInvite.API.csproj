@@ -5,6 +5,8 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <DisableOpenApiSourceGenerator>true</DisableOpenApiSourceGenerator>
+    <!-- SDK 10.0.300 bug: **/*.resx glob fails in Docker on Linux when no .resx files exist -->
+    <EnableDefaultEmbeddedResourceItems>false</EnableDefaultEmbeddedResourceItems>
   </PropertyGroup>
 
   <ItemGroup>
