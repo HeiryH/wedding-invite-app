@@ -232,7 +232,8 @@ export type TemplateConfigSection =
   | 'navigation'
   | 'general'
   | 'styling'
-  | 'music';
+  | 'music'
+  | 'scene';
 
 export type TemplateConfigFieldType =
   | 'text'

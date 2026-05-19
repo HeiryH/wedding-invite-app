@@ -225,11 +225,15 @@ function RSVPModal({ onRSVP, onClose, seatingEnabled, tables, t }: RSVPModalProp
 
 function MusicBubble({ url, loop }: { url: string; loop: boolean }) {
   const [isPlaying, setIsPlaying] = useState(true);
+  const [needsGesture, setNeedsGesture] = useState(false);
   const [expanded, setExpanded] = useState(true);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const collapseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
+    let cancelled = false;
+    let unlock: (() => void) | null = null;
+
     const audio = new Audio(url);
     audio.loop = loop;
     audioRef.current = audio;
@@ -239,32 +243,42 @@ function MusicBubble({ url, loop }: { url: string; loop: boolean }) {
       collapseTimerRef.current = setTimeout(() => setExpanded(false), 3500);
     };
 
-    const onPlay = () => {
-      setIsPlaying(true);
-      setExpanded(true);
-      startCollapseTimer();
-    };
-    const onPause = () => {
-      setIsPlaying(false);
-      setExpanded(false);
-      if (collapseTimerRef.current) clearTimeout(collapseTimerRef.current);
-    };
-    const onEnded = () => {
-      setIsPlaying(false);
-      setExpanded(false);
-      if (collapseTimerRef.current) clearTimeout(collapseTimerRef.current);
-    };
+    const onPlay  = () => { setIsPlaying(true);  setExpanded(true);  startCollapseTimer(); };
+    const onPause = () => { setIsPlaying(false); setExpanded(false); if (collapseTimerRef.current) clearTimeout(collapseTimerRef.current); };
+    const onEnded = () => { setIsPlaying(false); setExpanded(false); if (collapseTimerRef.current) clearTimeout(collapseTimerRef.current); };
 
     audio.addEventListener('play',  onPlay);
     audio.addEventListener('pause', onPause);
     audio.addEventListener('ended', onEnded);
 
-    audio.play().catch(() => setIsPlaying(false));
+    // Phase 1: try to play with sound — works if browser allows it
+    audio.play().catch(() => {
+      if (cancelled) return;
+      // Phase 2: unmuted blocked — play muted (always allowed) and unlock on first user gesture
+      audio.muted = true;
+      audio.play()
+        .then(() => {
+          if (cancelled) return;
+          setNeedsGesture(true);
+          unlock = () => {
+            if (!cancelled) { audio.muted = false; setNeedsGesture(false); }
+          };
+          document.addEventListener('click',      unlock, { once: true });
+          document.addEventListener('touchstart', unlock, { once: true });
+          document.addEventListener('scroll',     unlock, { once: true, passive: true } as EventListenerOptions);
+        })
+        .catch(() => { if (!cancelled) setIsPlaying(false); });
+    });
 
-    // Initial load — start the collapse timer now; onPlay will reset it once audio fires
     startCollapseTimer();
 
     return () => {
+      cancelled = true;
+      if (unlock) {
+        document.removeEventListener('click',      unlock);
+        document.removeEventListener('touchstart', unlock);
+        document.removeEventListener('scroll',     unlock);
+      }
       if (collapseTimerRef.current) clearTimeout(collapseTimerRef.current);
       audio.removeEventListener('play',  onPlay);
       audio.removeEventListener('pause', onPause);
@@ -280,6 +294,7 @@ function MusicBubble({ url, loop }: { url: string; loop: boolean }) {
     if (isPlaying) {
       audio.pause();
     } else {
+      audio.muted = false;
       audio.play().catch(() => {});
     }
   };
@@ -307,13 +322,19 @@ function MusicBubble({ url, loop }: { url: string; loop: boolean }) {
             exit={{ opacity: 0, width: 0 }}
             transition={{ duration: 0.4, ease: 'easeInOut' }}
           >
-            <div className={styles.musicWave}>
-              <span className={styles.musicBar} />
-              <span className={styles.musicBar} />
-              <span className={styles.musicBar} />
-              <span className={styles.musicBar} />
-            </div>
-            <span className={styles.musicNowPlayingText}>Now Playing</span>
+            {needsGesture ? (
+              <span className={styles.musicNowPlayingText}>Tap for sound</span>
+            ) : (
+              <>
+                <div className={styles.musicWave}>
+                  <span className={styles.musicBar} />
+                  <span className={styles.musicBar} />
+                  <span className={styles.musicBar} />
+                  <span className={styles.musicBar} />
+                </div>
+                <span className={styles.musicNowPlayingText}>Now Playing</span>
+              </>
+            )}
           </motion.div>
         )}
       </AnimatePresence>

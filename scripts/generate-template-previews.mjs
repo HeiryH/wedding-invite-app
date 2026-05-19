@@ -14,9 +14,9 @@ const CODES = [
   'garden-romance',
   'minimal-noir',
   'dreaming-floral-sky',
-  'fairy-garden',
 ];
 
+// CWD is frontend/ when called via npm script
 const BASE = 'http://localhost:3000';
 const OUT = path.resolve(process.cwd(), 'public/template-previews');
 
@@ -31,6 +31,8 @@ for (const code of CODES) {
   await page.setViewportSize({ width: 390, height: 700 });
 
   await page.goto(`${BASE}/template-preview/${code}`, { waitUntil: 'domcontentloaded' });
+
+  // Wait for the component to signal it's ready (1s after mount)
   await page.waitForSelector('[data-preview-ready]', { timeout: 20000 });
 
   await page.screenshot({
@@ -43,4 +45,4 @@ for (const code of CODES) {
 }
 
 await browser.close();
-console.log(`\nDone — ${CODES.length} screenshots saved to public/template-previews/`);
+console.log(`\nDone — ${CODES.length} screenshots saved to frontend/public/template-previews/`);

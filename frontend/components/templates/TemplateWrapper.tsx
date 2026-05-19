@@ -6,6 +6,7 @@ import Template2 from './Template2';
 import Template3 from './Template3';
 import Template4 from './Template4';
 import Template5 from './Template5';
+import Template6 from './Template6';
 
 interface TemplateWrapperProps {
   wedding: Wedding;
@@ -47,6 +48,8 @@ export default function TemplateWrapper({
         return Template4;
       case 5:
         return Template5;
+      case 6:
+        return Template6;
       default:
         return Template1; // Fallback to Template1
     }

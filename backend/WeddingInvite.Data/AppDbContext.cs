@@ -361,6 +361,20 @@ namespace WeddingInvite.Data
                     IsPremium = true,
                     SortOrder = 4,
                     CreatedDate = new DateTime(2026, 3, 27, 0, 0, 0, DateTimeKind.Utc)
+                },
+                new Template
+                {
+                    TemplateId = 6,
+                    TemplateName = "Fairy Garden",
+                    TemplateCode = "fairy-garden",
+                    Description = "Enchanted fairy garden with glowing 3D fireflies, falling petals, and immersive forest scenes",
+                    PrimaryColor = "#f7c6d7",
+                    SecondaryColor = "#a8d5a2",
+                    ComponentPath = "Template6",
+                    IsActive = true,
+                    IsPremium = true,
+                    SortOrder = 6,
+                    CreatedDate = new DateTime(2026, 5, 19, 0, 0, 0, DateTimeKind.Utc)
                 }
             );
 

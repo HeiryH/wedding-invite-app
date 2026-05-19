@@ -1,0 +1,736 @@
+@import url('https://fonts.googleapis.com/css2?family=Dancing+Script:wght@600;700&family=EB+Garamond:ital,wght@0,400;0,500;1,400&family=Playfair+Display:ital,wght@0,400;0,600;1,400&display=swap');
+
+/* ── Tokens ──────────────────────────────────────────────────────────────── */
+:root {
+  --t6-forest:      #0a1409;
+  --t6-canopy:      #0f1e10;
+  --t6-moss:        #2a4a2a;
+  --t6-gold:        #e8c96e;
+  --t6-gold-glow:   #ffe47a;
+  --t6-petal:       #f7c6d7;
+  --t6-cream:       #f5f0e8;
+  --t6-mist:        rgba(245, 240, 232, 0.65);
+  --t6-script:      'Dancing Script', cursive;
+  --t6-serif:       'Playfair Display', serif;
+  --t6-body:        'EB Garamond', serif;
+}
+
+/* ── Root wrapper ────────────────────────────────────────────────────────── */
+.wrapper {
+  position: relative;
+  width: 100%;
+  min-height: 100dvh;
+  background: var(--t6-forest);
+  color: var(--t6-cream);
+  font-family: var(--t6-body);
+  overflow-x: hidden;
+}
+
+/* ── Canvas layer (3D scene) ─────────────────────────────────────────────── */
+.canvasLayer {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ── Forest gradient overlay ─────────────────────────────────────────────── */
+.forestOverlay {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse at 50% 120%, rgba(10,20,9,0) 0%, rgba(10,20,9,0.55) 70%),
+    linear-gradient(to bottom,
+      rgba(10,20,9,0.3) 0%,
+      rgba(10,20,9,0.1) 40%,
+      rgba(10,20,9,0.5) 80%,
+      rgba(10,20,9,0.85) 100%
+    );
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* ── Sections ────────────────────────────────────────────────────────────── */
+.sectionWelcome {
+  position: relative;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.sectionCeremony,
+.sectionRSVP,
+.sectionItinerary,
+.sectionWishes,
+.sectionPhotobooth {
+  position: relative;
+  min-height: 60vh;
+  padding: 5rem 1.5rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: linear-gradient(to bottom, var(--t6-canopy), var(--t6-forest));
+}
+
+.sectionCeremony {
+  background: linear-gradient(to bottom, var(--t6-forest), #0d1f12);
+}
+
+.sectionWishes {
+  background: linear-gradient(to bottom, #0d1f12, var(--t6-forest));
+}
+
+.sectionInner {
+  position: relative;
+  width: 100%;
+  max-width: 640px;
+  z-index: 2;
+}
+
+/* ── Welcome content ─────────────────────────────────────────────────────── */
+.welcomeContent {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.2rem;
+  padding: 2rem 1.5rem 5rem;
+  text-align: center;
+  width: 100%;
+  max-width: 600px;
+}
+
+.enchantmentBadge {
+  font-family: var(--t6-body);
+  font-size: 0.75rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--t6-gold);
+  opacity: 0.85;
+  border: 1px solid rgba(232, 201, 110, 0.35);
+  padding: 0.3em 1em;
+  border-radius: 999px;
+}
+
+.fireflyGreeting {
+  font-family: var(--t6-body);
+  font-style: italic;
+  font-size: 1rem;
+  color: var(--t6-mist);
+  letter-spacing: 0.04em;
+  margin: 0;
+}
+
+.coupleNames {
+  font-family: var(--t6-script);
+  font-size: clamp(2.8rem, 8vw, 5rem);
+  font-weight: 700;
+  color: var(--t6-cream);
+  text-shadow: 0 0 40px rgba(232, 201, 110, 0.4);
+  line-height: 1.15;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.1em;
+}
+
+.ampersand {
+  font-family: var(--t6-serif);
+  font-style: italic;
+  font-size: 0.55em;
+  color: var(--t6-gold);
+  display: block;
+  line-height: 1;
+}
+
+.headingMessage {
+  font-family: var(--t6-body);
+  font-size: 1rem;
+  color: var(--t6-mist);
+  line-height: 1.6;
+  max-width: 420px;
+}
+
+.dateVenue {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 1.2rem 2rem;
+  border: 1px solid rgba(232, 201, 110, 0.25);
+  border-radius: 12px;
+  background: rgba(10, 20, 9, 0.45);
+  backdrop-filter: blur(6px);
+}
+
+.dateDisplay {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.2rem;
+}
+
+.dateMain {
+  font-family: var(--t6-serif);
+  font-size: 1rem;
+  color: var(--t6-gold);
+  letter-spacing: 0.05em;
+}
+
+.dateHijri {
+  font-family: var(--t6-body);
+  font-size: 0.85rem;
+  color: var(--t6-mist);
+  font-style: italic;
+}
+
+.venueDivider {
+  color: var(--t6-gold);
+  opacity: 0.6;
+  font-size: 0.8rem;
+}
+
+.venueDisplay {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.15rem;
+}
+
+.venueName {
+  font-family: var(--t6-serif);
+  font-size: 1rem;
+  color: var(--t6-cream);
+  letter-spacing: 0.04em;
+}
+
+.venueAddress {
+  font-family: var(--t6-body);
+  font-size: 0.8rem;
+  color: var(--t6-mist);
+}
+
+.inviteBody {
+  font-family: var(--t6-body);
+  font-style: italic;
+  font-size: 1rem;
+  color: var(--t6-mist);
+  line-height: 1.7;
+  max-width: 400px;
+}
+
+.scrollCue {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 1.5rem;
+  margin-top: 1rem;
+  padding: 0.4rem;
+}
+
+.scrollLeaf {
+  display: block;
+  animation: t6-sway 2.4s ease-in-out infinite;
+}
+
+/* ── Section titles ──────────────────────────────────────────────────────── */
+.sectionTitle {
+  font-family: var(--t6-script);
+  font-size: clamp(1.8rem, 5vw, 2.8rem);
+  color: var(--t6-gold);
+  text-align: center;
+  margin: 0 0 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+}
+
+.titleDecor {
+  font-size: 0.7em;
+  opacity: 0.7;
+}
+
+/* ── Ceremony ────────────────────────────────────────────────────────────── */
+.leafBorderTop,
+.leafBorderBottom {
+  font-size: 1.8rem;
+  opacity: 0.35;
+  user-select: none;
+  padding: 0.5rem 0;
+}
+
+.ceremonyBody {
+  font-family: var(--t6-body);
+  font-size: 1.05rem;
+  color: var(--t6-mist);
+  line-height: 1.8;
+}
+.ceremonyBody p { margin: 0 0 0.8em; }
+
+/* ── Itinerary ───────────────────────────────────────────────────────────── */
+.itineraryList {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1.2rem;
+}
+
+.itineraryItem {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+.itineraryDot {
+  font-size: 1.1rem;
+  flex-shrink: 0;
+  margin-top: 0.15rem;
+}
+
+.itineraryText {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.itineraryLabel {
+  font-family: var(--t6-serif);
+  font-size: 1.05rem;
+  color: var(--t6-cream);
+}
+
+.itineraryDetail {
+  font-family: var(--t6-body);
+  font-size: 0.88rem;
+  color: var(--t6-mist);
+}
+
+/* ── Wishes ──────────────────────────────────────────────────────────────── */
+.wishPrompt {
+  text-align: center;
+  font-style: italic;
+  color: var(--t6-mist);
+  margin-bottom: 1.5rem;
+}
+
+.wishForm {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-bottom: 2rem;
+}
+
+.wishInput,
+.wishTextarea {
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(232, 201, 110, 0.2);
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+  color: var(--t6-cream);
+  font-family: var(--t6-body);
+  font-size: 1rem;
+  outline: none;
+  transition: border-color 0.2s;
+}
+.wishInput::placeholder,
+.wishTextarea::placeholder { color: rgba(245,240,232,0.35); }
+.wishInput:focus,
+.wishTextarea:focus { border-color: rgba(232,201,110,0.5); }
+.wishTextarea { resize: vertical; }
+
+.wishBtn {
+  align-self: center;
+  background: linear-gradient(135deg, rgba(232,201,110,0.2), rgba(232,201,110,0.08));
+  border: 1px solid rgba(232,201,110,0.45);
+  border-radius: 999px;
+  color: var(--t6-gold);
+  font-family: var(--t6-serif);
+  font-size: 1rem;
+  padding: 0.6rem 2rem;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.15s;
+}
+.wishBtn:hover { background: rgba(232,201,110,0.18); }
+
+.wishSuccess {
+  text-align: center;
+  color: var(--t6-gold);
+  padding: 0.75rem;
+  border-radius: 8px;
+  background: rgba(232,201,110,0.1);
+  margin-bottom: 1rem;
+}
+
+.wishGrid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+}
+
+.wishCard {
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(232,201,110,0.15);
+  border-radius: 12px;
+  padding: 1.2rem 1.4rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.wishMessage {
+  font-style: italic;
+  color: var(--t6-mist);
+  line-height: 1.6;
+  margin: 0;
+}
+
+.wishAuthor {
+  font-family: var(--t6-serif);
+  font-size: 0.85rem;
+  color: var(--t6-gold);
+  opacity: 0.8;
+}
+
+/* ── RSVP ────────────────────────────────────────────────────────────────── */
+.rsvpSubtitle {
+  text-align: center;
+  font-style: italic;
+  color: var(--t6-mist);
+  margin-bottom: 2rem;
+}
+
+.rsvpOpenBtn,
+.rsvpSubmitBtn {
+  display: block;
+  margin: 0 auto;
+  background: linear-gradient(135deg, rgba(232,201,110,0.22), rgba(232,201,110,0.08));
+  border: 1px solid rgba(232,201,110,0.5);
+  border-radius: 999px;
+  color: var(--t6-gold);
+  font-family: var(--t6-serif);
+  font-size: 1.05rem;
+  padding: 0.75rem 2.5rem;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.rsvpOpenBtn:hover,
+.rsvpSubmitBtn:hover { background: rgba(232,201,110,0.2); }
+.rsvpSubmitBtn { width: 100%; border-radius: 8px; margin-top: 0.5rem; }
+
+.rsvpDone {
+  text-align: center;
+  color: var(--t6-gold);
+  font-family: var(--t6-serif);
+  font-size: 1.1rem;
+  padding: 1.5rem;
+  border: 1px solid rgba(232,201,110,0.25);
+  border-radius: 12px;
+  background: rgba(232,201,110,0.07);
+}
+
+.modalOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.7);
+  z-index: 50;
+}
+
+.modalSheet {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: #0f1e10;
+  border-top: 1px solid rgba(232,201,110,0.25);
+  border-radius: 20px 20px 0 0;
+  padding: 2rem 1.5rem 3rem;
+  z-index: 51;
+  max-height: 90dvh;
+  overflow-y: auto;
+  max-width: 520px;
+  margin: 0 auto;
+}
+
+.modalClose {
+  position: absolute;
+  top: 1rem;
+  right: 1.2rem;
+  background: none;
+  border: none;
+  color: var(--t6-mist);
+  font-size: 1.1rem;
+  cursor: pointer;
+  opacity: 0.7;
+}
+
+.modalTitle {
+  font-family: var(--t6-script);
+  font-size: 1.8rem;
+  color: var(--t6-gold);
+  text-align: center;
+  margin: 0 0 1.5rem;
+}
+
+.rsvpForm {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.rsvpInput,
+.rsvpSelect {
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(232,201,110,0.2);
+  border-radius: 8px;
+  padding: 0.7rem 1rem;
+  color: var(--t6-cream);
+  font-family: var(--t6-body);
+  font-size: 1rem;
+  width: 100%;
+  outline: none;
+}
+.rsvpInput::placeholder { color: rgba(245,240,232,0.35); }
+.rsvpSelect { appearance: none; }
+.rsvpSelect option { background: #0f1e10; }
+
+.rsvpRow {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.rsvpLabel {
+  font-size: 0.85rem;
+  color: var(--t6-mist);
+  white-space: nowrap;
+  min-width: 52px;
+}
+
+.rsvpInputSmall {
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(232,201,110,0.2);
+  border-radius: 8px;
+  padding: 0.65rem 0.8rem;
+  color: var(--t6-cream);
+  font-family: var(--t6-body);
+  font-size: 1rem;
+  width: 70px;
+  outline: none;
+  text-align: center;
+}
+
+.rsvpAttendingRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.6rem;
+}
+
+.attendingBtn {
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(232,201,110,0.2);
+  border-radius: 8px;
+  padding: 0.65rem;
+  color: var(--t6-mist);
+  font-family: var(--t6-body);
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-align: center;
+}
+
+.attendingActive {
+  background: rgba(232,201,110,0.15);
+  border-color: rgba(232,201,110,0.5);
+  color: var(--t6-gold);
+}
+
+/* ── Photo booth ─────────────────────────────────────────────────────────── */
+.uploadArea {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 1.5rem;
+}
+
+.fileInput { display: none; }
+
+.uploadBtn {
+  background: linear-gradient(135deg, rgba(232,201,110,0.18), rgba(232,201,110,0.06));
+  border: 1px solid rgba(232,201,110,0.4);
+  border-radius: 999px;
+  color: var(--t6-gold);
+  font-family: var(--t6-serif);
+  font-size: 1rem;
+  padding: 0.65rem 2rem;
+  cursor: pointer;
+}
+
+.photoGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 0.75rem;
+}
+
+.photoCard {
+  position: relative;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid rgba(232,201,110,0.15);
+  background: rgba(255,255,255,0.04);
+}
+
+.photoImg {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  object-fit: cover;
+  display: block;
+}
+
+.photoCaption {
+  display: block;
+  text-align: center;
+  font-size: 0.72rem;
+  color: var(--t6-mist);
+  padding: 0.3rem;
+  background: rgba(10,20,9,0.6);
+}
+
+/* ── Navigation ──────────────────────────────────────────────────────────── */
+.nav {
+  position: fixed;
+  bottom: 1.2rem;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  background: rgba(10, 20, 9, 0.75);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(232, 201, 110, 0.2);
+  border-radius: 999px;
+  padding: 0.35rem 0.6rem;
+  z-index: 40;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.5);
+}
+
+.navBtn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.1rem;
+  background: none;
+  border: none;
+  border-radius: 999px;
+  padding: 0.45rem 0.7rem;
+  cursor: pointer;
+  transition: background 0.2s;
+  color: var(--t6-mist);
+}
+
+.navBtnActive {
+  background: rgba(232, 201, 110, 0.15);
+  color: var(--t6-gold);
+}
+
+.navEmoji { font-size: 1.1rem; line-height: 1; }
+
+.navLabel {
+  font-size: 0.58rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  font-family: var(--t6-body);
+}
+
+/* ── Music bubble ────────────────────────────────────────────────────────── */
+.musicBubble {
+  position: fixed;
+  top: 1rem;
+  right: 1rem;
+  z-index: 40;
+  background: rgba(10,20,9,0.75);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(232,201,110,0.2);
+  border-radius: 999px;
+  padding: 0.4rem 0.8rem;
+  cursor: pointer;
+  color: var(--t6-gold);
+  font-size: 1.2rem;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.musicLabel {
+  font-family: var(--t6-body);
+  font-size: 0.7rem;
+  color: var(--t6-mist);
+  white-space: nowrap;
+  overflow: hidden;
+  max-width: 100px;
+  transition: max-width 0.4s;
+}
+
+.musicLabelHidden { max-width: 0; }
+
+/* ── Footer ──────────────────────────────────────────────────────────────── */
+.footer {
+  text-align: center;
+  padding: 2rem 1rem 6rem;
+  font-family: var(--t6-body);
+  font-size: 0.82rem;
+  color: rgba(245,240,232,0.35);
+  letter-spacing: 0.06em;
+}
+
+.footerTagline {
+  font-style: italic;
+  margin-bottom: 0.4rem;
+}
+
+/* ── Fallback background (CSS-only, no WebGL) ────────────────────────────── */
+.fallbackBg {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at 30% 40%, #1a3a1a 0%, #0a1409 70%);
+  overflow: hidden;
+}
+
+.fallbackFirefly {
+  position: absolute;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: #ffe47a;
+  box-shadow: 0 0 8px 3px rgba(255, 228, 122, 0.7);
+  animation: t6-flicker linear infinite;
+}
+
+/* ── Keyframes ───────────────────────────────────────────────────────────── */
+@keyframes t6-sway {
+  0%, 100% { transform: rotate(-8deg) translateY(0); }
+  50%       { transform: rotate(8deg) translateY(-4px); }
+}
+
+@keyframes t6-flicker {
+  0%, 100% { opacity: 0.1; transform: scale(0.8); }
+  50%       { opacity: 0.9; transform: scale(1.3); }
+}
+
+/* ── Media queries ───────────────────────────────────────────────────────── */
+@media (min-width: 640px) {
+  .wishGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .photoGrid {
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  }
+}

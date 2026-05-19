@@ -8,6 +8,7 @@ import Template2 from '@/components/templates/Template2';
 import Template3 from '@/components/templates/Template3';
 import Template4 from '@/components/templates/Template4';
 import Template5 from '@/components/templates/Template5';
+import Template6 from '@/components/templates/Template6';
 
 const DUMMY: Wedding = {
   weddingId: 0,
@@ -59,6 +60,7 @@ export default function TemplatePreviewPage() {
       {code === 'garden-romance'      && <Template3 {...PROPS} />}
       {code === 'minimal-noir'        && <Template4 {...PROPS} />}
       {code === 'dreaming-floral-sky' && <Template5 {...PROPS} />}
+      {code === 'fairy-garden'        && <Template6 {...PROPS} />}
     </div>
   );
 }
