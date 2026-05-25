@@ -134,7 +134,7 @@ export default function LoginPage() {
             )}
           </button>
 
-          <button
+          {/* <button
             type="button"
             onClick={async () => {
               try {
@@ -173,11 +173,11 @@ export default function LoginPage() {
             className="w-full py-2 bg-blue-500 text-white rounded mt-4"
           >
             🔍 Debug Test Login
-          </button>
+          </button> */}
         </form>
 
         {/* Footer */}
-        <div className="mt-8 text-center">
+        {/* <div className="mt-8 text-center">
           <p className="text-sm text-gray-500">
             Demo credentials:
           </p>
@@ -187,7 +187,7 @@ export default function LoginPage() {
           <p className="text-xs text-gray-400">
             Password: Admin123!
           </p>
-        </div>
+        </div> */}
       </motion.div>
     </div>
   );

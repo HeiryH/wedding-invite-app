@@ -403,6 +403,7 @@ const BG_SLOT: Record<string, number> = {
   'section.welcome.bg': TemplateSlots.WELCOME_BG,
   'section.ceremony.bg': TemplateSlots.CEREMONY_BG,
   'section.celebration.bg': TemplateSlots.CELEBRATION_BG,
+  'template.bg': TemplateSlots.TEMPLATE5_GLOBAL_BG,
 };
 
 function BgImageField({ configKey, label, value, weddingId, onChange }: {
@@ -806,20 +807,65 @@ export default function CustomizePage() {
             {activeTab === 'welcome' && <>
 
               <section className="space-y-3">
+                <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Invitation Layout</h3>
+                <div>
+                  <FieldLabel>Layout Style</FieldLabel>
+                  <SelectField value={draftConfig['invite.layout'] ?? 'classic'} options={['classic', 'minimal', 'ornate']} onChange={(v) => setConfig('invite.layout', v)} />
+                </div>
+              </section>
+
+              <section className="space-y-3">
                 <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Wedding Details</h3>
                 <div>
                   <FieldLabel>Bride&apos;s Name</FieldLabel>
                   <TextField value={weddingDraft.brideName} onChange={(v) => setWeddingDraft((d) => ({ ...d, brideName: v }))} maxLength={100} />
+                  {wedding?.templateId === 5 && (
+                    <div className="grid grid-cols-2 gap-2 mt-2">
+                      <div>
+                        <FieldLabel>Name Color</FieldLabel>
+                        <ColorField value={draftConfig['names.bride.color'] ?? ''} onChange={(v) => setConfig('names.bride.color', v)} />
+                      </div>
+                      <div>
+                        <FieldLabel>Shadow</FieldLabel>
+                        <SelectField value={draftConfig['names.bride.shadow'] ?? 'none'} options={['none', 'soft', 'strong', 'glow']} onChange={(v) => setConfig('names.bride.shadow', v)} />
+                      </div>
+                    </div>
+                  )}
                 </div>
                 <div>
                   <FieldLabel>Groom&apos;s Name</FieldLabel>
                   <TextField value={weddingDraft.groomName} onChange={(v) => setWeddingDraft((d) => ({ ...d, groomName: v }))} maxLength={100} />
+                  {wedding?.templateId === 5 && (
+                    <div className="grid grid-cols-2 gap-2 mt-2">
+                      <div>
+                        <FieldLabel>Name Color</FieldLabel>
+                        <ColorField value={draftConfig['names.groom.color'] ?? ''} onChange={(v) => setConfig('names.groom.color', v)} />
+                      </div>
+                      <div>
+                        <FieldLabel>Shadow</FieldLabel>
+                        <SelectField value={draftConfig['names.groom.shadow'] ?? 'none'} options={['none', 'soft', 'strong', 'glow']} onChange={(v) => setConfig('names.groom.shadow', v)} />
+                      </div>
+                    </div>
+                  )}
                 </div>
+                {wedding?.templateId === 5 && (
+                  <div>
+                    <FieldLabel>Ampersand (&amp;) Color</FieldLabel>
+                    <ColorField value={draftConfig['names.ampersand.color'] ?? ''} onChange={(v) => setConfig('names.ampersand.color', v)} />
+                  </div>
+                )}
                 <div>
                   <FieldLabel>Wedding Date &amp; Time</FieldLabel>
                   <input type="datetime-local" value={weddingDraft.weddingDate}
                     onChange={(e) => setWeddingDraft((d) => ({ ...d, weddingDate: e.target.value }))}
                     className="w-full px-3 py-2 border-2 border-gray-200 rounded-lg text-sm text-gray-900 focus:border-rose-400 focus:outline-none" />
+                </div>
+                <div className="flex items-center justify-between gap-3">
+                  <FieldLabel>Add to Calendar button</FieldLabel>
+                  <ToggleSwitch
+                    value={draftConfig['general.showAddToCalendar'] === 'true'}
+                    onChange={(v) => setConfig('general.showAddToCalendar', v ? 'true' : 'false')}
+                  />
                 </div>
                 <div>
                   <FieldLabel>Venue</FieldLabel>
@@ -828,6 +874,24 @@ export default function CustomizePage() {
                 <div>
                   <FieldLabel>Venue Address</FieldLabel>
                   <TextField value={weddingDraft.venueAddress} onChange={(v) => setWeddingDraft((d) => ({ ...d, venueAddress: v }))} maxLength={500} />
+                </div>
+                <div className="flex items-center justify-between gap-3">
+                  <FieldLabel>Show venue map</FieldLabel>
+                  <ToggleSwitch
+                    value={draftConfig['general.showVenueMap'] === 'true'}
+                    onChange={(v) => setConfig('general.showVenueMap', v ? 'true' : 'false')}
+                  />
+                </div>
+              </section>
+
+              <section>
+                <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Name Order</h3>
+                <div className="flex items-center justify-between gap-3">
+                  <FieldLabel hint="Toggle to put groom's name first">Bride&apos;s name first</FieldLabel>
+                  <ToggleSwitch
+                    value={draftConfig['general.brideFirst'] !== 'false'}
+                    onChange={(v) => setConfig('general.brideFirst', v ? 'true' : 'false')}
+                  />
                 </div>
               </section>
 
@@ -880,6 +944,67 @@ export default function CustomizePage() {
                 <BgImageField configKey="section.welcome.bg" label="Welcome" value={draftConfig['section.welcome.bg'] ?? ''} weddingId={weddingId!} onChange={(url) => setConfig('section.welcome.bg', url)} />
               </section>
 
+              {wedding?.templateId === 5 && (
+                <section>
+                  <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Page Background</h3>
+                  <BgImageField
+                    configKey="template.bg"
+                    label="Page Background"
+                    value={draftConfig['template.bg'] ?? ''}
+                    weddingId={weddingId!}
+                    onChange={(url) => setConfig('template.bg', url)}
+                  />
+                  <div className="mt-3 grid grid-cols-2 gap-2">
+                    <div>
+                      <FieldLabel>Background Size</FieldLabel>
+                      <select
+                        value={draftConfig['template.bgSize'] ?? 'cover'}
+                        onChange={(e) => setConfig('template.bgSize', e.target.value)}
+                        className="w-full px-3 py-2 border-2 border-gray-200 rounded-lg text-sm text-gray-900 focus:border-rose-400 focus:outline-none mt-1"
+                      >
+                        <option value="cover">Cover</option>
+                        <option value="contain">Contain</option>
+                        <option value="auto">Natural</option>
+                      </select>
+                    </div>
+                    <div>
+                      <FieldLabel>Background Position</FieldLabel>
+                      <select
+                        value={draftConfig['template.bgPosition'] ?? 'center'}
+                        onChange={(e) => setConfig('template.bgPosition', e.target.value)}
+                        className="w-full px-3 py-2 border-2 border-gray-200 rounded-lg text-sm text-gray-900 focus:border-rose-400 focus:outline-none mt-1"
+                      >
+                        <option value="center">Center</option>
+                        <option value="top center">Top</option>
+                        <option value="bottom center">Bottom</option>
+                        <option value="left center">Left</option>
+                        <option value="right center">Right</option>
+                      </select>
+                    </div>
+                  </div>
+                </section>
+              )}
+
+
+              {wedding?.templateId === 5 && (
+                <section className="space-y-3">
+                  <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Countdown</h3>
+                  <div>
+                    <FieldLabel>Countdown Label</FieldLabel>
+                    <TextField value={draftConfig['invite.countdown_prefix'] ?? ''} onChange={(v) => setConfig('invite.countdown_prefix', v)} maxLength={60} placeholder="Counting down to our special day" />
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <FieldLabel>Label Color</FieldLabel>
+                      <ColorField value={draftConfig['countdown.label.color'] ?? ''} onChange={(v) => setConfig('countdown.label.color', v)} />
+                    </div>
+                    <div>
+                      <FieldLabel>Number Color</FieldLabel>
+                      <ColorField value={draftConfig['countdown.number.color'] ?? ''} onChange={(v) => setConfig('countdown.number.color', v)} />
+                    </div>
+                  </div>
+                </section>
+              )}
 
             </>}
 
@@ -888,6 +1013,22 @@ export default function CustomizePage() {
 
               <section className="space-y-3">
                 <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Ceremony / Walimah</h3>
+                <div>
+                  <FieldLabel>Section Title</FieldLabel>
+                  <TextField value={draftConfig['walimah.title'] ?? ''} onChange={(v) => setConfig('walimah.title', v)} maxLength={40} placeholder="Walimatul Urus" />
+                  {wedding?.templateId === 5 && (
+                    <div className="grid grid-cols-2 gap-2 mt-2">
+                      <div>
+                        <FieldLabel>Title Color</FieldLabel>
+                        <ColorField value={draftConfig['ceremony.title.color'] ?? ''} onChange={(v) => setConfig('ceremony.title.color', v)} />
+                      </div>
+                      <div>
+                        <FieldLabel>Shadow</FieldLabel>
+                        <SelectField value={draftConfig['ceremony.title.shadow'] ?? 'none'} options={['none', 'soft', 'strong', 'glow']} onChange={(v) => setConfig('ceremony.title.shadow', v)} />
+                      </div>
+                    </div>
+                  )}
+                </div>
                 <div>
                   <FieldLabel hint="Supports bold and italic formatting">Ceremony Details</FieldLabel>
                   <RichTextEditor value={draftConfig['walimah.body'] ?? ''} onChange={(html) => setConfig('walimah.body', html)} maxLength={500} />
@@ -898,14 +1039,35 @@ export default function CustomizePage() {
                 </div>
               </section>
 
+              {wedding?.templateId === 5 && (
+                <section className="space-y-3">
+                  <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Couple Names in Card</h3>
+                  <p className="text-xs text-gray-400">Names displayed inside the ceremony card</p>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <FieldLabel>Color</FieldLabel>
+                      <ColorField value={draftConfig['ceremony.names.color'] ?? ''} onChange={(v) => setConfig('ceremony.names.color', v)} />
+                    </div>
+                    <div>
+                      <FieldLabel>Shadow</FieldLabel>
+                      <SelectField value={draftConfig['ceremony.names.shadow'] ?? 'none'} options={['none', 'soft', 'strong', 'glow']} onChange={(v) => setConfig('ceremony.names.shadow', v)} />
+                    </div>
+                  </div>
+                </section>
+              )}
+
               <section>
                 <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">RSVP</h3>
                 <FieldLabel>RSVP Subtitle</FieldLabel>
                 <TextField value={draftConfig['rsvp.subtitle'] ?? ''} onChange={(v) => setConfig('rsvp.subtitle', v)} maxLength={80} />
               </section>
 
-              <section>
-                <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Schedule / Itinerary</h3>
+              <section className="space-y-3">
+                <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Schedule / Itinerary</h3>
+                <div>
+                  <FieldLabel>Schedule Section Title</FieldLabel>
+                  <TextField value={draftConfig['itinerary.title'] ?? ''} onChange={(v) => setConfig('itinerary.title', v)} maxLength={40} placeholder="Aturcara Majlis" />
+                </div>
                 <ItineraryEditor weddingId={weddingId!} onItemsChange={setItinerary} />
               </section>
 
@@ -919,16 +1081,28 @@ export default function CustomizePage() {
             {/* ═══════════════ CELEBRATION TAB ═══════════════ */}
             {activeTab === 'celebration' && <>
 
-              <section>
-                <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Wishes &amp; Guestbook</h3>
-                <FieldLabel>Wish Prompt</FieldLabel>
-                <TextField value={draftConfig['wish.prompt'] ?? ''} onChange={(v) => setConfig('wish.prompt', v)} maxLength={80} />
+              <section className="space-y-3">
+                <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Wishes &amp; Guestbook</h3>
+                <div>
+                  <FieldLabel>Section Title</FieldLabel>
+                  <TextField value={draftConfig['wish.title'] ?? ''} onChange={(v) => setConfig('wish.title', v)} maxLength={40} placeholder="Wishes &amp; Blessings" />
+                </div>
+                <div>
+                  <FieldLabel>Wish Prompt</FieldLabel>
+                  <TextField value={draftConfig['wish.prompt'] ?? ''} onChange={(v) => setConfig('wish.prompt', v)} maxLength={80} />
+                </div>
               </section>
 
-              <section>
-                <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Photo Booth</h3>
-                <FieldLabel>Navigation Label</FieldLabel>
-                <TextField value={draftConfig['nav.photos'] ?? 'Photos'} onChange={(v) => setConfig('nav.photos', v)} maxLength={20} />
+              <section className="space-y-3">
+                <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Photo Booth</h3>
+                <div>
+                  <FieldLabel>Section Title</FieldLabel>
+                  <TextField value={draftConfig['photobooth.title'] ?? ''} onChange={(v) => setConfig('photobooth.title', v)} maxLength={40} placeholder="Photo Booth" />
+                </div>
+                <div>
+                  <FieldLabel>Navigation Label</FieldLabel>
+                  <TextField value={draftConfig['nav.photos'] ?? 'Photos'} onChange={(v) => setConfig('nav.photos', v)} maxLength={20} />
+                </div>
               </section>
 
               {showPortraitSlots && (
@@ -950,6 +1124,37 @@ export default function CustomizePage() {
                   </div>
                 </section>
               )}
+
+              {wedding?.templateId === 5 && (
+                <section className="space-y-3">
+                  <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Section Headings</h3>
+                  <p className="text-xs text-gray-400">Applies to Wishes &amp; Photo Booth headings</p>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <FieldLabel>Color</FieldLabel>
+                      <ColorField value={draftConfig['section.heading.color'] ?? ''} onChange={(v) => setConfig('section.heading.color', v)} />
+                    </div>
+                    <div>
+                      <FieldLabel>Shadow</FieldLabel>
+                      <SelectField value={draftConfig['section.heading.shadow'] ?? 'none'} options={['none', 'soft', 'strong', 'glow']} onChange={(v) => setConfig('section.heading.shadow', v)} />
+                    </div>
+                  </div>
+                </section>
+              )}
+
+              <section className="space-y-3">
+                <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Footer</h3>
+                <div>
+                  <FieldLabel>Footer Tagline</FieldLabel>
+                  <TextField value={draftConfig['footer.tagline'] ?? ''} onChange={(v) => setConfig('footer.tagline', v)} maxLength={80} placeholder="Made with love for our special day" />
+                </div>
+                {wedding?.templateId === 5 && (
+                  <div>
+                    <FieldLabel>Color</FieldLabel>
+                    <ColorField value={draftConfig['footer.tagline.color'] ?? ''} onChange={(v) => setConfig('footer.tagline.color', v)} />
+                  </div>
+                )}
+              </section>
 
               <section>
                 <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Section Background</h3>

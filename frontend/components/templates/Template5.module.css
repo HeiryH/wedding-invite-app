@@ -2,30 +2,30 @@
 :root {
   /* Fonts — local originals */
   --t5-font-display: 'PlayfairDisplay', serif;
-  --t5-font-script:  'Armelie', cursive;
-  --t5-font-body:    'PlayfairDisplay', serif;
+  --t5-font-script: 'Armelie', cursive;
+  --t5-font-body: 'PlayfairDisplay', serif;
 
   /* Accent colours */
-  --t5-rose:         #d97b86;
-  --t5-blush-deep:   #e69a9a;
-  --t5-peach:        #f6c3a6;
-  --t5-peach-deep:   #ec9d7c;
-  --t5-blush:        #f0c5c5;
-  --t5-gold:         #c8a072;
+  --t5-rose: #d97b86;
+  --t5-blush-deep: #e69a9a;
+  --t5-peach: #f6c3a6;
+  --t5-peach-deep: #ec9d7c;
+  --t5-blush: #f0c5c5;
+  --t5-gold: #c8a072;
 
   /* Backgrounds */
-  --t5-cream:        #fef8f0;
-  --t5-cream-warm:   #fff3e4;
-  --t5-paper:        rgba(255, 251, 244, 0.86);
-  --t5-glass:        #fffbf445;
+  --t5-cream: #fef8f0;
+  --t5-cream-warm: #fff3e4;
+  --t5-paper: rgba(255, 251, 244, 0.86);
+  --t5-glass: #fffbf445;
 
   /* Text */
-  --t5-ink:          #5b4537;
-  --t5-ink-2:        #7a6553;
-  --t5-ink-light:    #a48d7c;
+  --t5-ink: #5b4537;
+  --t5-ink-2: #7a6553;
+  --t5-ink-light: #a48d7c;
 
   /* Legacy scale — kept for RSVP modal */
-  --t5-rose-50:  #fff1f2;
+  --t5-rose-50: #fff1f2;
   --t5-rose-100: #ffe4e6;
   --t5-rose-200: #fecdd3;
   --t5-rose-300: #fda4af;
@@ -37,8 +37,8 @@
 
   /* Shadow tokens */
   --t5-shadow-heading: drop-shadow(3px 8px 15px #000000);
-  --t5-shadow-body:    drop-shadow(1px 3px 4px rgba(0, 0, 0, 0.6));
-  --t5-shadow-ui:      drop-shadow(1px 1px 10px #000);
+  --t5-shadow-body: drop-shadow(1px 3px 4px rgba(0, 0, 0, 0.6));
+  --t5-shadow-ui: drop-shadow(1px 1px 10px #000);
 
   --t5-text-glow:
     0 2px 8px rgba(255, 255, 255, 0.55),
@@ -61,21 +61,43 @@
 
 /* ── Keyframes ───────────────────────────────────────────────────── */
 @keyframes t5-bounce {
-  0%, 100% { transform: translate(-50%, 0); opacity: 0.7; }
-  50%       { transform: translate(-50%, 6px); opacity: 1; }
+
+  0%,
+  100% {
+    transform: translate(-50%, 0);
+    opacity: 0.7;
+  }
+
+  50% {
+    transform: translate(-50%, 6px);
+    opacity: 1;
+  }
 }
 
 @keyframes t5-rise {
-  from { opacity: 0; transform: translateY(8px); }
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
 }
 
 @keyframes t5-pop {
-  from { opacity: 0; transform: scale(0.96); }
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
 }
 
 @keyframes t5-fall {
-  from { transform: translateY(-20vh) rotate(0); opacity: 1; }
-  to   { transform: translateY(110vh) rotate(540deg); opacity: 0; }
+  from {
+    transform: translateY(-20vh) rotate(0);
+    opacity: 1;
+  }
+
+  to {
+    transform: translateY(110vh) rotate(540deg);
+    opacity: 0;
+  }
 }
 
 /* ── Background ──────────────────────────────────────────────────── */
@@ -187,9 +209,19 @@
 }
 
 @media (max-width: 440px) {
-  .sideNav { bottom: 14px; }
-  .sideNavBtn { width: 38px; height: 38px; }
-  .sideNavList { gap: 2px; padding: 5px 6px; }
+  .sideNav {
+    bottom: 14px;
+  }
+
+  .sideNavBtn {
+    width: 38px;
+    height: 38px;
+  }
+
+  .sideNavList {
+    gap: 2px;
+    padding: 5px 6px;
+  }
 }
 
 /* ── Section: Welcome ───────────────────────────────────────────── */
@@ -202,17 +234,18 @@
   justify-content: start;
   gap: 1rem;
   padding: 3rem 2.5rem;
-  overflow-x: hidden;
 }
 
 .invitationContent {
+  min-height: 550px;
   display: flex;
   flex-direction: column;
   align-items: center;
   text-align: center;
+  justify-content: space-evenly;
   gap: 1rem;
   padding: 1.5rem 2rem 2rem;
-  border-radius: 28px;
+  border-radius: 200px;
   background: var(--t5-glass);
   backdrop-filter: blur(20px) saturate(140%);
   -webkit-backdrop-filter: blur(20px) saturate(140%);
@@ -241,44 +274,37 @@
 }
 
 .coupleName {
-  color: white;
-  text-shadow: var(--t5-text-glow);
+  color: #8ab7c7;
+  text-shadow: var(--t5-text-glow), 0px 10px 4px #cdc2ba;
   font-family: var(--t5-font-script);
   font-size: 1.5rem;
   line-height: 2;
   margin-top: 0.5rem;
-  /* word-spacing: -20px; */
-  /* filter: none; */
-  filter: var(--t5-shadow-heading);
 }
 
 .coupleNameGroom {
-  color: white;
-  text-shadow: var(--t5-text-glow);
-  filter: var(--t5-shadow-heading);
+  color: #8ab7c7;
+  text-shadow: var(--t5-text-glow), 0px 10px 4px #cdc2ba;
   font-family: var(--t5-font-script);
   font-size: 1.5rem;
   line-height: 2;
   word-spacing: normal;
   margin-bottom: 0.5rem;
-  /* filter: none; */
 }
 
 .ampersand {
   color: white;
-  text-shadow: var(--t5-text-glow);
+  text-shadow: var(--t5-text-glow), 3px 8px 15px #000000;
   font-family: var(--t5-font-script);
-  font-size: 2rem;
+  font-size: 1.5rem;
   margin: -0.5rem 0;
-  filter: var(--t5-shadow-heading);
-  /* filter: none; */
 }
 
 .inviteVenue {
   color: rgba(255, 255, 255, 0.7);
   font-size: 1rem;
   letter-spacing: 0.1em;
-  filter: var(--t5-shadow-body);
+  text-shadow: 1px 3px 4px rgba(0, 0, 0, 0.6);
   font-family: var(--t5-font-display);
 }
 
@@ -298,7 +324,7 @@
   margin-top: 1.5rem;
   max-width: 20rem;
   line-height: 1.625;
-  filter: var(--t5-shadow-body);
+  text-shadow: 1px 3px 4px rgba(0, 0, 0, 0.6);
   font-family: var(--t5-font-display);
 }
 
@@ -312,18 +338,137 @@
   flex-direction: column;
   align-items: center;
   gap: 0.25rem;
-  color: #e042429e;
+  color: #fff;
   font-size: 0.8rem;
   letter-spacing: 0.2em;
   text-transform: uppercase;
   font-family: var(--t5-font-display);
-  filter: var(--t5-shadow-heading);
+  text-shadow: 3px 8px 15px #000000;
   white-space: nowrap;
 }
 
-.scrollCueArrow {
+/* .scrollCueArrow {
   font-size: 1.125rem;
   color: #e042429e;
+} */
+
+/* ── Invitation layout: minimal ──────────────────────────────────── */
+.invitationContentMinimal {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 0;
+  padding: 2.5rem 2.5rem 2rem;
+  border-radius: 28px;
+  background: var(--t5-glass);
+  backdrop-filter: blur(20px) saturate(140%);
+  -webkit-backdrop-filter: blur(20px) saturate(140%);
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  box-shadow: var(--t5-card-shadow);
+}
+
+.minimalHeading {
+  font-family: var(--t5-font-display);
+  font-weight: 400;
+  font-size: 0.7rem;
+  letter-spacing: 0.5em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.65);
+  text-shadow: 1px 2px 6px rgba(0, 0, 0, 0.5);
+  margin-bottom: 1.75rem;
+}
+
+.minimalName {
+  color: white;
+  text-shadow: var(--t5-text-glow), 3px 8px 15px #000000;
+  font-family: var(--t5-font-script);
+  font-size: 2.2rem;
+  line-height: 1.1;
+}
+
+.minimalRule {
+  width: 48px;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.35);
+  margin: 1.25rem auto;
+}
+
+.minimalAmpersand {
+  color: rgba(255, 255, 255, 0.55);
+  font-family: var(--t5-font-display);
+  font-style: italic;
+  font-size: 0.85rem;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  margin: 0;
+}
+
+.minimalDate {
+  font-family: var(--t5-font-display);
+  font-size: 0.72rem;
+  letter-spacing: 0.4em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.6);
+  text-shadow: 1px 2px 6px rgba(0, 0, 0, 0.5);
+  margin-top: 1.75rem;
+}
+
+/* ── Invitation layout: ornate ───────────────────────────────────── */
+.invitationContentOrnate {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 0;
+  padding: 1.5rem 2rem 2rem;
+  border-radius: 28px;
+  background: var(--t5-glass);
+  backdrop-filter: blur(20px) saturate(140%);
+  -webkit-backdrop-filter: blur(20px) saturate(140%);
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  box-shadow: var(--t5-card-shadow);
+}
+
+.ornateFlourish {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  max-width: 280px;
+  margin: 0.75rem auto;
+}
+
+.ornateLine {
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(to right, transparent, rgba(255, 255, 255, 0.45), transparent);
+}
+
+.ornateDiamond {
+  width: 6px;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.55);
+  transform: rotate(45deg);
+  flex-shrink: 0;
+}
+
+.ornateName {
+  color: white;
+  text-shadow: var(--t5-text-glow), 3px 8px 15px #000000;
+  font-family: var(--t5-font-script);
+  font-size: 1.7rem;
+  line-height: 1.5;
+  margin: 0.25rem 0;
+}
+
+.ornateAmpersand {
+  color: white;
+  text-shadow: var(--t5-text-glow), 3px 8px 15px #000000;
+  font-family: var(--t5-font-script);
+  font-size: 1.5rem;
+  line-height: 1;
+  margin: 0.1rem 0;
 }
 
 /* ── Section: Ceremony ───────────────────────────────────────────── */
@@ -334,27 +479,27 @@
   flex-direction: column;
   align-items: center;
   justify-content: stretch;
-  padding: 5rem 1.5rem;
+  padding: 2rem 1.5rem 2rem;
   overflow: visible;
   width: 100%;
 }
 
 .ceremonyTitle {
+  min-width: 450px;
   color: white;
   font-family: var(--t5-font-script);
   font-size: clamp(2rem, 8vw, 3rem);
   text-align: center;
-  text-shadow: var(--t5-text-glow);
-  filter: var(--t5-shadow-heading);
+  text-shadow: var(--t5-text-glow), 3px 8px 15px #000000;
   margin-bottom: 1.5rem;
 }
 
 /* Glassmorphism ceremony card */
 .ceremonyCard {
   width: 100%;
-  max-width: 26rem;
-  border-radius: 22px;
-  padding: 26px 22px;
+  max-width: 40rem;
+  border-radius: 200px 200px 24px 24px;
+  padding: 75px 25px 25px;
   background: var(--t5-glass);
   backdrop-filter: blur(20px) saturate(140%);
   -webkit-backdrop-filter: blur(20px) saturate(140%);
@@ -367,7 +512,8 @@
   font-family: var(--t5-font-display);
   font-style: italic;
   font-size: 20px;
-  color: var(--t5-ink-2);
+  /* color: var(--t5-ink-2); */
+  color: #4e96a6;
   line-height: 1.7;
   text-align: center;
   max-width: 100%;
@@ -375,35 +521,52 @@
   filter: none;
 }
 
+.ceremonyCoupleNames {
+  font-family: var(--t5-font-script);
+  font-size: 1.5rem;
+  color: #3881a2;
+  text-align: center;
+  margin: 2.25rem 1.25rem;
+  letter-spacing: 0.05em;
+}
+
 .dateInner {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: 0;
+  align-items: stretch;
+  gap: 10px;
+  width: 100%;
+  max-width: 40rem;
+  margin-top: 1rem;
 }
 
-/* Dashed separator block around date */
 .dateBlock {
-  padding: 18px 0;
-  border-top: 1px dashed rgba(91, 69, 55, 0.2);
-  border-bottom: 1px dashed rgba(91, 69, 55, 0.2);
-  margin-bottom: 0;
   width: 100%;
+  padding: 18px 24px;
+  border-radius: 16px;
+  background: var(--t5-glass);
+  backdrop-filter: blur(14px) saturate(130%);
+  -webkit-backdrop-filter: blur(14px) saturate(130%);
+  border: 1px solid rgba(91, 69, 55, 0.18);
+  box-shadow: var(--t5-card-shadow-soft);
+  text-align: center;
 }
 
 .dateText {
-  color: var(--t5-ink);
+  color: #367a89;
+  /* color: var(--t5-ink); */
   font-family: var(--t5-font-script);
-  font-size: clamp(1.6rem, 6vw, 2.2rem);
+  font-size: 20px;
   line-height: 1;
   filter: none;
 }
 
 .dayText {
-  color: var(--t5-ink-2);
+  color: #4e96a6;
+  /* color: var(--t5-ink-2); */
   font-family: var(--t5-font-display);
   font-style: italic;
-  font-size: 13px;
+  font-size: 18px;
   letter-spacing: 0.06em;
   line-height: 1.4;
   margin-top: 6px;
@@ -411,17 +574,26 @@
 }
 
 .hijriText {
-  color: var(--t5-ink-2);
+  color: #4e96a6;
+  /* color: var(--t5-ink-2); */
   font-family: var(--t5-font-display);
   font-style: italic;
-  font-size: 13px;
+  font-size: 18px;
   letter-spacing: 0.06em;
   line-height: 1.4;
   filter: none;
 }
 
 .locationBlock {
-  margin-top: 22px;
+  position: relative;
+  width: 100%;
+  padding: 18px 24px;
+  border-radius: 16px;
+  background: var(--t5-glass);
+  backdrop-filter: blur(14px) saturate(130%);
+  -webkit-backdrop-filter: blur(14px) saturate(130%);
+  border: 1px solid rgba(91, 69, 55, 0.18);
+  box-shadow: var(--t5-card-shadow-soft);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -429,20 +601,30 @@
 }
 
 .locationLabel {
-  font-family: var(--t5-font-display);
+
+  color: #367a89;
+  /* color: var(--t5-ink); */
+  font-family: var(--t5-font-script);
+  font-size: 20px;
+  line-height: 1;
+  filter: none;
+
+  /* font-family: var(--t5-font-display);
   font-weight: 600;
   font-size: 16px;
   letter-spacing: 0.18em;
+  color: #4e96a6;
   color: var(--t5-ink);
   text-transform: uppercase;
-  filter: none;
+  filter: none; */
 }
 
 .locationAddress {
   font-family: var(--t5-font-display);
   font-style: italic;
   font-size: 18px;
-  color: var(--t5-ink-2);
+  color: #4e96a6;
+  /* color: var(--t5-ink-2); */
   font-weight: normal;
   line-height: 1.5;
   text-align: center;
@@ -453,11 +635,12 @@
 /* ── Section: Envelope / RSVP ────────────────────────────────────── */
 .envelopeSection {
   --env-h: 50vh;
-  position: relative;
+  /* position: relative; */
   min-height: var(--env-h);
   display: flex;
   align-items: center;
   justify-content: center;
+  position: relative;
 }
 
 .envelopeWrapper {
@@ -487,6 +670,7 @@
   position: absolute;
   top: calc(100% + 0.75rem);
   /* left: 50%; */
+  top: -10%;
   transform: translateX(-50%);
   display: flex;
   flex-direction: column;
@@ -494,6 +678,7 @@
   gap: 0.25rem;
   pointer-events: none;
   white-space: nowrap;
+  z-index: 5;
 }
 
 .tapHintText {
@@ -503,14 +688,13 @@
   letter-spacing: 0.3em;
   text-transform: uppercase;
   font-family: var(--t5-font-display);
-  filter: var(--t5-shadow-body);
+  text-shadow: 1px 3px 4px rgba(0, 0, 0, 0.6);
 }
 
 .tapHintArrow {
   color: #fff;
   font-size: 2rem;
-  filter: var(--t5-shadow-body);
-
+  text-shadow: 1px 3px 4px rgba(0, 0, 0, 0.6);
 }
 
 /* ── Itinerary ───────────────────────────────────────────────────── */
@@ -526,7 +710,7 @@
 .aturcaraCard {
   width: 100%;
   max-width: 26rem;
-  border-radius: 22px;
+  border-radius: 24px 24px 200px 200px;
   padding: 26px 22px;
   background: var(--t5-glass);
   backdrop-filter: blur(20px) saturate(140%);
@@ -538,7 +722,8 @@
 .aturcaraTitle {
   font-family: var(--t5-font-script);
   font-size: clamp(1.8rem, 7vw, 2.5rem);
-  color: var(--t5-ink);
+  color: #367a89;
+  /* color: var(--t5-ink); */
   text-align: center;
   margin-bottom: 1rem;
   line-height: 1.2;
@@ -577,7 +762,7 @@
   font-family: var(--t5-font-display);
   font-weight: 500;
   font-size: 18px;
-  color: var(--t5-ink);
+  color: #4e96a6;
   display: flex;
   align-items: center;
   gap: 10px;
@@ -601,7 +786,7 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 5rem 1.25rem;
+  padding: 3rem 1.5rem;
 }
 
 .sectionContainer {
@@ -612,7 +797,7 @@
 .sectionHeading {
   font-size: 2.25rem;
   color: white;
-  filter: var(--t5-shadow-heading);
+  text-shadow: 3px 8px 15px #000000;
   margin-bottom: 0.5rem;
   font-family: var(--t5-font-display);
   font-weight: 700;
@@ -624,7 +809,7 @@
   font-size: 1rem;
   font-family: var(--t5-font-display);
   text-align: center;
-  filter: var(--t5-shadow-body);
+  text-shadow: 1px 3px 4px rgba(0, 0, 0, 0.6);
 }
 
 .sectionHeader {
@@ -869,11 +1054,25 @@
   animation: t5-rise 0.4s ease-out backwards;
 }
 
-.wishCard:nth-child(1) { animation-delay: 0ms; }
-.wishCard:nth-child(2) { animation-delay: 60ms; }
-.wishCard:nth-child(3) { animation-delay: 120ms; }
-.wishCard:nth-child(4) { animation-delay: 180ms; }
-.wishCard:nth-child(5) { animation-delay: 240ms; }
+.wishCard:nth-child(1) {
+  animation-delay: 0ms;
+}
+
+.wishCard:nth-child(2) {
+  animation-delay: 60ms;
+}
+
+.wishCard:nth-child(3) {
+  animation-delay: 120ms;
+}
+
+.wishCard:nth-child(4) {
+  animation-delay: 180ms;
+}
+
+.wishCard:nth-child(5) {
+  animation-delay: 240ms;
+}
 
 .wishCard::before {
   content: '';
@@ -910,7 +1109,7 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 5rem 1.25rem;
+  padding: 3rem 1.25rem;
 }
 
 .fileDropzone {
@@ -1031,14 +1230,12 @@
   position: relative;
   width: 100%;
   max-width: 380px;
-  height: 580px;
   margin: 0 auto 2.5rem;
 }
 
 .stackPolaroid {
   position: relative;
   width: 100%;
-  height: 100%;
   background: white;
   border-radius: 4px;
   padding: 10px 10px 52px;
@@ -1053,7 +1250,7 @@
 
 .stackPhoto {
   width: 100%;
-  flex: 1;
+  aspect-ratio: 1;
   object-fit: cover;
   border-radius: 2px;
   pointer-events: none;
@@ -1063,7 +1260,9 @@
 
 .stackGhost1 {
   position: absolute;
-  inset: 0;
+  top: 0;
+  left: 0;
+  right: 0;
   transform: rotate(4deg) translateY(10px) scale(0.97);
   z-index: 1;
   pointer-events: none;
@@ -1071,15 +1270,16 @@
 
 .stackGhost2 {
   position: absolute;
-  inset: 0;
+  top: 0;
+  left: 0;
+  right: 0;
   transform: rotate(-5deg) translateY(16px) scale(0.94);
   z-index: 0;
   pointer-events: none;
 }
 
 .stackCard {
-  position: absolute;
-  inset: 0;
+  position: relative;
   z-index: 10;
   cursor: grab;
   touch-action: pan-y;
@@ -1117,8 +1317,13 @@
   transform: translateY(-50%) scale(1.08);
 }
 
-.stackNavPrev { left: -14px; }
-.stackNavNext { right: -14px; }
+.stackNavPrev {
+  left: -14px;
+}
+
+.stackNavNext {
+  right: -14px;
+}
 
 .stackDots {
   position: absolute;
@@ -1169,9 +1374,17 @@
   transition: transform 250ms, box-shadow 250ms;
 }
 
-.polaroid:nth-child(3n+1) { transform: rotate(-2deg); }
-.polaroid:nth-child(3n+2) { transform: rotate(1.6deg); }
-.polaroid:nth-child(3n)   { transform: rotate(-1deg); }
+.polaroid:nth-child(3n+1) {
+  transform: rotate(-2deg);
+}
+
+.polaroid:nth-child(3n+2) {
+  transform: rotate(1.6deg);
+}
+
+.polaroid:nth-child(3n) {
+  transform: rotate(-1deg);
+}
 
 .polaroid:hover {
   transform: rotate(0deg) translateY(-4px) !important;
@@ -1194,7 +1407,7 @@
 .polaroidPhoto {
   width: 100%;
   aspect-ratio: 1;
-  object-fit: contain;
+  object-fit: cover;
   border-radius: 2px;
   display: block;
 }
@@ -1630,14 +1843,34 @@
   animation: t5MusicBar 0.75s ease-in-out infinite alternate;
 }
 
-.musicBar:nth-child(1) { height: 6px;  animation-delay: 0s; }
-.musicBar:nth-child(2) { height: 14px; animation-delay: 0.15s; }
-.musicBar:nth-child(3) { height: 9px;  animation-delay: 0.3s; }
-.musicBar:nth-child(4) { height: 12px; animation-delay: 0.08s; }
+.musicBar:nth-child(1) {
+  height: 6px;
+  animation-delay: 0s;
+}
+
+.musicBar:nth-child(2) {
+  height: 14px;
+  animation-delay: 0.15s;
+}
+
+.musicBar:nth-child(3) {
+  height: 9px;
+  animation-delay: 0.3s;
+}
+
+.musicBar:nth-child(4) {
+  height: 12px;
+  animation-delay: 0.08s;
+}
 
 @keyframes t5MusicBar {
-  from { transform: scaleY(0.25); }
-  to   { transform: scaleY(1); }
+  from {
+    transform: scaleY(0.25);
+  }
+
+  to {
+    transform: scaleY(1);
+  }
 }
 
 .musicToggleBtn {
@@ -1651,4 +1884,264 @@
   border: none;
   cursor: pointer;
   color: rgba(255, 255, 255, 0.9);
+}
+
+/* ── Countdown Timer ──────────────────────────────────────────────────────── */
+
+.countdownSection {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.5rem;
+  padding: 4rem 1.5rem 2rem;
+  position: relative;
+  z-index: 1;
+}
+
+.countdownLabel {
+  font-family: var(--t5-font-display);
+  font-size: 1rem;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  /* color: var(--t5-rose); */
+  color: #888787;
+  opacity: 0.75;
+  text-align: center;
+}
+
+.countdownGrid {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.countdownBlock {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 72px;
+  padding: 1.25rem 1rem;
+  border-radius: 16px;
+  background: var(--t5-glass);
+  backdrop-filter: blur(20px) saturate(140%);
+  -webkit-backdrop-filter: blur(20px) saturate(140%);
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  box-shadow: var(--t5-card-shadow);
+  transition: transform 0.2s ease;
+}
+
+.countdownBlock:hover {
+  transform: translateY(-3px);
+}
+
+.countdownNumber {
+  font-family: var(--t5-font-display);
+  font-size: clamp(2rem, 6vw, 2.75rem);
+  font-weight: 400;
+  line-height: 1;
+  color: #888787;
+  /* color: var(--t5-rose); */
+  text-shadow: var(--t5-text-glow);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+}
+
+.countdownUnit {
+  font-family: var(--t5-font-display);
+  font-size: 0.55rem;
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+  color: var(--t5-gold);
+  opacity: 0.8;
+}
+
+/* ── Date block — clickable variant ──────────────────────────────────────── */
+
+.dateBlockClickable {
+  cursor: pointer;
+  border-color: rgba(217, 123, 134, 0.35);
+  transition: box-shadow 0.25s ease, border-color 0.25s ease, transform 0.2s ease;
+}
+
+.dateBlockClickable:hover {
+  transform: translateY(-2px);
+  box-shadow:
+    0 0 0 1px rgba(217, 123, 134, 0.3),
+    0 8px 28px rgba(217, 123, 134, 0.18),
+    var(--t5-card-shadow-soft);
+  border-color: rgba(217, 123, 134, 0.55);
+}
+
+.calendarHint {
+  font-family: var(--t5-font-display);
+  font-size: 0.58rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--t5-rose);
+  opacity: 0.7;
+  margin-top: 8px;
+}
+
+/* ── Calendar modal ──────────────────────────────────────────────────────── */
+
+.calendarOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  /* background: rgba(91, 69, 55, 0.25); */
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+}
+
+.calendarCard {
+  position: relative;
+  width: 100%;
+  max-width: 340px;
+  padding: 2rem 1.75rem;
+  border-radius: 24px;
+  background: var(--t5-glass);
+  backdrop-filter: blur(24px) saturate(160%);
+  -webkit-backdrop-filter: blur(24px) saturate(160%);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  box-shadow: var(--t5-card-shadow), 0 0 0 1px rgba(217, 123, 134, 0.08);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.calendarTitle {
+  font-family: var(--t5-font-display);
+  font-size: 0.65rem;
+  letter-spacing: 0.35em;
+  text-transform: uppercase;
+  color: var(--t5-rose);
+}
+
+.calendarDate {
+  font-family: var(--t5-font-script);
+  font-size: 1.2rem;
+  color: var(--t5-ink);
+  margin-bottom: 0.5rem;
+}
+
+.calendarOptions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+  width: 100%;
+}
+
+.calendarOption {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.875rem 1.25rem;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  box-shadow: var(--t5-card-shadow-soft);
+  font-family: var(--t5-font-display);
+  font-size: 0.8rem;
+  letter-spacing: 0.04em;
+  color: var(--t5-ink);
+  text-decoration: none;
+  transition: background 0.2s, transform 0.15s;
+}
+
+.calendarOption:hover {
+  background: rgba(255, 255, 255, 0.88);
+  transform: translateX(3px);
+}
+
+.calendarOptionIcon {
+  font-size: 1.1rem;
+}
+
+.calendarClose {
+  position: absolute;
+  top: 0.875rem;
+  right: 0.875rem;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(91, 69, 55, 0.08);
+  color: var(--t5-ink-light);
+  font-size: 0.75rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s;
+}
+
+.calendarClose:hover {
+  background: rgba(217, 123, 134, 0.15);
+}
+
+/* ── Location block — clickable / glossy variant ─────────────────────────── */
+
+.locationBlockClickable {
+  cursor: pointer;
+  /* background: linear-gradient(
+    135deg,
+    rgba(255, 253, 248, 0.88) 0%,
+    rgba(255, 251, 244, 0.72) 50%,
+    rgba(255, 248, 238, 0.88) 100%
+  ); */
+  border-color: rgba(200, 160, 114, 0.35);
+  transition: box-shadow 0.25s ease, transform 0.2s ease;
+}
+
+.locationBlockClickable::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 16px;
+  background: linear-gradient(
+    105deg,
+    transparent 40%,
+    rgba(255, 255, 255, 0.45) 50%,
+    transparent 60%
+  );
+  pointer-events: none;
+}
+
+.locationBlockClickable:hover {
+  transform: translateY(-2px);
+  box-shadow:
+    0 0 0 1px rgba(200, 160, 114, 0.3),
+    0 8px 28px rgba(200, 160, 114, 0.18),
+    var(--t5-card-shadow-soft);
+}
+
+.mapHint {
+  font-family: var(--t5-font-display);
+  font-size: 0.58rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--t5-gold);
+  opacity: 0.8;
+  margin-top: 4px;
+}
+
+.mapContainer {
+  overflow: hidden;
+  width: calc(100% + 48px);
+  margin: 12px -24px -18px;
+  border-radius: 0 0 16px 16px;
+}
+
+.mapIframe {
+  width: 100%;
+  height: 240px;
+  border: none;
+  display: block;
 }

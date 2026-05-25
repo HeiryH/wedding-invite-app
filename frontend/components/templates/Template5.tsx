@@ -95,7 +95,16 @@ function RSVPModal({ onRSVP, onClose, seatingEnabled, tables, t }: RSVPModalProp
         <div className={styles.modalFrost} />
 
         <div className={styles.modalContent}>
-          <div className={styles.dragHandle} />
+          <motion.div
+            className={styles.dragHandle}
+            drag="y"
+            dragConstraints={{ top: 0, bottom: 0 }}
+            dragElastic={{ top: 0, bottom: 0.4 }}
+            onDragEnd={(_, info) => {
+              if (info.offset.y > 80 || info.velocity.y > 300) onClose();
+            }}
+            style={{ cursor: 'grab', touchAction: 'none' }}
+          />
 
           <div className={styles.modalHeader}>
             <div>
@@ -301,17 +310,11 @@ function MusicBubble({ url, loop }: { url: string; loop: boolean }) {
 
   return (
     <motion.div
-      layout
       className={styles.musicBubble}
-      style={{ borderRadius: expanded ? 22 : '50%' }}
+      style={{ borderRadius: 22 }}
       initial={{ opacity: 0, x: 20 }}
       animate={{ opacity: 1, x: 0 }}
-      transition={{
-        delay: 0.8,
-        duration: 0.5,
-        ease: 'easeOut',
-        layout: { duration: 0.5, ease: [0.4, 0, 0.2, 1] },
-      }}
+      transition={{ delay: 0.8, duration: 0.5, ease: 'easeOut' }}
     >
       <AnimatePresence>
         {expanded && (
@@ -364,6 +367,52 @@ function MusicBubble({ url, loop }: { url: string; loop: boolean }) {
   );
 }
 
+// ── Countdown hook ────────────────────────────────────────────────────────────
+
+function useCountdown(target: Date) {
+  const calc = () => {
+    const d = target.getTime() - Date.now();
+    if (d <= 0) return { days: 0, hours: 0, minutes: 0, seconds: 0 };
+    return {
+      days: Math.floor(d / 86400000),
+      hours: Math.floor((d % 86400000) / 3600000),
+      minutes: Math.floor((d % 3600000) / 60000),
+      seconds: Math.floor((d % 60000) / 1000),
+    };
+  };
+  const [ct, setCt] = useState(calc);
+  useEffect(() => {
+    const id = setInterval(() => setCt(calc()), 1000);
+    return () => clearInterval(id);
+  }, []);
+  return ct;
+}
+
+// ── Calendar link generator ───────────────────────────────────────────────────
+
+function calendarLinks(wedding: Wedding) {
+  const start = new Date(wedding.weddingDate);
+  const end   = new Date(start.getTime() + 4 * 3600000);
+  const fmt   = (d: Date) => d.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+  const title = encodeURIComponent(`${wedding.brideName} & ${wedding.groomName} Wedding`);
+  const loc   = encodeURIComponent(wedding.venueAddress || wedding.venue || '');
+  return {
+    google:  `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&dates=${fmt(start)}/${fmt(end)}&location=${loc}`,
+    outlook: `https://outlook.live.com/calendar/0/deeplink/compose?subject=${title}&startdt=${start.toISOString()}&enddt=${end.toISOString()}&location=${loc}`,
+    ical:    `data:text/calendar;charset=utf8,BEGIN:VCALENDAR%0AVERSION:2.0%0ABEGIN:VEVENT%0ADTSTART:${fmt(start)}%0ADTEND:${fmt(end)}%0ASUMMARY:${title}%0ALOCATION:${loc}%0AEND:VEVENT%0AEND:VCALENDAR`,
+  };
+}
+
+// ── Shadow preset → CSS ───────────────────────────────────────────────────────
+
+function shadowOf(preset: string): string {
+  return ({
+    soft:   '0 1px 4px rgba(0,0,0,0.35)',
+    strong: '0 2px 8px rgba(0,0,0,0.7), 0 1px 0 rgba(0,0,0,0.5)',
+    glow:   '0 0 14px rgba(255,220,180,0.9), 0 0 28px rgba(255,160,100,0.45)',
+  } as Record<string, string>)[preset] ?? '';
+}
+
 // ── Main Template ─────────────────────────────────────────────────────────────
 
 export default function Template5({
@@ -380,6 +429,10 @@ export default function Template5({
   itinerary = [],
 }: Template5Props) {
   const t = (key: string, fallback: string) => customConfig?.[key] || fallback;
+
+  const brideFirst = t('general.brideFirst', 'true') !== 'false';
+  const firstName  = brideFirst ? wedding.brideName  : wedding.groomName;
+  const secondName = brideFirst ? wedding.groomName  : wedding.brideName;
 
   const formatOrdinalDate = (date: Date): string => {
     const d = date.getDate();
@@ -418,6 +471,7 @@ export default function Template5({
   const [lightboxPhoto, setLightboxPhoto] = useState<Photo | null>(null);
   const [photoLayout, setPhotoLayout] = useState<'stack' | 'grid'>('stack');
   const [stackIndex, setStackIndex] = useState(0);
+  const [ghostIndex, setGhostIndex] = useState(0);
   const [stackDirection, setStackDirection] = useState(1);
   const autoShuffleRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const userInteractingRef = useRef(false);
@@ -435,6 +489,39 @@ export default function Template5({
   const photosRef = useRef<HTMLElement>(null);
 
   const weddingDate = new Date(wedding.weddingDate);
+  const countdown = useCountdown(weddingDate);
+
+  const showAddToCalendar = t('general.showAddToCalendar', 'false') === 'true';
+  const showVenueMap      = t('general.showVenueMap', 'false') === 'true';
+  const [calendarOpen, setCalendarOpen] = useState(false);
+  const [mapExpanded, setMapExpanded]   = useState(false);
+
+  const customBg    = customConfig?.['template.bg'];
+  const bgSize      = customConfig?.['template.bgSize'] || 'cover';
+  const bgPosition  = customConfig?.['template.bgPosition'] || 'center';
+
+  const brideColor     = t('names.bride.color', '');
+  const brideShadow    = shadowOf(t('names.bride.shadow', 'none'));
+  const groomColor     = t('names.groom.color', '');
+  const groomShadow    = shadowOf(t('names.groom.shadow', 'none'));
+  const ampersandColor = t('names.ampersand.color', '');
+  const cdLabelColor   = t('countdown.label.color', '');
+  const cdNumColor     = t('countdown.number.color', '');
+  const cerTitleColor  = t('ceremony.title.color', '');
+  const cerTitleShadow = shadowOf(t('ceremony.title.shadow', 'none'));
+  const cerNamesColor  = t('ceremony.names.color', '');
+  const cerNamesShadow = shadowOf(t('ceremony.names.shadow', 'none'));
+  const secHeadColor   = t('section.heading.color', '');
+  const secHeadShadow  = shadowOf(t('section.heading.shadow', 'none'));
+  const footerColor    = t('footer.tagline.color', '');
+  const headingColor   = t('invite.heading.color', '');
+  const headingShadow  = t('invite.heading.shadow', 'soft');
+
+  // Map to whichever name is displayed first/second based on brideFirst
+  const firstColor  = brideFirst ? brideColor  : groomColor;
+  const firstShadow = brideFirst ? brideShadow : groomShadow;
+  const secondColor  = brideFirst ? groomColor  : brideColor;
+  const secondShadow = brideFirst ? groomShadow : brideShadow;
 
 const NAV_EMOJIS: Record<string, string> = {
     welcome: '💍',
@@ -628,6 +715,11 @@ const NAV_EMOJIS: Record<string, string> = {
     return () => { clearInterval(id); autoShuffleRef.current = null; };
   }, [photoLayout, photos.length]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  useEffect(() => {
+    const t = setTimeout(() => setGhostIndex(stackIndex), 180);
+    return () => clearTimeout(t);
+  }, [stackIndex]);
+
   const markInteraction = () => {
     userInteractingRef.current = true;
     if (interactTimerRef.current) clearTimeout(interactTimerRef.current);
@@ -697,10 +789,35 @@ const NAV_EMOJIS: Record<string, string> = {
     finally { setPhotoSubmitting(false); }
   };
 
+  const layout = t('invite.layout', 'classic');
+
+  const heading = t('invite.heading', 'The Wedding of');
+  const headCharCount = Math.min(30, heading.length);
+  const arcT = Math.max(0, (headCharCount - 15) / 15);
+  const arcMargin = Math.round(100 - 80 * arcT);
+  const arcChord = 500 - 2 * arcMargin;
+  const arcR = Math.round(200 * arcChord / 300);
+  const arcPath = `M ${arcMargin},250 A ${arcR},${arcR} 0 0, 1 ${500 - arcMargin},250`;
+  const arcSagitta = arcR - Math.sqrt(arcR ** 2 - (arcChord / 2) ** 2);
+  const vbTop = Math.min(150, Math.round(250 - arcSagitta - 25));
+  const vbH = 250 - vbTop;
+
+  useEffect(() => {
+    document.body.style.overflow = rsvpOpen ? 'hidden' : '';
+    return () => { document.body.style.overflow = ''; };
+  }, [rsvpOpen]);
+
   return (
     <>
       {/* ── Fixed background ─────────────────────────────────────────── */}
-      <div className={styles.background} />
+      <div
+        className={styles.background}
+        style={customBg ? {
+          backgroundImage: `linear-gradient(to bottom, transparent 93%, white 100%), url(${API_BASE}${customBg})`,
+          backgroundSize: `auto, ${bgSize}`,
+          backgroundPosition: bgPosition,
+        } : undefined}
+      />
 
       {/* ── Side Navigation ──────────────────────────────────────────── */}
       <nav className={styles.sideNav}>
@@ -742,197 +859,286 @@ const NAV_EMOJIS: Record<string, string> = {
           You're invited
         </motion.p>
 
-        <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 1, ease: 'easeOut' }}
-          className={styles.invitationContent}
-        >
-          {/* <motion.svg viewBox="0 150 500 100" width={500}>
-            <path id="path" d="M 100,250 A 200,200 0 0, 1 400, 250" fill="transparent" />
-            <text fill="rgba(255,255,255,0.9)">
-              <textPath href="#path" startOffset="50%" textAnchor="middle"
-                style={{ fontFamily: 'PlayfairDisplay, serif', fontSize: '1.5rem', letterSpacing: '0.3em' }}>
-                {t('invite.heading', 'The Wedding of')}
-              </textPath>
-            </text>
-          </motion.svg> */}
-
-          <motion.svg viewBox="0 150 500 100" width="100%" style={{ maxWidth: 500 }}>
-            <defs>
-              {/* 1. Define the shadow filter */}
-              <filter id="text-shadow" x="-20%" y="-20%" width="140%" height="140%">
-                {/* Blur the alpha channel */}
-                <feGaussianBlur in="SourceAlpha" stdDeviation="3" />
-                {/* Shift the shadow down and right */}
-                <feOffset dx="2" dy="2" result="offsetblur" />
-                {/* Change shadow color and opacity */}
-                <feFlood floodColor="#000000" floodOpacity="0.8" />
-                <feComposite in2="offsetblur" operator="in" />
-                {/* Merge shadow with original text */}
-                <feMerge>
-                  <feMergeNode />
-                  <feMergeNode in="SourceGraphic" />
-                </feMerge>
-              </filter>
-            </defs>
-
-            <path id="path" d="M 100,250 A 200,200 0 0, 1 400, 250" fill="transparent" />
-
-            {/* Glass bands — outer diffuse, inner cream, edge highlight */}
-            <path d="M 100,250 A 200,200 0 0, 1 400, 250"
-              fill="none" stroke="rgba(255,251,244,0.15)"
-              strokeWidth="40" strokeLinecap="round" />
-            <path d="M 100,250 A 200,200 0 0, 1 400, 250"
-              fill="none" stroke="rgba(255,251,244,0.27)"
-              strokeWidth="28" strokeLinecap="round" />
-            <path d="M 100,250 A 200,200 0 0, 1 400, 250"
-              fill="none" stroke="rgba(255,255,255,0.45)"
-              strokeWidth="1.5" strokeLinecap="round" />
-
-            {/* 2. Apply filter attribute to text */}
-            <text
-              fill="rgba(255,255,255,0.9)"
-              filter="url(#text-shadow)"
-              style={{ fontFamily: 'PlayfairDisplay, serif', fontSize: '1.75rem', letterSpacing: '0.3em' }}
-            >
-              <textPath href="#path" startOffset="50%" textAnchor="middle">
-                {t('invite.heading', 'The Wedding of')}
-              </textPath>
-            </text>
-          </motion.svg>
-
-          <motion.h1
-            initial={{ opacity: 0, y: 20 }}
+        {layout === 'minimal' ? (
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2, duration: 0.9 }}
-            className={styles.coupleName}
+            transition={{ duration: 1, ease: 'easeOut' }}
+            className={styles.invitationContentMinimal}
           >
-            {wedding.brideName}
-          </motion.h1>
-
-          <motion.p
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.5, duration: 0.8 }}
-            className={styles.ampersand}
-          >
-            &amp;
-          </motion.p>
-
-          <motion.h1
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.4, duration: 0.9 }}
-            className={styles.coupleNameGroom}
-          >
-            {wedding.groomName}
-          </motion.h1>
-
-          {/* Date — downward arch */}
-          {/* <motion.svg
-            viewBox="0 0 500 72"
-            width={400}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.7, duration: 0.8 }}
-            style={{ overflow: 'visible', filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.3))' }}
-          >
-            <path id="dateCurve" d="M 80,0 A 250,250 0 0,0 420,0" fill="transparent" />
-            <text fill="rgba(255,255,255,0.9)">
-              <textPath href="#dateCurve" startOffset="50%" textAnchor="middle"
-                style={{ fontFamily: 'PlayfairDisplay, serif', fontSize: '2em', letterSpacing: '0.25em' }}>
-                {weddingDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}
-              </textPath>
-            </text>
-          </motion.svg> */}
-
-          <motion.svg
-            viewBox="0 0 500 72"
-            width="100%"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.7, duration: 0.8 }}
-            style={{ maxWidth: 400, overflow: 'visible' }}
-          >
-            <defs>
-              {/* Define the shadow filter */}
-              <filter id="date-text-shadow" x="-20%" y="-20%" width="140%" height="140%">
-                {/* Softness of the shadow */}
-                <feGaussianBlur in="SourceAlpha" stdDeviation="3" />
-
-                {/* 1. ADJUST ANGLE & DISTANCE HERE */}
-                <feOffset dx="2" dy="3" result="offsetblur" />
-
-                {/* 2. ADJUST DARKNESS HERE (e.g., 0.85 for darker) */}
-                <feFlood floodColor="#000000" floodOpacity="0.85" />
-
-                <feComposite in2="offsetblur" operator="in" />
-                <feMerge>
-                  <feMergeNode />
-                  <feMergeNode in="SourceGraphic" />
-                </feMerge>
-              </filter>
-            </defs>
-
-            <path id="dateCurve" d="M 80,0 A 250,250 0 0,0 420,0" fill="transparent" />
-
-            {/* Glass bands — outer diffuse, inner cream, edge highlight */}
-            <path d="M 80,0 A 250,250 0 0,0 420,0"
-              fill="none" stroke="rgba(255,251,244,0.15)"
-              strokeWidth="40" strokeLinecap="round" />
-            <path d="M 80,0 A 250,250 0 0,0 420,0"
-              fill="none" stroke="rgba(255,251,244,0.27)"
-              strokeWidth="28" strokeLinecap="round" />
-            <path d="M 80,0 A 250,250 0 0,0 420,0"
-              fill="none" stroke="rgba(255,255,255,0.45)"
-              strokeWidth="1.5" strokeLinecap="round" />
-
-            <text
-              fill="rgba(255,255,255,0.9)"
-              filter="url(#date-text-shadow)"
-              style={{ fontFamily: 'PlayfairDisplay, serif', fontSize: '1.75em', letterSpacing: '0.25em' }}
+            <p className={styles.minimalHeading}>{heading}</p>
+            <motion.h1
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2, duration: 0.9 }}
+              className={styles.minimalName}
+              style={{ color: firstColor || undefined, textShadow: firstShadow || undefined }}
             >
-              <textPath href="#dateCurve" startOffset="50%" textAnchor="middle">
-                {weddingDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}
-              </textPath>
-            </text>
-          </motion.svg>
-
-
-          {/* {wedding.venue && (
+              {firstName}
+            </motion.h1>
+            <div className={styles.minimalRule} />
+            <p className={styles.minimalAmpersand} style={{ color: ampersandColor || undefined }}>and</p>
+            <div className={styles.minimalRule} />
+            <motion.h1
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.4, duration: 0.9 }}
+              className={styles.minimalName}
+              style={{ color: secondColor || undefined, textShadow: secondShadow || undefined }}
+            >
+              {secondName}
+            </motion.h1>
             <motion.p
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              transition={{ delay: 0.9, duration: 0.8 }}
-              className={styles.inviteVenue}
+              transition={{ delay: 0.7, duration: 0.8 }}
+              className={styles.minimalDate}
             >
-              {wedding.venue}
+              {weddingDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}
             </motion.p>
-          )} */}
+            <div className={styles.scrollCue}>
+              <span>scroll</span>
+              <span className={styles.scrollCueArrow}>↓</span>
+            </div>
+          </motion.div>
+        ) : layout === 'ornate' ? (
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 1, ease: 'easeOut' }}
+            className={styles.invitationContentOrnate}
+          >
+            <motion.svg viewBox={`0 ${vbTop} 500 ${vbH}`} width="100%" style={{ maxWidth: 500, overflow: 'visible' }}>
+              <defs>
+                <filter id="arc-bloom-o" x="-15%" y="-50%" width="130%" height="200%">
+                  <feGaussianBlur in="SourceGraphic" stdDeviation="10" />
+                </filter>
+                <filter id="text-shadow-o" x="-20%" y="-20%" width="140%" height="140%">
+                  <feGaussianBlur in="SourceAlpha" stdDeviation="3" />
+                  <feOffset dx="2" dy="2" result="offsetblur" />
+                  <feFlood floodColor="#000000" floodOpacity="0.8" />
+                  <feComposite in2="offsetblur" operator="in" />
+                  <feMerge><feMergeNode /><feMergeNode in="SourceGraphic" /></feMerge>
+                </filter>
+              </defs>
+              <path id="path-o" d={arcPath} fill="transparent" />
+              <path d={arcPath} fill="none" stroke="rgba(255,248,230,0.30)" strokeWidth="54" strokeLinecap="round" filter="url(#arc-bloom-o)" />
+              <path d={arcPath} fill="none" stroke="rgba(255,251,244,0.16)" strokeWidth="42" strokeLinecap="round" />
+              <path d={arcPath} fill="none" stroke="rgba(255,253,248,0.30)" strokeWidth="24" strokeLinecap="round" />
+              <text fill={headingColor || 'rgba(255,255,255,0.9)'}
+                filter={headingShadow !== 'none' ? 'url(#text-shadow-o)' : undefined}
+                style={{ fontFamily: 'PlayfairDisplay, serif', fontSize: '1.75rem', letterSpacing: '0.3em' }}>
+                <textPath href="#path-o" startOffset="50%" textAnchor="middle">{heading}</textPath>
+              </text>
+            </motion.svg>
 
-          {/* {customConfig?.['invite.body'] && (
+            <div className={styles.ornateFlourish}>
+              <div className={styles.ornateLine} />
+              <div className={styles.ornateDiamond} />
+              <div className={styles.ornateDiamond} />
+              <div className={styles.ornateDiamond} />
+              <div className={styles.ornateLine} />
+            </div>
+
+            <motion.h1 initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2, duration: 0.9 }} className={styles.ornateName}
+              style={{ color: firstColor || undefined, textShadow: firstShadow || undefined }}>
+              {firstName}
+            </motion.h1>
+            <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+              transition={{ delay: 0.5, duration: 0.8 }} className={styles.ornateAmpersand}
+              style={{ color: ampersandColor || undefined }}>
+              &amp;
+            </motion.p>
+            <motion.h1 initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.4, duration: 0.9 }} className={styles.ornateName}
+              style={{ color: secondColor || undefined, textShadow: secondShadow || undefined }}>
+              {secondName}
+            </motion.h1>
+
+            <div className={styles.ornateFlourish}>
+              <div className={styles.ornateLine} />
+              <div className={styles.ornateDiamond} />
+              <div className={styles.ornateDiamond} />
+              <div className={styles.ornateDiamond} />
+              <div className={styles.ornateLine} />
+            </div>
+
+            <motion.svg viewBox="0 0 500 72" width="100%"
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+              transition={{ delay: 0.7, duration: 0.8 }} style={{ maxWidth: 400, overflow: 'visible' }}>
+              <defs>
+                <filter id="date-text-shadow-o" x="-20%" y="-20%" width="140%" height="140%">
+                  <feGaussianBlur in="SourceAlpha" stdDeviation="3" />
+                  <feOffset dx="2" dy="3" result="offsetblur" />
+                  <feFlood floodColor="#000000" floodOpacity="0.85" />
+                  <feComposite in2="offsetblur" operator="in" />
+                  <feMerge><feMergeNode /><feMergeNode in="SourceGraphic" /></feMerge>
+                </filter>
+              </defs>
+              <path id="dateCurve-o" d="M 80,0 A 250,250 0 0,0 420,0" fill="transparent" />
+              <path d="M 80,0 A 250,250 0 0,0 420,0" fill="none" stroke="rgba(255,251,244,0.15)" strokeWidth="40" strokeLinecap="round" />
+              <path d="M 80,0 A 250,250 0 0,0 420,0" fill="none" stroke="rgba(255,253,248,0.30)" strokeWidth="28" strokeLinecap="round" />
+              <text fill="rgba(255,255,255,0.9)" filter="url(#date-text-shadow-o)"
+                style={{ fontFamily: 'PlayfairDisplay, serif', fontSize: '1.75em', letterSpacing: '0.25em' }}>
+                <textPath href="#dateCurve-o" startOffset="50%" textAnchor="middle">
+                  {weddingDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}
+                </textPath>
+              </text>
+            </motion.svg>
+
+            <div className={styles.scrollCue}>
+              <span>scroll</span>
+              <span className={styles.scrollCueArrow}>↓</span>
+            </div>
+          </motion.div>
+        ) : (
+          /* classic (default) */
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 1, ease: 'easeOut' }}
+            className={styles.invitationContent}
+          >
+            <motion.svg viewBox={`0 ${vbTop} 500 ${vbH}`} width="100%" style={{ maxWidth: 500, overflow: 'visible' }}>
+              <defs>
+                <filter id="arc-bloom" x="-15%" y="-50%" width="130%" height="200%">
+                  <feGaussianBlur in="SourceGraphic" stdDeviation="10" />
+                </filter>
+                <filter id="text-shadow" x="-20%" y="-20%" width="140%" height="140%">
+                  <feGaussianBlur in="SourceAlpha" stdDeviation="3" />
+                  <feOffset dx="2" dy="2" result="offsetblur" />
+                  <feFlood floodColor="#000000" floodOpacity="0.8" />
+                  <feComposite in2="offsetblur" operator="in" />
+                  <feMerge>
+                    <feMergeNode />
+                    <feMergeNode in="SourceGraphic" />
+                  </feMerge>
+                </filter>
+              </defs>
+
+              <path id="path" d={arcPath} fill="transparent" />
+              <path d={arcPath} fill="none" stroke="rgba(255,248,230,0.30)"
+                strokeWidth="54" strokeLinecap="round" filter="url(#arc-bloom)" />
+              <path d={arcPath} fill="none" stroke="rgba(255,251,244,0.16)"
+                strokeWidth="42" strokeLinecap="round" />
+              <path d={arcPath} fill="none" stroke="rgba(255,253,248,0.30)"
+                strokeWidth="24" strokeLinecap="round" />
+              <text
+                fill={headingColor || 'rgba(255,255,255,0.9)'}
+                filter={headingShadow !== 'none' ? 'url(#text-shadow)' : undefined}
+                style={{ fontFamily: 'PlayfairDisplay, serif', fontSize: '1.75rem', letterSpacing: '0.3em' }}
+              >
+                <textPath href="#path" startOffset="50%" textAnchor="middle">
+                  {heading}
+                </textPath>
+              </text>
+            </motion.svg>
+
+            <motion.h1
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2, duration: 0.9 }}
+              className={styles.coupleName}
+              style={{ color: firstColor || undefined, textShadow: firstShadow || undefined }}
+            >
+              {firstName}
+            </motion.h1>
+
             <motion.p
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              transition={{ delay: 1, duration: 0.8 }}
-              className={styles.inviteBody}
-              dangerouslySetInnerHTML={{ __html: customConfig['invite.body'] }}
-            />
-          )} */}
+              transition={{ delay: 0.5, duration: 0.8 }}
+              className={styles.ampersand}
+              style={{ color: ampersandColor || undefined }}
+            >
+              &amp;
+            </motion.p>
 
-          <div className={styles.scrollCue}>
-            <span>scroll</span>
-            <span className={styles.scrollCueArrow}>↓</span>
-          </div>
-        </motion.div>
+            <motion.h1
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.4, duration: 0.9 }}
+              className={styles.coupleNameGroom}
+              style={{ color: secondColor || undefined, textShadow: secondShadow || undefined }}
+            >
+              {secondName}
+            </motion.h1>
+
+            <motion.svg
+              viewBox="0 0 500 72"
+              width="100%"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.7, duration: 0.8 }}
+              style={{ maxWidth: 400, overflow: 'visible' }}
+            >
+              <defs>
+                <filter id="date-text-shadow" x="-20%" y="-20%" width="140%" height="140%">
+                  <feGaussianBlur in="SourceAlpha" stdDeviation="3" />
+                  <feOffset dx="2" dy="3" result="offsetblur" />
+                  <feFlood floodColor="#000000" floodOpacity="0.85" />
+                  <feComposite in2="offsetblur" operator="in" />
+                  <feMerge>
+                    <feMergeNode />
+                    <feMergeNode in="SourceGraphic" />
+                  </feMerge>
+                </filter>
+              </defs>
+
+              <path id="dateCurve" d="M 80,0 A 250,250 0 0,0 420,0" fill="transparent" />
+              <path d="M 80,0 A 250,250 0 0,0 420,0"
+                fill="none" stroke="rgba(255,251,244,0.15)"
+                strokeWidth="40" strokeLinecap="round" />
+              <path d="M 80,0 A 250,250 0 0,0 420,0"
+                fill="none" stroke="rgba(255,253,248,0.30)"
+                strokeWidth="28" strokeLinecap="round" />
+              <text
+                fill="rgba(255,255,255,0.9)"
+                filter="url(#date-text-shadow)"
+                style={{ fontFamily: 'PlayfairDisplay, serif', fontSize: '1.75em', letterSpacing: '0.25em' }}
+              >
+                <textPath href="#dateCurve" startOffset="50%" textAnchor="middle">
+                  {weddingDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}
+                </textPath>
+              </text>
+            </motion.svg>
+
+            <div className={styles.scrollCue}>
+              <span>scroll</span>
+              <span className={styles.scrollCueArrow}>↓</span>
+            </div>
+          </motion.div>
+        )}
+      </section>
+
+      {/* ── Countdown Timer ──────────────────────────────────────────── */}
+      <section className={styles.countdownSection}>
+        <p className={styles.countdownLabel} style={{ color: cdLabelColor || undefined }}>
+          {t('invite.countdown_prefix', 'Counting down to our special day')}
+        </p>
+        <div className={styles.countdownGrid}>
+          {[
+            { val: countdown.days,    label: 'Days' },
+            { val: countdown.hours,   label: 'Hours' },
+            { val: countdown.minutes, label: 'Min' },
+            { val: countdown.seconds, label: 'Sec' },
+          ].map(({ val, label }) => (
+            <div key={label} className={styles.countdownBlock}>
+              <span className={styles.countdownNumber} style={{ color: cdNumColor || undefined }}>
+                {String(val).padStart(2, '0')}
+              </span>
+              <span className={styles.countdownUnit}>{label}</span>
+            </div>
+          ))}
+        </div>
       </section>
 
       {/* ── Section 2: Ceremony ──────────────────────────────────────── */}
       <section ref={ceremonyRef} id="ceremony" className={styles.sectionCeremony}>
-        <p className={styles.ceremonyTitle}>Walimatul Urus</p>
+        <p className={styles.ceremonyTitle} style={{ color: cerTitleColor || undefined, textShadow: cerTitleShadow || undefined }}>{t('walimah.title', 'Walimatul Urus')}</p>
 
-        {/* Glassmorphism card: walimah body + date + location */}
+        {/* Glassmorphism card: walimah body + couple names */}
         <div className={styles.ceremonyCard}>
           {customConfig?.['walimah.body'] && (
             <div
@@ -940,27 +1146,108 @@ const NAV_EMOJIS: Record<string, string> = {
               dangerouslySetInnerHTML={{ __html: customConfig['walimah.body'] }}
             />
           )}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 1.1, duration: 0.9 }}
-            className={styles.dateInner}
-          >
-            <div className={styles.dateBlock}>
-              <p className={styles.dateText}>{formatOrdinalDate(weddingDate)}</p>
-              <p className={styles.dayText}>{weddingDate.toLocaleDateString('en-GB', { weekday: 'long' })}</p>
-              {t('general.showIslamicDate', 'false') === 'true' && (
-                <p className={styles.hijriText}>{toHijriMalay(weddingDate)}</p>
-              )}
-            </div>
-            <div className={styles.locationBlock}>
-              <p className={styles.locationLabel}>Location</p>
-              {wedding.venueAddress && (
-                <p className={styles.locationAddress}>{wedding.venueAddress}</p>
-              )}
-            </div>
-          </motion.div>
+          {(wedding.brideName || wedding.groomName) && (
+            <p className={styles.ceremonyCoupleNames} style={{ color: cerNamesColor || undefined, textShadow: cerNamesShadow || undefined }}>
+              {firstName} <br /> &amp; <br /> {secondName}
+            </p>
+          )}
         </div>
+
+        {/* Date & location — separate rectangles outside the card */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 1.1, duration: 0.9 }}
+          className={styles.dateInner}
+        >
+          <div
+            className={`${styles.dateBlock}${showAddToCalendar ? ` ${styles.dateBlockClickable}` : ''}`}
+            onClick={() => showAddToCalendar && setCalendarOpen(true)}
+            role={showAddToCalendar ? 'button' : undefined}
+            tabIndex={showAddToCalendar ? 0 : undefined}
+          >
+            <p className={styles.dateText}>{formatOrdinalDate(weddingDate)}</p>
+            <p className={styles.dayText}>{weddingDate.toLocaleDateString('en-GB', { weekday: 'long' })}</p>
+            {t('general.showIslamicDate', 'false') === 'true' && (
+              <p className={styles.hijriText}>{toHijriMalay(weddingDate)}</p>
+            )}
+            {showAddToCalendar && (
+              <p className={styles.calendarHint}>Tap to add to calendar</p>
+            )}
+          </div>
+          <div
+            className={`${styles.locationBlock}${showVenueMap ? ` ${styles.locationBlockClickable}` : ''}`}
+            onClick={() => showVenueMap && setMapExpanded((v) => !v)}
+            role={showVenueMap ? 'button' : undefined}
+            tabIndex={showVenueMap ? 0 : undefined}
+          >
+            <p className={styles.locationLabel}>Location</p>
+            {wedding.venueAddress && (
+              <p className={styles.locationAddress}>{wedding.venueAddress}</p>
+            )}
+            {showVenueMap && (
+              <p className={styles.mapHint}>{mapExpanded ? 'Tap to close map' : 'Tap to view on map'}</p>
+            )}
+            <AnimatePresence>
+              {showVenueMap && mapExpanded && (
+                <motion.div
+                  className={styles.mapContainer}
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: 240, opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{ duration: 0.4, ease: 'easeInOut' }}
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <iframe
+                    className={styles.mapIframe}
+                    src={`https://maps.google.com/maps?q=${encodeURIComponent(wedding.venueAddress || wedding.venue || '')}&output=embed`}
+                    loading="lazy"
+                    allowFullScreen
+                  />
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+        </motion.div>
+
+        {/* Add to Calendar modal */}
+        <AnimatePresence>
+          {calendarOpen && (() => {
+            const links = calendarLinks(wedding);
+            return (
+              <motion.div
+                className={styles.calendarOverlay}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                onClick={() => setCalendarOpen(false)}
+              >
+                <motion.div
+                  className={styles.calendarCard}
+                  initial={{ opacity: 0, scale: 0.92, y: 20 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.92, y: 20 }}
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <p className={styles.calendarTitle}>Add to Calendar</p>
+                  <p className={styles.calendarDate}>{formatOrdinalDate(weddingDate)}</p>
+                  <div className={styles.calendarOptions}>
+                    <a href={links.google} target="_blank" rel="noopener noreferrer" className={styles.calendarOption}>
+                      <span className={styles.calendarOptionIcon}>📅</span> Google Calendar
+                    </a>
+                    <a href={links.ical} download="wedding.ics" className={styles.calendarOption}>
+                      <span className={styles.calendarOptionIcon}>🍎</span> Apple Calendar
+                    </a>
+                    <a href={links.outlook} target="_blank" rel="noopener noreferrer" className={styles.calendarOption}>
+                      <span className={styles.calendarOptionIcon}>📆</span> Outlook
+                    </a>
+                  </div>
+                  <button className={styles.calendarClose} onClick={() => setCalendarOpen(false)}>✕</button>
+                </motion.div>
+              </motion.div>
+            );
+          })()}
+        </AnimatePresence>
 
         {/* Separate card for itinerary */}
         {itinerary.length > 0 && (
@@ -969,10 +1256,10 @@ const NAV_EMOJIS: Record<string, string> = {
             animate={{ opacity: 1 }}
             transition={{ delay: 1.3, duration: 0.9 }}
             className={styles.aturcaraInner}
-            style={{ marginTop: '2rem' }}
+            style={{ marginTop: '1rem' }}
           >
             <div className={styles.aturcaraCard}>
-              <p className={styles.aturcaraTitle}>Aturcara Majlis</p>
+              <p className={styles.aturcaraTitle}>{t('itinerary.title', 'Aturcara Majlis')}</p>
               {itinerary.map((item) => (
                 <div key={item.itineraryItemId} className={styles.itineraryRow}>
                   <div className={styles.itineraryTime}>{item.detail}</div>
@@ -1049,7 +1336,7 @@ const NAV_EMOJIS: Record<string, string> = {
       <section ref={wishesRef} id="wishes" className={styles.sectionWishes}>
         <div className={styles.sectionContainer}>
           <div className={styles.sectionHeader}>
-            <h2 className={styles.sectionHeading}>Wishes &amp; Blessings</h2>
+            <h2 className={styles.sectionHeading} style={{ color: secHeadColor || undefined, textShadow: secHeadShadow || undefined }}>{t('wish.title', 'Wishes & Blessings')}</h2>
             <p className={styles.sectionSubheading}>
               {t('wish.prompt', 'Leave a heartfelt message for the happy couple')}
             </p>
@@ -1152,7 +1439,7 @@ const NAV_EMOJIS: Record<string, string> = {
         <section ref={photosRef} id="photos" className={styles.sectionPhotos}>
           <div className={styles.sectionContainer}>
             <div className={styles.sectionHeader}>
-              <h2 className={styles.sectionHeading}>Photo Booth</h2>
+              <h2 className={styles.sectionHeading} style={{ color: secHeadColor || undefined, textShadow: secHeadShadow || undefined }}>Photo Booth</h2>
               <p className={styles.sectionSubheading}>Share your favourite moments 📸</p>
             </div>
 
@@ -1258,7 +1545,7 @@ const NAV_EMOJIS: Record<string, string> = {
                       <div className={styles.stackGhost2}>
                         <div className={styles.stackPolaroid}>
                           <img
-                            src={`${API_BASE}${photos[(stackIndex + 2) % photos.length].photoUrl}`}
+                            src={`${API_BASE}${photos[(ghostIndex + 2) % photos.length].photoUrl}`}
                             className={styles.stackPhoto} alt="" draggable={false}
                           />
                         </div>
@@ -1268,7 +1555,7 @@ const NAV_EMOJIS: Record<string, string> = {
                       <div className={styles.stackGhost1}>
                         <div className={styles.stackPolaroid}>
                           <img
-                            src={`${API_BASE}${photos[(stackIndex + 1) % photos.length].photoUrl}`}
+                            src={`${API_BASE}${photos[(ghostIndex + 1) % photos.length].photoUrl}`}
                             className={styles.stackPhoto} alt="" draggable={false}
                           />
                         </div>
@@ -1276,7 +1563,7 @@ const NAV_EMOJIS: Record<string, string> = {
                     )}
 
                     {/* Active draggable card */}
-                    <AnimatePresence custom={stackDirection} mode="sync">
+                    <AnimatePresence custom={stackDirection} mode="popLayout">
                       <motion.div
                         key={stackIndex}
                         className={styles.stackCard}
@@ -1289,6 +1576,7 @@ const NAV_EMOJIS: Record<string, string> = {
                         drag="x"
                         dragConstraints={{ left: 0, right: 0 }}
                         dragElastic={0.22}
+                        dragTransition={{ power: 0, timeConstant: 0 }}
                         onDragStart={() => markInteraction()}
                         onDragEnd={(_, info) => {
                           if (info.offset.x < -55 || info.velocity.x < -400) goNext();
@@ -1361,7 +1649,7 @@ const NAV_EMOJIS: Record<string, string> = {
 
       {/* ── Footer ───────────────────────────────────────────────────── */}
       <footer className={styles.footer}>
-        <p>{t('footer.tagline', 'Made with love for our special day')}</p>
+        <p style={{ color: footerColor || undefined }}>{t('footer.tagline', 'Made with love for our special day')}</p>
       </footer>
 
       {/* ── Lightbox ─────────────────────────────────────────────────── */}

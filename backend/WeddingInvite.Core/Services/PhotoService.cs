@@ -77,7 +77,7 @@ namespace WeddingInvite.Core.Services
 
             // 3. Couple uploads require a valid slot
             if (isCouple && (uploadDto.TemplateSlot == null || !TemplateSlots.All.Contains(uploadDto.TemplateSlot.Value)))
-                throw new ArgumentException("A valid template slot (1-5) is required for couple uploads");
+                throw new ArgumentException("A valid template slot is required for couple uploads");
 
             // 4. Validate file
             var file = uploadDto.File;

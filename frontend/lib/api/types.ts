@@ -119,6 +119,7 @@ export const TemplateSlots = {
   WELCOME_BG: 10,
   CEREMONY_BG: 11,
   CELEBRATION_BG: 12,
+  TEMPLATE5_GLOBAL_BG: 13,
 } as const;
 
 export interface ApprovePhotoRequest {
