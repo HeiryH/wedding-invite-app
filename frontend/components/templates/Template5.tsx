@@ -794,7 +794,7 @@ const NAV_EMOJIS: Record<string, string> = {
   const heading = t('invite.heading', 'The Wedding of');
   const headCharCount = Math.min(30, heading.length);
   const arcT = Math.max(0, (headCharCount - 15) / 15);
-  const arcMargin = Math.round(100 - 80 * arcT);
+  const arcMargin = Math.round(20 - 80 * arcT);
   const arcChord = 500 - 2 * arcMargin;
   const arcR = Math.round(200 * arcChord / 300);
   const arcPath = `M ${arcMargin},250 A ${arcR},${arcR} 0 0, 1 ${500 - arcMargin},250`;
@@ -1018,16 +1018,16 @@ const NAV_EMOJIS: Record<string, string> = {
               </defs>
 
               <path id="path" d={arcPath} fill="transparent" />
-              <path d={arcPath} fill="none" stroke="rgba(255,248,230,0.30)"
+              {/* <path d={arcPath} fill="none" stroke="rgba(255,248,230,0.30)"
                 strokeWidth="54" strokeLinecap="round" filter="url(#arc-bloom)" />
               <path d={arcPath} fill="none" stroke="rgba(255,251,244,0.16)"
                 strokeWidth="42" strokeLinecap="round" />
               <path d={arcPath} fill="none" stroke="rgba(255,253,248,0.30)"
-                strokeWidth="24" strokeLinecap="round" />
+                strokeWidth="24" strokeLinecap="round" /> */}
               <text
                 fill={headingColor || 'rgba(255,255,255,0.9)'}
                 filter={headingShadow !== 'none' ? 'url(#text-shadow)' : undefined}
-                style={{ fontFamily: 'PlayfairDisplay, serif', fontSize: '1.75rem', letterSpacing: '0.3em' }}
+                style={{ fontFamily: 'PlayfairDisplay, serif', fontSize: '2rem', letterSpacing: '0.3em' }}
               >
                 <textPath href="#path" startOffset="50%" textAnchor="middle">
                   {heading}
@@ -1087,16 +1087,16 @@ const NAV_EMOJIS: Record<string, string> = {
               </defs>
 
               <path id="dateCurve" d="M 80,0 A 250,250 0 0,0 420,0" fill="transparent" />
-              <path d="M 80,0 A 250,250 0 0,0 420,0"
+              {/* <path d="M 80,0 A 250,250 0 0,0 420,0"
                 fill="none" stroke="rgba(255,251,244,0.15)"
                 strokeWidth="40" strokeLinecap="round" />
               <path d="M 80,0 A 250,250 0 0,0 420,0"
                 fill="none" stroke="rgba(255,253,248,0.30)"
-                strokeWidth="28" strokeLinecap="round" />
+                strokeWidth="28" strokeLinecap="round" /> */}
               <text
                 fill="rgba(255,255,255,0.9)"
                 filter="url(#date-text-shadow)"
-                style={{ fontFamily: 'PlayfairDisplay, serif', fontSize: '1.75em', letterSpacing: '0.25em' }}
+                style={{ fontFamily: 'PlayfairDisplay, serif', fontSize: '2em', letterSpacing: '0.25em' }}
               >
                 <textPath href="#dateCurve" startOffset="50%" textAnchor="middle">
                   {weddingDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}

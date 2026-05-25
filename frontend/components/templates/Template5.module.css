@@ -243,8 +243,8 @@
   align-items: center;
   text-align: center;
   justify-content: space-evenly;
-  gap: 1rem;
-  padding: 1.5rem 2rem 2rem;
+  gap: 1.5rem;
+  padding: 1rem 0.5rem 1rem;
   border-radius: 200px;
   background: var(--t5-glass);
   backdrop-filter: blur(20px) saturate(140%);
