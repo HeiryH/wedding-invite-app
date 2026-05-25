@@ -95,7 +95,7 @@ export default function LoginPage() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg text-gray-900 focus:border-rose-400 focus:outline-none transition-colors"
-              placeholder="admin@wedding-cms.com"
+              placeholder="username"
               required
               disabled={loading}
             />

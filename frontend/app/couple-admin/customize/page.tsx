@@ -859,6 +859,12 @@ export default function CustomizePage() {
                   <input type="datetime-local" value={weddingDraft.weddingDate}
                     onChange={(e) => setWeddingDraft((d) => ({ ...d, weddingDate: e.target.value }))}
                     className="w-full px-3 py-2 border-2 border-gray-200 rounded-lg text-sm text-gray-900 focus:border-rose-400 focus:outline-none" />
+                  {wedding?.templateId === 5 && (
+                    <div className="mt-2">
+                      <FieldLabel>Date Color</FieldLabel>
+                      <ColorField value={draftConfig['date.color'] ?? ''} onChange={(v) => setConfig('date.color', v)} />
+                    </div>
+                  )}
                 </div>
                 <div className="flex items-center justify-between gap-3">
                   <FieldLabel>Add to Calendar button</FieldLabel>
@@ -870,6 +876,12 @@ export default function CustomizePage() {
                 <div>
                   <FieldLabel>Venue</FieldLabel>
                   <TextField value={weddingDraft.venue} onChange={(v) => setWeddingDraft((d) => ({ ...d, venue: v }))} maxLength={200} />
+                  {wedding?.templateId === 5 && (
+                    <div className="mt-2">
+                      <FieldLabel>Venue Color</FieldLabel>
+                      <ColorField value={draftConfig['venue.color'] ?? ''} onChange={(v) => setConfig('venue.color', v)} />
+                    </div>
+                  )}
                 </div>
                 <div>
                   <FieldLabel>Venue Address</FieldLabel>
@@ -1037,6 +1049,12 @@ export default function CustomizePage() {
                   <FieldLabel>Text Alignment</FieldLabel>
                   <SelectField value={draftConfig['walimah.body.align'] ?? 'center'} options={['left', 'center', 'right']} onChange={(v) => setConfig('walimah.body.align', v)} />
                 </div>
+                {wedding?.templateId === 5 && (
+                  <div>
+                    <FieldLabel hint="Leave empty for template default">Body Text Color</FieldLabel>
+                    <ColorField value={draftConfig['walimah.body.color'] ?? ''} onChange={(v) => setConfig('walimah.body.color', v)} />
+                  </div>
+                )}
               </section>
 
               {wedding?.templateId === 5 && (
@@ -1056,10 +1074,17 @@ export default function CustomizePage() {
                 </section>
               )}
 
+
               <section>
                 <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">RSVP</h3>
                 <FieldLabel>RSVP Subtitle</FieldLabel>
                 <TextField value={draftConfig['rsvp.subtitle'] ?? ''} onChange={(v) => setConfig('rsvp.subtitle', v)} maxLength={80} />
+                {wedding?.templateId === 5 && (
+                  <div className="mt-2">
+                    <FieldLabel>Subtitle Color</FieldLabel>
+                    <ColorField value={draftConfig['rsvp.subtitle.color'] ?? ''} onChange={(v) => setConfig('rsvp.subtitle.color', v)} />
+                  </div>
+                )}
               </section>
 
               <section className="space-y-3">
@@ -1067,7 +1092,19 @@ export default function CustomizePage() {
                 <div>
                   <FieldLabel>Schedule Section Title</FieldLabel>
                   <TextField value={draftConfig['itinerary.title'] ?? ''} onChange={(v) => setConfig('itinerary.title', v)} maxLength={40} placeholder="Aturcara Majlis" />
+                  {wedding?.templateId === 5 && (
+                    <div className="mt-2">
+                      <FieldLabel>Title Color</FieldLabel>
+                      <ColorField value={draftConfig['itinerary.title.color'] ?? ''} onChange={(v) => setConfig('itinerary.title.color', v)} />
+                    </div>
+                  )}
                 </div>
+                {wedding?.templateId === 5 && (
+                  <div>
+                    <FieldLabel>Item Text Color</FieldLabel>
+                    <ColorField value={draftConfig['itinerary.item.color'] ?? ''} onChange={(v) => setConfig('itinerary.item.color', v)} />
+                  </div>
+                )}
                 <ItineraryEditor weddingId={weddingId!} onItemsChange={setItinerary} />
               </section>
 
@@ -1090,6 +1127,12 @@ export default function CustomizePage() {
                 <div>
                   <FieldLabel>Wish Prompt</FieldLabel>
                   <TextField value={draftConfig['wish.prompt'] ?? ''} onChange={(v) => setConfig('wish.prompt', v)} maxLength={80} />
+                  {wedding?.templateId === 5 && (
+                    <div className="mt-2">
+                      <FieldLabel>Prompt Color</FieldLabel>
+                      <ColorField value={draftConfig['wish.prompt.color'] ?? ''} onChange={(v) => setConfig('wish.prompt.color', v)} />
+                    </div>
+                  )}
                 </div>
               </section>
 

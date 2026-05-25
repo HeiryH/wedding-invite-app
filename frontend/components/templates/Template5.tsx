@@ -109,7 +109,7 @@ function RSVPModal({ onRSVP, onClose, seatingEnabled, tables, t }: RSVPModalProp
           <div className={styles.modalHeader}>
             <div>
               <h2 className={styles.modalTitle}>RSVP</h2>
-              <p className={styles.modalSubtitle}>
+              <p className={styles.modalSubtitle} style={{ color: t('rsvp.subtitle.color', '') || undefined }}>
                 {t('rsvp.subtitle', "We'd love to celebrate with you")}
               </p>
             </div>
@@ -515,6 +515,12 @@ export default function Template5({
   const secHeadShadow  = shadowOf(t('section.heading.shadow', 'none'));
   const footerColor    = t('footer.tagline.color', '');
   const headingColor   = t('invite.heading.color', '');
+  const walimahBodyColor = t('walimah.body.color', '');
+  const wishPromptColor  = t('wish.prompt.color', '');
+  const itTitleColor     = t('itinerary.title.color', '');
+  const dateColor        = t('date.color', '');
+  const venueColor       = t('venue.color', '');
+  const itItemColor      = t('itinerary.item.color', '');
   const headingShadow  = t('invite.heading.shadow', 'soft');
 
   // Map to whichever name is displayed first/second based on brideFirst
@@ -1147,6 +1153,7 @@ const NAV_EMOJIS: Record<string, string> = {
           {customConfig?.['walimah.body'] && (
             <div
               className={styles.walimahBody}
+              style={{ color: walimahBodyColor || undefined }}
               dangerouslySetInnerHTML={{ __html: customConfig['walimah.body'] }}
             />
           )}
@@ -1170,10 +1177,10 @@ const NAV_EMOJIS: Record<string, string> = {
             role={showAddToCalendar ? 'button' : undefined}
             tabIndex={showAddToCalendar ? 0 : undefined}
           >
-            <p className={styles.dateText}>{formatOrdinalDate(weddingDate)}</p>
-            <p className={styles.dayText}>{weddingDate.toLocaleDateString('en-GB', { weekday: 'long' })}</p>
+            <p className={styles.dateText} style={{ color: dateColor || undefined }}>{formatOrdinalDate(weddingDate)}</p>
+            <p className={styles.dayText} style={{ color: dateColor || undefined }}>{weddingDate.toLocaleDateString('en-GB', { weekday: 'long' })}</p>
             {t('general.showIslamicDate', 'false') === 'true' && (
-              <p className={styles.hijriText}>{toHijriMalay(weddingDate)}</p>
+              <p className={styles.hijriText} style={{ color: dateColor || undefined }}>{toHijriMalay(weddingDate)}</p>
             )}
             {showAddToCalendar && (
               <p className={styles.calendarHint}>Tap to add to calendar</p>
@@ -1185,9 +1192,9 @@ const NAV_EMOJIS: Record<string, string> = {
             role={showVenueMap ? 'button' : undefined}
             tabIndex={showVenueMap ? 0 : undefined}
           >
-            <p className={styles.locationLabel}>Location</p>
+            <p className={styles.locationLabel} style={{ color: venueColor || undefined }}>Location</p>
             {wedding.venueAddress && (
-              <p className={styles.locationAddress}>{wedding.venueAddress}</p>
+              <p className={styles.locationAddress} style={{ color: venueColor || undefined }}>{wedding.venueAddress}</p>
             )}
             {showVenueMap && (
               <p className={styles.mapHint}>{mapExpanded ? 'Tap to close map' : 'Tap to view on map'}</p>
@@ -1263,11 +1270,11 @@ const NAV_EMOJIS: Record<string, string> = {
             style={{ marginTop: '1rem' }}
           >
             <div className={styles.aturcaraCard}>
-              <p className={styles.aturcaraTitle}>{t('itinerary.title', 'Aturcara Majlis')}</p>
+              <p className={styles.aturcaraTitle} style={{ color: itTitleColor || undefined }}>{t('itinerary.title', 'Aturcara Majlis')}</p>
               {itinerary.map((item) => (
                 <div key={item.itineraryItemId} className={styles.itineraryRow}>
-                  <div className={styles.itineraryTime}>{item.detail}</div>
-                  <div className={styles.itineraryEvent}>
+                  <div className={styles.itineraryTime} style={{ color: itItemColor || undefined }}>{item.detail}</div>
+                  <div className={styles.itineraryEvent} style={{ color: itItemColor || undefined }}>
                     <span className={styles.itineraryDot} />
                     {item.label}
                   </div>
@@ -1341,7 +1348,7 @@ const NAV_EMOJIS: Record<string, string> = {
         <div className={styles.sectionContainer}>
           <div className={styles.sectionHeader}>
             <h2 className={styles.sectionHeading} style={{ color: secHeadColor || undefined, textShadow: secHeadShadow || undefined }}>{t('wish.title', 'Wishes & Blessings')}</h2>
-            <p className={styles.sectionSubheading}>
+            <p className={styles.sectionSubheading} style={{ color: wishPromptColor || undefined }}>
               {t('wish.prompt', 'Leave a heartfelt message for the happy couple')}
             </p>
           </div>

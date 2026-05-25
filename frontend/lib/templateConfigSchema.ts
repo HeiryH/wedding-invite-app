@@ -466,6 +466,13 @@ const TEMPLATE5_EXTRA_FIELDS: TemplateConfigField[] = [
   { key: 'section.heading.color',  label: 'Section Heading Color',   fieldType: 'color',  defaultValue: '', maxLength: 20, richText: false, adminOnly: false, section: 'styling' },
   { key: 'section.heading.shadow', label: 'Section Heading Shadow',  fieldType: 'select', defaultValue: 'none', maxLength: 10, richText: false, adminOnly: false, options: ['none', 'soft', 'strong', 'glow'], section: 'styling' },
   { key: 'footer.tagline.color',   label: 'Footer Tagline Color',    fieldType: 'color',  defaultValue: '', maxLength: 20, richText: false, adminOnly: false, section: 'footer' },
+  { key: 'walimah.body.color',    label: 'Ceremony Body Color',     fieldType: 'color',  defaultValue: '', maxLength: 20, richText: false, adminOnly: false, section: 'ceremony' },
+  { key: 'rsvp.subtitle.color',   label: 'RSVP Subtitle Color',     fieldType: 'color',  defaultValue: '', maxLength: 20, richText: false, adminOnly: false, section: 'rsvp' },
+  { key: 'wish.prompt.color',     label: 'Wish Prompt Color',       fieldType: 'color',  defaultValue: '', maxLength: 20, richText: false, adminOnly: false, section: 'wishes' },
+  { key: 'itinerary.title.color', label: 'Schedule Title Color',    fieldType: 'color',  defaultValue: '', maxLength: 20, richText: false, adminOnly: false, section: 'ceremony' },
+  { key: 'date.color',           label: 'Date Card Color',          fieldType: 'color',  defaultValue: '', maxLength: 20, richText: false, adminOnly: false, section: 'ceremony' },
+  { key: 'venue.color',          label: 'Venue Card Color',         fieldType: 'color',  defaultValue: '', maxLength: 20, richText: false, adminOnly: false, section: 'ceremony' },
+  { key: 'itinerary.item.color', label: 'Schedule Item Color',      fieldType: 'color',  defaultValue: '', maxLength: 20, richText: false, adminOnly: false, section: 'ceremony' },
 ];
 
 const TEMPLATE_CONFIGS: Record<number, TemplateConfigField[]> = {

@@ -479,7 +479,7 @@
   flex-direction: column;
   align-items: center;
   justify-content: stretch;
-  padding: 2rem 1.5rem 2rem;
+  padding: 5rem 1.5rem 2rem;
   overflow: visible;
   width: 100%;
 }
@@ -781,7 +781,7 @@
 /* ── Section: Wishes ─────────────────────────────────────────────── */
 .sectionWishes {
   position: relative;
-  min-height: 100vh;
+  /* min-height: 100vh; */
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -1104,7 +1104,7 @@
 /* ── Section: Photos ─────────────────────────────────────────────── */
 .sectionPhotos {
   position: relative;
-  min-height: 100vh;
+  /* min-height: 100vh; */
   display: flex;
   flex-direction: column;
   align-items: center;
