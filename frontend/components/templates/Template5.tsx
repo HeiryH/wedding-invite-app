@@ -1017,7 +1017,11 @@ const NAV_EMOJIS: Record<string, string> = {
                 </filter>
               </defs>
 
-              <path id="path" d={arcPath} fill="transparent" />
+              <path 
+              id="path" 
+              // d={arcPath}
+              d="M 54,250 A 206,206 0 0,1 446,250" 
+              fill="transparent" />
               {/* <path d={arcPath} fill="none" stroke="rgba(255,248,230,0.30)"
                 strokeWidth="54" strokeLinecap="round" filter="url(#arc-bloom)" />
               <path d={arcPath} fill="none" stroke="rgba(255,251,244,0.16)"
