@@ -1000,7 +1000,7 @@ const NAV_EMOJIS: Record<string, string> = {
             transition={{ duration: 1, ease: 'easeOut' }}
             className={styles.invitationContent}
           >
-            <motion.svg viewBox={`0 ${vbTop} 500 ${vbH}`} width="100%" style={{ maxWidth: 500, overflow: 'visible' }}>
+            <motion.svg viewBox={`0 ${vbTop} 500 ${vbH}`} width="100%" style={{ maxWidth: 500, overflow: 'visible', transform: 'translateY(20px)' }}>
               <defs>
                 <filter id="arc-bloom" x="-15%" y="-50%" width="130%" height="200%">
                   <feGaussianBlur in="SourceGraphic" stdDeviation="10" />
