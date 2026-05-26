@@ -59,14 +59,9 @@ namespace WeddingInvite.Core.Services
             if (createDto.NumberOfAttendees > 10)
                 throw new ArgumentException("Maximum 10 attendees per RSVP");
 
-            // 6. Check total pax limit
-            if (wedding.MaxPax > 0 && createDto.IsAttending)
-            {
-                var currentPax = await _guestRepo.GetAttendingCountByWeddingIdAsync(weddingId);
-                if (currentPax + createDto.NumberOfAttendees > wedding.MaxPax)
-                    throw new ArgumentException(
-                        $"Only {Math.Max(0, wedding.MaxPax - currentPax)} pax spot(s) remaining.");
-            }
+            // 6. Check per-entry pax limit
+            if (wedding.MaxPax > 0 && createDto.NumberOfAttendees > wedding.MaxPax)
+                throw new ArgumentException($"Maximum {wedding.MaxPax} guest(s) per RSVP.");
 
             // Create guest
             var guest = new Guest
