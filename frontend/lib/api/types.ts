@@ -236,7 +236,8 @@ export type TemplateConfigSection =
   | 'general'
   | 'styling'
   | 'music'
-  | 'scene';
+  | 'scene'
+  | 'photobooth';
 
 export type TemplateConfigFieldType =
   | 'text'
