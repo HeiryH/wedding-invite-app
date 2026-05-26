@@ -273,6 +273,18 @@ const COMMON_FIELDS: TemplateConfigField[] = [
     adminOnly: false,
     section: 'music',
   },
+
+  // ── Photo Booth settings ────────────────────────────────────────────────────
+  {
+    key: 'photobooth.autoApprove',
+    label: 'Auto-approve Guest Photos',
+    defaultValue: 'true',
+    maxLength: 5,
+    richText: false,
+    fieldType: 'boolean',
+    adminOnly: false,
+    section: 'photobooth',
+  },
 ];
 
 const TEMPLATE3_EXTRA_FIELDS: TemplateConfigField[] = [

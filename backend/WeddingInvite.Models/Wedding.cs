@@ -25,6 +25,7 @@
 
         // Status
         public bool IsActive { get; set; } = true;
+        public int MaxPax { get; set; } = 0; // 0 = no limit
         public DateTime CreatedDate { get; set; } = DateTime.UtcNow;
 
         // Navigation properties - related data

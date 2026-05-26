@@ -63,6 +63,8 @@ export default function Template2({
 
     const weddingDate = new Date(wedding.weddingDate);
 
+    const paxLimit = (wedding?.maxPax ?? 0) > 0 ? Math.min(10, wedding.maxPax!) : 10;
+
     // RSVP Form State
     const [isAttending, setIsAttending] = useState(true);
     const [rsvpData, setRsvpData] = useState({
@@ -618,14 +620,12 @@ export default function Template2({
                                             type="number"
                                             placeholder="Number of Guests *"
                                             min="1"
-                                            max="10"
+                                            max={paxLimit}
                                             value={rsvpData.numberOfAttendees}
-                                            onChange={(e) =>
-                                                setRsvpData({
-                                                    ...rsvpData,
-                                                    numberOfAttendees: parseInt(e.target.value),
-                                                })
-                                            }
+                                            onChange={(e) => {
+                                                const raw = parseInt(e.target.value) || 1;
+                                                setRsvpData({ ...rsvpData, numberOfAttendees: Math.max(1, Math.min(raw, paxLimit)) });
+                                            }}
                                             className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-amber-400 focus:outline-none"
                                             required
                                         />

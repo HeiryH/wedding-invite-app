@@ -91,6 +91,8 @@ export default function Template1({
 
   const weddingDate = new Date(wedding.weddingDate);
 
+  const paxLimit = (wedding?.maxPax ?? 0) > 0 ? Math.min(10, wedding.maxPax!) : 10;
+
   const navItems = sectionOrder.map((code) => ({ name: NAV_LABELS[code], section: code }));
 
   const goToSeating = () => setRsvpStep(2);
@@ -611,14 +613,12 @@ export default function Template1({
                           type="number"
                           placeholder="Number of Guests *"
                           min="1"
-                          max="10"
+                          max={paxLimit}
                           value={rsvpData.numberOfAttendees}
-                          onChange={(e) =>
-                            setRsvpData({
-                              ...rsvpData,
-                              numberOfAttendees: parseInt(e.target.value),
-                            })
-                          }
+                          onChange={(e) => {
+                            const raw = parseInt(e.target.value) || 1;
+                            setRsvpData({ ...rsvpData, numberOfAttendees: Math.max(1, Math.min(raw, paxLimit)) });
+                          }}
                           className="w-full px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-rose-400 focus:outline-none"
                           required
                         />

@@ -1,15 +1,17 @@
 'use client';
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { CreateGuest } from '@/lib/api';
+import { CreateGuest, Wedding } from '@/lib/api';
 import styles from '../Template6.module.css';
 
 interface Props {
   onRSVP: (data: any) => Promise<void>;
   customConfig?: Record<string, string>;
+  wedding?: Wedding;
 }
 
-export default function RSVPSection({ onRSVP, customConfig }: Props) {
+export default function RSVPSection({ onRSVP, customConfig, wedding }: Props) {
+  const paxLimit = (wedding?.maxPax ?? 0) > 0 ? Math.min(10, wedding!.maxPax!) : 10;
   const t = (key: string, fallback: string) => customConfig?.[key] || fallback;
   const [open, setOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -140,11 +142,12 @@ export default function RSVPSection({ onRSVP, customConfig }: Props) {
                     className={styles.rsvpInputSmall}
                     type="number"
                     min={1}
-                    max={10}
+                    max={paxLimit}
                     value={form.numberOfAttendees}
-                    onChange={(e) =>
-                      setForm((f) => ({ ...f, numberOfAttendees: Number(e.target.value) }))
-                    }
+                    onChange={(e) => {
+                      const raw = Number(e.target.value) || 1;
+                      setForm((f) => ({ ...f, numberOfAttendees: Math.max(1, Math.min(raw, paxLimit)) }));
+                    }}
                   />
                 </div>
 

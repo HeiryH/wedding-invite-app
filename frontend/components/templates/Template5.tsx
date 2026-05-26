@@ -39,7 +39,11 @@ interface RSVPModalProps {
   t: (key: string, fallback: string) => string;
 }
 
-function RSVPModal({ onRSVP, onClose, seatingEnabled, tables, t }: RSVPModalProps) {
+function RSVPModal({ wedding, onRSVP, onClose, seatingEnabled, tables, t }: RSVPModalProps) {
+  const maxPax = wedding.maxPax ?? 0;
+  const remainingPax = maxPax > 0 ? Math.max(0, maxPax - wedding.totalAttending) : null;
+  const paxLimit = maxPax > 0 ? Math.min(10, maxPax) : 10;
+
   const [rsvpStep, setRsvpStep] = useState<1 | 2>(1);
   const [isAttending, setIsAttending] = useState(true);
   const [selectedTableId, setSelectedTableId] = useState<number | null>(null);
@@ -60,8 +64,8 @@ function RSVPModal({ onRSVP, onClose, seatingEnabled, tables, t }: RSVPModalProp
       await onRSVP({ ...rsvpData, isAttending, tableId: selectedTableId });
       setRsvpSuccess(true);
       setTimeout(() => { setRsvpSuccess(false); onClose(); }, 2000);
-    } catch {
-      alert('Failed to submit RSVP');
+    } catch (error: any) {
+      alert(error?.response?.data?.message || 'Failed to submit RSVP');
     } finally {
       setRsvpSubmitting(false);
     }
@@ -115,6 +119,13 @@ function RSVPModal({ onRSVP, onClose, seatingEnabled, tables, t }: RSVPModalProp
             </div>
             <button onClick={onClose} className={styles.closeBtn}>×</button>
           </div>
+          {remainingPax !== null && (
+            <p className={styles.rsvpPaxNotice}>
+              {remainingPax > 0
+                ? `${remainingPax} pax spot(s) remaining`
+                : 'This wedding has reached its guest limit'}
+            </p>
+          )}
 
           <AnimatePresence mode="wait">
             {rsvpSuccess ? (
@@ -201,9 +212,13 @@ function RSVPModal({ onRSVP, onClose, seatingEnabled, tables, t }: RSVPModalProp
                         </label>
                       ))}
                     </div>
-                    <input type="number" placeholder="Number of Guests *" required min="1" max="10"
+                    <input type="number" placeholder="Number of Guests *" required min="1"
+                      max={paxLimit}
                       value={rsvpData.numberOfAttendees}
-                      onChange={(e) => setRsvpData({ ...rsvpData, numberOfAttendees: parseInt(e.target.value) })}
+                      onChange={(e) => {
+                        const raw = parseInt(e.target.value) || 1;
+                        setRsvpData({ ...rsvpData, numberOfAttendees: Math.max(1, Math.min(raw, paxLimit)) });
+                      }}
                       className={styles.rsvpFormInput}
                     />
                     <input type="text" placeholder="Song Request 🎵"

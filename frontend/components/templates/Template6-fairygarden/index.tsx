@@ -175,7 +175,7 @@ export default function Template6({
       )}
 
       {sections.includes('rsvp') && (
-        <RSVPSection onRSVP={onRSVP} customConfig={customConfig} />
+        <RSVPSection onRSVP={onRSVP} customConfig={customConfig} wedding={wedding} />
       )}
 
       {sections.includes('itinerary') && (

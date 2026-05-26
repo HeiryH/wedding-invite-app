@@ -358,6 +358,8 @@ export default function Template4({
   const weddingDate = new Date(wedding.weddingDate);
   const countdown = useCountdown(weddingDate);
 
+  const paxLimit = (wedding?.maxPax ?? 0) > 0 ? Math.min(10, wedding.maxPax!) : 10;
+
   const sectionOrder = resolveSectionOrder(
     customConfig?.['section.order'],
     !!customConfig?.['walimah.body'],
@@ -798,7 +800,7 @@ export default function Template4({
                               </button>
                             ))}
                           </div>
-                          <input type="number" min={1} max={10} placeholder="Number of guests" value={rsvpData.numberOfAttendees} onChange={(e) => setRsvpData({ ...rsvpData, numberOfAttendees: Number(e.target.value) })} className="w-full border border-[#E0DFD9] px-4 py-3 text-sm text-[#1C1C1A] placeholder-[#B0AFA8] focus:outline-none focus:border-[#1C1C1A] transition-colors" />
+                          <input type="number" min={1} max={paxLimit} placeholder="Number of guests" value={rsvpData.numberOfAttendees} onChange={(e) => { const raw = Number(e.target.value) || 1; setRsvpData({ ...rsvpData, numberOfAttendees: Math.max(1, Math.min(raw, paxLimit)) }); }} className="w-full border border-[#E0DFD9] px-4 py-3 text-sm text-[#1C1C1A] placeholder-[#B0AFA8] focus:outline-none focus:border-[#1C1C1A] transition-colors" />
                           <input type="text" placeholder="Song request (optional)" value={rsvpData.songRequest} onChange={(e) => setRsvpData({ ...rsvpData, songRequest: e.target.value })} className="w-full border border-[#E0DFD9] px-4 py-3 text-sm text-[#1C1C1A] placeholder-[#B0AFA8] focus:outline-none focus:border-[#1C1C1A] transition-colors" />
                         </motion.div>
                       )}

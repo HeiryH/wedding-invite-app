@@ -10,17 +10,20 @@ namespace WeddingInvite.Core.Services
         private readonly IPhotoRepository _photoRepo;
         private readonly IWeddingRepository _weddingRepo;
         private readonly IWeddingFeatureRepository _weddingFeatureRepo;
+        private readonly ITemplateConfigService _templateConfigService;
         private const long MaxFileSizeBytes = 10 * 1024 * 1024; // 10MB
         private static readonly string[] AllowedExtensions = { ".jpg", ".jpeg", ".png", ".gif" };
-        
+
         public PhotoService(
             IPhotoRepository photoRepo,
             IWeddingRepository weddingRepo,
-            IWeddingFeatureRepository weddingFeatureRepo)
+            IWeddingFeatureRepository weddingFeatureRepo,
+            ITemplateConfigService templateConfigService)
         {
             _photoRepo = photoRepo;
             _weddingRepo = weddingRepo;
             _weddingFeatureRepo = weddingFeatureRepo;
+            _templateConfigService = templateConfigService;
         }
         
         public async Task<PhotoDto?> GetByIdAsync(int id)
@@ -119,7 +122,15 @@ namespace WeddingInvite.Core.Services
                 await file.CopyToAsync(stream);
             }
 
-            // 7. Create photo record
+            // 7. Determine approval state (couple uploads always approved; guest uploads check config)
+            var autoApprove = true;
+            if (!isCouple)
+            {
+                var config = await _templateConfigService.GetConfigAsync(weddingId);
+                autoApprove = !config.TryGetValue("photobooth.autoApprove", out var val) || val != "false";
+            }
+
+            // 8. Create photo record
             var photo = new Photo
             {
                 WeddingId = weddingId,
@@ -131,7 +142,7 @@ namespace WeddingInvite.Core.Services
                 Caption = uploadDto.Caption?.Trim(),
                 UploadedBy = isCouple ? PhotoUploaderRole.Couple : PhotoUploaderRole.Guest,
                 TemplateSlot = uploadDto.TemplateSlot,
-                IsApproved = true,
+                IsApproved = autoApprove,
                 IsVisible = true,
                 IsFeatured = false,
                 CreatedDate = DateTime.UtcNow

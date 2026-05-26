@@ -1,9 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { guestService, CreateGuest } from '@/lib/api';
+import { guestService, CreateGuest, Wedding } from '@/lib/api';
 import { useForm } from 'react-hook-form';
 
 interface RSVPFormData {
@@ -23,7 +23,17 @@ export default function RSVPPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitSuccess, setSubmitSuccess] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
-  const [isAttending, setIsAttending] = useState(true); // Manual state
+  const [isAttending, setIsAttending] = useState(true);
+  const [weddingData, setWeddingData] = useState<Wedding | null>(null);
+
+  useEffect(() => {
+    fetch(`${process.env.NEXT_PUBLIC_API_URL}/wedding/couple/${coupleName}`)
+      .then((r) => r.json())
+      .then((w) => setWeddingData(w))
+      .catch(() => {});
+  }, [coupleName]);
+
+  const paxLimit = (weddingData?.maxPax ?? 0) > 0 ? Math.min(10, weddingData!.maxPax!) : 10;
 
   const {
     register,
@@ -41,14 +51,13 @@ export default function RSVPPage() {
       setIsSubmitting(true);
       setSubmitError(null);
 
-      const weddingResponse = await fetch(
+      const wedding = weddingData ?? await fetch(
         `${process.env.NEXT_PUBLIC_API_URL}/wedding/couple/${coupleName}`
-      );
-      const wedding = await weddingResponse.json();
+      ).then((r) => r.json());
 
       const guestData: CreateGuest = {
         ...data,
-        isAttending, // Use manual state
+        isAttending,
         numberOfAttendees: Number(data.numberOfAttendees),
       };
 
@@ -256,13 +265,13 @@ export default function RSVPPage() {
                         {...register('numberOfAttendees', {
                           required: isAttending ? 'Number of guests is required' : false,
                           min: isAttending ? { value: 1, message: 'At least 1 guest' } : undefined,
-                          max: isAttending ? { value: 10, message: 'Maximum 10 guests' } : undefined,
-                          setValueAs: (v) => Number(v), // Convert to number
+                          max: isAttending ? { value: paxLimit, message: `Maximum ${paxLimit} guest(s) per RSVP` } : undefined,
+                          setValueAs: (v) => Math.max(1, Math.min(Number(v), paxLimit)),
                         })}
                         type="number"
                         className="w-full px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-rose-400 focus:outline-none transition-colors"
                         min="1"
-                        max="10"
+                        max={paxLimit}
                       />
                       {errors.numberOfAttendees && (
                         <p className="text-red-500 text-sm mt-1">

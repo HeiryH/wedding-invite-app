@@ -121,6 +121,8 @@ export default function Template3({
 
   const weddingDate = new Date(wedding.weddingDate);
 
+  const paxLimit = (wedding?.maxPax ?? 0) > 0 ? Math.min(10, wedding.maxPax!) : 10;
+
   const navItems = sectionOrder.map((code) => ({ name: NAV_LABELS[code], section: code }));
 
   const groomPortrait = getMedia(coupleMedia, TemplateSlots.GROOM_PORTRAIT);
@@ -440,10 +442,13 @@ export default function Template3({
                       <input
                         type="number"
                         min={1}
-                        max={10}
+                        max={paxLimit}
                         placeholder="Number of attendees"
                         value={rsvpData.numberOfAttendees}
-                        onChange={(e) => setRsvpData({ ...rsvpData, numberOfAttendees: Number(e.target.value) })}
+                        onChange={(e) => {
+                          const raw = Number(e.target.value) || 1;
+                          setRsvpData({ ...rsvpData, numberOfAttendees: Math.max(1, Math.min(raw, paxLimit)) });
+                        }}
                         className="w-full border border-green-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-green-400"
                       />
                       <input

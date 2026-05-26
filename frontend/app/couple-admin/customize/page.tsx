@@ -501,7 +501,7 @@ export default function CustomizePage() {
   const [savedConfig, setSavedConfig] = useState<Record<string, string>>({});
 
   // Wedding model fields (names, date, venue)
-  const emptyWed = { brideName: '', groomName: '', weddingDate: '', venue: '', venueAddress: '' };
+  const emptyWed = { brideName: '', groomName: '', weddingDate: '', venue: '', venueAddress: '', maxPax: 0 };
   const [weddingDraft, setWeddingDraft] = useState(emptyWed);
   const [weddingSaved, setWeddingSaved] = useState(emptyWed);
 
@@ -639,6 +639,7 @@ export default function CustomizePage() {
         weddingDate: w.weddingDate.slice(0, 16),
         venue: w.venue,
         venueAddress: w.venueAddress,
+        maxPax: w.maxPax ?? 0,
       };
       setWeddingDraft(wd);
       setWeddingSaved(wd);
@@ -670,6 +671,7 @@ export default function CustomizePage() {
           weddingDate: weddingDraft.weddingDate,
           venue: weddingDraft.venue,
           venueAddress: weddingDraft.venueAddress,
+          maxPax: weddingDraft.maxPax,
         }));
       }
       await Promise.all(tasks);
@@ -886,6 +888,14 @@ export default function CustomizePage() {
                 <div>
                   <FieldLabel>Venue Address</FieldLabel>
                   <TextField value={weddingDraft.venueAddress} onChange={(v) => setWeddingDraft((d) => ({ ...d, venueAddress: v }))} maxLength={500} />
+                </div>
+                <div className="flex items-center justify-between gap-3">
+                  <FieldLabel hint="Max guests per RSVP entry. Set to 0 for no limit.">Max Pax per RSVP</FieldLabel>
+                  <input
+                    type="number" min={0} value={weddingDraft.maxPax}
+                    onChange={(e) => setWeddingDraft((d) => ({ ...d, maxPax: parseInt(e.target.value) || 0 }))}
+                    className="w-24 px-3 py-2 border-2 border-gray-200 rounded-lg text-sm text-gray-900 focus:border-rose-400 focus:outline-none text-right"
+                  />
                 </div>
                 <div className="flex items-center justify-between gap-3">
                   <FieldLabel>Show venue map</FieldLabel>
@@ -1146,6 +1156,15 @@ export default function CustomizePage() {
                   <FieldLabel>Navigation Label</FieldLabel>
                   <TextField value={draftConfig['nav.photos'] ?? 'Photos'} onChange={(v) => setConfig('nav.photos', v)} maxLength={20} />
                 </div>
+                {photoBoothEnabled && (
+                  <div className="flex items-center justify-between gap-3">
+                    <FieldLabel hint="When off, submitted photos require manual approval in your dashboard">Auto-approve Guest Photos</FieldLabel>
+                    <ToggleSwitch
+                      value={draftConfig['photobooth.autoApprove'] !== 'false'}
+                      onChange={(v) => setConfig('photobooth.autoApprove', v ? 'true' : 'false')}
+                    />
+                  </div>
+                )}
               </section>
 
               {showPortraitSlots && (

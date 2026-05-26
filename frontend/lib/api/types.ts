@@ -18,6 +18,7 @@ export interface Wedding {
   templateName: string;
   packageId?: number;
   packageName?: string;
+  maxPax?: number;
 }
 
 export interface CreateWedding {
@@ -38,6 +39,7 @@ export interface UpdateWeddingDto {
   venue: string;
   venueAddress: string;
   templateId?: number;
+  maxPax?: number;
 }
 
 // ========== Guest Types ==========

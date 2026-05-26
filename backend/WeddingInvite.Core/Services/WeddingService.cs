@@ -122,6 +122,7 @@ namespace WeddingInvite.Core.Services
             wedding.WeddingDate = updateDto.WeddingDate;
             wedding.Venue = updateDto.Venue;
             wedding.VenueAddress = updateDto.VenueAddress;
+            wedding.MaxPax = updateDto.MaxPax;
 
             wedding.CoupleName = GenerateCoupleName(updateDto.BrideName, updateDto.GroomName);
 
@@ -229,6 +230,7 @@ namespace WeddingInvite.Core.Services
                 TotalPhotos = wedding.Photos.Count,
                 EnabledFeaturesCount = wedding.WeddingFeatures.Count(wf => wf.IsEnabled),
                 IsActive = wedding.IsActive,
+                MaxPax = wedding.MaxPax,
                 TemplateId = wedding.TemplateId,
                 TemplateName = wedding.Template?.TemplateName,
                 TemplateCode = wedding.Template?.TemplateCode,
