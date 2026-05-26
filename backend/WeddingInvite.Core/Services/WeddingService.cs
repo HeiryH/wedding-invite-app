@@ -123,6 +123,8 @@ namespace WeddingInvite.Core.Services
             wedding.Venue = updateDto.Venue;
             wedding.VenueAddress = updateDto.VenueAddress;
             wedding.MaxPax = updateDto.MaxPax;
+            wedding.MaxCapacity = updateDto.MaxCapacity;
+            wedding.ShowCapacityWarning = updateDto.ShowCapacityWarning;
 
             wedding.CoupleName = GenerateCoupleName(updateDto.BrideName, updateDto.GroomName);
 
@@ -231,6 +233,8 @@ namespace WeddingInvite.Core.Services
                 EnabledFeaturesCount = wedding.WeddingFeatures.Count(wf => wf.IsEnabled),
                 IsActive = wedding.IsActive,
                 MaxPax = wedding.MaxPax,
+                MaxCapacity = wedding.MaxCapacity,
+                ShowCapacityWarning = wedding.ShowCapacityWarning,
                 TemplateId = wedding.TemplateId,
                 TemplateName = wedding.Template?.TemplateName,
                 TemplateCode = wedding.Template?.TemplateCode,

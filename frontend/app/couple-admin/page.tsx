@@ -224,7 +224,7 @@ export default function CoupleAdminDashboard() {
   const [loading, setLoading] = useState(true);
 
   const [isEditing, setIsEditing] = useState(false);
-  const [editData, setEditData] = useState({ brideName: '', groomName: '', weddingDate: '', weddingTime: '', venue: '', venueAddress: '' });
+  const [editData, setEditData] = useState({ brideName: '', groomName: '', weddingDate: '', weddingTime: '', venue: '', venueAddress: '', maxCapacity: 0, showCapacityWarning: false });
   const [saving, setSaving] = useState(false);
 
   const [activeTab, setActiveTab] = useState<ActiveTab | null>(null);
@@ -271,7 +271,7 @@ export default function CoupleAdminDashboard() {
   const startEdit = () => {
     if (!wedding) return;
     const dt = new Date(wedding.weddingDate);
-    setEditData({ brideName: wedding.brideName, groomName: wedding.groomName, weddingDate: dt.toISOString().split('T')[0], weddingTime: dt.toTimeString().slice(0, 5), venue: wedding.venue, venueAddress: wedding.venueAddress });
+    setEditData({ brideName: wedding.brideName, groomName: wedding.groomName, weddingDate: dt.toISOString().split('T')[0], weddingTime: dt.toTimeString().slice(0, 5), venue: wedding.venue, venueAddress: wedding.venueAddress, maxCapacity: wedding.maxCapacity ?? 0, showCapacityWarning: wedding.showCapacityWarning ?? false });
     setIsEditing(true);
   };
 
@@ -279,7 +279,7 @@ export default function CoupleAdminDashboard() {
     if (!weddingId) return;
     setSaving(true);
     try {
-      const updated = await weddingService.update(weddingId, { brideName: editData.brideName, groomName: editData.groomName, weddingDate: `${editData.weddingDate}T${editData.weddingTime || '00:00'}:00` as any, venue: editData.venue, venueAddress: editData.venueAddress });
+      const updated = await weddingService.update(weddingId, { brideName: editData.brideName, groomName: editData.groomName, weddingDate: `${editData.weddingDate}T${editData.weddingTime || '00:00'}:00` as any, venue: editData.venue, venueAddress: editData.venueAddress, maxCapacity: editData.maxCapacity, showCapacityWarning: editData.showCapacityWarning });
       setWedding(updated); setIsEditing(false);
     } catch { alert('Failed to save.'); }
     finally { setSaving(false); }
@@ -364,6 +364,14 @@ export default function CoupleAdminDashboard() {
             </div>
             <input value={editData.venue} onChange={e => setEditData({ ...editData, venue: e.target.value })} placeholder="Venue" style={{ ...inp, width: '100%', boxSizing: 'border-box' }} />
             <input value={editData.venueAddress} onChange={e => setEditData({ ...editData, venueAddress: e.target.value })} placeholder="Venue Address" style={{ ...inp, width: '100%', boxSizing: 'border-box' }} />
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+              <input type="number" min={0} value={editData.maxCapacity} onChange={e => setEditData({ ...editData, maxCapacity: parseInt(e.target.value) || 0 })} placeholder="0 = unlimited" style={{ ...inp, width: 120, textAlign: 'right' }} />
+              <span style={{ fontSize: 12, color: 'var(--ink-2)', whiteSpace: 'nowrap' }}>total capacity (0 = unlimited)</span>
+            </div>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: 'var(--ink-2)', cursor: 'pointer' }}>
+              <input type="checkbox" checked={editData.showCapacityWarning} onChange={e => setEditData({ ...editData, showCapacityWarning: e.target.checked })} style={{ width: 16, height: 16, accentColor: 'var(--lavender-grey-ink)', cursor: 'pointer' }} />
+              Show spots remaining to guests
+            </label>
             <div style={{ display: 'flex', gap: 8 }}>
               <button onClick={handleSaveEdit} disabled={saving} style={{ padding: '9px 18px', background: 'var(--lavender-grey-ink)', color: 'var(--floral)', border: 'none', borderRadius: 10, fontSize: 13.5, fontWeight: 500, cursor: 'pointer', opacity: saving ? 0.6 : 1 }}>
                 {saving ? 'Saving…' : 'Save'}

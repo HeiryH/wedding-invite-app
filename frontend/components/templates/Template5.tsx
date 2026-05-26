@@ -41,8 +41,11 @@ interface RSVPModalProps {
 
 function RSVPModal({ wedding, onRSVP, onClose, seatingEnabled, tables, t }: RSVPModalProps) {
   const maxPax = wedding.maxPax ?? 0;
-  const remainingPax = maxPax > 0 ? Math.max(0, maxPax - wedding.totalAttending) : null;
   const paxLimit = maxPax > 0 ? Math.min(10, maxPax) : 10;
+  const maxCapacity = wedding.maxCapacity ?? 0;
+  const remainingPax = (maxCapacity > 0 && wedding.showCapacityWarning)
+    ? Math.max(0, maxCapacity - wedding.totalAttending)
+    : null;
 
   const [rsvpStep, setRsvpStep] = useState<1 | 2>(1);
   const [isAttending, setIsAttending] = useState(true);

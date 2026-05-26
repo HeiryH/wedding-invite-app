@@ -19,6 +19,8 @@ export interface Wedding {
   packageId?: number;
   packageName?: string;
   maxPax?: number;
+  maxCapacity?: number;
+  showCapacityWarning?: boolean;
 }
 
 export interface CreateWedding {
@@ -40,6 +42,8 @@ export interface UpdateWeddingDto {
   venueAddress: string;
   templateId?: number;
   maxPax?: number;
+  maxCapacity?: number;
+  showCapacityWarning?: boolean;
 }
 
 // ========== Guest Types ==========

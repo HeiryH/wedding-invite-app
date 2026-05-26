@@ -24,6 +24,8 @@ namespace WeddingInvite.Core.DTOs
         public int? PackageId { get; set; }
         public string? PackageName { get; set; }
         public int MaxPax { get; set; }
+        public int MaxCapacity { get; set; }
+        public bool ShowCapacityWarning { get; set; }
     }
 
     // What clients send when creating a wedding
@@ -50,6 +52,8 @@ namespace WeddingInvite.Core.DTOs
         public string VenueAddress { get; set; } = string.Empty;
         // public int TemplateId { get; set; }
         public int MaxPax { get; set; } = 0;
+        public int MaxCapacity { get; set; } = 0;
+        public bool ShowCapacityWarning { get; set; } = false;
     }
 
     public class UpdateTemplateDto
