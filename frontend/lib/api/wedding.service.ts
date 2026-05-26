@@ -1,5 +1,5 @@
 import { apiClient } from './client';
-import { Wedding, CreateWedding } from './types';
+import { Wedding, CreateWedding, UpdateWeddingDto } from './types';
 
 export const weddingService = {
   // Get all weddings
@@ -27,7 +27,7 @@ export const weddingService = {
   },
 
   // Update wedding
-  update: async (id: number, data: Partial<CreateWedding>): Promise<Wedding> => {
+  update: async (id: number, data: Partial<UpdateWeddingDto>): Promise<Wedding> => {
     const response = await apiClient.put<Wedding>(`/wedding/${id}`, data);
     return response.data;
   },
