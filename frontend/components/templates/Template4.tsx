@@ -770,7 +770,12 @@ export default function Template4({
                   <p className="text-sm text-[#8A8A80] mt-2">{t('rsvp.subtitle', 'Will you be joining us?')}</p>
                 </div>
                 <AnimatePresence mode="wait">
-                  {rsvpSuccess ? (
+                  {wedding.isRsvpOpen === false ? (
+                    <motion.div key="closed" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }} className="border border-[#E0DFD9] bg-white p-10 text-center">
+                      <p className="text-2xl italic text-[#1C1C1A] mb-2">RSVPs are closed</p>
+                      <p className="text-sm text-[#8A8A80]">Thank you for your interest — we&apos;re no longer accepting responses.</p>
+                    </motion.div>
+                  ) : rsvpSuccess ? (
                     <motion.div key="success" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }} className="border border-[#E0DFD9] bg-white p-10 text-center">
                       <p className="text-2xl italic text-[#1C1C1A] mb-2">Thank you!</p>
                       <p className="text-sm text-[#8A8A80]">Your RSVP has been received.</p>

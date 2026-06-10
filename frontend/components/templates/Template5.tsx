@@ -131,7 +131,18 @@ function RSVPModal({ wedding, onRSVP, onClose, seatingEnabled, tables, t }: RSVP
           )}
 
           <AnimatePresence mode="wait">
-            {rsvpSuccess ? (
+            {wedding.isRsvpOpen === false ? (
+              <motion.div
+                key="closed"
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className={styles.rsvpSuccess}
+              >
+                <div className={styles.rsvpSuccessEmoji}>🔒</div>
+                <h3 className={styles.rsvpSuccessTitle}>RSVPs are closed</h3>
+                <p className={styles.rsvpSuccessBody}>Thank you for your interest — we&apos;re no longer accepting responses.</p>
+              </motion.div>
+            ) : rsvpSuccess ? (
               <motion.div
                 key="success"
                 initial={{ opacity: 0, scale: 0.9 }}

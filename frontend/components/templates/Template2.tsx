@@ -468,7 +468,19 @@ export default function Template2({
                     </div>
 
                     <AnimatePresence mode="wait">
-                        {rsvpSuccess ? (
+                        {wedding.isRsvpOpen === false ? (
+                            <motion.div
+                                key="closed"
+                                initial={{ opacity: 0, scale: 0.9 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                exit={{ opacity: 0 }}
+                                className="bg-gray-50 border-2 border-gray-200 rounded-3xl p-12 text-center"
+                            >
+                                <div className="text-6xl mb-4">🔒</div>
+                                <h3 className="text-2xl font-bold text-gray-700 mb-2">RSVPs are closed</h3>
+                                <p className="text-gray-500">Thank you for your interest — we&apos;re no longer accepting responses.</p>
+                            </motion.div>
+                        ) : rsvpSuccess ? (
                             <motion.div
                                 key="success"
                                 initial={{ opacity: 0, scale: 0.8 }}

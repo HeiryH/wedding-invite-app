@@ -25,6 +25,7 @@
 
         // Status
         public bool IsActive { get; set; } = true;
+        public bool IsRsvpOpen { get; set; } = true;
         public int MaxPax { get; set; } = 0;          // 0 = no limit (per-RSVP entry cap)
         public int MaxCapacity { get; set; } = 0;     // 0 = no limit (total wedding capacity)
         public bool ShowCapacityWarning { get; set; } = false;

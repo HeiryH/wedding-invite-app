@@ -6,7 +6,7 @@ namespace WeddingInvite.Core.Services
     {
         Task<GuestDto?> GetByIdAsync(int id);
         Task<IEnumerable<GuestDto>> GetByWeddingIdAsync(int weddingId);
-        Task<GuestDto> CreateAsync(int weddingId, CreateGuestDto createDto);
+        Task<GuestDto> CreateAsync(int weddingId, CreateGuestDto createDto, bool enforceRsvpOpen = false);
         Task<GuestDto> UpdateAsync(int id, UpdateGuestDto updateDto);
         Task<bool> DeleteAsync(int id);
         Task<int> GetAttendingCountAsync(int weddingId);

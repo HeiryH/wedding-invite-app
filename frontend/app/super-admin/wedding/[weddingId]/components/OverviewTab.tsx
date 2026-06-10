@@ -14,15 +14,39 @@ interface OverviewTabProps {
     totalWishes: number;
   };
   guests: Guest[];
+  isRsvpOpen: boolean;
+  onToggleRsvp: (isRsvpOpen: boolean) => void;
 }
 
-export default function OverviewTab({ stats, guests }: OverviewTabProps) {
+export default function OverviewTab({ stats, guests, isRsvpOpen, onToggleRsvp }: OverviewTabProps) {
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4 }}
     >
+      {/* RSVP Open/Close Toggle */}
+      <div className="bg-white rounded-xl shadow-md p-5 mb-6 flex items-center justify-between gap-4">
+        <div>
+          <h3 className="text-sm font-semibold text-gray-800">RSVP Status</h3>
+          <p className="text-xs text-gray-500 mt-0.5">
+            {isRsvpOpen ? 'Guests can currently submit RSVPs.' : 'RSVPs are closed — the public form is disabled.'}
+          </p>
+        </div>
+        <div className="flex items-center gap-3 shrink-0">
+          <span className={`text-xs font-medium ${isRsvpOpen ? 'text-green-600' : 'text-red-500'}`}>
+            {isRsvpOpen ? 'Open' : 'Closed'}
+          </span>
+          <button
+            type="button"
+            onClick={() => onToggleRsvp(!isRsvpOpen)}
+            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${isRsvpOpen ? 'bg-green-500' : 'bg-gray-300'}`}
+          >
+            <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${isRsvpOpen ? 'translate-x-6' : 'translate-x-1'}`} />
+          </button>
+        </div>
+      </div>
+
       {/* Statistics Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         <StatCard title="Total RSVPs" value={stats.totalGuests} icon="📋" color="blue" />

@@ -217,6 +217,16 @@ export default function WeddingDetailPage() {
     }
   };
 
+  const handleToggleRsvp = async (isRsvpOpen: boolean) => {
+    if (!wedding) return;
+    try {
+      const updated = await weddingService.toggleRsvp(wedding.weddingId, isRsvpOpen);
+      setWedding(updated);
+    } catch (err: any) {
+      alert(err.response?.data?.message || 'Failed to update RSVP status');
+    }
+  };
+
   const handleToggleFeature = async (featureId: number, featureCode: string, currentStatus: boolean) => {
     try {
       await weddingFeatureService.toggleFeature(weddingId, {
@@ -449,7 +459,14 @@ export default function WeddingDetailPage() {
 
       {/* ── Tab Content ─────────────────────────────────────────────────── */}
       <div>
-        {activeTab === 'overview' && <OverviewTab stats={stats} guests={guests} />}
+        {activeTab === 'overview' && (
+          <OverviewTab
+            stats={stats}
+            guests={guests}
+            isRsvpOpen={wedding.isRsvpOpen !== false}
+            onToggleRsvp={handleToggleRsvp}
+          />
+        )}
 
         {activeTab === 'guests' && (
           <GuestsTab

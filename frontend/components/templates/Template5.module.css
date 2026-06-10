@@ -1352,19 +1352,20 @@
 /* Polaroid gallery */
 .polaroidGrid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 18px 16px;
   margin-top: 1.5rem;
 }
 
 @media (min-width: 520px) {
   .polaroidGrid {
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 22px 18px;
   }
 }
 
 .polaroid {
+  min-width: 0;
   background: #fffdf6;
   padding: 9px 9px 36px;
   border-radius: 6px;

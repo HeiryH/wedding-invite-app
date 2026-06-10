@@ -31,7 +31,7 @@ namespace WeddingInvite.Core.Services
             return guests.Select(MapToDto);
         }
         
-        public async Task<GuestDto> CreateAsync(int weddingId, CreateGuestDto createDto)
+        public async Task<GuestDto> CreateAsync(int weddingId, CreateGuestDto createDto, bool enforceRsvpOpen = false)
         {
             // BUSINESS VALIDATION
             
@@ -43,7 +43,11 @@ namespace WeddingInvite.Core.Services
             // 2. Check if wedding has already passed
             if (wedding.WeddingDate < DateTime.UtcNow)
                 throw new InvalidOperationException("Cannot RSVP to a past wedding");
-            
+
+            // 2b. Check if RSVPs are open (only enforced on public submissions)
+            if (enforceRsvpOpen && !wedding.IsRsvpOpen)
+                throw new ArgumentException("RSVPs are closed for this wedding.");
+
             // 3. Validate guest name
             if (string.IsNullOrWhiteSpace(createDto.GuestName))
                 throw new ArgumentException("Guest name is required");

@@ -13,7 +13,6 @@ namespace WeddingInvite.Core.Services
         Task<WeddingDto> UpdateTemplateAsync(int id, int templateId);
         Task<WeddingDto> UpdatePackageAsync(int id, int packageId);
         Task<WeddingDto> ToggleActiveAsync(int id, bool isActive);
-
-
+        Task<WeddingDto> ToggleRsvpAsync(int id, bool isRsvpOpen);
     }
 }

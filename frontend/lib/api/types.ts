@@ -21,6 +21,7 @@ export interface Wedding {
   maxPax?: number;
   maxCapacity?: number;
   showCapacityWarning?: boolean;
+  isRsvpOpen?: boolean;
 }
 
 export interface CreateWedding {

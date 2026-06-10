@@ -293,6 +293,14 @@ export default function CoupleAdminDashboard() {
     else { const created = await guestService.create(weddingId, data as any); setGuests(prev => [...prev, created]); }
   };
 
+  const handleToggleRsvp = async (isRsvpOpen: boolean) => {
+    if (!weddingId) return;
+    try {
+      const updated = await weddingService.toggleRsvp(weddingId, isRsvpOpen);
+      setWedding(updated);
+    } catch { alert('Failed to update RSVP status'); }
+  };
+
   const handleDeleteWish = async (id: number) => { if (!confirm('Delete?')) return; await wishService.delete(id); setWishes(prev => prev.filter(w => w.wishId !== id)); };
 
   const exportGuestsCSV = () => {
@@ -458,6 +466,30 @@ export default function CoupleAdminDashboard() {
           </div>
         )}
       </div>
+
+      {/* ── RSVP Open/Close Toggle ───────────────────────────────────────── */}
+      {isEnabled('RSVP') && (
+        <div style={{ background: 'white', border: '1px solid var(--line)', borderRadius: 'var(--radius-md)', padding: '14px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+          <div>
+            <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--ink)' }}>RSVP Status</div>
+            <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 2 }}>
+              {wedding.isRsvpOpen !== false ? 'Guests can currently submit RSVPs.' : 'RSVPs are closed — the public form is disabled.'}
+            </div>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
+            <span style={{ fontSize: 12, fontWeight: 500, color: wedding.isRsvpOpen !== false ? 'var(--success)' : 'var(--danger)' }}>
+              {wedding.isRsvpOpen !== false ? 'Open' : 'Closed'}
+            </span>
+            <button
+              type="button"
+              onClick={() => handleToggleRsvp(wedding.isRsvpOpen === false)}
+              style={{ position: 'relative', display: 'inline-flex', alignItems: 'center', width: 44, height: 24, borderRadius: 999, border: 'none', cursor: 'pointer', padding: 0, transition: 'background .2s', background: wedding.isRsvpOpen !== false ? 'var(--success)' : '#d1d5db' }}
+            >
+              <span style={{ position: 'absolute', left: wedding.isRsvpOpen !== false ? 22 : 2, width: 20, height: 20, borderRadius: '50%', background: 'white', boxShadow: '0 1px 3px rgba(0,0,0,.2)', transition: 'left .2s' }} />
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* ── Tabs + content ────────────────────────────────────────────────── */}
       {tabs.length > 0 ? (

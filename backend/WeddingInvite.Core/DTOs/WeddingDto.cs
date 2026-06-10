@@ -11,6 +11,7 @@ namespace WeddingInvite.Core.DTOs
         public string Venue { get; set; } = string.Empty;
         public string VenueAddress { get; set; } = string.Empty;
         public bool IsActive { get; set; }
+        public bool IsRsvpOpen { get; set; }
 
         // Computed fields (not in database)
         public int TotalGuests { get; set; }
@@ -64,6 +65,11 @@ namespace WeddingInvite.Core.DTOs
     public class ToggleActiveDto
     {
         public bool IsActive { get; set; }
+    }
+
+    public class ToggleRsvpDto
+    {
+        public bool IsRsvpOpen { get; set; }
     }
 
 }

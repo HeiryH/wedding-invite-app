@@ -373,7 +373,13 @@ export default function Template3({
               <h2 className="text-3xl font-bold text-green-900 text-center mb-2">RSVP</h2>
               <p className="text-green-600 text-center mb-8">{t('rsvp.subtitle', 'Will you be joining us?')}</p>
 
-              {rsvpSuccess ? (
+              {wedding.isRsvpOpen === false ? (
+                <div className="bg-gray-50 border border-gray-200 rounded-2xl p-8 text-center">
+                  <div className="text-5xl mb-4">🔒</div>
+                  <h3 className="text-2xl font-bold text-gray-700 mb-2">RSVPs are closed</h3>
+                  <p className="text-gray-500">Thank you for your interest — we&apos;re no longer accepting responses.</p>
+                </div>
+              ) : rsvpSuccess ? (
                 <div className="bg-green-50 border border-green-200 rounded-2xl p-8 text-center">
                   <div className="text-5xl mb-4">🌿</div>
                   <h3 className="text-2xl font-bold text-green-800 mb-2">Thank you!</h3>
@@ -601,13 +607,13 @@ export default function Template3({
                 </div>
               )}
 
-              <div className="columns-2 md:columns-3 gap-4 space-y-4">
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                 {photos.map((photo) => (
-                  <div key={photo.photoId} className="break-inside-avoid">
+                  <div key={photo.photoId} className="overflow-hidden rounded-xl shadow-sm">
                     <img
                       src={`${API_BASE}${photo.photoUrl}`}
                       alt={photo.caption || 'Wedding photo'}
-                      className="w-full rounded-xl shadow-sm"
+                      className="w-full aspect-square object-cover"
                     />
                     {photo.caption && (
                       <p className="text-xs text-green-500 mt-1 px-1">{photo.caption}</p>

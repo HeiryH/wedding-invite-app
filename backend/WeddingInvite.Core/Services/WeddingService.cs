@@ -198,6 +198,18 @@ namespace WeddingInvite.Core.Services
             return await MapToDto(updated);
         }
 
+        public async Task<WeddingDto> ToggleRsvpAsync(int id, bool isRsvpOpen)
+        {
+            var wedding = await _weddingRepo.GetByIdAsync(id);
+            if (wedding == null)
+                throw new KeyNotFoundException($"Wedding with ID {id} not found");
+
+            wedding.IsRsvpOpen = isRsvpOpen;
+            var updated = await _weddingRepo.UpdateAsync(wedding);
+
+            return await MapToDto(updated);
+        }
+
         // HELPER METHODS
 
         private async Task EnablePackageFeaturesAsync(int weddingId, int packageId)
@@ -232,6 +244,7 @@ namespace WeddingInvite.Core.Services
                 TotalPhotos = wedding.Photos.Count,
                 EnabledFeaturesCount = wedding.WeddingFeatures.Count(wf => wf.IsEnabled),
                 IsActive = wedding.IsActive,
+                IsRsvpOpen = wedding.IsRsvpOpen,
                 MaxPax = wedding.MaxPax,
                 MaxCapacity = wedding.MaxCapacity,
                 ShowCapacityWarning = wedding.ShowCapacityWarning,

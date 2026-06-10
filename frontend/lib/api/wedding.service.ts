@@ -51,6 +51,11 @@ export const weddingService = {
     return response.data;
   },
 
+  toggleRsvp: async (id: number, isRsvpOpen: boolean): Promise<Wedding> => {
+    const response = await apiClient.put<Wedding>(`/wedding/${id}/toggle-rsvp`, { isRsvpOpen });
+    return response.data;
+  },
+
   // Delete wedding
   delete: async (id: number): Promise<void> => {
     await apiClient.delete(`/wedding/${id}`);

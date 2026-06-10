@@ -122,6 +122,30 @@ namespace WeddingInvite.API.Controllers
             }
         }
 
+        // PUT: api/wedding/5/toggle-rsvp
+        [HttpPut("{id}/toggle-rsvp")]
+        [Authorize]
+        public async Task<ActionResult<WeddingDto>> ToggleRsvp(int id, [FromBody] ToggleRsvpDto toggleDto)
+        {
+            var userEmail = User.Identity?.Name;
+            if (!await _authorizationService.CanAccessWeddingAsync(userEmail!, id))
+                return Forbid();
+
+            try
+            {
+                var wedding = await _weddingService.ToggleRsvpAsync(id, toggleDto.IsRsvpOpen);
+                return Ok(wedding);
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(new { message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
         // DELETE: api/wedding/5
         [HttpDelete("{id}")]
         [Authorize(Roles = "SUPER_ADMIN")]

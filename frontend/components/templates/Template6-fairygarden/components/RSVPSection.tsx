@@ -57,7 +57,15 @@ export default function RSVPSection({ onRSVP, customConfig, wedding }: Props) {
           {t('rsvp.subtitle', 'Kindly reply by one week before the wedding date')}
         </p>
 
-        {done ? (
+        {wedding?.isRsvpOpen === false ? (
+          <motion.div
+            className={styles.rsvpDone}
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+          >
+            🔒 RSVPs are closed — thank you for your interest.
+          </motion.div>
+        ) : done ? (
           <motion.div
             className={styles.rsvpDone}
             initial={{ opacity: 0, scale: 0.8 }}
