@@ -23,6 +23,7 @@ namespace WeddingInvite.Data.Repositories
         public async Task<IEnumerable<Guest>> GetByWeddingIdAsync(int weddingId)
         {
             return await _context.Guests
+                .AsNoTracking() // read-only list for display — skip change-tracking overhead
                 .Include(g => g.Table)
                 .Where(g => g.WeddingId == weddingId)
                 .OrderBy(g => g.GuestName)

@@ -22,6 +22,7 @@ namespace WeddingInvite.Data.Repositories
         public async Task<IEnumerable<Wish>> GetByWeddingIdAsync(int weddingId)
         {
             return await _context.Wishes
+                .AsNoTracking() // read-only list for display
                 .Where(w => w.WeddingId == weddingId)
                 .OrderByDescending(w => w.CreatedDate)
                 .ToListAsync();

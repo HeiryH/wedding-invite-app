@@ -22,6 +22,7 @@ namespace WeddingInvite.Data.Repositories
         public async Task<IEnumerable<Photo>> GetByWeddingIdAsync(int weddingId)
         {
             return await _context.Photos
+                .AsNoTracking() // read-only list for display
                 .Where(p => p.WeddingId == weddingId && p.UploadedBy == PhotoUploaderRole.Guest)
                 .OrderByDescending(p => p.CreatedDate)
                 .ToListAsync();
@@ -30,6 +31,7 @@ namespace WeddingInvite.Data.Repositories
         public async Task<IEnumerable<Photo>> GetVisibleByWeddingIdAsync(int weddingId)
         {
             return await _context.Photos
+                .AsNoTracking() // read-only list for display
                 .Where(p => p.WeddingId == weddingId && p.UploadedBy == PhotoUploaderRole.Guest && p.IsVisible && p.IsApproved)
                 .OrderByDescending(p => p.CreatedDate)
                 .ToListAsync();
@@ -38,6 +40,7 @@ namespace WeddingInvite.Data.Repositories
         public async Task<IEnumerable<Photo>> GetCoupleMediaByWeddingIdAsync(int weddingId)
         {
             return await _context.Photos
+                .AsNoTracking() // read-only list for display
                 .Where(p => p.WeddingId == weddingId && p.UploadedBy == PhotoUploaderRole.Couple)
                 .OrderBy(p => p.TemplateSlot)
                 .ToListAsync();
