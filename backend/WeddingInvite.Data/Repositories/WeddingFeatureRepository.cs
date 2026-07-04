@@ -79,11 +79,20 @@ namespace WeddingInvite.Data.Repositories
         {
             return await _context.WeddingFeatures
                 .Include(wf => wf.Feature)
-                .AnyAsync(wf => 
-                    wf.WeddingId == weddingId && 
-                    wf.Feature.FeatureCode == featureCode && 
+                .AnyAsync(wf =>
+                    wf.WeddingId == weddingId &&
+                    wf.Feature.FeatureCode == featureCode &&
                     wf.IsEnabled
                 );
+        }
+
+        public async Task<Dictionary<int, int>> GetEnabledCountsByFeatureAsync()
+        {
+            return await _context.WeddingFeatures
+                .Where(wf => wf.IsEnabled)
+                .GroupBy(wf => wf.FeatureId)
+                .Select(g => new { FeatureId = g.Key, Count = g.Count() })
+                .ToDictionaryAsync(x => x.FeatureId, x => x.Count);
         }
     }
 }

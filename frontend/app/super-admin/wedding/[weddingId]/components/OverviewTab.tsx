@@ -2,7 +2,11 @@
 
 import { motion } from 'framer-motion';
 import { Guest } from '@/lib/api';
-import StatCard from './StatCard';
+import { StatCard, Card } from '@/components/ui/Card';
+import { Switch } from '@/components/ui/Switch';
+import { ProgressBar } from '@/components/ui/ProgressBar';
+import { Badge } from '@/components/ui/Badge';
+import { Icon } from '@/components/ui/Icon';
 
 interface OverviewTabProps {
   stats: {
@@ -18,164 +22,186 @@ interface OverviewTabProps {
   onToggleRsvp: (isRsvpOpen: boolean) => void;
 }
 
+function pct(n: number, total: number) {
+  return total > 0 ? Math.round((n / total) * 100) : 0;
+}
+
 export default function OverviewTab({ stats, guests, isRsvpOpen, onToggleRsvp }: OverviewTabProps) {
+  const recentGuests = [...guests]
+    .sort((a, b) => new Date(b.respondedDate || 0).getTime() - new Date(a.respondedDate || 0).getTime())
+    .slice(0, 5);
+
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
+      initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4 }}
+      transition={{ duration: 0.3 }}
+      style={{ display: 'flex', flexDirection: 'column', gap: 20 }}
     >
-      {/* RSVP Open/Close Toggle */}
-      <div className="bg-white rounded-xl shadow-md p-5 mb-6 flex items-center justify-between gap-4">
-        <div>
-          <h3 className="text-sm font-semibold text-gray-800">RSVP Status</h3>
-          <p className="text-xs text-gray-500 mt-0.5">
-            {isRsvpOpen ? 'Guests can currently submit RSVPs.' : 'RSVPs are closed — the public form is disabled.'}
-          </p>
+      {/* RSVP Status */}
+      <Card padding="16px">
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
+          <div>
+            <p style={{ margin: 0, fontFamily: 'var(--font-ui)', fontSize: 'var(--text-md)', fontWeight: 600, color: 'var(--text-strong)' }}>
+              RSVP Status
+            </p>
+            <p style={{ margin: '3px 0 0', fontFamily: 'var(--font-ui)', fontSize: 'var(--text-sm)', color: 'var(--text-subtle)' }}>
+              {isRsvpOpen ? 'Guests can currently submit RSVPs.' : 'RSVPs are closed — the public form is disabled.'}
+            </p>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
+            <span style={{ fontFamily: 'var(--font-ui)', fontSize: 'var(--text-sm)', fontWeight: 600, color: isRsvpOpen ? 'var(--success)' : 'var(--danger)' }}>
+              {isRsvpOpen ? 'Open' : 'Closed'}
+            </span>
+            <Switch checked={isRsvpOpen} onChange={e => onToggleRsvp(e.target.checked)} />
+          </div>
         </div>
-        <div className="flex items-center gap-3 shrink-0">
-          <span className={`text-xs font-medium ${isRsvpOpen ? 'text-green-600' : 'text-red-500'}`}>
-            {isRsvpOpen ? 'Open' : 'Closed'}
-          </span>
-          <button
-            type="button"
-            onClick={() => onToggleRsvp(!isRsvpOpen)}
-            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${isRsvpOpen ? 'bg-green-500' : 'bg-gray-300'}`}
-          >
-            <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${isRsvpOpen ? 'translate-x-6' : 'translate-x-1'}`} />
-          </button>
-        </div>
-      </div>
+      </Card>
 
-      {/* Statistics Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        <StatCard title="Total RSVPs" value={stats.totalGuests} icon="📋" color="blue" />
+      {/* Stat cards */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 12 }} className="lg:grid-cols-4">
         <StatCard
-          title="Total Attending"
-          value={stats.totalAttending}
-          subtitle="guests"
-          icon="✅"
-          color="green"
+          label="Total RSVPs"
+          value={stats.totalGuests}
+          icon={<Icon name="clipboard" size={16} />}
+          tone="neutral"
         />
-        <StatCard title="Not Attending" value={stats.totalNotAttending} icon="❌" color="red" />
-        <StatCard title="Wishes Received" value={stats.totalWishes} icon="💬" color="purple" />
+        <StatCard
+          label="Attending"
+          value={stats.totalAttending}
+          sublabel="guests"
+          icon={<Icon name="check-circle" size={16} />}
+          tone="success"
+        />
+        <StatCard
+          label="Not Attending"
+          value={stats.totalNotAttending}
+          icon={<Icon name="x-circle" size={16} />}
+          tone="neutral"
+        />
+        <StatCard
+          label="Wishes"
+          value={stats.totalWishes}
+          icon={<Icon name="message-circle" size={16} />}
+          tone="gold"
+        />
       </div>
 
-      {/* Distribution Charts */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-        {/* Guest Distribution */}
-        <div className="bg-white rounded-xl shadow-md p-6">
-          <h3 className="text-lg font-semibold text-gray-800 mb-4">Guest Distribution</h3>
-          <div className="space-y-4">
+      {/* Distribution */}
+      <div style={{ display: 'grid', gap: 16 }} className="md:grid-cols-2">
+        {/* Guest distribution */}
+        <Card padding="20px">
+          <p style={{ margin: '0 0 16px', fontFamily: 'var(--font-ui)', fontSize: 'var(--text-md)', fontWeight: 600, color: 'var(--text-strong)' }}>
+            Guest Distribution
+          </p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
             <div>
-              <div className="flex justify-between mb-2">
-                <span className="text-gray-600">👰 Bride's Side</span>
-                <span className="font-semibold text-black">{stats.brideSide} guests</span>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6, fontFamily: 'var(--font-ui)', fontSize: 'var(--text-sm)', color: 'var(--text-body)' }}>
+                <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                  <Icon name="heart" size={13} style={{ color: 'var(--brand)' }} /> Bride&apos;s Side
+                </span>
+                <span style={{ fontWeight: 600, color: 'var(--text-strong)', fontFamily: 'var(--font-mono)', fontSize: 12 }}>
+                  {stats.brideSide}
+                </span>
               </div>
-              <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-pink-500"
-                  style={{
-                    width: `${stats.totalGuests > 0 ? (stats.brideSide / stats.totalGuests) * 100 : 0}%`,
-                  }}
-                />
-              </div>
+              <ProgressBar value={pct(stats.brideSide, stats.totalGuests)} tone="brand" />
             </div>
             <div>
-              <div className="flex justify-between mb-2">
-                <span className="text-gray-600">🤵 Groom's Side</span>
-                <span className="font-semibold text-black">{stats.groomSide} guests</span>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6, fontFamily: 'var(--font-ui)', fontSize: 'var(--text-sm)', color: 'var(--text-body)' }}>
+                <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                  <Icon name="user" size={13} style={{ color: 'var(--text-muted)' }} /> Groom&apos;s Side
+                </span>
+                <span style={{ fontWeight: 600, color: 'var(--text-strong)', fontFamily: 'var(--font-mono)', fontSize: 12 }}>
+                  {stats.groomSide}
+                </span>
               </div>
-              <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-blue-500"
-                  style={{
-                    width: `${stats.totalGuests > 0 ? (stats.groomSide / stats.totalGuests) * 100 : 0}%`,
-                  }}
-                />
-              </div>
+              <ProgressBar value={pct(stats.groomSide, stats.totalGuests)} tone="neutral" />
             </div>
           </div>
-        </div>
+        </Card>
 
-        {/* Attendance Status */}
-        <div className="bg-white rounded-xl shadow-md p-6">
-          <h3 className="text-lg font-semibold text-gray-800 mb-4">Attendance Status</h3>
-          <div className="space-y-4">
+        {/* Attendance status */}
+        <Card padding="20px">
+          <p style={{ margin: '0 0 16px', fontFamily: 'var(--font-ui)', fontSize: 'var(--text-md)', fontWeight: 600, color: 'var(--text-strong)' }}>
+            Attendance Status
+          </p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
             <div>
-              <div className="flex justify-between mb-2">
-                <span className="text-gray-600">✅ Attending</span>
-                <span className="font-semibold text-black">{stats.totalAttending} people</span>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6, fontFamily: 'var(--font-ui)', fontSize: 'var(--text-sm)', color: 'var(--text-body)' }}>
+                <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                  <Icon name="check-circle" size={13} style={{ color: 'var(--success)' }} /> Attending
+                </span>
+                <span style={{ fontWeight: 600, color: 'var(--text-strong)', fontFamily: 'var(--font-mono)', fontSize: 12 }}>
+                  {stats.totalAttending}
+                </span>
               </div>
-              <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-green-500"
-                  style={{
-                    width: `${
-                      stats.totalGuests > 0
-                        ? (stats.totalAttending / (stats.totalAttending + stats.totalNotAttending)) * 100
-                        : 0
-                    }%`,
-                  }}
-                />
-              </div>
+              <ProgressBar value={pct(stats.totalAttending, stats.totalAttending + stats.totalNotAttending)} tone="success" />
             </div>
             <div>
-              <div className="flex justify-between mb-2">
-                <span className="text-gray-600">❌ Not Attending</span>
-                <span className="font-semibold text-black">{stats.totalNotAttending} guests</span>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6, fontFamily: 'var(--font-ui)', fontSize: 'var(--text-sm)', color: 'var(--text-body)' }}>
+                <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                  <Icon name="x-circle" size={13} style={{ color: 'var(--danger)' }} /> Not Attending
+                </span>
+                <span style={{ fontWeight: 600, color: 'var(--text-strong)', fontFamily: 'var(--font-mono)', fontSize: 12 }}>
+                  {stats.totalNotAttending}
+                </span>
               </div>
-              <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-red-500"
-                  style={{
-                    width: `${stats.totalGuests > 0 ? (stats.totalNotAttending / stats.totalGuests) * 100 : 0}%`,
-                  }}
-                />
-              </div>
+              <ProgressBar value={pct(stats.totalNotAttending, stats.totalAttending + stats.totalNotAttending)} tone="neutral" />
             </div>
           </div>
-        </div>
+        </Card>
       </div>
 
       {/* Recent RSVPs */}
-      <div className="bg-white rounded-xl shadow-md p-6">
-        <h3 className="text-lg font-semibold text-gray-800 mb-4">Recent RSVPs</h3>
-        <div className="space-y-3">
-          {guests.length === 0 ? (
-            <p className="text-gray-500 text-center py-8">No RSVPs yet</p>
+      <Card padding="0">
+        <div style={{
+          padding: '14px 18px', borderBottom: '1px solid var(--border-subtle)',
+          background: 'var(--surface-sunken)',
+          fontFamily: 'var(--font-ui)', fontSize: 'var(--text-sm)',
+          fontWeight: 600, color: 'var(--text-muted)',
+          letterSpacing: 'var(--tracking-caps)', textTransform: 'uppercase',
+          borderRadius: 'var(--radius-lg) var(--radius-lg) 0 0',
+        }}>
+          Recent RSVPs
+        </div>
+        <div style={{ padding: '0 18px' }}>
+          {recentGuests.length === 0 ? (
+            <p style={{ padding: '32px 0', textAlign: 'center', color: 'var(--text-subtle)', fontFamily: 'var(--font-ui)', fontSize: 'var(--text-sm)', margin: 0 }}>
+              No RSVPs yet
+            </p>
           ) : (
-            guests
-              .sort((a, b) => new Date(b.respondedDate || 0).getTime() - new Date(a.respondedDate || 0).getTime())
-              .slice(0, 5)
-              .map((guest) => (
-                <div
-                  key={guest.guestId}
-                  className="flex justify-between items-center py-2 border-b border-gray-100 last:border-0"
-                >
-                  <div>
-                    <p className="font-medium text-gray-800">{guest.guestName}</p>
-                    <p className="text-sm text-gray-500">
-                      {guest.brideOrGroomSide} side • {guest.numberOfAttendees} guest(s)
-                    </p>
-                  </div>
-                  <div className="text-right">
-                    <span
-                      className={`px-3 py-1 rounded-full text-sm font-medium ${
-                        guest.isAttending ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
-                      }`}
-                    >
-                      {guest.isAttending ? 'Attending' : 'Not Attending'}
-                    </span>
-                    <p className="text-xs text-gray-400 mt-1">
-                      {guest.respondedDate ? new Date(guest.respondedDate).toLocaleDateString() : ''}
-                    </p>
-                  </div>
+            recentGuests.map((guest, i) => (
+              <div
+                key={guest.guestId}
+                style={{
+                  display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                  padding: '13px 0',
+                  borderBottom: i < recentGuests.length - 1 ? '1px solid var(--border-subtle)' : 'none',
+                }}
+              >
+                <div>
+                  <p style={{ margin: 0, fontFamily: 'var(--font-ui)', fontWeight: 600, fontSize: 'var(--text-md)', color: 'var(--text-strong)' }}>
+                    {guest.guestName}
+                  </p>
+                  <p style={{ margin: '2px 0 0', fontFamily: 'var(--font-ui)', fontSize: 'var(--text-sm)', color: 'var(--text-subtle)' }}>
+                    {guest.brideOrGroomSide} side · {guest.numberOfAttendees} guest(s)
+                  </p>
                 </div>
-              ))
+                <div style={{ textAlign: 'right' }}>
+                  <Badge tone={guest.isAttending ? 'success' : 'danger'}>
+                    {guest.isAttending ? 'Attending' : 'Not Attending'}
+                  </Badge>
+                  {guest.respondedDate && (
+                    <p style={{ margin: '4px 0 0', fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--text-subtle)' }}>
+                      {new Date(guest.respondedDate).toLocaleDateString()}
+                    </p>
+                  )}
+                </div>
+              </div>
+            ))
           )}
         </div>
-      </div>
+      </Card>
     </motion.div>
   );
 }

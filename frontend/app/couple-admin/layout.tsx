@@ -1,20 +1,25 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { getUser, logout } from '@/lib/auth';
 import { authService } from '@/lib/api';
 import AdminShell from '@/components/admin/AdminShell';
 
 const NAV_ITEMS = [
-  { id: 'dashboard',  label: 'Dashboard',  icon: 'home-simple',  href: '/couple-admin' },
-  { id: 'customize',  label: 'Customise',  icon: 'design-nib',   href: '/couple-admin/customize' },
+  { id: 'dashboard',  label: 'Dashboard',  icon: 'home',      href: '/couple-admin' },
+  { id: 'customize',  label: 'Customise',  icon: 'pen-tool',  href: '/couple-admin/customize' },
 ];
 
 export default function CoupleAdminLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
+  const pathname = usePathname();
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+
+  // The customize page is a full-screen editor (its own toolbar + 3-pane shell) —
+  // render it without the AdminShell chrome.
+  const fullScreen = pathname?.startsWith('/couple-admin/customize');
 
   useEffect(() => {
     const user = getUser();
@@ -46,6 +51,8 @@ export default function CoupleAdminLayout({ children }: { children: React.ReactN
       </div>
     );
   }
+
+  if (fullScreen) return <>{children}</>;
 
   return (
     <AdminShell

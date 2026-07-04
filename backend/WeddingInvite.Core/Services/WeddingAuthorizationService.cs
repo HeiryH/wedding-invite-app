@@ -12,12 +12,14 @@ namespace WeddingInvite.Core.Services
     public class WeddingAuthorizationService : IWeddingAuthorizationService
     {
         private readonly IUserRepository _userRepo;
-        
-        public WeddingAuthorizationService(IUserRepository userRepo)
+        private readonly IWeddingRepository _weddingRepo;
+
+        public WeddingAuthorizationService(IUserRepository userRepo, IWeddingRepository weddingRepo)
         {
             _userRepo = userRepo;
+            _weddingRepo = weddingRepo;
         }
-        
+
         public async Task<bool> CanAccessWeddingAsync(string userEmail, int weddingId)
         {
             Console.WriteLine($"[AUTH] Checking access for email: '{userEmail}' to wedding: {weddingId}");
@@ -29,17 +31,21 @@ namespace WeddingInvite.Core.Services
             if (user == null)
                 return false;
 
-            // Super admins can access any wedding
             if (user.Role == UserRoles.SuperAdmin)
                 return true;
 
-            // Couple admins can only access their own wedding
+            if (user.Role == UserRoles.HostAdmin)
+            {
+                var wedding = await _weddingRepo.GetByIdAsync(weddingId);
+                return wedding?.CreatedByUserId == user.UserId;
+            }
+
             if (user.Role == UserRoles.CoupleAdmin)
                 return user.WeddingId == weddingId;
 
             return false;
         }
-        
+
         public async Task<bool> IsSuperAdminAsync(string userEmail)
         {
             if (string.IsNullOrEmpty(userEmail))
@@ -48,7 +54,7 @@ namespace WeddingInvite.Core.Services
             var user = await _userRepo.GetByEmailAsync(userEmail);
             return user?.Role == UserRoles.SuperAdmin;
         }
-        
+
         public async Task<int?> GetUserWeddingIdAsync(string userEmail)
         {
             if (string.IsNullOrEmpty(userEmail))

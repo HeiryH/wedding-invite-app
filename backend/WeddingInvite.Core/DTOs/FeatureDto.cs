@@ -11,6 +11,11 @@ namespace WeddingInvite.Core.DTOs
         public int SortOrder { get; set; }
     }
     
+    public class FeatureUsageDto : FeatureDto
+    {
+        public int WeddingCount { get; set; }
+    }
+
     public class CreateFeatureDto
     {
         public string FeatureCode { get; set; } = string.Empty;

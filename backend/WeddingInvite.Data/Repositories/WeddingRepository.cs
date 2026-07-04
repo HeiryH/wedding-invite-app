@@ -15,11 +15,11 @@ namespace WeddingInvite.Data.Repositories
 
         public async Task<Wedding?> GetByIdAsync(int id)
         {
-            // Include related data (Guests and Wishes)
             return await _context.Weddings
                 .Include(w => w.Guests)
                 .Include(w => w.Wishes)
-                .Include(w => w.Template) // ADD THIS
+                .Include(w => w.Template)
+                .Include(w => w.CreatedBy)
                 .FirstOrDefaultAsync(w => w.WeddingId == id);
         }
 
@@ -28,7 +28,8 @@ namespace WeddingInvite.Data.Repositories
             return await _context.Weddings
                 .Include(w => w.Guests)
                 .Include(w => w.Wishes)
-                .Include(w => w.Template) // ADD THIS
+                .Include(w => w.Template)
+                .Include(w => w.CreatedBy)
                 .FirstOrDefaultAsync(w => w.CoupleName == coupleName);
         }
 
@@ -38,6 +39,7 @@ namespace WeddingInvite.Data.Repositories
                 .Include(w => w.Guests)
                 .Include(w => w.Wishes)
                 .Include(w => w.Template)
+                .Include(w => w.CreatedBy)
                 .OrderByDescending(w => w.WeddingDate)
                 .ToListAsync();
         }
@@ -84,6 +86,34 @@ namespace WeddingInvite.Data.Repositories
         {
             return await _context.Weddings
                 .AnyAsync(w => w.CoupleName == coupleName);
+        }
+
+        public async Task<IEnumerable<Wedding>> GetByCreatorIdAsync(int userId)
+        {
+            return await _context.Weddings
+                .Include(w => w.Guests)
+                .Include(w => w.Wishes)
+                .Include(w => w.Template)
+                .Where(w => w.CreatedByUserId == userId)
+                .OrderByDescending(w => w.WeddingDate)
+                .ToListAsync();
+        }
+
+        public async Task<IEnumerable<Wedding>> GetStalePrivateAsync(DateTime olderThan)
+        {
+            return await _context.Weddings
+                .Where(w => !w.IsPublic && w.CreatedDate < olderThan)
+                .ToListAsync();
+        }
+
+        public async Task HardDeleteAsync(int id)
+        {
+            var wedding = await _context.Weddings.FindAsync(id);
+            if (wedding != null)
+            {
+                _context.Weddings.Remove(wedding);
+                await _context.SaveChangesAsync();
+            }
         }
     }
 }

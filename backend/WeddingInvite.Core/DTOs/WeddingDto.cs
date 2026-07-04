@@ -12,6 +12,7 @@ namespace WeddingInvite.Core.DTOs
         public string VenueAddress { get; set; } = string.Empty;
         public bool IsActive { get; set; }
         public bool IsRsvpOpen { get; set; }
+        public bool IsPublic { get; set; }
 
         // Computed fields (not in database)
         public int TotalGuests { get; set; }
@@ -27,6 +28,8 @@ namespace WeddingInvite.Core.DTOs
         public int MaxPax { get; set; }
         public int MaxCapacity { get; set; }
         public bool ShowCapacityWarning { get; set; }
+        public int? CreatedByUserId { get; set; }
+        public string? CreatedByEmail { get; set; }
     }
 
     // What clients send when creating a wedding

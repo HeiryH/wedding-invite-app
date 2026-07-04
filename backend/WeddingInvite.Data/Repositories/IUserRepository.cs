@@ -10,5 +10,6 @@ namespace WeddingInvite.Data.Repositories
         Task<User> CreateAsync(User user);
         Task<User> UpdateAsync(User user);
         Task<bool> DeleteAsync(int id);
+        Task<IEnumerable<User>> GetAllByRoleAsync(string role);
     }
 }

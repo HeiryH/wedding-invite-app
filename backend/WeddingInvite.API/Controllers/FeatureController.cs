@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using WeddingInvite.Core.DTOs;
 using WeddingInvite.Core.Services;
@@ -31,6 +32,15 @@ namespace WeddingInvite.API.Controllers
             return Ok(features);
         }
         
+        // GET: api/feature/usage
+        [HttpGet("usage")]
+        [Authorize(Roles = "SUPER_ADMIN")]
+        public async Task<ActionResult<IEnumerable<FeatureUsageDto>>> GetUsage()
+        {
+            var features = await _featureService.GetAllWithUsageAsync();
+            return Ok(features);
+        }
+
         // GET: api/feature/5
         [HttpGet("{id}")]
         public async Task<ActionResult<FeatureDto>> GetById(int id)
@@ -57,6 +67,7 @@ namespace WeddingInvite.API.Controllers
         
         // POST: api/feature
         [HttpPost]
+        [Authorize(Roles = "SUPER_ADMIN")]
         public async Task<ActionResult<FeatureDto>> Create([FromBody] CreateFeatureDto createDto)
         {
             try
@@ -72,6 +83,7 @@ namespace WeddingInvite.API.Controllers
         
         // PUT: api/feature/5
         [HttpPut("{id}")]
+        [Authorize(Roles = "SUPER_ADMIN")]
         public async Task<ActionResult<FeatureDto>> Update(int id, [FromBody] UpdateFeatureDto updateDto)
         {
             try
@@ -87,6 +99,7 @@ namespace WeddingInvite.API.Controllers
         
         // DELETE: api/feature/5
         [HttpDelete("{id}")]
+        [Authorize(Roles = "SUPER_ADMIN")]
         public async Task<ActionResult> Delete(int id)
         {
             var result = await _featureService.DeleteAsync(id);

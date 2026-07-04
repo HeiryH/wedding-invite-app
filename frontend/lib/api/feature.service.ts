@@ -1,10 +1,22 @@
 import { apiClient } from './client';
-import { Feature } from './types';
+import { Feature, FeatureWithUsage, UpdateFeature } from './types';
 
 export const featureService = {
   // Get all features
   getAll: async (): Promise<Feature[]> => {
     const response = await apiClient.get<Feature[]>('/feature');
+    return response.data;
+  },
+
+  // Get all features with usage counts (super admin), ranked active-first by usage
+  getUsage: async (): Promise<FeatureWithUsage[]> => {
+    const response = await apiClient.get<FeatureWithUsage[]>('/feature/usage');
+    return response.data;
+  },
+
+  // Update a feature's metadata / active state (super admin)
+  update: async (id: number, data: UpdateFeature): Promise<Feature> => {
+    const response = await apiClient.put<Feature>(`/feature/${id}`, data);
     return response.data;
   },
 

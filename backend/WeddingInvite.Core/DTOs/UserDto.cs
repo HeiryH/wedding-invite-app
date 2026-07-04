@@ -7,6 +7,7 @@ namespace WeddingInvite.Core.DTOs
         public string Role { get; set; } = string.Empty;
         public int? WeddingId { get; set; }
         public bool IsActive { get; set; }
+        public string Tier { get; set; } = "FREE";
         public DateTime CreatedDate { get; set; }
     }
 }

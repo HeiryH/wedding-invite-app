@@ -52,7 +52,16 @@ namespace WeddingInvite.Core.Services
             return dtos;
         }
 
-        public async Task<WeddingDto> CreateAsync(CreateWeddingDto createDto)
+        public async Task<IEnumerable<WeddingDto>> GetByCreatorAsync(int userId)
+        {
+            var weddings = await _weddingRepo.GetByCreatorIdAsync(userId);
+            var dtos = new List<WeddingDto>();
+            foreach (var wedding in weddings)
+                dtos.Add(await MapToDto(wedding));
+            return dtos;
+        }
+
+        public async Task<WeddingDto> CreateAsync(CreateWeddingDto createDto, int? createdByUserId = null)
         {
             // BUSINESS VALIDATION
 
@@ -98,6 +107,7 @@ namespace WeddingInvite.Core.Services
                 PackageId = createDto.PackageId,
                 IsActive = true,
                 CreatedDate = DateTime.UtcNow,
+                CreatedByUserId = createdByUserId,
             };
 
             var created = await _weddingRepo.CreateAsync(wedding);
@@ -245,6 +255,7 @@ namespace WeddingInvite.Core.Services
                 EnabledFeaturesCount = wedding.WeddingFeatures.Count(wf => wf.IsEnabled),
                 IsActive = wedding.IsActive,
                 IsRsvpOpen = wedding.IsRsvpOpen,
+                IsPublic = wedding.IsPublic,
                 MaxPax = wedding.MaxPax,
                 MaxCapacity = wedding.MaxCapacity,
                 ShowCapacityWarning = wedding.ShowCapacityWarning,
@@ -252,8 +263,23 @@ namespace WeddingInvite.Core.Services
                 TemplateName = wedding.Template?.TemplateName,
                 TemplateCode = wedding.Template?.TemplateCode,
                 PackageId = wedding.PackageId,
-                PackageName = wedding.Package?.PackageName
+                PackageName = wedding.Package?.PackageName,
+                CreatedByUserId = wedding.CreatedByUserId,
+                CreatedByEmail = wedding.CreatedBy?.Email
             };
+        }
+
+        public async Task<int> PruneStalePrivateAsync(int daysOld)
+        {
+            var cutoff = DateTime.UtcNow.AddDays(-daysOld);
+            var stale = await _weddingRepo.GetStalePrivateAsync(cutoff);
+            var count = 0;
+            foreach (var w in stale)
+            {
+                await _weddingRepo.HardDeleteAsync(w.WeddingId);
+                count++;
+            }
+            return count;
         }
 
         private bool IsValidCoupleName(string coupleName)

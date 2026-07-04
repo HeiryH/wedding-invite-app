@@ -58,10 +58,18 @@ namespace WeddingInvite.Data.Repositories
         {
             var template = await _context.Templates.FindAsync(id);
             if (template == null) return false;
-            
+
             _context.Templates.Remove(template);
             await _context.SaveChangesAsync();
             return true;
+        }
+
+        public async Task<Dictionary<int, int>> GetWeddingCountsByTemplateAsync()
+        {
+            return await _context.Weddings
+                .GroupBy(w => w.TemplateId)
+                .Select(g => new { TemplateId = g.Key, Count = g.Count() })
+                .ToDictionaryAsync(x => x.TemplateId, x => x.Count);
         }
     }
 }

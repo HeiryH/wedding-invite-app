@@ -7,10 +7,12 @@ namespace WeddingInvite.Core.Services
     public class FeatureService : IFeatureService
     {
         private readonly IFeatureRepository _featureRepo;
-        
-        public FeatureService(IFeatureRepository featureRepo)
+        private readonly IWeddingFeatureRepository _weddingFeatureRepo;
+
+        public FeatureService(IFeatureRepository featureRepo, IWeddingFeatureRepository weddingFeatureRepo)
         {
             _featureRepo = featureRepo;
+            _weddingFeatureRepo = weddingFeatureRepo;
         }
         
         public async Task<FeatureDto?> GetByIdAsync(int id)
@@ -41,6 +43,30 @@ namespace WeddingInvite.Core.Services
             return features.Select(MapToDto);
         }
         
+        public async Task<IEnumerable<FeatureUsageDto>> GetAllWithUsageAsync()
+        {
+            var features = await _featureRepo.GetAllAsync();
+            var counts = await _weddingFeatureRepo.GetEnabledCountsByFeatureAsync();
+
+            return features
+                .Select(f => new FeatureUsageDto
+                {
+                    FeatureId = f.FeatureId,
+                    FeatureCode = f.FeatureCode,
+                    FeatureName = f.FeatureName,
+                    Description = f.Description,
+                    IsPremium = f.IsPremium,
+                    IsActive = f.IsActive,
+                    SortOrder = f.SortOrder,
+                    WeddingCount = counts.TryGetValue(f.FeatureId, out var c) ? c : 0
+                })
+                // Active first, then by usage (most-used first), then by name
+                .OrderByDescending(f => f.IsActive)
+                .ThenByDescending(f => f.WeddingCount)
+                .ThenBy(f => f.FeatureName)
+                .ToList();
+        }
+
         public async Task<FeatureDto> CreateAsync(CreateFeatureDto createDto)
         {
             // VALIDATION

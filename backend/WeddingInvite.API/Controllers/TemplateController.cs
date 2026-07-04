@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using WeddingInvite.Core.DTOs;
 using WeddingInvite.Core.Services;
@@ -29,6 +30,15 @@ namespace WeddingInvite.API.Controllers
             return Ok(templates);
         }
         
+        // GET: api/template/usage
+        [HttpGet("usage")]
+        [Authorize(Roles = "SUPER_ADMIN")]
+        public async Task<ActionResult<IEnumerable<TemplateUsageDto>>> GetUsage()
+        {
+            var templates = await _templateService.GetAllWithUsageAsync();
+            return Ok(templates);
+        }
+
         [HttpGet("{id}")]
         public async Task<ActionResult<TemplateDto>> GetById(int id)
         {
@@ -47,8 +57,24 @@ namespace WeddingInvite.API.Controllers
             
             if (template == null)
                 return NotFound(new { message = $"Template '{code}' not found" });
-            
+
             return Ok(template);
+        }
+
+        // PUT: api/template/5
+        [HttpPut("{id}")]
+        [Authorize(Roles = "SUPER_ADMIN")]
+        public async Task<ActionResult<TemplateDto>> Update(int id, [FromBody] UpdateTemplateMetaDto updateDto)
+        {
+            try
+            {
+                var template = await _templateService.UpdateAsync(id, updateDto);
+                return Ok(template);
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(new { message = ex.Message });
+            }
         }
     }
 }

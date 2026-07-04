@@ -2,6 +2,14 @@
 
 import { motion } from 'framer-motion';
 import { WeddingFeature } from '@/lib/api';
+import { FeatureToggle } from '@/components/ui/FeatureToggle';
+import { Icon } from '@/components/ui/Icon';
+
+const FEATURE_ICONS: Record<string, string> = {
+  PHOTO_BOOTH: 'camera',
+  RSVP:        'check-circle',
+  WISHES:      'message-circle',
+};
 
 interface FeaturesTabProps {
   features: WeddingFeature[];
@@ -11,53 +19,53 @@ interface FeaturesTabProps {
 export default function FeaturesTab({ features, onToggle }: FeaturesTabProps) {
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
+      initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4 }}
+      transition={{ duration: 0.3 }}
     >
-      <div className="bg-white rounded-xl shadow-md p-6">
-        <h3 className="text-lg font-semibold text-gray-800 mb-6">Wedding Features</h3>
+      {/* Info banner */}
+      <div style={{
+        display: 'flex', alignItems: 'flex-start', gap: 10,
+        padding: '12px 16px', borderRadius: 'var(--radius-md)',
+        background: 'var(--brand-subtle)', border: '1px solid var(--brand-border)',
+        marginBottom: 20,
+      }}>
+        <Icon name="info" size={16} style={{ color: 'var(--brand)', flexShrink: 0, marginTop: 1 }} />
+        <p style={{ margin: 0, fontSize: 'var(--text-sm)', fontFamily: 'var(--font-ui)', color: 'var(--brand)', lineHeight: 1.5 }}>
+          Disabling a feature hides its corresponding tab on the public invitation.
+        </p>
+      </div>
 
-        {/* Info Box */}
-        <div className="mb-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
-          <p className="text-sm text-blue-800">
-            💡 <strong>Note:</strong> Disabling features will hide their corresponding tabs.
-            For example, disabling "Photo Booth" will hide the Photos tab.
-          </p>
+      <div style={{
+        background: 'var(--surface-card)',
+        border: '1px solid var(--border-subtle)',
+        borderRadius: 'var(--radius-lg)',
+        overflow: 'hidden',
+      }}>
+        <div style={{
+          padding: '12px 18px', borderBottom: '1px solid var(--border-subtle)',
+          background: 'var(--surface-sunken)',
+          fontFamily: 'var(--font-ui)', fontSize: 'var(--text-sm)',
+          fontWeight: 600, color: 'var(--text-muted)',
+          letterSpacing: 'var(--tracking-caps)', textTransform: 'uppercase',
+        }}>
+          Features
         </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {features.map((feature) => (
-            <div
-              // key={feature.weddingFeatureId}
-              key={feature.featureId}
-              className={`p-6 rounded-xl border-2 transition-all cursor-pointer ${feature.isEnabled
-                  ? 'border-green-500 bg-green-50'
-                  : 'border-gray-200 bg-gray-50'
-                }`}
-              onClick={() => onToggle(feature.featureId, feature.featureCode, feature.isEnabled)}
-            >
-              <div className="flex justify-between items-start mb-3">
-                <div>
-                  <h4 className="font-semibold text-gray-800">{feature.featureName}</h4>
-                  {/* <p className="text-sm text-gray-600 mt-1">{feature.featureDescription}</p> */}
-                </div>
-                <div
-                  className={`w-12 h-6 rounded-full transition-colors ${feature.isEnabled ? 'bg-green-500' : 'bg-gray-300'
-                    }`}
-                >
-                  <div
-                    className={`w-5 h-5 rounded-full bg-white transform transition-transform ${feature.isEnabled ? 'translate-x-6' : 'translate-x-1'
-                      } mt-0.5`}
-                  />
-                </div>
-              </div>
-              <div className="text-xs text-gray-500">
-                {feature.isEnabled ? '✅ Enabled' : '❌ Disabled'}
-              </div>
-            </div>
-          ))}
-        </div>
+        {features.map((feature, i) => (
+          <FeatureToggle
+            key={feature.featureId}
+            icon={FEATURE_ICONS[feature.featureCode] ?? 'sparkles'}
+            title={feature.featureName}
+            description={feature.isEnabled ? 'Visible on the public invitation' : 'Hidden from guests'}
+            enabled={feature.isEnabled}
+            onChange={() => onToggle(feature.featureId, feature.featureCode, feature.isEnabled)}
+            style={{
+              border: 'none',
+              borderBottom: i < features.length - 1 ? '1px solid var(--border-subtle)' : 'none',
+              borderRadius: 0,
+            }}
+          />
+        ))}
       </div>
     </motion.div>
   );

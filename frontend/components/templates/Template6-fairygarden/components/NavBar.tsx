@@ -18,8 +18,8 @@ export default function NavBar({ items, active, onNav }: Props) {
   return (
     <motion.nav
       className={styles.nav}
-      initial={{ y: 80, opacity: 0 }}
-      animate={{ y: 0, opacity: 1 }}
+      initial={{ x: '-50%', y: 80, opacity: 0 }}
+      animate={{ x: '-50%', y: 0, opacity: 1 }}
       transition={{ delay: 1.2, duration: 0.6, ease: 'easeOut' }}
     >
       {items.map((item) => (

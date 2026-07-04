@@ -61,7 +61,7 @@ export default function RSVPPage() {
         numberOfAttendees: Number(data.numberOfAttendees),
       };
 
-      await guestService.create(wedding.weddingId, guestData);
+      await guestService.rsvp(wedding.weddingId, guestData);
 
       setSubmitSuccess(true);
 

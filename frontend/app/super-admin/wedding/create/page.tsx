@@ -225,9 +225,20 @@ export default function CreateWeddingPage() {
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 4 }}>
                       <div>
                         <h3 style={{ margin: '0 0 4px', fontSize: 15, fontFamily: 'var(--serif)', fontWeight: 400, color: 'var(--ink)', letterSpacing: '-0.01em' }}>{template.templateName}</h3>
-                        {template.isPremium && (
-                          <span style={{ fontSize: 11, background: 'var(--thistle-soft)', color: 'var(--ink-2)', padding: '2px 8px', borderRadius: 999, border: '1px solid var(--thistle)' }}>Premium</span>
-                        )}
+                        {(() => {
+                          const tier = template.tier ?? (template.isPremium ? 'PREMIUM' : 'FREE');
+                          const styles: Record<string, React.CSSProperties> = {
+                            FREE:    { background: 'var(--sand-1)', color: 'var(--text-muted)', border: '1px solid var(--border-subtle)' },
+                            PREMIUM: { background: 'color-mix(in srgb, var(--accent) 12%, transparent)', color: 'var(--accent-deep)', border: '1px solid color-mix(in srgb, var(--accent) 30%, transparent)' },
+                            PRO:     { background: 'var(--lavender)', color: 'var(--lavender-grey-deep)', border: '1px solid var(--lavender-deep)' },
+                          };
+                          const labels: Record<string, string> = { FREE: 'Free', PREMIUM: 'Premium', PRO: 'Pro' };
+                          return (
+                            <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 999, fontWeight: 500, ...(styles[tier] ?? styles.FREE) }}>
+                              {labels[tier] ?? tier}
+                            </span>
+                          );
+                        })()}
                       </div>
                       {formData.templateId === template.templateId && <Icon name="check-circle" size={16} style={{ color: 'var(--lavender-grey-ink)' }} />}
                     </div>

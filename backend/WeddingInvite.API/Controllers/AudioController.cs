@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using WeddingInvite.Core.Utilities;
 
 namespace WeddingInvite.API.Controllers;
 
@@ -26,6 +27,10 @@ public class AudioController : ControllerBase
 
         if (!file.ContentType.StartsWith("audio/"))
             return BadRequest(new { message = "Only audio files are allowed" });
+
+        // Content-Type and extension are client-controlled — verify the real bytes.
+        if (!FileSignatureValidator.IsValidAudio(file, extension))
+            return BadRequest(new { message = "File content does not match a valid audio format" });
 
         var uploadsFolder = Path.Combine("wwwroot", "uploads", weddingId.ToString(), "audio");
         Directory.CreateDirectory(uploadsFolder);

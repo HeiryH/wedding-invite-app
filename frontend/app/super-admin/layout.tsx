@@ -7,8 +7,11 @@ import { authService } from '@/lib/api';
 import AdminShell from '@/components/admin/AdminShell';
 
 const NAV_ITEMS = [
-  { id: 'dashboard', label: 'Dashboard', icon: 'home-simple', href: '/super-admin' },
+  { id: 'dashboard', label: 'Dashboard', icon: 'home', href: '/super-admin' },
+  { id: 'hosts',     label: 'Hosts',     icon: 'users',       href: '/super-admin/hosts' },
   { id: 'packages',  label: 'Packages',  icon: 'gift',        href: '/super-admin/packages' },
+  { id: 'features',  label: 'Features',  icon: 'sliders',     href: '/super-admin/features' },
+  { id: 'themes',    label: 'Themes',    icon: 'palette',     href: '/super-admin/themes' },
 ];
 
 export default function SuperAdminLayout({ children }: { children: React.ReactNode }) {
@@ -36,7 +39,7 @@ export default function SuperAdminLayout({ children }: { children: React.ReactNo
     return (
       <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--floral)' }}>
         <div style={{ textAlign: 'center' }}>
-          <div style={{ width: 48, height: 48, border: '3px solid var(--lavender-grey-ink)', borderTopColor: 'transparent', borderRadius: '50%', margin: '0 auto 16px', animation: 'spin 0.8s linear infinite' }} />
+          <div style={{ width: 48, height: 48, borderWidth: '3px', borderStyle: 'solid', borderColor: 'transparent var(--lavender-grey-ink) var(--lavender-grey-ink) var(--lavender-grey-ink)', borderRadius: '50%', margin: '0 auto 16px', animation: 'spin 0.8s linear infinite' }} />
           <p style={{ color: 'var(--muted)', fontSize: 14 }}>Checking authentication…</p>
         </div>
         <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
@@ -51,6 +54,7 @@ export default function SuperAdminLayout({ children }: { children: React.ReactNo
       userInitials="SA"
       role="Super Admin"
       fabHref="/super-admin/wedding/create"
+      homeHref="/home"
       sidePillLinks={[
         { label: 'New wedding', href: '/super-admin/wedding/create' },
         { label: 'Packages', href: '/super-admin/packages' },

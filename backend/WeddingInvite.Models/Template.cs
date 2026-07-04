@@ -18,7 +18,8 @@ namespace WeddingInvite.Models
         
         // Status
         public bool IsActive { get; set; } = true;
-        public bool IsPremium { get; set; } = false;
+        public bool IsPremium { get; set; } = false; // kept in sync with Tier (Tier != FREE)
+        public string Tier { get; set; } = "FREE"; // FREE | PREMIUM | PRO
         public int SortOrder { get; set; } = 0;
         
         public DateTime CreatedDate { get; set; } = DateTime.UtcNow;

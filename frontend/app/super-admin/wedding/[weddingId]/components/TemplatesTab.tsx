@@ -4,6 +4,13 @@ import { motion } from 'framer-motion';
 import { Template } from '@/lib/api';
 import { TemplatePreview } from '@/components/templates/TemplatePreview';
 
+type Tier = 'FREE' | 'PREMIUM' | 'PRO';
+const tierBadge: Record<Tier, { bg: string; text: string; label: string }> = {
+  FREE:    { bg: 'bg-gray-100',   text: 'text-gray-600',  label: 'Free' },
+  PREMIUM: { bg: 'bg-yellow-100', text: 'text-yellow-700', label: 'Premium' },
+  PRO:     { bg: 'bg-indigo-100', text: 'text-indigo-700', label: 'Pro' },
+};
+
 interface TemplatesTabProps {
   templates: Template[];
   currentTemplateId: number;
@@ -56,14 +63,18 @@ export default function TemplatesTab({
                       : 'border-gray-200 hover:border-gray-300 hover:shadow-md'
                   }`}
                 >
-                  {/* Premium Badge */}
-                  {template.isPremium && (
-                    <div className="absolute top-3 left-3 z-10">
-                      <span className="bg-gradient-to-r from-yellow-400 to-orange-500 text-white text-xs px-3 py-1 rounded-full font-semibold shadow-md">
-                        ⭐ Premium
-                      </span>
-                    </div>
-                  )}
+                  {/* Tier Badge */}
+                  {(() => {
+                    const t = template.tier ?? (template.isPremium ? 'PREMIUM' : 'FREE');
+                    const tb = tierBadge[t as Tier] ?? tierBadge.FREE;
+                    return (
+                      <div className="absolute top-3 left-3 z-10">
+                        <span className={`${tb.bg} ${tb.text} text-xs px-3 py-1 rounded-full font-semibold shadow-sm`}>
+                          {tb.label}
+                        </span>
+                      </div>
+                    );
+                  })()}
 
                   {/* Active Badge */}
                   {currentTemplateId === template.templateId && (

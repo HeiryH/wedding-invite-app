@@ -22,6 +22,7 @@ const DUMMY: Wedding = {
   totalAttending: 0,
   daysUntilWedding: 365,
   isActive: true,
+  isPublic: true,
   totalPhotos: 0,
   enabledFeaturesCount: 0,
   templateId: 0,

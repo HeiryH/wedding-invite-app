@@ -4,31 +4,18 @@ import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { getUser } from '@/lib/auth';
 
-export default function Home() {
+export default function RootPage() {
   const router = useRouter();
 
   useEffect(() => {
     const user = getUser();
-    
     if (user) {
-      if (user.role === 'SUPER_ADMIN') {
-        router.push('/super-admin');
-      } else if (user.role === 'COUPLE_ADMIN') {
-        router.push('/couple-admin');
-      } else {
-        router.push('/login');
-      }
-    } else {
-      router.push('/login');
+      if (user.role === 'SUPER_ADMIN')  { router.replace('/super-admin'); return; }
+      if (user.role === 'HOST_ADMIN')   { router.replace('/host-admin'); return; }
+      if (user.role === 'COUPLE_ADMIN') { router.replace('/couple-admin'); return; }
     }
+    router.replace('/home');
   }, [router]);
 
-  return (
-    <div className="min-h-screen flex items-center justify-center">
-      <div className="text-center">
-        <div className="w-16 h-16 border-4 border-rose-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-        <p className="text-gray-600">Redirecting...</p>
-      </div>
-    </div>
-  );
+  return null;
 }

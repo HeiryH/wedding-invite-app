@@ -446,7 +446,7 @@ export default function WeddingDetailPage() {
       <div style={{ display: 'flex', gap: 4, borderBottom: '1px solid var(--line)', overflowX: 'auto', scrollbarWidth: 'none', marginBottom: 22 }}>
         {availableTabs.map((tab) => (
           <button key={tab.key} onClick={() => setActiveTab(tab.key)}
-            style={{ padding: '12px 14px', fontSize: 13.5, color: activeTab === tab.key ? 'var(--ink)' : 'var(--muted)', borderBottom: `2px solid ${activeTab === tab.key ? 'var(--lavender-grey-ink)' : 'transparent'}`, marginBottom: -1, whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center', gap: 6, fontWeight: 500, background: 'none', border: 'none', borderBottomWidth: 2, borderBottomStyle: 'solid', borderBottomColor: activeTab === tab.key ? 'var(--lavender-grey-ink)' : 'transparent', cursor: 'pointer', transition: 'color .15s ease' }}>
+            style={{ padding: '12px 14px', fontSize: 13.5, color: activeTab === tab.key ? 'var(--ink)' : 'var(--muted)', marginBottom: -1, whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center', gap: 6, fontWeight: 500, background: 'none', border: 'none', borderBottomWidth: 2, borderBottomStyle: 'solid', borderBottomColor: activeTab === tab.key ? 'var(--lavender-grey-ink)' : 'transparent', cursor: 'pointer', transition: 'color .15s ease' }}>
             {tab.label}
             {tab.key === 'photos' && stats.pendingPhotos > 0 && (
               <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 18, height: 18, fontSize: 10, fontWeight: 700, background: 'var(--danger)', color: 'white', borderRadius: '50%' }}>

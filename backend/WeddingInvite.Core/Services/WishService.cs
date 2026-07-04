@@ -17,20 +17,30 @@ namespace WeddingInvite.Core.Services
             _weddingRepo = weddingRepo;
         }
         
+        public async Task<WishDto?> GetByIdAsync(int id)
+        {
+            var wish = await _wishRepo.GetByIdAsync(id);
+            return wish == null ? null : MapToDto(wish);
+        }
+
         public async Task<IEnumerable<WishDto>> GetByWeddingIdAsync(int weddingId)
         {
             var wishes = await _wishRepo.GetByWeddingIdAsync(weddingId);
             return wishes.Select(MapToDto);
         }
-        
+
         public async Task<WishDto> CreateAsync(int weddingId, CreateWishDto createDto)
         {
             // BUSINESS VALIDATION
-            
+
             // 1. Check if wedding exists
             var wedding = await _weddingRepo.GetByIdAsync(weddingId);
             if (wedding == null)
                 throw new KeyNotFoundException($"Wedding with ID {weddingId} not found");
+
+            // 1b. Block wishes on private (self-serve free) weddings
+            if (!wedding.IsPublic)
+                throw new InvalidOperationException("This invitation is not yet shared publicly.");
             
             // 2. Validate guest name
             if (string.IsNullOrWhiteSpace(createDto.GuestName))

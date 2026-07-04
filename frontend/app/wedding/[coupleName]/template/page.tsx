@@ -69,7 +69,7 @@ export default function Template2Page() {
   const handleRSVP = async (data: any) => {
     if (!wedding) return;
     
-    await guestService.create(wedding.weddingId, {
+    await guestService.rsvp(wedding.weddingId, {
       guestName: data.guestName,
       email: data.email,
       phoneNumber: data.phoneNumber,

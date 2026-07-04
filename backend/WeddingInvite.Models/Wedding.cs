@@ -26,10 +26,16 @@
         // Status
         public bool IsActive { get; set; } = true;
         public bool IsRsvpOpen { get; set; } = true;
+        // true = publicly accessible; false = private preview (self-serve free tier)
+        public bool IsPublic { get; set; } = true;
         public int MaxPax { get; set; } = 0;          // 0 = no limit (per-RSVP entry cap)
         public int MaxCapacity { get; set; } = 0;     // 0 = no limit (total wedding capacity)
         public bool ShowCapacityWarning { get; set; } = false;
         public DateTime CreatedDate { get; set; } = DateTime.UtcNow;
+
+        // Owner — null = created by super admin (Platform/Direct group)
+        public int? CreatedByUserId { get; set; }
+        public User? CreatedBy { get; set; }
 
         // Navigation properties - related data
         // One wedding has many guests

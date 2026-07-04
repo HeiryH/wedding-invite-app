@@ -865,7 +865,7 @@ export default function Template2({
                         <div>
                             <h3 className="text-2xl font-semibold mb-6 text-center">
                                 Gallery ({photos.length})
-                            </h3>Continue7:28 AM
+                            </h3>
                             {photos.length === 0 ? (
                                 <div className="text-center py-12 bg-white/80 rounded-3xl shadow-md">
                                     <p className="text-gray-500">No photos yet. Be the first to share!</p>

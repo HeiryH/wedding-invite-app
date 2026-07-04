@@ -2,6 +2,8 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
+using System.Threading.RateLimiting;
+using WeddingInvite.API;
 using WeddingInvite.Data;
 using WeddingInvite.Data.Repositories;
 using WeddingInvite.Core.Services;
@@ -13,6 +15,10 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+
+// Centralized error handling → structured logs + RFC-7807 ProblemDetails
+builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
+builder.Services.AddProblemDetails();
 
 // Database
 builder.Services.AddDbContext<AppDbContext>(options =>
@@ -50,6 +56,37 @@ builder.Services.AddScoped<IItineraryService, ItineraryService>();
 // JWT Authentication
 var jwtSettings = builder.Configuration.GetSection("JwtSettings");
 var secretKey = jwtSettings["SecretKey"];
+
+// ── Secret hygiene: fail fast on a missing/weak/leaked signing key ──────────────
+// The old default key was committed to source control; never allow it to sign tokens.
+const string LeakedDefaultKey = "YourSuperSecretKeyThatIsAtLeast32CharactersLong!";
+if (secretKey == LeakedDefaultKey)
+{
+    throw new InvalidOperationException(
+        "JwtSettings:SecretKey is set to the old committed default. Set a fresh secret via " +
+        "the JWT_SECRET env var (JwtSettings__SecretKey) before starting.");
+}
+if (string.IsNullOrWhiteSpace(secretKey) || Encoding.UTF8.GetByteCount(secretKey) < 32)
+{
+    if (builder.Environment.IsDevelopment())
+    {
+        // Dev convenience: generate an ephemeral key so `dotnet run` works with no setup.
+        // Tokens won't survive a restart — acceptable locally, never in production.
+        secretKey = Convert.ToBase64String(System.Security.Cryptography.RandomNumberGenerator.GetBytes(48));
+        Console.WriteLine("⚠️  JwtSettings:SecretKey not configured — using an ephemeral dev key. " +
+                          "Set JWT_SECRET for stable sessions.");
+    }
+    else
+    {
+        throw new InvalidOperationException(
+            "JwtSettings:SecretKey is missing or shorter than 32 bytes. " +
+            "Set a strong secret via the JWT_SECRET env var (JwtSettings__SecretKey).");
+    }
+}
+
+// Write the resolved key back so token generation (AuthService reads IConfiguration)
+// and validation below share one source of truth — critical for the dev ephemeral key.
+builder.Configuration["JwtSettings:SecretKey"] = secretKey;
 
 builder.Services.AddAuthentication(options =>
 {
@@ -97,6 +134,21 @@ builder.Services.AddCors(options =>
     });
 });
 
+// Rate limiting — throttle credential endpoints per client IP to blunt brute force.
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    options.AddPolicy("auth", httpContext =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey: httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            factory: _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 5,
+                Window = TimeSpan.FromMinutes(1),
+                QueueLimit = 0,
+            }));
+});
+
 var app = builder.Build();
 
 // Auto-apply migrations on startup (creates DB on first run)
@@ -107,6 +159,8 @@ using (var scope = app.Services.CreateScope())
 }
 
 // Configure the HTTP request pipeline.
+app.UseExceptionHandler(); // first: convert unhandled exceptions → logged ProblemDetails
+
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
@@ -116,6 +170,7 @@ if (app.Environment.IsDevelopment())
 app.UseStaticFiles(); // ADD THIS - Must be before UseRouting
 app.UseHttpsRedirection();
 app.UseCors("AllowFrontend");
+app.UseRateLimiter();
 app.UseAuthentication(); // ADD THIS - Must be before UseAuthorization
 app.UseAuthorization();
 app.MapControllers();

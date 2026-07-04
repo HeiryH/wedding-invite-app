@@ -1,5 +1,7 @@
 using Microsoft.AspNetCore.Http;
+using WeddingInvite.Core.Constants;
 using WeddingInvite.Core.DTOs;
+using WeddingInvite.Core.Utilities;
 using WeddingInvite.Data.Repositories;
 using WeddingInvite.Models;
 
@@ -70,7 +72,7 @@ namespace WeddingInvite.Core.Services
             // 2. Guest uploads require PHOTO_BOOTH feature
             if (!isCouple)
             {
-                var isPhotoBoothEnabled = await _weddingFeatureRepo.IsFeatureEnabledAsync(weddingId, "PHOTO_BOOTH");
+                var isPhotoBoothEnabled = await _weddingFeatureRepo.IsFeatureEnabledAsync(weddingId, FeatureCodes.PhotoBooth);
                 if (!isPhotoBoothEnabled)
                     throw new InvalidOperationException("Photo Booth feature is not enabled for this wedding");
 
@@ -96,6 +98,10 @@ namespace WeddingInvite.Core.Services
 
             if (!file.ContentType.StartsWith("image/"))
                 throw new ArgumentException("Only image files are allowed");
+
+            // Content-Type and extension are client-controlled — verify the real bytes.
+            if (!FileSignatureValidator.IsValidImage(file, extension))
+                throw new ArgumentException("File content does not match a valid image format");
 
             // 5. For couple uploads: upsert (delete existing slot if any)
             if (isCouple && uploadDto.TemplateSlot.HasValue)

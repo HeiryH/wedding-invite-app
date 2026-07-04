@@ -2,6 +2,7 @@ export interface User {
   email: string;
   role: string;
   weddingId?: number;
+  tier?: string;
 }
 
 export const getUser = (): User | null => {
@@ -20,6 +21,11 @@ export const getUser = (): User | null => {
 export const isSuperAdmin = (): boolean => {
   const user = getUser();
   return user?.role === 'SUPER_ADMIN';
+};
+
+export const isHostAdmin = (): boolean => {
+  const user = getUser();
+  return user?.role === 'HOST_ADMIN';
 };
 
 export const isCoupleAdmin = (): boolean => {

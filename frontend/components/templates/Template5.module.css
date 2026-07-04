@@ -485,7 +485,8 @@
 }
 
 .ceremonyTitle {
-  min-width: 450px;
+  min-width: min(450px, 100%);
+  max-width: 100%;
   color: white;
   font-family: var(--t5-font-script);
   font-size: clamp(2rem, 8vw, 3rem);

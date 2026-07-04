@@ -61,7 +61,7 @@ namespace WeddingInvite.Data.Migrations
                         new
                         {
                             FeatureId = 1,
-                            CreatedDate = new DateTime(2026, 6, 10, 9, 34, 6, 427, DateTimeKind.Utc).AddTicks(9460),
+                            CreatedDate = new DateTime(2026, 6, 19, 9, 25, 33, 415, DateTimeKind.Utc).AddTicks(1870),
                             Description = "Allow guests to upload and share photos from the wedding",
                             FeatureCode = "PHOTO_BOOTH",
                             FeatureName = "Photo Booth",
@@ -72,7 +72,7 @@ namespace WeddingInvite.Data.Migrations
                         new
                         {
                             FeatureId = 2,
-                            CreatedDate = new DateTime(2026, 6, 10, 9, 34, 6, 427, DateTimeKind.Utc).AddTicks(9580),
+                            CreatedDate = new DateTime(2026, 6, 19, 9, 25, 33, 415, DateTimeKind.Utc).AddTicks(1950),
                             Description = "Online gift registry with payment links",
                             FeatureCode = "E_GIFTS",
                             FeatureName = "E-Gifts Registry",
@@ -83,7 +83,7 @@ namespace WeddingInvite.Data.Migrations
                         new
                         {
                             FeatureId = 3,
-                            CreatedDate = new DateTime(2026, 6, 10, 9, 34, 6, 427, DateTimeKind.Utc).AddTicks(9580),
+                            CreatedDate = new DateTime(2026, 6, 19, 9, 25, 33, 415, DateTimeKind.Utc).AddTicks(1950),
                             Description = "Use your own domain name (e.g., johnandmary.wedding)",
                             FeatureCode = "CUSTOM_DOMAIN",
                             FeatureName = "Custom Domain",
@@ -94,7 +94,7 @@ namespace WeddingInvite.Data.Migrations
                         new
                         {
                             FeatureId = 4,
-                            CreatedDate = new DateTime(2026, 6, 10, 9, 34, 6, 427, DateTimeKind.Utc).AddTicks(9580),
+                            CreatedDate = new DateTime(2026, 6, 19, 9, 25, 33, 415, DateTimeKind.Utc).AddTicks(1950),
                             Description = "Guest RSVP and attendance tracking",
                             FeatureCode = "RSVP",
                             FeatureName = "RSVP Management",
@@ -105,7 +105,7 @@ namespace WeddingInvite.Data.Migrations
                         new
                         {
                             FeatureId = 5,
-                            CreatedDate = new DateTime(2026, 6, 10, 9, 34, 6, 427, DateTimeKind.Utc).AddTicks(9580),
+                            CreatedDate = new DateTime(2026, 6, 19, 9, 25, 33, 415, DateTimeKind.Utc).AddTicks(1950),
                             Description = "Guests can leave wishes and messages",
                             FeatureCode = "WISHES",
                             FeatureName = "Wishes & Guestbook",
@@ -496,6 +496,10 @@ namespace WeddingInvite.Data.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("Tier")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
                     b.HasKey("TemplateId");
 
                     b.HasIndex("TemplateCode")
@@ -508,7 +512,7 @@ namespace WeddingInvite.Data.Migrations
                         {
                             TemplateId = 1,
                             ComponentPath = "Template1",
-                            CreatedDate = new DateTime(2026, 6, 10, 9, 34, 6, 430, DateTimeKind.Utc).AddTicks(8370),
+                            CreatedDate = new DateTime(2026, 6, 19, 9, 25, 33, 417, DateTimeKind.Utc).AddTicks(5860),
                             Description = "Elegant rose and pink design with top navigation",
                             IsActive = true,
                             IsPremium = false,
@@ -517,13 +521,14 @@ namespace WeddingInvite.Data.Migrations
                             SortOrder = 1,
                             TemplateCode = "classic-rose",
                             TemplateName = "Classic Rose",
-                            ThumbnailUrl = ""
+                            ThumbnailUrl = "",
+                            Tier = "FREE"
                         },
                         new
                         {
                             TemplateId = 2,
                             ComponentPath = "Template2",
-                            CreatedDate = new DateTime(2026, 6, 10, 9, 34, 6, 430, DateTimeKind.Utc).AddTicks(8470),
+                            CreatedDate = new DateTime(2026, 6, 19, 9, 25, 33, 417, DateTimeKind.Utc).AddTicks(5940),
                             Description = "Luxurious yellow and gold single-page design with floating navigation",
                             IsActive = true,
                             IsPremium = true,
@@ -532,7 +537,8 @@ namespace WeddingInvite.Data.Migrations
                             SortOrder = 2,
                             TemplateCode = "golden-elegance",
                             TemplateName = "Golden Elegance",
-                            ThumbnailUrl = ""
+                            ThumbnailUrl = "",
+                            Tier = "PREMIUM"
                         },
                         new
                         {
@@ -547,7 +553,8 @@ namespace WeddingInvite.Data.Migrations
                             SortOrder = 3,
                             TemplateCode = "garden-romance",
                             TemplateName = "Garden Romance",
-                            ThumbnailUrl = ""
+                            ThumbnailUrl = "",
+                            Tier = "PREMIUM"
                         },
                         new
                         {
@@ -562,7 +569,8 @@ namespace WeddingInvite.Data.Migrations
                             SortOrder = 4,
                             TemplateCode = "minimal-noir",
                             TemplateName = "Minimal Noir",
-                            ThumbnailUrl = ""
+                            ThumbnailUrl = "",
+                            Tier = "PREMIUM"
                         },
                         new
                         {
@@ -577,7 +585,8 @@ namespace WeddingInvite.Data.Migrations
                             SortOrder = 6,
                             TemplateCode = "fairy-garden",
                             TemplateName = "Fairy Garden",
-                            ThumbnailUrl = ""
+                            ThumbnailUrl = "",
+                            Tier = "PREMIUM"
                         });
                 });
 
@@ -607,6 +616,10 @@ namespace WeddingInvite.Data.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("Tier")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
                     b.Property<int?>("WeddingId")
                         .HasColumnType("INTEGER");
 
@@ -623,11 +636,12 @@ namespace WeddingInvite.Data.Migrations
                         new
                         {
                             UserId = 1,
-                            CreatedDate = new DateTime(2026, 6, 10, 9, 34, 6, 591, DateTimeKind.Utc).AddTicks(3630),
+                            CreatedDate = new DateTime(2026, 6, 19, 9, 25, 33, 582, DateTimeKind.Utc).AddTicks(4480),
                             Email = "admin@wedding-cms.com",
                             IsActive = true,
-                            PasswordHash = "$2a$11$tMGkSQFx8SzK8piQYvpIneHDBdhxIm.PQUioMr94RbhND0OohtpPS",
-                            Role = "SUPER_ADMIN"
+                            PasswordHash = "$2a$11$cwZ7eny9.y3JYzCE6oNSOO8eJNxt7icp7pSJa5pKuUoYB1wY0Sxuu",
+                            Role = "SUPER_ADMIN",
+                            Tier = "FREE"
                         });
                 });
 
@@ -647,6 +661,9 @@ namespace WeddingInvite.Data.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("TEXT");
 
+                    b.Property<int?>("CreatedByUserId")
+                        .HasColumnType("INTEGER");
+
                     b.Property<DateTime>("CreatedDate")
                         .HasColumnType("TEXT");
 
@@ -656,6 +673,9 @@ namespace WeddingInvite.Data.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<bool>("IsActive")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("IsPublic")
                         .HasColumnType("INTEGER");
 
                     b.Property<bool>("IsRsvpOpen")
@@ -693,6 +713,8 @@ namespace WeddingInvite.Data.Migrations
 
                     b.HasIndex("CoupleName")
                         .IsUnique();
+
+                    b.HasIndex("CreatedByUserId");
 
                     b.HasIndex("PackageId");
 
@@ -880,6 +902,11 @@ namespace WeddingInvite.Data.Migrations
 
             modelBuilder.Entity("WeddingInvite.Models.Wedding", b =>
                 {
+                    b.HasOne("WeddingInvite.Models.User", "CreatedBy")
+                        .WithMany()
+                        .HasForeignKey("CreatedByUserId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
                     b.HasOne("WeddingInvite.Models.Package", "Package")
                         .WithMany("Weddings")
                         .HasForeignKey("PackageId")
@@ -890,6 +917,8 @@ namespace WeddingInvite.Data.Migrations
                         .HasForeignKey("TemplateId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+
+                    b.Navigation("CreatedBy");
 
                     b.Navigation("Package");
 

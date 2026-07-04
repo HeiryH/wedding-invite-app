@@ -8,6 +8,7 @@ namespace WeddingInvite.Models
         public string Role { get; set; } = string.Empty; // "SUPER_ADMIN" or "COUPLE_ADMIN"
         public int? WeddingId { get; set; } // NULL for super admin
         public bool IsActive { get; set; } = true;
+        public string Tier { get; set; } = "FREE"; // FREE | PREMIUM | PRO
         public DateTime CreatedDate { get; set; } = DateTime.UtcNow;
         
         // Navigation
@@ -18,6 +19,7 @@ namespace WeddingInvite.Models
     public static class UserRoles
     {
         public const string SuperAdmin = "SUPER_ADMIN";
+        public const string HostAdmin = "HOST_ADMIN";
         public const string CoupleAdmin = "COUPLE_ADMIN";
     }
 }

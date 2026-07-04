@@ -112,7 +112,7 @@ export default function WeddingInvitationPage() {
 
   const handleRSVP = async (data: any) => {
     if (!wedding) return;
-    await guestService.create(wedding.weddingId, {
+    await guestService.rsvp(wedding.weddingId, {
       guestName: data.guestName,
       email: data.email,
       phoneNumber: data.phoneNumber,
@@ -170,12 +170,54 @@ export default function WeddingInvitationPage() {
     );
   }
 
+  // Gate: private wedding (free tier / self-registered) — only the owner can view
+  if (!wedding.isPublic) {
+    const viewer = typeof window !== 'undefined'
+      ? (() => { try { return JSON.parse(localStorage.getItem('user') ?? 'null'); } catch { return null; } })()
+      : null;
+    const isOwner = viewer?.weddingId === wedding.weddingId;
+
+    if (!isOwner) {
+      return (
+        <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(135deg, #ecfdf5 0%, #f0fdf4 100%)', padding: 32 }}>
+          <div style={{ background: '#fff', borderRadius: 24, padding: '48px 40px', maxWidth: 420, width: '100%', boxShadow: '0 8px 40px rgba(0,0,0,0.08)', textAlign: 'center', border: '1px solid #e7f5ee' }}>
+            <div style={{ width: 64, height: 64, borderRadius: '50%', background: '#ecfdf5', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px', fontSize: 28 }}>
+              🔒
+            </div>
+            <h1 style={{ margin: '0 0 10px', fontFamily: 'Georgia, serif', fontSize: 26, fontWeight: 700, color: '#1c1815' }}>
+              Private Invitation
+            </h1>
+            <p style={{ margin: '0 0 28px', fontSize: 15, color: '#645a4d', lineHeight: 1.6 }}>
+              This invitation is not yet shared publicly. The couple is still setting things up.
+            </p>
+            <a
+              href="/"
+              style={{ display: 'inline-block', background: '#059669', color: '#fff', padding: '13px 28px', borderRadius: 999, fontSize: 14, fontWeight: 700, textDecoration: 'none' }}
+            >
+              Create your own invitation
+            </a>
+          </div>
+        </div>
+      );
+    }
+  }
+
   return (
     <>
       {/* Preview Mode Banner */}
       {previewTemplateId && (
         <div className="fixed top-0 left-0 right-0 z-50 bg-yellow-500 text-white px-4 py-3 text-center font-semibold shadow-lg">
           🔍 PREVIEW MODE - Viewing Template {currentTemplateId} (Not Saved)
+        </div>
+      )}
+
+      {/* Private preview banner (owner viewing their own private wedding) */}
+      {!wedding.isPublic && !previewTemplateId && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 50, background: '#059669', color: '#fff', padding: '10px 20px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, fontSize: 13, fontFamily: 'system-ui, sans-serif' }}>
+          <span>🔒 Private preview — only you can see this</span>
+          <a href="/couple-admin" style={{ color: '#fff', fontWeight: 700, textDecoration: 'underline', fontSize: 12 }}>
+            Back to dashboard
+          </a>
         </div>
       )}
 

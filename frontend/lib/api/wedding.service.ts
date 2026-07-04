@@ -2,9 +2,15 @@ import { apiClient } from './client';
 import { Wedding, CreateWedding, UpdateWeddingDto } from './types';
 
 export const weddingService = {
-  // Get all weddings
+  // Get all weddings (super admin only)
   getAll: async (): Promise<Wedding[]> => {
     const response = await apiClient.get<Wedding[]>('/wedding');
+    return response.data;
+  },
+
+  // Get weddings created by the current host admin
+  getMine: async (): Promise<Wedding[]> => {
+    const response = await apiClient.get<Wedding[]>('/wedding/mine');
     return response.data;
   },
 

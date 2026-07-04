@@ -17,68 +17,347 @@
   font-display: swap;
 }
 
+/* ════════════════════════════════════════════════════════════════
+   Convive Design System tokens (admin UI)
+   Brand recolor: dusk-blue #436a8a replaces claret red.
+   Gold accent + ivory/sand neutrals + warm shadows kept as-is.
+   ════════════════════════════════════════════════════════════════ */
+
 :root {
+  /* ── Legacy template vars (keep for existing templates) ─── */
   --background: #ffffff;
   --foreground: #171717;
+  /* serif still available for invitation templates */
+  --serif: var(--font-display);
 
-  /* ── Admin design system tokens ───────────────────────────────────────── */
-  --lavender-grey: #8e9aaf;
-  --lavender-grey-deep: #6d7a92;
-  --lavender-grey-ink: #3b4456;
-  --thistle: #cbc0d3;
-  --thistle-soft: #e4dce9;
-  --floral: #FFFCF2;
-  --floral-deep: #f6f1e4;
-  --veil: #feeafa;
-  --veil-deep: #f9d8ee;
-  --lavender: #dee2ff;
-  --lavender-deep: #c4cbff;
-  --ink: #2a2a35;
-  --ink-2: #4a4a58;
-  --muted: #8b8a96;
-  --line: #ece6e7;
-  --line-2: #e1d9e2;
-  --success: #4a7d5f;
-  --warn: #a8743a;
-  --danger: #a14a52;
+  /* ── Gold accent ramp ───────────────────────────────────── */
+  --gold-50:  #fbf6e9;
+  --gold-100: #f4e8c6;
+  --gold-200: #e9d291;
+  --gold-300: #dcb95c;
+  --gold-400: #cca23a;
+  --gold-500: #b3882b;
+  --gold-600: #8f6a22;
+  --gold-700: #6d501e;
+  --gold-800: #4e3a19;
 
-  --radius-xs: 8px;
-  --radius-sm: 10px;
-  --radius-md: 14px;
-  --radius-lg: 20px;
-  --radius-xl: 28px;
+  /* ── Sand/neutral ramp (warm paper & ink) ────────────────── */
+  --sand-0:   #ffffff;
+  --sand-25:  #fdfbf7;
+  --sand-50:  #faf6ef;
+  --sand-100: #f3ece1;
+  --sand-150: #ebe2d4;
+  --sand-200: #ded2c0;
+  --sand-300: #c7b8a3;
+  --sand-400: #a89a86;
+  --sand-500: #847766;
+  --sand-600: #645a4d;
+  --sand-700: #46403a;
+  --sand-800: #312c28;
+  --sand-900: #211d1a;
+  --espresso: #1c1815;
 
-  --shadow-sm: 0 1px 2px rgba(74,68,86,.04), 0 1px 1px rgba(74,68,86,.03);
-  --shadow-md: 0 4px 14px rgba(74,68,86,.06), 0 1px 3px rgba(74,68,86,.04);
-  --shadow-lg: 0 16px 40px rgba(74,68,86,.12), 0 4px 12px rgba(74,68,86,.06);
+  /* ── Celebration palette ─────────────────────────────────── */
+  --hue-claret:     #a83541;
+  --hue-terracotta: #bf6a4a;
+  --hue-ochre:      #c79436;
+  --hue-sage:       #7c8a63;
+  --hue-eucalypt:   #5f7d6e;
+  --hue-dusk:       #4f6d8c;
+  --hue-plum:       #6f4a64;
+  --hue-mauve:      #9b6a78;
+  --hue-ink:        #2f3a44;
 
-  --serif: var(--font-instrument-serif), 'Instrument Serif', ui-serif, Georgia, serif;
-  --sans: 'Geist', ui-sans-serif, system-ui, sans-serif;
-  --mono: 'Geist Mono', ui-monospace, monospace;
+  /* ── Brand — dusk-blue (replaces claret) ─────────────────── */
+  --brand:           #436a8a;
+  --brand-hover:     color-mix(in srgb, #436a8a 86%, #000);
+  --brand-active:    color-mix(in srgb, #436a8a 74%, #000);
+  --brand-subtle:    #e7eef4;
+  --brand-subtle-2:  #d3e0ec;
+  --brand-border:    #bcd0e0;
+  --brand-on:        #ffffff;
+  --brand-gradient:  linear-gradient(165deg, #436a8a, color-mix(in srgb, #436a8a 70%, #000));
+
+  /* ── Emerald ramp (marketing / freemium primary) ─────────── */
+  --emerald-50:  #ecfdf5;
+  --emerald-100: #d1fae5;
+  --emerald-200: #a7f3d0;
+  --emerald-300: #6ee7b7;
+  --emerald-400: #34d399;
+  --emerald-500: #10b981;
+  --emerald-600: #059669;
+  --emerald-700: #047857;
+  --emerald-800: #065f46;
+  --emerald-900: #064e3b;
+
+  /* ── Emerald semantic roles ───────────────────────────────── */
+  --em:          var(--emerald-600);
+  --em-hover:    var(--emerald-700);
+  --em-active:   var(--emerald-800);
+  --em-subtle:   var(--emerald-50);
+  --em-border:   var(--emerald-200);
+  --em-on:       #ffffff;
+  --em-gradient: linear-gradient(135deg, var(--emerald-600) 0%, var(--emerald-500) 100%);
+
+  /* ── Accent (gold) ───────────────────────────────────────── */
+  --accent:          var(--gold-400);
+  --accent-hover:    var(--gold-500);
+  --accent-subtle:   var(--gold-50);
+  --accent-deep:     var(--gold-700);
+  --accent-on:       var(--espresso);
+
+  /* ── Surfaces ─────────────────────────────────────────────── */
+  --surface-app:     var(--sand-50);
+  --surface-card:    var(--sand-0);
+  --surface-sunken:  var(--sand-100);
+  --surface-raised:  var(--sand-0);
+  --surface-inverse: var(--espresso);
+  --surface-overlay: rgba(28, 24, 21, 0.46);
+  --surface-canvas:  var(--sand-150);
+
+  /* ── Text ─────────────────────────────────────────────────── */
+  --text-strong:    var(--espresso);
+  --text-body:      var(--sand-800);
+  --text-muted:     var(--sand-600);
+  --text-subtle:    var(--sand-500);
+  --text-faint:     var(--sand-400);
+  --text-on-inverse: var(--sand-50);
+  --text-link:      color-mix(in srgb, #436a8a 88%, #000);
+
+  /* ── Borders & lines ──────────────────────────────────────── */
+  --border-subtle:   var(--sand-150);
+  --border-default:  var(--sand-200);
+  --border-strong:   var(--sand-300);
+  --border-inverse:  rgba(255,255,255,0.14);
+  --divider:         var(--sand-150);
+  --ring:            color-mix(in srgb, #436a8a 38%, transparent);
+
+  /* ── Semantic states ──────────────────────────────────────── */
+  --success:         #3f7d57;
+  --success-subtle:  #e8f2eb;
+  --success-border:  #bcd9c7;
+  --warning:         #b9821f;
+  --warning-subtle:  #fbf1da;
+  --warning-border:  #ecd49b;
+  --danger:          #b23b3b;
+  --danger-subtle:   #fbe9e7;
+  --danger-border:   #eab7b2;
+  /* info nudged from #436a8a to avoid collision with brand */
+  --info:            #3a5f7d;
+  --info-subtle:     #e2edf4;
+  --info-border:     #b4cede;
+
+  /* ── Status (invite lifecycle) ────────────────────────────── */
+  --status-draft:     var(--sand-500);
+  --status-scheduled: var(--info);
+  --status-live:      var(--success);
+  --status-closed:    var(--sand-600);
+
+  /* ── Legacy token aliases (used by older tab components) ──── */
+  --line:              var(--border-subtle);
+  --line-2:            var(--border-default);
+  --ink:               var(--text-strong);
+  --ink-2:             var(--text-body);
+  --muted:             var(--text-muted);
+  --lavender:          var(--brand-subtle);
+  --lavender-deep:     var(--brand-border);
+  --lavender-grey:     var(--brand-border);
+  --lavender-grey-ink: var(--brand);
+  --floral:            var(--surface-sunken);
+  --veil:              #e8f0ef;
+  --veil-deep:         #b0ccc4;
+
+  /* ── Typography ───────────────────────────────────────────── */
+  --font-display: var(--font-cormorant), "Cormorant Garamond", "Hoefler Text", Georgia, serif;
+  --font-ui:      var(--font-hanken), "Hanken Grotesk", ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-mono:    var(--font-jetbrains), "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+
+  --fw-regular:  400;
+  --fw-medium:   500;
+  --fw-semibold: 600;
+  --fw-bold:     700;
+  --fw-display:  600;
+
+  --text-2xs:  0.6875rem;
+  --text-xs:   0.75rem;
+  --text-sm:   0.8125rem;
+  --text-md:   0.875rem;
+  --text-base: 0.9375rem;
+  --text-lg:   1.0625rem;
+  --text-xl:   1.25rem;
+  --text-2xl:  1.5rem;
+  --text-3xl:  1.875rem;
+
+  --display-sm:  2rem;
+  --display-md:  2.75rem;
+  --display-lg:  3.75rem;
+  --display-xl:  5rem;
+  --display-2xl: 6.5rem;
+
+  --leading-tight:   1.1;
+  --leading-snug:    1.25;
+  --leading-normal:  1.5;
+  --leading-relaxed: 1.65;
+  --leading-display: 1.04;
+
+  --tracking-tighter: -0.02em;
+  --tracking-tight:   -0.01em;
+  --tracking-normal:  0;
+  --tracking-wide:    0.02em;
+  --tracking-wider:   0.06em;
+  --tracking-caps:    0.14em;
+
+  --eyebrow-size:     var(--text-xs);
+  --eyebrow-tracking: var(--tracking-caps);
+  --label-size:       var(--text-md);
+  --body-size:        var(--text-base);
+
+  /* ── Spacing (4px base) ───────────────────────────────────── */
+  --space-0:   0;
+  --space-px:  1px;
+  --space-0-5: 0.125rem;
+  --space-1:   0.25rem;
+  --space-1-5: 0.375rem;
+  --space-2:   0.5rem;
+  --space-2-5: 0.625rem;
+  --space-3:   0.75rem;
+  --space-4:   1rem;
+  --space-5:   1.25rem;
+  --space-6:   1.5rem;
+  --space-7:   1.75rem;
+  --space-8:   2rem;
+  --space-10:  2.5rem;
+  --space-12:  3rem;
+  --space-16:  4rem;
+  --space-20:  5rem;
+  --space-24:  6rem;
+
+  /* ── Radii ────────────────────────────────────────────────── */
+  --radius-xs:   4px;
+  --radius-sm:   6px;
+  --radius-md:   9px;
+  --radius-lg:   14px;
+  --radius-xl:   20px;
+  --radius-2xl:  28px;
+  --radius-full: 999px;
+
+  /* ── Control heights ──────────────────────────────────────── */
+  --control-sm: 32px;
+  --control-md: 38px;
+  --control-lg: 44px;
+
+  /* ── Layout ───────────────────────────────────────────────── */
+  --container:       1200px;
+  --container-wide:  1360px;
+  --container-prose: 680px;
+  --sidebar-w:       264px;
+  --topbar-h:        60px;
+
+  /* ── Z-index ──────────────────────────────────────────────── */
+  --z-base:    0;
+  --z-raised:  10;
+  --z-sticky:  100;
+  --z-overlay: 1000;
+  --z-modal:   1100;
+  --z-toast:   1200;
+  --z-tooltip: 1300;
+
+  /* ── Elevation (warm espresso tint) ───────────────────────── */
+  --shadow-xs:   0 1px 2px rgba(33, 29, 26, 0.06);
+  --shadow-sm:   0 1px 2px rgba(33, 29, 26, 0.05), 0 2px 6px rgba(33, 29, 26, 0.06);
+  --shadow-md:   0 2px 4px rgba(33, 29, 26, 0.05), 0 6px 16px rgba(33, 29, 26, 0.09);
+  --shadow-lg:   0 4px 10px rgba(33, 29, 26, 0.07), 0 16px 36px rgba(33, 29, 26, 0.12);
+  --shadow-xl:   0 8px 18px rgba(33, 29, 26, 0.09), 0 28px 60px rgba(33, 29, 26, 0.16);
+  --shadow-inset: inset 0 1px 2px rgba(33, 29, 26, 0.10);
+  --shadow-foil: 0 1px 0 rgba(255,255,255,0.5) inset, 0 2px 8px rgba(67, 106, 138, 0.20);
+  --shadow-focus: 0 0 0 3px var(--ring);
+  --card-shadow:       var(--shadow-sm);
+  --card-shadow-hover: var(--shadow-md);
+
+  /* ── Motion ───────────────────────────────────────────────── */
+  --dur-instant: 80ms;
+  --dur-fast:    140ms;
+  --dur-base:    200ms;
+  --dur-slow:    320ms;
+  --dur-slower:  500ms;
+
+  --ease-out:      cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-in-out:   cubic-bezier(0.65, 0, 0.35, 1);
+  --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-emphasis: cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  --transition-control:
+    background-color var(--dur-fast) var(--ease-standard),
+    border-color     var(--dur-fast) var(--ease-standard),
+    color            var(--dur-fast) var(--ease-standard),
+    box-shadow       var(--dur-fast) var(--ease-standard);
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-hanken), var(--font-geist-sans);
+  --font-mono: var(--font-jetbrains), var(--font-geist-mono);
 }
 
-/* App is light-mode only — no dark mode override */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --dur-instant: 0ms;
+    --dur-fast:    0ms;
+    --dur-base:    0ms;
+    --dur-slow:    0ms;
+    --dur-slower:  0ms;
+  }
+}
+
+/* ── Base reset ─────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--surface-app);
+  color: var(--text-body);
+  font-family: var(--font-ui);
+  font-size: var(--body-size);
+  line-height: var(--leading-normal);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
 }
 
-/* Ensure form elements always render with dark text on white background,
-   regardless of OS color scheme. Templates override these locally. */
+/* Utility classes */
+.display {
+  font-family: var(--font-display);
+  font-weight: var(--fw-display);
+  line-height: var(--leading-display);
+  letter-spacing: var(--tracking-tight);
+  color: var(--text-strong);
+}
+
+.eyebrow {
+  font-family: var(--font-ui);
+  font-size: var(--eyebrow-size);
+  font-weight: var(--fw-semibold);
+  letter-spacing: var(--eyebrow-tracking);
+  text-transform: uppercase;
+  color: var(--text-subtle);
+}
+
+:focus-visible {
+  outline: none;
+  box-shadow: var(--shadow-focus);
+  border-radius: var(--radius-sm);
+}
+
+/* Ensure form elements render correctly across OS themes.
+   Templates override these locally. */
 @layer base {
   input:not([type="checkbox"]):not([type="radio"]):not([type="color"]):not([type="range"]),
   select,
   textarea {
-    color: #171717;
-    background-color: #ffffff;
+    color: var(--text-body);
+    background-color: var(--surface-card);
   }
 }
+
+/* Hero edit inputs (on gradient dark background) */
+.hero-inp::placeholder { color: rgba(255,255,255,.6); }

@@ -12,13 +12,29 @@ import {
 import SeatingTab from '@/app/super-admin/wedding/[weddingId]/components/SeatingTab';
 import GuestsTab from '@/app/super-admin/wedding/[weddingId]/components/GuestsTab';
 import WishesTab from '@/app/super-admin/wedding/[weddingId]/components/WishesTab';
-import Icon from '@/components/admin/Icon';
+import { Icon } from '@/components/ui/Icon';
+import { Button } from '@/components/ui/Button';
+import { Input } from '@/components/ui/Input';
+import { Select } from '@/components/ui/Select';
+import { Switch } from '@/components/ui/Switch';
+import { Badge } from '@/components/ui/Badge';
+import { Card, StatCard } from '@/components/ui/Card';
+import { Tabs } from '@/components/ui/Tabs';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { UpgradeDialog } from '@/components/templates/UpgradeDialog';
+import { tierRank } from '@/lib/tierRank';
 
 type ActiveTab = 'guests' | 'wishes' | 'photos' | 'seating';
 
 // ── Add / Edit Guest Modal ─────────────────────────────────────────────────────
 function GuestModal({ guest, onClose, onSave }: { guest: Guest | null; onClose: () => void; onSave: (data: Partial<Guest>) => Promise<void> }) {
-  const [form, setForm] = useState({ guestName: guest?.guestName ?? '', email: guest?.email ?? '', phoneNumber: guest?.phoneNumber ?? '', brideOrGroomSide: guest?.brideOrGroomSide ?? 'Bride', songRequest: guest?.songRequest ?? '' });
+  const [form, setForm] = useState({
+    guestName: guest?.guestName ?? '',
+    email: guest?.email ?? '',
+    phoneNumber: guest?.phoneNumber ?? '',
+    brideOrGroomSide: guest?.brideOrGroomSide ?? 'Bride',
+    songRequest: guest?.songRequest ?? '',
+  });
   const [saving, setSaving] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -30,48 +46,47 @@ function GuestModal({ guest, onClose, onSave }: { guest: Guest | null; onClose: 
     finally { setSaving(false); }
   };
 
-  const inp: React.CSSProperties = { width: '100%', padding: '9px 12px', border: '1px solid var(--line-2)', borderRadius: 10, fontSize: 14, color: 'var(--ink)', outline: 'none', background: 'white', boxSizing: 'border-box' };
-
   return (
-    <div style={{ position: 'fixed', inset: 0, background: 'rgba(42,42,53,.35)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50, padding: 16, backdropFilter: 'blur(4px)' }}>
-      <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
-        style={{ background: 'var(--floral)', borderRadius: 'var(--radius-lg)', boxShadow: 'var(--shadow-lg)', width: '100%', maxWidth: 440 }}>
-        <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--line)', fontFamily: 'var(--serif)', fontSize: 22, letterSpacing: '-0.01em', color: 'var(--ink)' }}>
-          {guest?.guestId ? 'Edit Guest' : 'Add Guest'}
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(28,32,40,.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 'var(--z-modal)' as unknown as number, padding: 16, backdropFilter: 'blur(6px)' }}>
+      <motion.div
+        initial={{ opacity: 0, scale: 0.96, y: 8 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        style={{ background: 'var(--surface-card)', borderRadius: 'var(--radius-xl)', boxShadow: 'var(--shadow-xl)', width: '100%', maxWidth: 440, border: '1px solid var(--border-subtle)' }}
+      >
+        <div style={{ padding: '18px 24px', borderBottom: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <span style={{ fontFamily: 'var(--font-display)', fontSize: 22, letterSpacing: 'var(--tracking-tight)', color: 'var(--text-strong)' }}>
+            {guest?.guestId ? 'Edit Guest' : 'Add Guest'}
+          </span>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', display: 'flex', padding: 4 }}>
+            <Icon name="x" size={18} />
+          </button>
         </div>
         <form onSubmit={handleSubmit} style={{ padding: 24, display: 'flex', flexDirection: 'column', gap: 14 }}>
-          <div>
-            <label style={{ display: 'block', fontSize: 11, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--muted)', marginBottom: 6 }}>Name *</label>
-            <input style={inp} value={form.guestName} onChange={e => setForm({ ...form, guestName: e.target.value })} required />
-          </div>
+          <Input
+            label="Name"
+            required
+            value={form.guestName}
+            onChange={e => setForm({ ...form, guestName: e.target.value })}
+            placeholder="Guest name"
+          />
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-            <div>
-              <label style={{ display: 'block', fontSize: 11, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--muted)', marginBottom: 6 }}>Email</label>
-              <input style={inp} type="email" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} />
-            </div>
-            <div>
-              <label style={{ display: 'block', fontSize: 11, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--muted)', marginBottom: 6 }}>Phone</label>
-              <input style={inp} type="tel" value={form.phoneNumber} onChange={e => setForm({ ...form, phoneNumber: e.target.value })} />
-            </div>
+            <Input label="Email" type="email" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} placeholder="Optional" />
+            <Input label="Phone" type="tel" value={form.phoneNumber} onChange={e => setForm({ ...form, phoneNumber: e.target.value })} placeholder="Optional" />
           </div>
-          <div>
-            <label style={{ display: 'block', fontSize: 11, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--muted)', marginBottom: 6 }}>Side</label>
-            <select style={{ ...inp }} value={form.brideOrGroomSide} onChange={e => setForm({ ...form, brideOrGroomSide: e.target.value as any })}>
-              <option value="Bride">Bride's Side</option>
-              <option value="Groom">Groom's Side</option>
-            </select>
-          </div>
-          <div>
-            <label style={{ display: 'block', fontSize: 11, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--muted)', marginBottom: 6 }}>Song Request</label>
-            <input style={inp} value={form.songRequest} onChange={e => setForm({ ...form, songRequest: e.target.value })} />
-          </div>
+          <Select
+            label="Side"
+            value={form.brideOrGroomSide}
+            onChange={e => setForm({ ...form, brideOrGroomSide: e.target.value as 'Bride' | 'Groom' })}
+            options={[{ value: 'Bride', label: "Bride's Side" }, { value: 'Groom', label: "Groom's Side" }]}
+          />
+          <Input label="Song Request" value={form.songRequest} onChange={e => setForm({ ...form, songRequest: e.target.value })} placeholder="Optional" />
           <div style={{ display: 'flex', gap: 10, paddingTop: 4 }}>
-            <button type="submit" disabled={saving} style={{ flex: 1, padding: '10px 14px', background: 'var(--lavender-grey-ink)', color: 'var(--floral)', border: 'none', borderRadius: 12, fontSize: 13.5, fontWeight: 500, cursor: 'pointer', opacity: saving ? 0.6 : 1 }}>
+            <Button variant="primary" tone="brand" type="submit" disabled={saving} fullWidth>
               {saving ? 'Saving…' : 'Save'}
-            </button>
-            <button type="button" onClick={onClose} style={{ flex: 1, padding: '10px 14px', background: 'white', color: 'var(--ink)', border: '1px solid var(--line-2)', borderRadius: 12, fontSize: 13.5, fontWeight: 500, cursor: 'pointer' }}>
+            </Button>
+            <Button variant="secondary" tone="neutral" type="button" onClick={onClose} fullWidth>
               Cancel
-            </button>
+            </Button>
           </div>
         </form>
       </motion.div>
@@ -95,33 +110,40 @@ function UploadPhotoModal({ weddingId, onClose, onUploaded }: { weddingId: numbe
     finally { setUploading(false); }
   };
 
-  const inp: React.CSSProperties = { width: '100%', padding: '9px 12px', border: '1px solid var(--line-2)', borderRadius: 10, fontSize: 14, color: 'var(--ink)', outline: 'none', background: 'white', boxSizing: 'border-box' };
-
   return (
-    <div style={{ position: 'fixed', inset: 0, background: 'rgba(42,42,53,.35)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50, padding: 16, backdropFilter: 'blur(4px)' }}>
-      <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
-        style={{ background: 'var(--floral)', borderRadius: 'var(--radius-lg)', boxShadow: 'var(--shadow-lg)', width: '100%', maxWidth: 380 }}>
-        <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--line)', fontFamily: 'var(--serif)', fontSize: 22, letterSpacing: '-0.01em', color: 'var(--ink)' }}>Upload Photo</div>
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(28,32,40,.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 'var(--z-modal)' as unknown as number, padding: 16, backdropFilter: 'blur(6px)' }}>
+      <motion.div
+        initial={{ opacity: 0, scale: 0.96, y: 8 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        style={{ background: 'var(--surface-card)', borderRadius: 'var(--radius-xl)', boxShadow: 'var(--shadow-xl)', width: '100%', maxWidth: 380, border: '1px solid var(--border-subtle)' }}
+      >
+        <div style={{ padding: '18px 24px', borderBottom: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <span style={{ fontFamily: 'var(--font-display)', fontSize: 22, letterSpacing: 'var(--tracking-tight)', color: 'var(--text-strong)' }}>Upload Photo</span>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', display: 'flex', padding: 4 }}>
+            <Icon name="x" size={18} />
+          </button>
+        </div>
         <form onSubmit={handleSubmit} style={{ padding: 24, display: 'flex', flexDirection: 'column', gap: 14 }}>
+          <Input label="Guest Name" required value={guestName} onChange={e => setGuestName(e.target.value)} placeholder="Who's in the photo?" />
+          <Input label="Caption" value={caption} onChange={e => setCaption(e.target.value)} placeholder="Optional" />
           <div>
-            <label style={{ display: 'block', fontSize: 11, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--muted)', marginBottom: 6 }}>Guest Name *</label>
-            <input style={inp} value={guestName} onChange={e => setGuestName(e.target.value)} required />
-          </div>
-          <div>
-            <label style={{ display: 'block', fontSize: 11, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--muted)', marginBottom: 6 }}>Caption</label>
-            <input style={inp} value={caption} onChange={e => setCaption(e.target.value)} />
-          </div>
-          <div>
-            <label style={{ display: 'block', fontSize: 11, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--muted)', marginBottom: 6 }}>Photo *</label>
-            <input type="file" accept="image/*" onChange={e => setFile(e.target.files?.[0] ?? null)} required className="w-full text-sm text-gray-500 file:mr-3 file:py-2 file:px-3 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-rose-50 file:text-rose-700" />
+            <p style={{ fontFamily: 'var(--font-ui)', fontSize: 'var(--text-md)', fontWeight: 600, color: 'var(--text-strong)', margin: '0 0 6px' }}>
+              Photo <span style={{ color: 'var(--danger)' }}>*</span>
+            </p>
+            <input
+              type="file" accept="image/*"
+              onChange={e => setFile(e.target.files?.[0] ?? null)}
+              required
+              style={{ fontFamily: 'var(--font-ui)', fontSize: 'var(--text-sm)', color: 'var(--text-body)', width: '100%' }}
+            />
           </div>
           <div style={{ display: 'flex', gap: 10, paddingTop: 4 }}>
-            <button type="submit" disabled={uploading || !file} style={{ flex: 1, padding: '10px 14px', background: 'var(--lavender-grey-ink)', color: 'var(--floral)', border: 'none', borderRadius: 12, fontSize: 13.5, fontWeight: 500, cursor: 'pointer', opacity: uploading || !file ? 0.6 : 1 }}>
-              {uploading ? 'Uploading…' : 'Upload'}
-            </button>
-            <button type="button" onClick={onClose} style={{ flex: 1, padding: '10px 14px', background: 'white', color: 'var(--ink)', border: '1px solid var(--line-2)', borderRadius: 12, fontSize: 13.5, fontWeight: 500, cursor: 'pointer' }}>
+            <Button variant="primary" tone="brand" type="submit" disabled={uploading || !file} fullWidth loading={uploading}>
+              Upload
+            </Button>
+            <Button variant="secondary" tone="neutral" type="button" onClick={onClose} fullWidth>
               Cancel
-            </button>
+            </Button>
           </div>
         </form>
       </motion.div>
@@ -139,65 +161,72 @@ function PhotosPanel({ photos, weddingId, onRefresh }: { photos: Photo[]; weddin
   const filtered = photos.filter(p => filter === 'pending' ? !p.isApproved : filter === 'approved' ? p.isApproved : true);
 
   const handleApprove = async (id: number) => { try { await photoService.approve(id, { isApproved: true }); onRefresh(); } catch { alert('Failed to approve'); } };
-  const handleUnapprove = async (id: number) => { const reason = prompt('Reason (optional):') ?? ''; try { await photoService.approve(id, { isApproved: false, rejectionReason: reason || undefined }); onRefresh(); } catch { alert('Failed'); } };
+  const handleUnapprove = async (id: number) => {
+    const reason = prompt('Reason (optional):') ?? '';
+    try { await photoService.approve(id, { isApproved: false, rejectionReason: reason || undefined }); onRefresh(); }
+    catch { alert('Failed'); }
+  };
   const handleDelete = async (id: number) => { if (!confirm('Delete this photo?')) return; try { await photoService.delete(id); onRefresh(); } catch { alert('Failed'); } };
-
-  const chipStyle = (active: boolean): React.CSSProperties => ({
-    display: 'inline-flex', alignItems: 'center', gap: 5, padding: '6px 12px', borderRadius: 999,
-    background: active ? 'var(--lavender-grey-ink)' : 'white', color: active ? 'white' : 'var(--ink-2)',
-    border: `1px solid ${active ? 'var(--lavender-grey-ink)' : 'var(--line-2)'}`,
-    fontSize: 12.5, cursor: 'pointer', fontWeight: 500,
-  });
 
   return (
     <div>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12, marginBottom: 16 }}>
-        <div style={{ display: 'flex', gap: 8 }}>
-          {(['all', 'pending', 'approved'] as const).map(f => {
-            const count = f === 'all' ? photos.length : f === 'pending' ? pending : approved;
-            return (
-              <button key={f} onClick={() => setFilter(f)} style={chipStyle(filter === f)}>
-                {f} <span style={{ fontFamily: 'var(--mono)', fontSize: 11, opacity: 0.75 }}>{count}</span>
-                {f === 'pending' && pending > 0 && filter !== 'pending' && <span style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--danger)', display: 'inline-block' }} />}
-              </button>
-            );
-          })}
-        </div>
-        <button onClick={() => setShowUpload(true)} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 14px', background: 'var(--lavender-grey-ink)', color: 'var(--floral)', border: 'none', borderRadius: 10, fontSize: 13, fontWeight: 500, cursor: 'pointer' }}>
-          <Icon name="plus" size={14} /> Upload Photo
-        </button>
+        <Tabs
+          variant="pill"
+          size="sm"
+          tabs={[
+            { value: 'all', label: 'All', count: photos.length },
+            { value: 'pending', label: 'Pending', count: pending },
+            { value: 'approved', label: 'Approved', count: approved },
+          ]}
+          value={filter}
+          onChange={v => setFilter(v as typeof filter)}
+        />
+        <Button variant="soft" tone="brand" size="sm" iconLeft={<Icon name="plus" size={13} />} onClick={() => setShowUpload(true)}>
+          Upload Photo
+        </Button>
       </div>
+
       {filtered.length === 0 ? (
-        <div style={{ textAlign: 'center', padding: '40px 16px', color: 'var(--muted)', border: '1px dashed var(--line-2)', borderRadius: 12, background: 'var(--floral)' }}>No photos in this category</div>
+        <EmptyState icon="camera" title="No photos" description="No photos in this category yet." compact />
       ) : (
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
           <AnimatePresence>
             {filtered.map((photo, i) => (
-              <motion.div key={photo.photoId} initial={{ opacity: 0, scale: 0.85 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.85 }} transition={{ delay: i * 0.04 }}
-                style={{ background: 'white', borderRadius: 'var(--radius-md)', overflow: 'hidden', border: '1px solid var(--line)', position: 'relative' }}
-                className="group">
+              <motion.div
+                key={photo.photoId}
+                initial={{ opacity: 0, scale: 0.88 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.88 }}
+                transition={{ delay: i * 0.03 }}
+                style={{ background: 'var(--surface-card)', borderRadius: 'var(--radius-lg)', overflow: 'hidden', border: '1px solid var(--border-subtle)', position: 'relative' }}
+                className="group"
+              >
                 <div style={{ position: 'absolute', top: 8, right: 8, zIndex: 10 }}>
-                  <span style={{ fontSize: 10.5, padding: '3px 8px', borderRadius: 999, fontWeight: 600, background: photo.isApproved ? '#e5f1ea' : 'var(--floral-deep)', color: photo.isApproved ? 'var(--success)' : 'var(--warn)', letterSpacing: '0.04em' }}>
+                  <Badge tone={photo.isApproved ? 'success' : 'warning'} size="sm">
                     {photo.isApproved ? 'Approved' : 'Pending'}
-                  </span>
+                  </Badge>
                 </div>
                 <div style={{ position: 'relative', aspectRatio: '1' }}>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={photo.photoUrl} alt={photo.caption || 'Photo'} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                  <div style={{ position: 'absolute', inset: 0, background: 'rgba(42,42,53,0)', transition: 'background .2s', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                    className="group-hover:bg-[rgba(42,42,53,0.7)]">
+                  <div
+                    style={{ position: 'absolute', inset: 0, background: 'rgba(28,32,40,0)', transition: 'background .2s', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                    className="group-hover:bg-[rgba(28,32,40,0.7)]"
+                  >
                     <div className="opacity-0 group-hover:opacity-100 transition-opacity flex flex-col gap-1.5 p-3 w-full">
                       {!photo.isApproved ? (
-                        <button onClick={() => handleApprove(photo.photoId)} style={{ padding: '6px 10px', background: '#e5f1ea', color: 'var(--success)', borderRadius: 8, border: 'none', fontSize: 12, fontWeight: 500, cursor: 'pointer' }}>Approve</button>
+                        <button onClick={() => handleApprove(photo.photoId)} style={{ padding: '6px 10px', background: 'var(--success-subtle)', color: 'var(--success)', borderRadius: 'var(--radius-sm)', border: 'none', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'var(--font-ui)' }}>Approve</button>
                       ) : (
-                        <button onClick={() => handleUnapprove(photo.photoId)} style={{ padding: '6px 10px', background: 'var(--floral-deep)', color: 'var(--warn)', borderRadius: 8, border: 'none', fontSize: 12, fontWeight: 500, cursor: 'pointer' }}>Unapprove</button>
+                        <button onClick={() => handleUnapprove(photo.photoId)} style={{ padding: '6px 10px', background: 'var(--warning-subtle)', color: 'var(--warning)', borderRadius: 'var(--radius-sm)', border: 'none', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'var(--font-ui)' }}>Unapprove</button>
                       )}
-                      <button onClick={() => handleDelete(photo.photoId)} style={{ padding: '6px 10px', background: '#f5e6e6', color: 'var(--danger)', borderRadius: 8, border: 'none', fontSize: 12, fontWeight: 500, cursor: 'pointer' }}>Delete</button>
+                      <button onClick={() => handleDelete(photo.photoId)} style={{ padding: '6px 10px', background: 'var(--danger-subtle)', color: 'var(--danger)', borderRadius: 'var(--radius-sm)', border: 'none', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'var(--font-ui)' }}>Delete</button>
                     </div>
                   </div>
                 </div>
                 <div style={{ padding: 10 }}>
-                  <p style={{ fontSize: 12, fontWeight: 600, color: 'var(--ink)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', margin: 0 }}>{photo.guestName}</p>
-                  {photo.caption && <p style={{ fontSize: 11, color: 'var(--muted)', fontStyle: 'italic', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', margin: '2px 0 0' }}>"{photo.caption}"</p>}
+                  <p style={{ fontSize: 12, fontWeight: 600, fontFamily: 'var(--font-ui)', color: 'var(--text-strong)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', margin: 0 }}>{photo.guestName}</p>
+                  {photo.caption && <p style={{ fontSize: 11, fontFamily: 'var(--font-ui)', color: 'var(--text-subtle)', fontStyle: 'italic', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', margin: '2px 0 0' }}>"{photo.caption}"</p>}
                 </div>
               </motion.div>
             ))}
@@ -227,7 +256,11 @@ export default function CoupleAdminDashboard() {
   const [editData, setEditData] = useState({ brideName: '', groomName: '', weddingDate: '', weddingTime: '', venue: '', venueAddress: '', maxCapacity: 0, showCapacityWarning: false });
   const [saving, setSaving] = useState(false);
 
+  const userTier = user?.tier ?? 'FREE';
+  const isFree = tierRank(userTier) === 0;
+
   const [activeTab, setActiveTab] = useState<ActiveTab | null>(null);
+  const [lockedTabDialog, setLockedTabDialog] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterSide, setFilterSide] = useState<'All' | 'Bride' | 'Groom'>('All');
   const [filterAttending, setFilterAttending] = useState<'All' | 'Yes' | 'No'>('All');
@@ -295,31 +328,29 @@ export default function CoupleAdminDashboard() {
 
   const handleToggleRsvp = async (isRsvpOpen: boolean) => {
     if (!weddingId) return;
-    try {
-      const updated = await weddingService.toggleRsvp(weddingId, isRsvpOpen);
-      setWedding(updated);
-    } catch { alert('Failed to update RSVP status'); }
+    try { const updated = await weddingService.toggleRsvp(weddingId, isRsvpOpen); setWedding(updated); }
+    catch { alert('Failed to update RSVP status'); }
   };
 
   const handleDeleteWish = async (id: number) => { if (!confirm('Delete?')) return; await wishService.delete(id); setWishes(prev => prev.filter(w => w.wishId !== id)); };
 
   const exportGuestsCSV = () => {
     const rows = guests.map(g => [g.guestName, g.email ?? '', g.phoneNumber ?? '', g.brideOrGroomSide, g.isAttending ? 'Yes' : 'No', g.numberOfAttendees, g.songRequest ?? '']);
-    const csv = [['Name','Email','Phone','Side','Attending','Guests','Song Request'], ...rows].map(r => r.map(c => `"${c}"`).join(',')).join('\n');
+    const csv = [['Name', 'Email', 'Phone', 'Side', 'Attending', 'Guests', 'Song Request'], ...rows].map(r => r.map(c => `"${c}"`).join(',')).join('\n');
     const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' })); a.download = `guests-${new Date().toISOString().split('T')[0]}.csv`; a.click();
   };
 
   const exportWishesCSV = () => {
     const rows = wishes.map(w => [w.guestName, w.message, new Date(w.createdDate).toLocaleDateString()]);
-    const csv = [['Guest Name','Message','Date'], ...rows].map(r => r.map(c => `"${c}"`).join(',')).join('\n');
+    const csv = [['Guest Name', 'Message', 'Date'], ...rows].map(r => r.map(c => `"${c}"`).join(',')).join('\n');
     const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' })); a.download = `wishes-${new Date().toISOString().split('T')[0]}.csv`; a.click();
   };
 
   if (loading) return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '60vh' }}>
       <div style={{ textAlign: 'center' }}>
-        <div style={{ width: 48, height: 48, border: '3px solid var(--lavender-grey-ink)', borderTopColor: 'transparent', borderRadius: '50%', margin: '0 auto 14px', animation: 'spin 0.8s linear infinite' }} />
-        <p style={{ color: 'var(--muted)', fontSize: 14 }}>Loading your wedding…</p>
+        <div style={{ width: 40, height: 40, border: '2.5px solid var(--brand)', borderTopColor: 'transparent', borderRadius: '50%', margin: '0 auto 14px', animation: 'spin 0.7s linear infinite' }} />
+        <p style={{ color: 'var(--text-subtle)', fontSize: 'var(--text-sm)', fontFamily: 'var(--font-ui)' }}>Loading your wedding…</p>
         <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
       </div>
     </div>
@@ -327,7 +358,7 @@ export default function CoupleAdminDashboard() {
 
   if (!wedding) return null;
 
-  const daysUntil = Math.ceil((new Date(wedding.weddingDate).getTime() - Date.now()) / 86400000);
+  const daysUntil = Math.max(0, Math.ceil((new Date(wedding.weddingDate).getTime() - Date.now()) / 86400000));
   const attending = guests.filter(g => g.isAttending).reduce((s, g) => s + g.numberOfAttendees, 0);
   const pendingPhotos = photos.filter(p => !p.isApproved).length;
 
@@ -335,186 +366,237 @@ export default function CoupleAdminDashboard() {
   const dateStr = weddingDate.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
   const timeStr = weddingDate.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
 
-  const tabs: { key: ActiveTab; label: string; icon: string; code: string }[] = [
-    { key: 'guests',  label: 'Guests',   icon: 'group',      code: 'RSVP' },
-    { key: 'wishes',  label: 'Wishes',   icon: 'heart',      code: 'WISHES' },
-    { key: 'photos',  label: 'Photos',   icon: 'eye',        code: 'PHOTO_BOOTH' },
-    { key: 'seating', label: 'Seating',  icon: 'puzzle',     code: 'SEATING' },
-  ].filter(t => isEnabled(t.code)) as { key: ActiveTab; label: string; icon: string; code: string }[];
+  // Tabs that are accessible (feature enabled, and tier sufficient for tier-gated ones)
+  const tabDefs: { key: ActiveTab; label: string; icon: string; code: string }[] = [
+    { key: 'guests',  label: 'Guests',  icon: 'users',        code: 'RSVP' },
+    { key: 'wishes',  label: 'Wishes',  icon: 'heart',        code: 'WISHES' },
+    { key: 'photos',  label: 'Photos',  icon: 'camera',       code: 'PHOTO_BOOTH' },
+    { key: 'seating', label: 'Seating', icon: 'layout-grid',  code: 'SEATING' },
+  ].filter(t => isEnabled(t.code) && !(isFree && (t.code === 'PHOTO_BOOTH' || t.code === 'SEATING'))) as { key: ActiveTab; label: string; icon: string; code: string }[];
 
-  // Stat card style helpers
-  const statTint = (n: 1 | 2 | 3): React.CSSProperties => n === 1
-    ? { background: 'linear-gradient(170deg, var(--lavender) 0%, white 90%)', borderColor: 'var(--lavender-deep)' }
-    : n === 2
-    ? { background: 'linear-gradient(170deg, var(--veil) 0%, white 90%)', borderColor: 'var(--veil-deep)' }
-    : { background: 'linear-gradient(170deg, var(--thistle-soft) 0%, white 90%)', borderColor: 'var(--thistle)' };
+  // Tabs always shown but locked for free users (appear as greyed entries after the active tabs)
+  const lockedTabDefs = isFree ? [
+    { key: 'photos' as ActiveTab,  label: 'Photo Booth', icon: 'camera',      requiredTier: 'PREMIUM' },
+    { key: 'seating' as ActiveTab, label: 'Seating',     icon: 'layout-grid', requiredTier: 'PREMIUM' },
+  ] : [];
 
-  const inp: React.CSSProperties = { padding: '8px 12px', border: '1px solid rgba(255,255,255,.5)', borderRadius: 10, background: 'rgba(255,255,255,.85)', color: 'var(--ink)', fontSize: 14, outline: 'none' };
+  // Fields for the hero's inline edit form (on a dark background, so use translucent inputs)
+  const heroInp: React.CSSProperties = { padding: '8px 12px', border: '1px solid rgba(255,255,255,.4)', borderRadius: 'var(--radius-md)', background: 'rgba(255,255,255,.18)', color: '#fff', fontSize: 14, outline: 'none', fontFamily: 'var(--font-ui)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)' };
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
 
-      {/* ── Detail Hero ───────────────────────────────────────────────────── */}
-      <div style={{ background: 'linear-gradient(150deg, var(--veil) 0%, var(--lavender) 100%)', borderRadius: 'var(--radius-lg)', padding: '22px 22px 26px', position: 'relative', overflow: 'hidden', border: '1px solid var(--veil-deep)' }}>
-        {/* decorative circle */}
-        <div style={{ position: 'absolute', right: -50, top: -50, width: 220, height: 220, borderRadius: '50%', background: 'radial-gradient(circle, rgba(255,255,255,.6), transparent 70%)', pointerEvents: 'none' }} />
+      {/* ── Hero ───────────────────────────────────────────────────────────── */}
+      <div style={{
+        background: 'var(--brand-gradient)',
+        borderRadius: 'var(--radius-xl)', padding: '24px 24px 28px',
+        position: 'relative', overflow: 'hidden',
+        boxShadow: 'var(--shadow-foil)',
+      }}>
+        {/* Decorative glare */}
+        <div style={{ position: 'absolute', right: -60, top: -60, width: 240, height: 240, borderRadius: '50%', background: 'radial-gradient(circle, rgba(255,255,255,.18), transparent 70%)', pointerEvents: 'none' }} />
 
         {isEditing ? (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10, maxWidth: 480, position: 'relative', zIndex: 1 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10, maxWidth: 520, position: 'relative', zIndex: 1 }}>
             <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-              <input value={editData.brideName} onChange={e => setEditData({ ...editData, brideName: e.target.value })} placeholder="Bride's Name" style={{ ...inp, flex: 1, fontSize: 16 }} />
-              <span style={{ color: 'var(--lavender-grey-deep)', fontFamily: 'var(--serif)', fontStyle: 'italic', fontSize: 20 }}>&amp;</span>
-              <input value={editData.groomName} onChange={e => setEditData({ ...editData, groomName: e.target.value })} placeholder="Groom's Name" style={{ ...inp, flex: 1, fontSize: 16 }} />
+              <input className="hero-inp" value={editData.brideName} onChange={e => setEditData({ ...editData, brideName: e.target.value })} placeholder="Bride's Name" style={{ ...heroInp, flex: 1, fontSize: 16 }} />
+              <span style={{ color: 'rgba(255,255,255,.6)', fontFamily: 'var(--font-display)', fontStyle: 'italic', fontSize: 20 }}>&amp;</span>
+              <input className="hero-inp" value={editData.groomName} onChange={e => setEditData({ ...editData, groomName: e.target.value })} placeholder="Groom's Name" style={{ ...heroInp, flex: 1, fontSize: 16 }} />
             </div>
             <div style={{ display: 'flex', gap: 8 }}>
-              <input type="date" value={editData.weddingDate} onChange={e => setEditData({ ...editData, weddingDate: e.target.value })} style={inp} />
-              <input type="time" value={editData.weddingTime} onChange={e => setEditData({ ...editData, weddingTime: e.target.value })} style={inp} />
+              <input className="hero-inp" type="date" value={editData.weddingDate} onChange={e => setEditData({ ...editData, weddingDate: e.target.value })} style={heroInp} />
+              <input className="hero-inp" type="time" value={editData.weddingTime} onChange={e => setEditData({ ...editData, weddingTime: e.target.value })} style={heroInp} />
             </div>
-            <input value={editData.venue} onChange={e => setEditData({ ...editData, venue: e.target.value })} placeholder="Venue" style={{ ...inp, width: '100%', boxSizing: 'border-box' }} />
-            <input value={editData.venueAddress} onChange={e => setEditData({ ...editData, venueAddress: e.target.value })} placeholder="Venue Address" style={{ ...inp, width: '100%', boxSizing: 'border-box' }} />
-            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-              <input type="number" min={0} value={editData.maxCapacity} onChange={e => setEditData({ ...editData, maxCapacity: parseInt(e.target.value) || 0 })} placeholder="0 = unlimited" style={{ ...inp, width: 120, textAlign: 'right' }} />
-              <span style={{ fontSize: 12, color: 'var(--ink-2)', whiteSpace: 'nowrap' }}>total capacity (0 = unlimited)</span>
+            <input className="hero-inp" value={editData.venue} onChange={e => setEditData({ ...editData, venue: e.target.value })} placeholder="Venue" style={{ ...heroInp, width: '100%', boxSizing: 'border-box' }} />
+            <input className="hero-inp" value={editData.venueAddress} onChange={e => setEditData({ ...editData, venueAddress: e.target.value })} placeholder="Venue Address" style={{ ...heroInp, width: '100%', boxSizing: 'border-box' }} />
+            <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+              <input className="hero-inp" type="number" min={0} value={editData.maxCapacity} onChange={e => setEditData({ ...editData, maxCapacity: parseInt(e.target.value) || 0 })} placeholder="0 = unlimited" style={{ ...heroInp, width: 120, textAlign: 'right' }} />
+              <span style={{ fontSize: 12, color: 'rgba(255,255,255,.75)', fontFamily: 'var(--font-ui)', whiteSpace: 'nowrap' }}>total capacity (0 = unlimited)</span>
             </div>
-            <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: 'var(--ink-2)', cursor: 'pointer' }}>
-              <input type="checkbox" checked={editData.showCapacityWarning} onChange={e => setEditData({ ...editData, showCapacityWarning: e.target.checked })} style={{ width: 16, height: 16, accentColor: 'var(--lavender-grey-ink)', cursor: 'pointer' }} />
+            <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: 'rgba(255,255,255,.85)', fontFamily: 'var(--font-ui)', cursor: 'pointer' }}>
+              <input type="checkbox" checked={editData.showCapacityWarning} onChange={e => setEditData({ ...editData, showCapacityWarning: e.target.checked })} style={{ width: 16, height: 16, accentColor: 'var(--gold-400)', cursor: 'pointer' }} />
               Show spots remaining to guests
             </label>
             <div style={{ display: 'flex', gap: 8 }}>
-              <button onClick={handleSaveEdit} disabled={saving} style={{ padding: '9px 18px', background: 'var(--lavender-grey-ink)', color: 'var(--floral)', border: 'none', borderRadius: 10, fontSize: 13.5, fontWeight: 500, cursor: 'pointer', opacity: saving ? 0.6 : 1 }}>
+              <button onClick={handleSaveEdit} disabled={saving} style={{ padding: '9px 20px', background: 'rgba(255,255,255,.95)', color: 'var(--brand)', border: 'none', borderRadius: 'var(--radius-md)', fontSize: 13.5, fontWeight: 700, cursor: 'pointer', fontFamily: 'var(--font-ui)', opacity: saving ? 0.7 : 1 }}>
                 {saving ? 'Saving…' : 'Save'}
               </button>
-              <button onClick={() => setIsEditing(false)} style={{ padding: '9px 18px', background: 'rgba(255,255,255,.5)', color: 'var(--ink)', border: '1px solid rgba(255,255,255,.6)', borderRadius: 10, fontSize: 13.5, fontWeight: 500, cursor: 'pointer' }}>
+              <button onClick={() => setIsEditing(false)} style={{ padding: '9px 20px', background: 'rgba(255,255,255,.15)', color: '#fff', border: '1px solid rgba(255,255,255,.35)', borderRadius: 'var(--radius-md)', fontSize: 13.5, fontWeight: 500, cursor: 'pointer', fontFamily: 'var(--font-ui)' }}>
                 Cancel
               </button>
             </div>
           </div>
         ) : (
           <div style={{ position: 'relative', zIndex: 1 }}>
-            {/* Top row: days pill + edit button */}
-            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, marginBottom: 14 }}>
-              <div style={{ display: 'inline-flex', alignItems: 'baseline', gap: 6, background: 'rgba(255,255,255,.7)', border: '1px solid rgba(255,255,255,.9)', padding: '6px 10px', borderRadius: 999, fontSize: 11, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--lavender-grey-ink)' }}>
-                <b style={{ fontFamily: 'var(--serif)', fontSize: 16, letterSpacing: '-0.01em', textTransform: 'none', fontWeight: 400 }}>{daysUntil > 0 ? daysUntil : 0}</b> days to go
+            {/* Days pill + edit */}
+            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, marginBottom: 16 }}>
+              <div style={{ display: 'inline-flex', alignItems: 'baseline', gap: 6, background: 'rgba(255,255,255,.18)', border: '1px solid rgba(255,255,255,.35)', padding: '6px 12px', borderRadius: 'var(--radius-full)', fontSize: 11, letterSpacing: 'var(--tracking-caps)', textTransform: 'uppercase', color: 'rgba(255,255,255,.85)', fontFamily: 'var(--font-ui)', backdropFilter: 'blur(8px)' }}>
+                <b style={{ fontFamily: 'var(--font-display)', fontSize: 16, letterSpacing: 'var(--tracking-tight)', textTransform: 'none', fontWeight: 400, color: '#fff' }}>{daysUntil}</b>
+                days to go
               </div>
-              <button onClick={startEdit} style={{ padding: '7px 12px', background: 'rgba(255,255,255,.7)', border: '1px solid rgba(255,255,255,.9)', borderRadius: 10, fontSize: 13, fontWeight: 500, color: 'var(--lavender-grey-ink)', cursor: 'pointer', flexShrink: 0, display: 'inline-flex', alignItems: 'center', gap: 5 }}>
-                <Icon name="settings" size={13} /> Edit
+              <button onClick={startEdit} style={{ padding: '7px 12px', background: 'rgba(255,255,255,.18)', border: '1px solid rgba(255,255,255,.35)', borderRadius: 'var(--radius-md)', fontSize: 12.5, fontWeight: 500, color: '#fff', cursor: 'pointer', flexShrink: 0, display: 'inline-flex', alignItems: 'center', gap: 5, fontFamily: 'var(--font-ui)', backdropFilter: 'blur(8px)' }}>
+                <Icon name="settings" size={12} /> Edit
               </button>
             </div>
+
             {/* Names */}
-            <h1 style={{ margin: '0 0 12px', fontFamily: 'var(--serif)', fontSize: 'clamp(26px, 6vw, 48px)', fontWeight: 400, lineHeight: 1.05, letterSpacing: '-0.02em', color: 'var(--ink)' }}>
+            <h1 style={{ margin: '0 0 14px', fontFamily: 'var(--font-display)', fontSize: 'clamp(26px, 6vw, 48px)', fontWeight: 400, lineHeight: 1.05, letterSpacing: 'var(--tracking-tight)', color: '#fff' }}>
               {wedding.brideName}{' '}
-              <em style={{ fontStyle: 'italic', color: 'var(--lavender-grey-deep)', margin: '0 4px' }}>&amp;</em>
+              <em style={{ fontStyle: 'italic', color: 'rgba(255,255,255,.65)', margin: '0 4px' }}>&amp;</em>
               {wedding.groomName}
             </h1>
-            {/* Meta: stacked on mobile for legibility */}
-            <div style={{ color: 'var(--ink-2)', fontSize: 13, display: 'flex', flexDirection: 'column', gap: 4, marginBottom: 16 }}>
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}><Icon name="calendar" size={13} style={{ color: 'var(--lavender-grey-deep)', flexShrink: 0 }} /> {dateStr}</span>
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}><Icon name="clock" size={13} style={{ color: 'var(--lavender-grey-deep)', flexShrink: 0 }} /> {timeStr}</span>
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}><Icon name="map-pin" size={13} style={{ color: 'var(--lavender-grey-deep)', flexShrink: 0 }} /> {wedding.venue}{wedding.venueAddress ? `, ${wedding.venueAddress}` : ''}</span>
+
+            {/* Meta */}
+            <div style={{ color: 'rgba(255,255,255,.8)', fontSize: 13, fontFamily: 'var(--font-ui)', display: 'flex', flexDirection: 'column', gap: 4, marginBottom: 18 }}>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><Icon name="calendar" size={13} style={{ color: 'rgba(255,255,255,.6)', flexShrink: 0 }} /> {dateStr}</span>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><Icon name="clock" size={13} style={{ color: 'rgba(255,255,255,.6)', flexShrink: 0 }} /> {timeStr}</span>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><Icon name="map-pin" size={13} style={{ color: 'rgba(255,255,255,.6)', flexShrink: 0 }} /> {wedding.venue}{wedding.venueAddress ? `, ${wedding.venueAddress}` : ''}</span>
             </div>
+
             {/* Action buttons */}
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-              <button onClick={() => router.push('/couple-admin/customize')} style={{ flex: '1 1 calc(50% - 4px)', minWidth: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '9px 12px', background: 'var(--lavender-grey-ink)', color: 'var(--floral)', border: 'none', borderRadius: 12, fontSize: 13, fontWeight: 500, cursor: 'pointer' }}>
-                <Icon name="design-nib" size={14} /> Customise
+              <button
+                onClick={() => router.push('/couple-admin/customize')}
+                style={{ flex: '1 1 calc(50% - 4px)', minWidth: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '10px 14px', background: 'rgba(255,255,255,.96)', color: 'var(--brand)', border: 'none', borderRadius: 'var(--radius-md)', fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'var(--font-ui)' }}
+              >
+                <Icon name="palette" size={14} /> Customise
               </button>
-              <button onClick={() => window.open(`/wedding/${wedding.coupleName}`, '_blank')} style={{ flex: '1 1 calc(50% - 4px)', minWidth: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '9px 12px', background: 'rgba(255,255,255,.7)', border: '1px solid rgba(255,255,255,.9)', borderRadius: 12, fontSize: 13, fontWeight: 500, color: 'var(--lavender-grey-ink)', cursor: 'pointer' }}>
-                <Icon name="eye" size={14} /> View
+              <button
+                onClick={() => window.open(`/wedding/${wedding.coupleName}`, '_blank')}
+                style={{ flex: '1 1 calc(50% - 4px)', minWidth: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '10px 14px', background: 'rgba(255,255,255,.14)', border: '1px solid rgba(255,255,255,.35)', borderRadius: 'var(--radius-md)', fontSize: 13, fontWeight: 500, color: '#fff', cursor: 'pointer', fontFamily: 'var(--font-ui)' }}
+              >
+                <Icon name="eye" size={14} /> {isFree ? 'Preview' : 'View'}
               </button>
-              <button onClick={() => navigator.clipboard?.writeText(`${window.location.origin}/wedding/${wedding.coupleName}`)} style={{ flex: '1 1 100%', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '9px 12px', background: 'rgba(255,255,255,.7)', border: '1px solid rgba(255,255,255,.9)', borderRadius: 12, fontSize: 13, fontWeight: 500, color: 'var(--lavender-grey-ink)', cursor: 'pointer' }}>
-                <Icon name="share-android" size={14} /> Share link
-              </button>
+              {!isFree && (
+                <button
+                  onClick={() => navigator.clipboard?.writeText(`${window.location.origin}/wedding/${wedding.coupleName}`)}
+                  style={{ flex: '1 1 100%', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '10px 14px', background: 'rgba(255,255,255,.10)', border: '1px solid rgba(255,255,255,.25)', borderRadius: 'var(--radius-md)', fontSize: 13, fontWeight: 500, color: 'rgba(255,255,255,.85)', cursor: 'pointer', fontFamily: 'var(--font-ui)' }}
+                >
+                  <Icon name="share-2" size={14} /> Copy invitation link
+                </button>
+              )}
             </div>
           </div>
         )}
       </div>
+
+      {/* ── Private invitation nudge (free tier only) ─────────────────────── */}
+      {isFree && (
+        <div style={{ borderRadius: 'var(--radius-lg)', padding: '12px 16px', background: 'color-mix(in srgb, var(--gold-400) 10%, transparent)', border: '1px solid var(--gold-200)', display: 'flex', alignItems: 'center', gap: 12 }}>
+          <Icon name="lock" size={16} style={{ color: 'var(--gold-600)', flexShrink: 0 }} />
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <p style={{ margin: 0, fontFamily: 'var(--font-ui)', fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--gold-800)' }}>
+              Your invitation is private
+            </p>
+            <p style={{ margin: '2px 0 0', fontFamily: 'var(--font-ui)', fontSize: 'var(--text-xs)', color: 'var(--gold-700)', lineHeight: 1.4 }}>
+              Only you can preview it. Upgrade to share with guests and collect real RSVPs.
+            </p>
+          </div>
+          <a href="/templates" style={{ flexShrink: 0, fontFamily: 'var(--font-ui)', fontSize: 'var(--text-xs)', fontWeight: 700, color: 'var(--gold-700)', textDecoration: 'none', border: '1px solid var(--gold-400)', borderRadius: 'var(--radius-full)', padding: '5px 12px', whiteSpace: 'nowrap' }}>
+            Upgrade
+          </a>
+        </div>
+      )}
 
       {/* ── Stat cards ────────────────────────────────────────────────────── */}
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
         {isEnabled('RSVP') && (
-          <div onClick={() => setActiveTab('guests')} style={{ background: 'white', border: '1px solid var(--line)', borderRadius: 'var(--radius-md)', padding: 16, cursor: 'pointer', position: 'relative', overflow: 'hidden', ...statTint(1) }}>
-            <div style={{ fontSize: 11, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--muted)', display: 'flex', alignItems: 'center', gap: 6 }}><Icon name="group" size={13} /> Guests</div>
-            <div style={{ fontFamily: 'var(--serif)', fontSize: 38, lineHeight: 1, marginTop: 10, letterSpacing: '-0.01em', color: 'var(--ink)' }}>{attending}</div>
-            <div style={{ marginTop: 6, fontSize: 12, color: 'var(--lavender-grey-deep)' }}>attending / {guests.length} total</div>
-            <div style={{ position: 'absolute', top: 12, right: 12, width: 28, height: 28, borderRadius: 10, background: 'rgba(255,255,255,.7)', display: 'grid', placeItems: 'center', color: 'var(--lavender-grey-deep)', border: '1px solid rgba(255,255,255,.9)' }}>
-              <Icon name="group" size={15} />
-            </div>
+          <div onClick={() => setActiveTab('guests')} style={{ cursor: 'pointer' }}>
+            <StatCard
+              label="Guests"
+              value={attending}
+              sublabel={`/ ${guests.length} total`}
+              icon={<Icon name="users" size={16} />}
+              tone="brand"
+            />
           </div>
         )}
         {isEnabled('WISHES') && (
-          <div onClick={() => setActiveTab('wishes')} style={{ background: 'white', border: '1px solid var(--line)', borderRadius: 'var(--radius-md)', padding: 16, cursor: 'pointer', position: 'relative', overflow: 'hidden', ...statTint(2) }}>
-            <div style={{ fontSize: 11, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--muted)', display: 'flex', alignItems: 'center', gap: 6 }}><Icon name="heart" size={13} /> Wishes</div>
-            <div style={{ fontFamily: 'var(--serif)', fontSize: 38, lineHeight: 1, marginTop: 10, letterSpacing: '-0.01em', color: 'var(--ink)' }}>{wishes.length}</div>
-            <div style={{ marginTop: 6, fontSize: 12, color: 'var(--lavender-grey-deep)' }}>messages received</div>
-            <div style={{ position: 'absolute', top: 12, right: 12, width: 28, height: 28, borderRadius: 10, background: 'rgba(255,255,255,.7)', display: 'grid', placeItems: 'center', color: 'var(--lavender-grey-deep)', border: '1px solid rgba(255,255,255,.9)' }}>
-              <Icon name="heart" size={15} />
-            </div>
+          <div onClick={() => setActiveTab('wishes')} style={{ cursor: 'pointer' }}>
+            <StatCard
+              label="Wishes"
+              value={wishes.length}
+              sublabel="received"
+              icon={<Icon name="heart" size={16} />}
+              tone="gold"
+            />
           </div>
         )}
         {isEnabled('PHOTO_BOOTH') && (
-          <div onClick={() => setActiveTab('photos')} style={{ background: 'white', border: '1px solid var(--line)', borderRadius: 'var(--radius-md)', padding: 16, cursor: 'pointer', position: 'relative', overflow: 'hidden', ...statTint(3) }}>
+          <div onClick={() => setActiveTab('photos')} style={{ cursor: 'pointer', position: 'relative' }}>
             {pendingPhotos > 0 && (
-              <div style={{ position: 'absolute', top: -6, right: -6, width: 22, height: 22, background: 'var(--danger)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 700, color: 'white', border: '2px solid var(--floral)' }}>
+              <div style={{ position: 'absolute', top: -6, right: -6, width: 20, height: 20, background: 'var(--danger)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 700, color: 'white', border: '2px solid var(--surface-app)', zIndex: 1 }}>
                 {pendingPhotos}
               </div>
             )}
-            <div style={{ fontSize: 11, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--muted)', display: 'flex', alignItems: 'center', gap: 6 }}><Icon name="eye" size={13} /> Photos</div>
-            <div style={{ fontFamily: 'var(--serif)', fontSize: 38, lineHeight: 1, marginTop: 10, letterSpacing: '-0.01em', color: 'var(--ink)' }}>{photos.length}</div>
-            <div style={{ marginTop: 6, fontSize: 12, color: pendingPhotos > 0 ? 'var(--warn)' : 'var(--lavender-grey-deep)' }}>{pendingPhotos > 0 ? `${pendingPhotos} pending` : 'all approved'}</div>
-            <div style={{ position: 'absolute', top: 12, right: 12, width: 28, height: 28, borderRadius: 10, background: 'rgba(255,255,255,.7)', display: 'grid', placeItems: 'center', color: 'var(--lavender-grey-deep)', border: '1px solid rgba(255,255,255,.9)' }}>
-              <Icon name="eye" size={15} />
-            </div>
+            <StatCard
+              label="Photos"
+              value={photos.length}
+              sublabel={pendingPhotos > 0 ? `${pendingPhotos} pending` : 'all approved'}
+              icon={<Icon name="camera" size={16} />}
+              tone={pendingPhotos > 0 ? 'neutral' : 'success'}
+            />
           </div>
         )}
       </div>
 
-      {/* ── RSVP Open/Close Toggle ───────────────────────────────────────── */}
+      {/* ── RSVP Toggle ───────────────────────────────────────────────────── */}
       {isEnabled('RSVP') && (
-        <div style={{ background: 'white', border: '1px solid var(--line)', borderRadius: 'var(--radius-md)', padding: '14px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-          <div>
-            <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--ink)' }}>RSVP Status</div>
-            <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 2 }}>
-              {wedding.isRsvpOpen !== false ? 'Guests can currently submit RSVPs.' : 'RSVPs are closed — the public form is disabled.'}
+        <Card padding="14px 18px">
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+            <div>
+              <p style={{ margin: 0, fontFamily: 'var(--font-ui)', fontSize: 'var(--text-md)', fontWeight: 600, color: 'var(--text-strong)' }}>RSVP Status</p>
+              <p style={{ margin: '2px 0 0', fontFamily: 'var(--font-ui)', fontSize: 'var(--text-sm)', color: 'var(--text-subtle)' }}>
+                {wedding.isRsvpOpen !== false ? 'Guests can currently submit RSVPs.' : 'RSVPs are closed — the public form is disabled.'}
+              </p>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
+              <span style={{ fontFamily: 'var(--font-ui)', fontSize: 'var(--text-sm)', fontWeight: 600, color: wedding.isRsvpOpen !== false ? 'var(--success)' : 'var(--danger)' }}>
+                {wedding.isRsvpOpen !== false ? 'Open' : 'Closed'}
+              </span>
+              <Switch
+                checked={wedding.isRsvpOpen !== false}
+                onChange={e => handleToggleRsvp(e.target.checked)}
+              />
             </div>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
-            <span style={{ fontSize: 12, fontWeight: 500, color: wedding.isRsvpOpen !== false ? 'var(--success)' : 'var(--danger)' }}>
-              {wedding.isRsvpOpen !== false ? 'Open' : 'Closed'}
-            </span>
-            <button
-              type="button"
-              onClick={() => handleToggleRsvp(wedding.isRsvpOpen === false)}
-              style={{ position: 'relative', display: 'inline-flex', alignItems: 'center', width: 44, height: 24, borderRadius: 999, border: 'none', cursor: 'pointer', padding: 0, transition: 'background .2s', background: wedding.isRsvpOpen !== false ? 'var(--success)' : '#d1d5db' }}
-            >
-              <span style={{ position: 'absolute', left: wedding.isRsvpOpen !== false ? 22 : 2, width: 20, height: 20, borderRadius: '50%', background: 'white', boxShadow: '0 1px 3px rgba(0,0,0,.2)', transition: 'left .2s' }} />
-            </button>
-          </div>
-        </div>
+        </Card>
       )}
 
-      {/* ── Tabs + content ────────────────────────────────────────────────── */}
-      {tabs.length > 0 ? (
-        <div style={{ background: 'white', border: '1px solid var(--line)', borderRadius: 'var(--radius-md)' }}>
-          {/* Tab bar */}
-          <div style={{ display: 'flex', borderBottom: '1px solid var(--line)', paddingLeft: 4, overflowX: 'auto', scrollbarWidth: 'none' }}>
-            {tabs.map(tab => (
-              <button key={tab.key} onClick={() => setActiveTab(tab.key)}
-                style={{ padding: '12px 14px', fontSize: 13.5, color: activeTab === tab.key ? 'var(--ink)' : 'var(--muted)', borderBottom: `2px solid ${activeTab === tab.key ? 'var(--lavender-grey-ink)' : 'transparent'}`, marginBottom: -1, whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center', gap: 6, fontWeight: 500, background: 'none', border: 'none', cursor: 'pointer', transition: 'color .15s ease' }}>
-                <Icon name={tab.icon} size={16} /> {tab.label}
-                {tab.key === 'photos' && pendingPhotos > 0 && (
-                  <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 16, height: 16, fontSize: 10, fontWeight: 700, background: 'var(--danger)', color: 'white', borderRadius: '50%' }}>{pendingPhotos}</span>
-                )}
+      {/* ── Tab panel ─────────────────────────────────────────────────────── */}
+      {tabDefs.length > 0 ? (
+        <Card padding="0">
+          <div style={{ padding: '4px 16px 0', borderBottom: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'flex-end', gap: 0 }}>
+            <Tabs
+              variant="underline"
+              value={activeTab ?? tabDefs[0]?.key}
+              onChange={v => setActiveTab(v as ActiveTab)}
+              tabs={tabDefs.map(t => ({
+                value: t.key,
+                label: t.label,
+                icon: <Icon name={t.icon} size={15} />,
+                count: t.key === 'photos' && pendingPhotos > 0 ? pendingPhotos : undefined,
+              }))}
+            />
+            {/* Locked tabs appended after the real tabs */}
+            {lockedTabDefs.map(lt => (
+              <button
+                key={lt.key}
+                onClick={() => setLockedTabDialog(lt.requiredTier)}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '10px 14px 11px', border: 'none', background: 'transparent', cursor: 'pointer', fontFamily: 'var(--font-ui)', fontSize: 'var(--text-sm)', fontWeight: 500, color: 'var(--text-faint)', opacity: 0.7, whiteSpace: 'nowrap' }}
+              >
+                <Icon name={lt.icon} size={15} />
+                {lt.label}
+                <Icon name="lock" size={11} style={{ color: 'var(--text-faint)', marginLeft: 1 }} />
               </button>
             ))}
           </div>
-
-          {/* Content */}
           <div style={{ padding: 20 }}>
             {activeTab === 'guests' && (
               <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 12 }}>
-                <button onClick={() => { setEditingGuest(null); setShowGuestModal(true); }}
-                  style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '7px 12px', background: 'var(--lavender-grey-ink)', color: 'var(--floral)', border: 'none', borderRadius: 10, fontSize: 12.5, fontWeight: 500, cursor: 'pointer' }}>
-                  <Icon name="plus" size={13} /> Add Guest
-                </button>
+                <Button variant="soft" tone="brand" size="sm" iconLeft={<Icon name="plus" size={13} />} onClick={() => { setEditingGuest(null); setShowGuestModal(true); }}>
+                  Add Guest
+                </Button>
               </div>
             )}
             <AnimatePresence mode="wait">
@@ -524,16 +606,53 @@ export default function CoupleAdminDashboard() {
               {activeTab === 'seating' && weddingId && <SeatingTab key="seating" weddingId={weddingId} tables={tables} guests={guests} onRefresh={fetchData} />}
             </AnimatePresence>
           </div>
+        </Card>
+      ) : isFree ? (
+        /* Free users with no features enabled: show the locked tabs as cards */
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+          {lockedTabDefs.map(lt => (
+            <button
+              key={lt.key}
+              onClick={() => setLockedTabDialog(lt.requiredTier)}
+              style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 10, padding: '32px 16px', background: 'var(--surface-card)', border: '1.5px dashed var(--border-default)', borderRadius: 'var(--radius-xl)', cursor: 'pointer', transition: 'var(--transition-control)' }}
+              onMouseEnter={e => { e.currentTarget.style.background = 'var(--surface-sunken)'; e.currentTarget.style.borderColor = 'var(--brand-border)'; }}
+              onMouseLeave={e => { e.currentTarget.style.background = 'var(--surface-card)'; e.currentTarget.style.borderColor = 'var(--border-default)'; }}
+            >
+              <div style={{ width: 40, height: 40, borderRadius: 'var(--radius-full)', background: 'var(--surface-sunken)', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
+                <Icon name={lt.icon} size={18} style={{ color: 'var(--text-muted)' }} />
+                <div style={{ position: 'absolute', bottom: -4, right: -4, width: 16, height: 16, background: 'var(--surface-card)', borderRadius: '50%', border: '1px solid var(--border-default)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Icon name="lock" size={9} style={{ color: 'var(--text-muted)' }} />
+                </div>
+              </div>
+              <div style={{ textAlign: 'center' }}>
+                <p style={{ margin: 0, fontFamily: 'var(--font-ui)', fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--text-muted)' }}>{lt.label}</p>
+                <p style={{ margin: '3px 0 0', fontFamily: 'var(--font-ui)', fontSize: 'var(--text-xs)', color: 'var(--text-subtle)' }}>Premium feature</p>
+              </div>
+            </button>
+          ))}
         </div>
       ) : (
-        <div style={{ background: 'white', border: '1px solid var(--line)', borderRadius: 'var(--radius-md)', padding: '40px 20px', textAlign: 'center' }}>
-          <p style={{ color: 'var(--ink-2)', fontSize: 15, marginBottom: 6 }}>No features enabled yet</p>
-          <p style={{ color: 'var(--muted)', fontSize: 13 }}>Contact your administrator to enable RSVP, Wishes, or Photos.</p>
-        </div>
+        <EmptyState
+          icon="sparkles"
+          title="No features enabled"
+          description="Contact your administrator to enable RSVP, Wishes, or Photos."
+        />
       )}
 
-      {/* ── Modals ─────────────────────────────────────────────────────── */}
-      {showGuestModal && <GuestModal guest={editingGuest} onClose={() => { setShowGuestModal(false); setEditingGuest(null); }} onSave={handleSaveGuest} />}
+      {/* ── Modals ─────────────────────────────────────────────────────────── */}
+      {showGuestModal && (
+        <GuestModal
+          guest={editingGuest}
+          onClose={() => { setShowGuestModal(false); setEditingGuest(null); }}
+          onSave={handleSaveGuest}
+        />
+      )}
+
+      <UpgradeDialog
+        open={!!lockedTabDialog}
+        onClose={() => setLockedTabDialog(null)}
+        requiredTier={lockedTabDialog ?? 'PREMIUM'}
+      />
     </div>
   );
 }

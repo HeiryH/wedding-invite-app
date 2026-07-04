@@ -71,6 +71,11 @@ namespace WeddingInvite.Data
                .WithMany(p => p.Weddings)
                .HasForeignKey(e => e.PackageId)
                .OnDelete(DeleteBehavior.SetNull);
+
+                entity.HasOne(e => e.CreatedBy)
+               .WithMany()
+               .HasForeignKey(e => e.CreatedByUserId)
+               .OnDelete(DeleteBehavior.SetNull);
             });
 
             // Guest configuration
@@ -317,6 +322,7 @@ namespace WeddingInvite.Data
                     ComponentPath = "Template1",
                     IsActive = true,
                     IsPremium = false,
+                    Tier = "FREE",
                     SortOrder = 1,
                     CreatedDate = DateTime.UtcNow
                 },
@@ -331,6 +337,7 @@ namespace WeddingInvite.Data
                     ComponentPath = "Template2",
                     IsActive = true,
                     IsPremium = true,
+                    Tier = "PREMIUM",
                     SortOrder = 2,
                     CreatedDate = DateTime.UtcNow
                 },
@@ -345,6 +352,7 @@ namespace WeddingInvite.Data
                     ComponentPath = "Template3",
                     IsActive = true,
                     IsPremium = true,
+                    Tier = "PREMIUM",
                     SortOrder = 3,
                     CreatedDate = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc)
                 },
@@ -359,6 +367,7 @@ namespace WeddingInvite.Data
                     ComponentPath = "Template4",
                     IsActive = true,
                     IsPremium = true,
+                    Tier = "PREMIUM",
                     SortOrder = 4,
                     CreatedDate = new DateTime(2026, 3, 27, 0, 0, 0, DateTimeKind.Utc)
                 },
@@ -373,6 +382,7 @@ namespace WeddingInvite.Data
                     ComponentPath = "Template6",
                     IsActive = true,
                     IsPremium = true,
+                    Tier = "PREMIUM",
                     SortOrder = 6,
                     CreatedDate = new DateTime(2026, 5, 19, 0, 0, 0, DateTimeKind.Utc)
                 }
@@ -560,6 +570,7 @@ namespace WeddingInvite.Data
                     PasswordHash = BCrypt.Net.BCrypt.HashPassword("Admin123!"),
                     Role = UserRoles.SuperAdmin,
                     WeddingId = null,
+                    Tier = "FREE",
                     CreatedDate = DateTime.UtcNow
                 }
             );

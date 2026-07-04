@@ -2,6 +2,11 @@
 
 import { useState } from 'react';
 import { authService, CoupleAdminUser } from '@/lib/api';
+import { getUser } from '@/lib/auth';
+import { tierLabel } from '@/lib/tierRank';
+
+type Tier = 'FREE' | 'PREMIUM' | 'PRO';
+const TIERS: Tier[] = ['FREE', 'PREMIUM', 'PRO'];
 
 interface AccessTabProps {
   coupleAdmin: CoupleAdminUser | null;
@@ -23,6 +28,10 @@ export default function AccessTab({ coupleAdmin, weddingId, onRefresh }: AccessT
 
   // Toggle active state
   const [toggling, setToggling] = useState(false);
+
+  // Tier state
+  const [settingTier, setSettingTier] = useState(false);
+  const viewerRole = getUser()?.role;
 
   const handleCreate = async () => {
     if (!newEmail.trim() || !newPassword.trim()) {
@@ -68,6 +77,19 @@ export default function AccessTab({ coupleAdmin, weddingId, onRefresh }: AccessT
       alert('Failed to reset password');
     } finally {
       setResetting(false);
+    }
+  };
+
+  const handleSetTier = async (tier: Tier) => {
+    if (!coupleAdmin || tier === coupleAdmin.tier?.toUpperCase()) return;
+    setSettingTier(true);
+    try {
+      await authService.setTier(coupleAdmin.userId, tier);
+      onRefresh();
+    } catch {
+      alert('Failed to update account tier');
+    } finally {
+      setSettingTier(false);
     }
   };
 
@@ -164,6 +186,33 @@ export default function AccessTab({ coupleAdmin, weddingId, onRefresh }: AccessT
             ? 'The couple can log in and manage their wedding dashboard.'
             : 'Access is disabled. The couple cannot log in until you re-enable it.'}
         </p>
+
+        {/* Tier selector — SUPER_ADMIN only */}
+        {viewerRole === 'SUPER_ADMIN' && (
+          <div className="mb-5 p-4 bg-gray-50 rounded-lg border border-gray-200">
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Account Tier</p>
+            <div className="flex gap-2">
+              {TIERS.map(t => {
+                const current = (coupleAdmin.tier ?? 'FREE').toUpperCase() === t;
+                const colors: Record<Tier, string> = {
+                  FREE:    current ? 'bg-gray-200 text-gray-800 border-gray-400' : 'bg-white text-gray-500 border-gray-200 hover:border-gray-400',
+                  PREMIUM: current ? 'bg-yellow-100 text-yellow-800 border-yellow-400' : 'bg-white text-gray-500 border-gray-200 hover:border-yellow-300',
+                  PRO:     current ? 'bg-indigo-100 text-indigo-800 border-indigo-400' : 'bg-white text-gray-500 border-gray-200 hover:border-indigo-300',
+                };
+                return (
+                  <button
+                    key={t}
+                    onClick={() => handleSetTier(t)}
+                    disabled={settingTier || current}
+                    className={`flex-1 py-1.5 rounded-lg text-xs font-semibold border transition-colors disabled:cursor-default ${colors[t]}`}
+                  >
+                    {tierLabel[t]}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         <div className="space-y-3">
           {/* Toggle active */}

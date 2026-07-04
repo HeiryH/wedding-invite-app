@@ -11,5 +11,6 @@ namespace WeddingInvite.Data.Repositories
         Task<Template> CreateAsync(Template template);
         Task<Template> UpdateAsync(Template template);
         Task<bool> DeleteAsync(int id);
+        Task<Dictionary<int, int>> GetWeddingCountsByTemplateAsync();
     }
 }

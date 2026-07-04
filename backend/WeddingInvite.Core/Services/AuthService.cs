@@ -44,7 +44,8 @@ namespace WeddingInvite.Core.Services
                 Token = token,
                 Email = user.Email,
                 Role = user.Role,
-                WeddingId = user.WeddingId
+                WeddingId = user.WeddingId,
+                Tier = user.Tier
             };
         }
 
@@ -78,7 +79,8 @@ namespace WeddingInvite.Core.Services
                 Token = token,
                 Email = createdUser.Email,
                 Role = createdUser.Role,
-                WeddingId = createdUser.WeddingId
+                WeddingId = createdUser.WeddingId,
+                Tier = createdUser.Tier
             };
         }
 
@@ -112,6 +114,31 @@ namespace WeddingInvite.Core.Services
             return user == null ? null : MapToDto(user);
         }
 
+        public async Task<UserDto> CreateHostAdminAsync(string email, string password)
+        {
+            var existing = await _userRepo.GetByEmailAsync(email);
+            if (existing != null)
+                throw new ArgumentException("Email already registered");
+
+            var user = new User
+            {
+                Email = email,
+                PasswordHash = BCrypt.Net.BCrypt.HashPassword(password),
+                Role = UserRoles.HostAdmin,
+                WeddingId = null,
+                CreatedDate = DateTime.UtcNow
+            };
+
+            var created = await _userRepo.CreateAsync(user);
+            return MapToDto(created);
+        }
+
+        public async Task<IEnumerable<UserDto>> GetAllHostAdminsAsync()
+        {
+            var users = await _userRepo.GetAllByRoleAsync(UserRoles.HostAdmin);
+            return users.Select(MapToDto);
+        }
+
         public async Task<UserDto> SetActiveAsync(int userId, bool isActive)
         {
             var user = await _userRepo.GetByIdAsync(userId);
@@ -119,6 +146,21 @@ namespace WeddingInvite.Core.Services
                 throw new KeyNotFoundException($"User {userId} not found");
 
             user.IsActive = isActive;
+            var updated = await _userRepo.UpdateAsync(user);
+            return MapToDto(updated);
+        }
+
+        public async Task<UserDto> SetTierAsync(int userId, string tier)
+        {
+            var valid = new[] { "FREE", "PREMIUM", "PRO" };
+            if (!valid.Contains(tier.ToUpper()))
+                throw new ArgumentException($"Invalid tier '{tier}'. Must be FREE, PREMIUM, or PRO.");
+
+            var user = await _userRepo.GetByIdAsync(userId);
+            if (user == null)
+                throw new KeyNotFoundException($"User {userId} not found");
+
+            user.Tier = tier.ToUpper();
             var updated = await _userRepo.UpdateAsync(user);
             return MapToDto(updated);
         }
@@ -147,6 +189,7 @@ namespace WeddingInvite.Core.Services
             Role = user.Role,
             WeddingId = user.WeddingId,
             IsActive = user.IsActive,
+            Tier = user.Tier,
             CreatedDate = user.CreatedDate
         };
 

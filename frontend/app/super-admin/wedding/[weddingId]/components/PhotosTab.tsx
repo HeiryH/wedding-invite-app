@@ -2,7 +2,8 @@
 
 import { motion, AnimatePresence } from 'framer-motion';
 import { Photo } from '@/lib/api';
-import StatCard from './StatCard';
+import { StatCard } from '@/components/ui/Card';
+import { Icon } from '@/components/ui/Icon';
 
 interface PhotosTabProps {
   photos: Photo[];
@@ -38,10 +39,10 @@ export default function PhotosTab({
     >
       {/* Photo Stats */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
-        <StatCard title="Total Photos" value={stats.totalPhotos} icon="📸" color="blue" />
-        <StatCard title="Pending" value={stats.pendingPhotos} icon="⏳" color="yellow" />
-        <StatCard title="Approved" value={stats.approvedPhotos} icon="✅" color="green" />
-        <StatCard title="Featured" value={stats.featuredPhotos} icon="⭐" color="purple" />
+        <StatCard label="Total Photos" value={stats.totalPhotos} icon={<Icon name="camera" size={16} />} tone="brand" />
+        <StatCard label="Pending" value={stats.pendingPhotos} icon={<Icon name="clock" size={16} />} tone="gold" />
+        <StatCard label="Approved" value={stats.approvedPhotos} icon={<Icon name="check-circle" size={16} />} tone="success" />
+        <StatCard label="Featured" value={stats.featuredPhotos} icon={<Icon name="star" size={16} />} tone="neutral" />
       </div>
 
       {/* Photo Filters */}

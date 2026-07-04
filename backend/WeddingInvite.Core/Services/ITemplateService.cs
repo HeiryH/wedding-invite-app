@@ -8,5 +8,7 @@ namespace WeddingInvite.Core.Services
         Task<TemplateDto?> GetByCodeAsync(string code);
         Task<IEnumerable<TemplateDto>> GetAllAsync();
         Task<IEnumerable<TemplateDto>> GetActiveAsync();
+        Task<IEnumerable<TemplateUsageDto>> GetAllWithUsageAsync();
+        Task<TemplateDto> UpdateAsync(int id, UpdateTemplateMetaDto updateDto);
     }
 }

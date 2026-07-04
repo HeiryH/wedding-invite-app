@@ -12,5 +12,8 @@ namespace WeddingInvite.Data.Repositories
         Task<Wedding> UpdateAsync(Wedding wedding);
         Task<bool> DeleteAsync(int id);
         Task<bool> CoupleNameExistsAsync(string coupleName);
+        Task<IEnumerable<Wedding>> GetByCreatorIdAsync(int userId);
+        Task<IEnumerable<Wedding>> GetStalePrivateAsync(DateTime olderThan);
+        Task HardDeleteAsync(int id);
     }
 }

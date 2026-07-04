@@ -12,6 +12,7 @@ export interface Wedding {
   totalAttending: number;
   daysUntilWedding: number;
   isActive: boolean;
+  isPublic: boolean;
   totalPhotos: number;           // NEW
   enabledFeaturesCount: number;  // NEW
   templateId: number;
@@ -22,6 +23,8 @@ export interface Wedding {
   maxCapacity?: number;
   showCapacityWarning?: boolean;
   isRsvpOpen?: boolean;
+  createdByUserId?: number;
+  createdByEmail?: string;
 }
 
 export interface CreateWedding {
@@ -146,6 +149,18 @@ export interface Feature {
   sortOrder: number;
 }
 
+export interface FeatureWithUsage extends Feature {
+  weddingCount: number;
+}
+
+export interface UpdateFeature {
+  featureName: string;
+  description: string;
+  isPremium: boolean;
+  isActive: boolean;
+  sortOrder: number;
+}
+
 export interface WeddingFeature {
   weddingFeatureId: number;
   weddingId: number;
@@ -195,6 +210,19 @@ export interface Template {
   componentPath: string;
   isActive: boolean;
   isPremium: boolean;
+  tier: 'FREE' | 'PREMIUM' | 'PRO';
+  sortOrder: number;
+}
+
+export interface TemplateWithUsage extends Template {
+  weddingCount: number;
+}
+
+export interface UpdateTemplate {
+  templateName: string;
+  description: string;
+  tier: 'FREE' | 'PREMIUM' | 'PRO';
+  isActive: boolean;
   sortOrder: number;
 }
 

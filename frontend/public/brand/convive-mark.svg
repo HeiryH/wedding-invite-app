@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80" fill="none" role="img" aria-label="Convive mark">
+  <path d="M 40.00 10.00 Q 46.63 6.65 51.48 12.28 Q 58.89 11.73 61.21 18.79 Q 68.27 21.11 67.72 28.52 Q 73.35 33.37 70.00 40.00 Q 73.35 46.63 67.72 51.48 Q 68.27 58.89 61.21 61.21 Q 58.89 68.27 51.48 67.72 Q 46.63 73.35 40.00 70.00 Q 33.37 73.35 28.52 67.72 Q 21.11 68.27 18.79 61.21 Q 11.73 58.89 12.28 51.48 Q 6.65 46.63 10.00 40.00 Q 6.65 33.37 12.28 28.52 Q 11.73 21.11 18.79 18.79 Q 21.11 11.73 28.52 12.28 Q 33.37 6.65 40.00 10.00 Z" fill="#a83541"></path>
+  <circle cx="40" cy="40" r="25.5" fill="none" stroke="#cca23a" stroke-width="1.4" stroke-opacity="0.85"></circle>
+  <text x="40" y="40" font-family="Cormorant Garamond, Georgia, serif" font-size="40" font-weight="600" fill="#faf6ef" text-anchor="middle" dominant-baseline="central" letter-spacing="0">C</text>
+</svg>

@@ -50,10 +50,18 @@ namespace WeddingInvite.Data.Repositories
         {
             var user = await _context.Users.FindAsync(id);
             if (user == null) return false;
-            
+
             _context.Users.Remove(user);
             await _context.SaveChangesAsync();
             return true;
+        }
+
+        public async Task<IEnumerable<User>> GetAllByRoleAsync(string role)
+        {
+            return await _context.Users
+                .Where(u => u.Role == role)
+                .OrderBy(u => u.Email)
+                .ToListAsync();
         }
     }
 }

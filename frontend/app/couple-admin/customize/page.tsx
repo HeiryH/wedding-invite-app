@@ -8,17 +8,24 @@ import {
   photoService,
   audioService,
   templateConfigService,
+  templateService,
   weddingFeatureService,
   itineraryService,
   Wedding,
   Photo,
+  Template,
   ItineraryItem,
   TemplateSlots,
 } from '@/lib/api';
+import { TemplateLibrary } from '@/components/templates/TemplateLibrary';
 import { buildDefaultConfig } from '@/lib/templateConfigSchema';
+import { Button } from '@/components/ui/Button';
+import { Switch } from '@/components/ui/Switch';
+import { Icon } from '@/components/ui/Icon';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import CharacterCount from '@tiptap/extension-character-count';
+import { PreviewPanel, type Device, type EditorMode } from './_components/PreviewPanel';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL?.replace('/api', '') ?? '';
 
@@ -43,109 +50,239 @@ const PORTRAIT_SLOTS_T4 = [
   { slot: TemplateSlots.EXTRA_3, label: 'Photo Booth — Card 3' },
 ];
 
+// ── Block model ───────────────────────────────────────────────────────────────
+type BlockId = 'details' | 'welcome' | 'walimah' | 'rsvp' | 'itinerary' | 'wishes' | 'photobooth' | 'music';
 
-// ── Tab / section-order types ─────────────────────────────────────────────────
-
-type Tab = 'welcome' | 'ceremony' | 'celebration' | 'music';
-
-// Music tab is fixed (not reorderable) — only these 3 go into tabOrder
-const REORDERABLE_TABS: { id: Tab; label: string }[] = [
-  { id: 'welcome', label: 'Welcome' },
-  { id: 'ceremony', label: 'Ceremony' },
-  { id: 'celebration', label: 'Celebration' },
+const SECTION_BLOCKS: { code: string; label: string; icon: string }[] = [
+  { code: 'welcome',    label: 'Cover',       icon: 'image' },
+  { code: 'walimah',   label: 'Ceremony',    icon: 'calendar' },
+  { code: 'rsvp',      label: 'RSVP',        icon: 'star' },
+  { code: 'itinerary', label: 'Itinerary',   icon: 'clock' },
+  { code: 'wishes',    label: 'Wishes',      icon: 'message-circle' },
+  { code: 'photobooth',label: 'Photo Booth', icon: 'camera' },
 ];
+const SECTION_CODES = SECTION_BLOCKS.map((b) => b.code);
+const DEFAULT_SECTION_ORDER = SECTION_CODES.slice();
 
-// Keep TABS alias so existing code (buildSectionOrder, parseTabOrder) works unchanged
-const TABS = REORDERABLE_TABS;
-
-const TAB_SECTION_CODES: Record<Tab, string[]> = {
-  welcome: ['welcome'],
-  ceremony: ['walimah', 'rsvp', 'itinerary'],
-  celebration: ['wishes', 'photobooth'],
-  music: [],
-};
-
-const TAB_SCROLL_FRACTION: Record<Tab, number> = {
-  welcome: 0,
-  ceremony: 0.35,
-  celebration: 0.7,
-  music: 0,
-};
-
-function buildSectionOrder(order: Tab[]): string {
-  return order.flatMap((t) => TAB_SECTION_CODES[t]).join(',');
+function parseSectionOrder(value: string | undefined): string[] {
+  if (!value) return DEFAULT_SECTION_ORDER.slice();
+  const codes = value.split(',').map((c) => c.trim()).filter((c) => SECTION_CODES.includes(c));
+  const ordered = Array.from(new Set(codes));
+  return ordered.length ? ordered : DEFAULT_SECTION_ORDER.slice();
 }
 
-function parseTabOrder(sectionOrder: string): Tab[] {
-  const codes = sectionOrder.split(',');
-  const result: Tab[] = [];
-  const seen = new Set<Tab>();
-  for (const code of codes) {
-    const entry = (Object.entries(TAB_SECTION_CODES) as [Tab, string[]][]).find(([, v]) => v.includes(code));
-    if (entry && !seen.has(entry[0])) { result.push(entry[0]); seen.add(entry[0]); }
-  }
-  for (const { id } of TABS) { if (!seen.has(id)) result.push(id); }
-  return result;
+function scrollFractionFor(block: BlockId, order: string[]): number {
+  if (block === 'details' || block === 'music') return 0;
+  const i = order.indexOf(block);
+  return i <= 0 ? 0 : i / Math.max(1, order.length);
 }
 
-// ── UI primitives ─────────────────────────────────────────────────────────────
+// Block metadata for form header
+const BLOCK_INFO: Record<string, { eyebrow: string; title: string; subtitle: string; chips: string[] }> = {
+  details:    { eyebrow: 'Global', title: 'Details & Theme', subtitle: 'Wedding info and template settings.', chips: ['Layout', 'Details', 'Display', 'Footer'] },
+  welcome:    { eyebrow: 'Section · Cover', title: 'Welcome screen', subtitle: 'The first thing guests see when they open the invitation.', chips: ['Content', 'Style', 'Background'] },
+  walimah:    { eyebrow: 'Section · Ceremony', title: 'The ceremony', subtitle: 'Ceremony details and walimah text.', chips: ['Content', 'Style'] },
+  rsvp:       { eyebrow: 'Section · RSVP', title: 'RSVP', subtitle: 'Guest confirmation section.', chips: ['RSVP'] },
+  itinerary:  { eyebrow: 'Section · Itinerary', title: 'Schedule', subtitle: 'Event timeline and programme.', chips: ['Schedule', 'Background'] },
+  wishes:     { eyebrow: 'Section · Wishes', title: 'Wishes & Guestbook', subtitle: 'Messages from your guests.', chips: ['Content'] },
+  photobooth: { eyebrow: 'Section · Photo Booth', title: 'Photo Booth', subtitle: 'Guest photo gallery.', chips: ['Content', 'Media', 'Background'] },
+  music:      { eyebrow: 'Background Music', title: 'Music & playlist', subtitle: 'Audio that plays while guests browse.', chips: ['Audio', 'Settings'] },
+};
+
+// Preset color swatches per field type
+const PRESETS = {
+  bride:   ['#9a244f', '#b0506b', '#6f5bb5', '#1a1718', '#b8945a', '#ffffff'],
+  groom:   ['#1a1718', '#6f5bb5', '#0a3a5c', '#2d6a4f', '#4a90d9', '#b8945a'],
+  amp:     ['#1a1718', '#b8945a', '#6f5bb5', '#ffffff', '#9a244f', '#cccccc'],
+  heading: ['#ffffff', '#f4d9e2', '#e8e2f4', '#b8945a', '#1a1718', '#9a244f'],
+  date:    ['#ffffff', '#d6c4a3', '#b8945a', '#9a244f', '#6f5bb5', '#1a1718'],
+  venue:   ['#ffffff', '#d6c4a3', '#b8945a', '#6f5bb5', '#9a244f', '#1a1718'],
+  body:    ['#ffffff', '#f0ebe0', '#d6c4a3', '#b8945a', '#1a1718', '#6b6469'],
+  generic: ['#ffffff', '#1a1718', '#b8945a', '#6f5bb5', '#9a244f', '#6b6469'],
+};
+
+// ── Existing sub-components (functional, restyled inputs) ─────────────────────
 
 function FieldLabel({ children, hint }: { children: React.ReactNode; hint?: string }) {
   return (
-    <div className="mb-1.5">
-      <p className="text-sm font-medium text-gray-700">{children}</p>
-      {hint && <p className="text-xs text-gray-400 mt-0.5">{hint}</p>}
+    <div style={{ marginBottom: 6 }}>
+      <p style={{ margin: 0, fontFamily: 'var(--font-ui)', fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--text-strong)' }}>{children}</p>
+      {hint && <p style={{ margin: '2px 0 0', fontFamily: 'var(--font-ui)', fontSize: 'var(--text-xs)', color: 'var(--text-subtle)' }}>{hint}</p>}
     </div>
   );
 }
 
-function TextField({ value, onChange, maxLength, placeholder }: {
-  value: string; onChange: (v: string) => void; maxLength: number; placeholder?: string;
+function TextField({ value, onChange, maxLength, placeholder, type }: {
+  value: string; onChange: (v: string) => void; maxLength: number; placeholder?: string; type?: string;
 }) {
   return (
     <div>
-      <input type="text" value={value} onChange={(e) => onChange(e.target.value)}
+      <input
+        type={type ?? 'text'} value={value} onChange={(e) => onChange(e.target.value)}
         maxLength={maxLength} placeholder={placeholder}
-        className="w-full px-3 py-2 border-2 border-gray-200 rounded-lg text-sm text-gray-900 focus:border-rose-400 focus:outline-none" />
-      <p className={`text-right text-xs mt-0.5 ${value.length >= maxLength ? 'text-red-500' : 'text-gray-400'}`}>
+        style={{ width: '100%', padding: '8px 12px', border: '1px solid var(--border-default)', borderRadius: 'var(--radius-md)', fontSize: 'var(--text-sm)', fontFamily: 'var(--font-ui)', color: 'var(--text-body)', background: 'var(--surface-card)', outline: 'none', boxSizing: 'border-box', transition: 'var(--transition-control)' }}
+        onFocus={e => { e.currentTarget.style.borderColor = 'var(--brand)'; e.currentTarget.style.boxShadow = 'var(--shadow-focus)'; }}
+        onBlur={e => { e.currentTarget.style.borderColor = 'var(--border-default)'; e.currentTarget.style.boxShadow = 'none'; }}
+      />
+      <p style={{ textAlign: 'right', fontSize: 'var(--text-xs)', fontFamily: 'var(--font-mono)', marginTop: 2, color: value.length >= maxLength ? 'var(--danger)' : 'var(--text-subtle)' }}>
         {value.length} / {maxLength}
       </p>
     </div>
   );
 }
 
-function SelectField({ value, options, onChange }: {
-  value: string; options: string[]; onChange: (v: string) => void;
+function SelectField({ value, options, onChange, labels }: {
+  value: string; options: string[]; onChange: (v: string) => void; labels?: Record<string, string>;
 }) {
   return (
-    <select value={value} onChange={(e) => onChange(e.target.value)}
-      className="w-full px-3 py-2 border-2 border-gray-200 rounded-lg text-sm text-gray-900 focus:border-rose-400 focus:outline-none bg-white">
-      {options.map((o) => <option key={o} value={o}>{o.charAt(0).toUpperCase() + o.slice(1)}</option>)}
+    <select
+      value={value} onChange={(e) => onChange(e.target.value)}
+      style={{ width: '100%', padding: '8px 12px', border: '1px solid var(--border-default)', borderRadius: 'var(--radius-md)', fontSize: 'var(--text-sm)', fontFamily: 'var(--font-ui)', color: 'var(--text-body)', background: 'var(--surface-card)', outline: 'none', appearance: 'none', WebkitAppearance: 'none', transition: 'var(--transition-control)' }}
+      onFocus={e => { e.currentTarget.style.borderColor = 'var(--brand)'; e.currentTarget.style.boxShadow = 'var(--shadow-focus)'; }}
+      onBlur={e => { e.currentTarget.style.borderColor = 'var(--border-default)'; e.currentTarget.style.boxShadow = 'none'; }}
+    >
+      {options.map((o) => <option key={o} value={o}>{labels?.[o] ?? (o.charAt(0).toUpperCase() + o.slice(1))}</option>)}
     </select>
   );
 }
 
 function ToggleSwitch({ value, onChange }: { value: boolean; onChange: (v: boolean) => void }) {
+  return <Switch checked={value} onChange={e => onChange(e.target.checked)} />;
+}
+
+// ── New Eveline-design primitives ────────────────────────────────────────────
+
+// Collapsible form group
+function Group({ title, children, count, defaultOpen = true, chipAnchor }: {
+  title: string; children: React.ReactNode; count?: number; defaultOpen?: boolean; chipAnchor?: string;
+}) {
+  const [open, setOpen] = useState(defaultOpen);
   return (
-    <button type="button" onClick={() => onChange(!value)}
-      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${value ? 'bg-rose-500' : 'bg-gray-200'}`}>
-      <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${value ? 'translate-x-6' : 'translate-x-1'}`} />
-    </button>
+    <div data-chip={chipAnchor || undefined} style={{ marginBottom: 28 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+        <div style={{
+          fontSize: 10, letterSpacing: '0.14em', textTransform: 'uppercase',
+          color: 'var(--text-subtle)', fontWeight: 600, fontFamily: 'var(--font-ui)',
+          display: 'flex', alignItems: 'center', gap: 8,
+        }}>
+          <span style={{ width: 14, height: 1, background: 'var(--border-default)', display: 'inline-block' }} />
+          {title}
+          {count != null && (
+            <span style={{ fontSize: 9, padding: '1px 6px', background: 'var(--surface-sunken)', borderRadius: 999, color: 'var(--text-muted)', fontVariantNumeric: 'tabular-nums' }}>{count}</span>
+          )}
+        </div>
+        <button
+          onClick={() => setOpen(!open)}
+          style={{ width: 22, height: 22, display: 'grid', placeItems: 'center', border: 'none', background: 'transparent', cursor: 'pointer', color: 'var(--text-subtle)', borderRadius: 4, transition: 'background 150ms' }}
+          onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'var(--surface-sunken)'; (e.currentTarget as HTMLElement).style.color = 'var(--text-strong)'; }}
+          onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent'; (e.currentTarget as HTMLElement).style.color = 'var(--text-subtle)'; }}
+        >
+          <Icon name={open ? 'chevron-up' : 'chevron-down'} size={14} />
+        </button>
+      </div>
+      {open && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          {children}
+        </div>
+      )}
+    </div>
   );
 }
 
-function ColorField({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+// Styled field card
+function FieldCard({ label, count, max, children }: {
+  label?: string; count?: number; max?: number; children: React.ReactNode;
+}) {
   return (
-    <div className="flex items-center gap-2">
-      <input type="color" value={value || '#000000'} onChange={(e) => onChange(e.target.value)}
-        className="h-9 w-14 cursor-pointer rounded border-2 border-gray-200 p-0.5" />
-      <input type="text" value={value} onChange={(e) => onChange(e.target.value)}
-        placeholder="Hex color or leave empty for default"
-        className="flex-1 px-3 py-2 border-2 border-gray-200 rounded-lg text-sm text-gray-900 focus:border-rose-400 focus:outline-none font-mono" />
-      {value && (
-        <button type="button" onClick={() => onChange('')}
-          className="text-xs text-gray-400 hover:text-gray-600 shrink-0">Clear</button>
+    <div
+      style={{ background: 'var(--surface-sunken)', border: '1px solid var(--border-subtle)', borderRadius: 10, padding: '12px 14px', transition: 'border-color 150ms' }}
+      onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--border-default)'; }}
+      onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--border-subtle)'; }}
+      onFocusCapture={e => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--brand)'; (e.currentTarget as HTMLElement).style.boxShadow = '0 0 0 3px rgba(67,106,138,0.1)'; }}
+      onBlurCapture={e => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--border-subtle)'; (e.currentTarget as HTMLElement).style.boxShadow = 'none'; }}
+    >
+      {(label || count != null) && (
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+          <span style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 500, fontFamily: 'var(--font-ui)' }}>{label}</span>
+          {count != null && <span style={{ fontSize: 10, color: 'var(--text-subtle)', fontVariantNumeric: 'tabular-nums', fontFamily: 'var(--font-mono)' }}>{count} / {max}</span>}
+        </div>
       )}
+      {children}
+    </div>
+  );
+}
+
+// Color row: swatch + hex input + reset + preset swatches
+function ColorRow({ value, onChange, onClear, presets }: {
+  value: string; onChange: (v: string) => void; onClear: () => void; presets?: string[];
+}) {
+  return (
+    <>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 10, paddingTop: 10, borderTop: '1px dashed var(--border-subtle)' }}>
+        <label style={{ width: 26, height: 26, borderRadius: 6, border: '1px solid var(--border-default)', flexShrink: 0, position: 'relative', cursor: 'pointer', transition: 'transform 150ms', background: value || undefined, display: 'block' }}
+          onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform = 'scale(1.06)'; }}
+          onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = 'scale(1)'; }}>
+          {!value && <div style={{ position: 'absolute', inset: 0, borderRadius: 'inherit', background: 'repeating-linear-gradient(45deg, #fff 0 4px, var(--border-subtle) 4px 5px)' }} />}
+          <input type="color" value={value || '#000000'} onChange={e => onChange(e.target.value)}
+            style={{ opacity: 0, position: 'absolute', inset: 0, cursor: 'pointer', width: '100%', height: '100%' }} />
+        </label>
+        <input
+          className="color-hex-input"
+          value={value || ''} placeholder="Default"
+          onChange={e => onChange(e.target.value)}
+          style={{ flex: 1, fontFamily: "'SF Mono', ui-monospace, monospace", fontSize: 12, fontWeight: 500, color: 'var(--text-strong)', letterSpacing: '0.02em', background: 'transparent', border: 'none', outline: 'none' }}
+        />
+        <button onClick={onClear}
+          style={{ fontSize: 11, color: 'var(--text-subtle)', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'var(--font-ui)', flexShrink: 0, padding: '4px 8px', borderRadius: 'var(--radius-sm)', transition: 'color 150ms' }}
+          onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = 'var(--brand)'; }}
+          onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = 'var(--text-subtle)'; }}>
+          Reset
+        </button>
+      </div>
+      {presets && (
+        <div style={{ display: 'flex', gap: 5, marginTop: 8 }}>
+          {presets.map(p => (
+            <button key={p} onClick={() => onChange(p)} title={p}
+              style={{
+                width: 18, height: 18, borderRadius: 6, cursor: 'pointer',
+                background: p, border: value?.toLowerCase() === p.toLowerCase()
+                  ? '1.5px solid var(--text-strong)' : '1.5px solid transparent',
+                boxShadow: value?.toLowerCase() === p.toLowerCase()
+                  ? '0 0 0 2px #fff, 0 0 0 3px var(--text-strong)' : 'none',
+                transition: 'transform 150ms',
+              }}
+              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform = 'scale(1.15)'; }}
+              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = 'scale(1)'; }}
+            />
+          ))}
+        </div>
+      )}
+    </>
+  );
+}
+
+// Segmented control for shadow/effect options
+function ShadowSeg({ value, onChange, options = ['none', 'shadow', 'glow'] }: {
+  value: string; onChange: (v: string) => void; options?: string[];
+}) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 10, paddingTop: 10, borderTop: '1px dashed var(--border-subtle)' }}>
+      <span style={{ fontSize: 11, color: 'var(--text-muted)', flexShrink: 0, fontFamily: 'var(--font-ui)' }}>Effect</span>
+      <div style={{ display: 'inline-flex', background: 'var(--surface-card)', border: '1px solid var(--border-subtle)', borderRadius: 999, padding: 2 }}>
+        {options.map(opt => (
+          <button key={opt} onClick={() => onChange(opt)}
+            style={{
+              padding: '4px 10px', borderRadius: 999, fontSize: 11,
+              fontWeight: value === opt ? 600 : 500,
+              fontFamily: 'var(--font-ui)',
+              background: value === opt ? 'var(--text-strong)' : 'transparent',
+              color: value === opt ? '#fff' : 'var(--text-muted)',
+              border: 'none', cursor: 'pointer', transition: 'all 150ms',
+            }}>
+            {opt.charAt(0).toUpperCase() + opt.slice(1)}
+          </button>
+        ))}
+      </div>
     </div>
   );
 }
@@ -166,15 +303,18 @@ function RichTextEditor({ value, onChange, maxLength }: {
   });
   const count = editor?.storage.characterCount.characters() ?? 0;
   return (
-    <div className="border-2 border-gray-200 rounded-lg focus-within:border-rose-400 transition-colors">
-      <div className="flex gap-1 p-2 border-b border-gray-100">
+    <div style={{ border: '1px solid var(--border-default)', borderRadius: 'var(--radius-md)', overflow: 'hidden', transition: 'border-color 150ms' }}
+      onFocusCapture={e => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--brand)'; (e.currentTarget as HTMLElement).style.boxShadow = 'var(--shadow-focus)'; }}
+      onBlurCapture={e => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--border-default)'; (e.currentTarget as HTMLElement).style.boxShadow = 'none'; }}
+    >
+      <div style={{ display: 'flex', gap: 4, padding: '6px 8px', borderBottom: '1px solid var(--border-subtle)', background: 'var(--surface-sunken)' }}>
         <button type="button" onClick={() => editor?.chain().focus().toggleBold().run()}
-          className={`px-2 py-1 text-sm rounded font-bold ${editor?.isActive('bold') ? 'bg-gray-200' : 'hover:bg-gray-100'}`}>B</button>
+          style={{ padding: '3px 8px', fontSize: 13, borderRadius: 'var(--radius-sm)', fontWeight: 700, fontFamily: 'var(--font-ui)', background: editor?.isActive('bold') ? 'var(--brand-subtle)' : 'transparent', color: editor?.isActive('bold') ? 'var(--brand)' : 'var(--text-body)', border: 'none', cursor: 'pointer' }}>B</button>
         <button type="button" onClick={() => editor?.chain().focus().toggleItalic().run()}
-          className={`px-2 py-1 text-sm rounded italic ${editor?.isActive('italic') ? 'bg-gray-200' : 'hover:bg-gray-100'}`}>I</button>
+          style={{ padding: '3px 8px', fontSize: 13, borderRadius: 'var(--radius-sm)', fontStyle: 'italic', fontFamily: 'var(--font-ui)', background: editor?.isActive('italic') ? 'var(--brand-subtle)' : 'transparent', color: editor?.isActive('italic') ? 'var(--brand)' : 'var(--text-body)', border: 'none', cursor: 'pointer' }}>I</button>
       </div>
       <EditorContent editor={editor} className="prose prose-sm max-w-none p-3 min-h-[80px] [&_.ProseMirror]:outline-none" />
-      <div className={`text-right text-xs px-3 py-1 border-t border-gray-100 ${count >= maxLength ? 'text-red-500' : 'text-gray-400'}`}>
+      <div style={{ textAlign: 'right', fontSize: 11, fontFamily: 'var(--font-mono)', padding: '3px 12px', borderTop: '1px solid var(--border-subtle)', color: count >= maxLength ? 'var(--danger)' : 'var(--text-subtle)', background: 'var(--surface-sunken)' }}>
         {count} / {maxLength}
       </div>
     </div>
@@ -195,7 +335,6 @@ function ItineraryEditor({ weddingId, onItemsChange }: { weddingId: number; onIt
     itineraryService.getByWeddingId(weddingId).then((data) => { setItems(data); setLoading(false); });
   }, [weddingId]);
 
-  // Notify parent whenever items change so preview stays in sync
   useEffect(() => { onItemsChange?.(items); }, [items]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const nextSort = items.length > 0 ? Math.max(...items.map((i) => i.sortOrder)) + 1 : 1;
@@ -230,50 +369,39 @@ function ItineraryEditor({ weddingId, onItemsChange }: { weddingId: number; onIt
     await itineraryService.reorder(weddingId, { items: reordered.map((i) => ({ itineraryItemId: i.itineraryItemId, sortOrder: i.sortOrder })) });
   };
 
-  if (loading) return <p className="text-sm text-gray-400 py-2">Loading…</p>;
+  const inputStyle: React.CSSProperties = { width: '100%', padding: '6px 10px', border: '1px solid var(--border-default)', borderRadius: 'var(--radius-sm)', fontSize: 'var(--text-sm)', fontFamily: 'var(--font-ui)', color: 'var(--text-body)', background: 'var(--surface-card)', outline: 'none', boxSizing: 'border-box' };
+
+  if (loading) return <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-subtle)', padding: '8px 0' }}>Loading…</p>;
 
   return (
-    <div className="space-y-2">
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
       {items.length === 0 && !adding && (
-        <p className="text-sm text-gray-400 text-center py-3">No items yet. Add your first schedule entry below.</p>
+        <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-subtle)', textAlign: 'center', padding: '12px 0' }}>No items yet.</p>
       )}
-
       {items.map((item, index) => (
-        <div key={item.itineraryItemId} className="border border-gray-200 rounded-lg p-3 bg-gray-50">
+        <div key={item.itineraryItemId} style={{ border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-md)', padding: 12, background: 'var(--surface-sunken)' }}>
           {editingId === item.itineraryItemId ? (
-            <div className="space-y-2">
-              <input autoFocus type="text" value={editDraft.label}
-                onChange={(e) => setEditDraft((d) => ({ ...d, label: e.target.value }))}
-                placeholder="Label (e.g. Akad Nikah)"
-                className="w-full px-2 py-1.5 border border-gray-300 rounded text-sm text-gray-900 focus:border-rose-400 focus:outline-none" />
-              <input type="text" value={editDraft.detail}
-                onChange={(e) => setEditDraft((d) => ({ ...d, detail: e.target.value }))}
-                placeholder="Detail (e.g. 10:00 AM · Grand Mosque)"
-                className="w-full px-2 py-1.5 border border-gray-300 rounded text-sm text-gray-900 focus:border-rose-400 focus:outline-none" />
-              <div className="flex gap-2">
-                <button onClick={() => handleSaveEdit(item)}
-                  className="px-3 py-1 bg-rose-500 text-white text-xs rounded-md hover:bg-rose-600">Save</button>
-                <button onClick={() => setEditingId(null)}
-                  className="px-3 py-1 bg-gray-100 text-gray-600 text-xs rounded-md hover:bg-gray-200">Cancel</button>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <input autoFocus type="text" value={editDraft.label} onChange={e => setEditDraft(d => ({ ...d, label: e.target.value }))} placeholder="Label" style={inputStyle} />
+              <input type="text" value={editDraft.detail} onChange={e => setEditDraft(d => ({ ...d, detail: e.target.value }))} placeholder="Detail" style={inputStyle} />
+              <div style={{ display: 'flex', gap: 6 }}>
+                <button onClick={() => handleSaveEdit(item)} style={{ padding: '4px 12px', background: 'var(--brand)', color: '#fff', fontSize: 11, borderRadius: 'var(--radius-sm)', border: 'none', cursor: 'pointer', fontFamily: 'var(--font-ui)', fontWeight: 600 }}>Save</button>
+                <button onClick={() => setEditingId(null)} style={{ padding: '4px 12px', background: 'var(--surface-card)', color: 'var(--text-body)', fontSize: 11, borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-default)', cursor: 'pointer', fontFamily: 'var(--font-ui)' }}>Cancel</button>
               </div>
             </div>
           ) : (
-            <div className="flex items-start gap-2">
-              <div className="flex flex-col gap-0 pt-0.5">
-                <button onClick={() => handleMove(index, 'up')} disabled={index === 0}
-                  className="text-[10px] text-gray-400 hover:text-gray-600 disabled:opacity-20 leading-tight px-0.5">▲</button>
-                <button onClick={() => handleMove(index, 'down')} disabled={index === items.length - 1}
-                  className="text-[10px] text-gray-400 hover:text-gray-600 disabled:opacity-20 leading-tight px-0.5">▼</button>
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                <button onClick={() => handleMove(index, 'up')} disabled={index === 0} style={{ fontSize: 10, color: 'var(--text-subtle)', background: 'none', border: 'none', cursor: index === 0 ? 'default' : 'pointer', opacity: index === 0 ? 0.2 : 1, lineHeight: 1 }}>▲</button>
+                <button onClick={() => handleMove(index, 'down')} disabled={index === items.length - 1} style={{ fontSize: 10, color: 'var(--text-subtle)', background: 'none', border: 'none', cursor: index === items.length - 1 ? 'default' : 'pointer', opacity: index === items.length - 1 ? 0.2 : 1, lineHeight: 1 }}>▼</button>
               </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-gray-800 leading-snug">{item.label}</p>
-                {item.detail && <p className="text-xs text-gray-500 mt-0.5 leading-snug">{item.detail}</p>}
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <p style={{ margin: 0, fontSize: 'var(--text-sm)', fontWeight: 500, color: 'var(--text-strong)', fontFamily: 'var(--font-ui)' }}>{item.label}</p>
+                {item.detail && <p style={{ margin: '2px 0 0', fontSize: 'var(--text-xs)', color: 'var(--text-muted)', fontFamily: 'var(--font-ui)' }}>{item.detail}</p>}
               </div>
-              <div className="flex gap-1 shrink-0 mt-0.5">
-                <button onClick={() => { setEditingId(item.itineraryItemId); setEditDraft({ label: item.label, detail: item.detail }); }}
-                  className="px-2 py-1 text-xs text-gray-600 border border-gray-200 rounded hover:bg-white transition-colors">Edit</button>
-                <button onClick={() => handleDelete(item.itineraryItemId)}
-                  className="px-2 py-1 text-xs text-red-400 border border-red-100 rounded hover:bg-red-50 transition-colors">Del</button>
+              <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
+                <button onClick={() => { setEditingId(item.itineraryItemId); setEditDraft({ label: item.label, detail: item.detail }); }} style={{ padding: '3px 8px', fontSize: 11, color: 'var(--text-body)', border: '1px solid var(--border-default)', borderRadius: 'var(--radius-sm)', background: 'transparent', cursor: 'pointer', fontFamily: 'var(--font-ui)' }}>Edit</button>
+                <button onClick={() => handleDelete(item.itineraryItemId)} style={{ padding: '3px 8px', fontSize: 11, color: 'var(--danger)', border: '1px solid var(--danger-border, #fca5a5)', borderRadius: 'var(--radius-sm)', background: 'transparent', cursor: 'pointer', fontFamily: 'var(--font-ui)' }}>Del</button>
               </div>
             </div>
           )}
@@ -281,27 +409,19 @@ function ItineraryEditor({ weddingId, onItemsChange }: { weddingId: number; onIt
       ))}
 
       {adding ? (
-        <div className="border border-rose-200 rounded-lg p-3 bg-rose-50/50 space-y-2">
-          <input autoFocus type="text" value={newRow.label}
-            onChange={(e) => setNewRow((d) => ({ ...d, label: e.target.value }))}
-            placeholder="Label (e.g. Akad Nikah)"
-            onKeyDown={(e) => e.key === 'Enter' && handleAdd()}
-            className="w-full px-2 py-1.5 border border-gray-300 rounded text-sm text-gray-900 focus:border-rose-400 focus:outline-none" />
-          <input type="text" value={newRow.detail}
-            onChange={(e) => setNewRow((d) => ({ ...d, detail: e.target.value }))}
-            placeholder="Detail (e.g. 10:00 AM · Grand Mosque)"
-            onKeyDown={(e) => e.key === 'Enter' && handleAdd()}
-            className="w-full px-2 py-1.5 border border-gray-300 rounded text-sm text-gray-900 focus:border-rose-400 focus:outline-none" />
-          <div className="flex gap-2">
-            <button onClick={handleAdd}
-              className="px-3 py-1 bg-rose-500 text-white text-xs rounded-md hover:bg-rose-600">Add</button>
-            <button onClick={() => { setAdding(false); setNewRow({ label: '', detail: '' }); }}
-              className="px-3 py-1 bg-gray-100 text-gray-600 text-xs rounded-md hover:bg-gray-200">Cancel</button>
+        <div style={{ border: '1px solid var(--brand-border)', borderRadius: 'var(--radius-md)', padding: 12, background: 'var(--brand-subtle)', display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <input autoFocus type="text" value={newRow.label} onChange={e => setNewRow(d => ({ ...d, label: e.target.value }))} placeholder="Label (e.g. Akad Nikah)" onKeyDown={e => e.key === 'Enter' && handleAdd()} style={inputStyle} />
+          <input type="text" value={newRow.detail} onChange={e => setNewRow(d => ({ ...d, detail: e.target.value }))} placeholder="Detail (e.g. 10:00 AM · Grand Mosque)" onKeyDown={e => e.key === 'Enter' && handleAdd()} style={inputStyle} />
+          <div style={{ display: 'flex', gap: 6 }}>
+            <button onClick={handleAdd} style={{ padding: '4px 12px', background: 'var(--brand)', color: '#fff', fontSize: 11, borderRadius: 'var(--radius-sm)', border: 'none', cursor: 'pointer', fontFamily: 'var(--font-ui)', fontWeight: 600 }}>Add</button>
+            <button onClick={() => { setAdding(false); setNewRow({ label: '', detail: '' }); }} style={{ padding: '4px 12px', background: 'var(--surface-card)', color: 'var(--text-body)', fontSize: 11, borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-default)', cursor: 'pointer', fontFamily: 'var(--font-ui)' }}>Cancel</button>
           </div>
         </div>
       ) : (
         <button onClick={() => setAdding(true)}
-          className="w-full py-2.5 border-2 border-dashed border-gray-300 rounded-lg text-sm text-gray-500 hover:border-rose-300 hover:text-rose-500 transition-colors">
+          style={{ width: '100%', padding: 10, border: '1.5px dashed var(--border-default)', borderRadius: 'var(--radius-md)', fontSize: 'var(--text-sm)', fontFamily: 'var(--font-ui)', color: 'var(--text-muted)', cursor: 'pointer', background: 'transparent', transition: 'var(--transition-control)' }}
+          onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--brand)'; e.currentTarget.style.color = 'var(--brand)'; }}
+          onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border-default)'; e.currentTarget.style.color = 'var(--text-muted)'; }}>
           + Add schedule item
         </button>
       )}
@@ -332,67 +452,53 @@ function MusicTab({ url, loop, weddingId, onUrlChange, onLoopChange }: {
   };
 
   return (
-    <div className="space-y-6">
-      <section className="space-y-3">
-        <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Upload Audio</h3>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+      <Group title="Upload Audio" chipAnchor="Audio">
         <div
           onClick={() => inputRef.current?.click()}
-          onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+          onDragOver={e => { e.preventDefault(); setDragOver(true); }}
           onDragLeave={() => setDragOver(false)}
-          onDrop={(e) => {
-            e.preventDefault(); setDragOver(false);
-            const f = e.dataTransfer.files[0];
-            if (f?.type.startsWith('audio/')) handleFile(f);
-          }}
-          className={`rounded-xl border-2 border-dashed p-6 flex flex-col items-center justify-center gap-2 cursor-pointer transition-colors ${dragOver ? 'border-rose-400 bg-rose-50' : 'border-gray-300 hover:border-rose-300 bg-gray-50'}`}
+          onDrop={e => { e.preventDefault(); setDragOver(false); const f = e.dataTransfer.files[0]; if (f?.type.startsWith('audio/')) handleFile(f); }}
+          style={{ borderRadius: 12, border: `2px dashed ${dragOver ? 'var(--brand)' : 'var(--border-default)'}`, padding: 24, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 8, cursor: 'pointer', transition: 'var(--transition-control)', background: dragOver ? 'var(--brand-subtle)' : 'var(--surface-sunken)' }}
         >
-          {uploading ? (
-            <p className="text-sm text-gray-400">Uploading…</p>
-          ) : (
+          {uploading ? <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-muted)' }}>Uploading…</p> : (
             <>
-              <span className="text-3xl">🎵</span>
-              <p className="text-sm font-medium text-gray-600">Drop audio file here or click to browse</p>
-              <p className="text-xs text-gray-400">MP3, WAV, OGG, AAC, M4A, FLAC · max 20 MB</p>
+              <span style={{ fontSize: 28 }}>🎵</span>
+              <p style={{ margin: 0, fontSize: 'var(--text-sm)', fontWeight: 500, color: 'var(--text-body)', fontFamily: 'var(--font-ui)' }}>Drop audio file here or click to browse</p>
+              <p style={{ margin: 0, fontSize: 'var(--text-xs)', color: 'var(--text-muted)', fontFamily: 'var(--font-ui)' }}>MP3, WAV, OGG, AAC, M4A, FLAC · max 20 MB</p>
             </>
           )}
         </div>
-        <input ref={inputRef} type="file" accept="audio/*" className="hidden"
-          onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f); e.target.value = ''; }} />
-      </section>
+        <input ref={inputRef} type="file" accept="audio/*" style={{ display: 'none' }}
+          onChange={e => { const f = e.target.files?.[0]; if (f) handleFile(f); e.target.value = ''; }} />
+      </Group>
 
-      <section className="space-y-3">
-        <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Or Paste a URL</h3>
-        <TextField value={url} onChange={onUrlChange} maxLength={500} />
-        <p className="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 leading-relaxed">
-          Must be a <strong>direct link</strong> to an audio file (ending in .mp3, .wav, etc.).
-          YouTube, Spotify, and SoundCloud links won&apos;t work — they don&apos;t expose raw audio streams.
-          Use file hosting like Dropbox (direct download link) or upload above instead.
+      <Group title="Or Paste a URL">
+        <TextField value={url} onChange={onUrlChange} maxLength={500} placeholder="https://..." />
+        <p style={{ fontSize: 'var(--text-xs)', color: 'var(--warning)', background: 'var(--warning-subtle)', border: '1px solid var(--warning-border)', borderRadius: 'var(--radius-md)', padding: '8px 12px', margin: 0, fontFamily: 'var(--font-ui)', lineHeight: 1.6 }}>
+          Must be a <strong>direct link</strong> to an audio file (.mp3, .wav, etc.). YouTube, Spotify, and SoundCloud won&apos;t work.
         </p>
-      </section>
+      </Group>
 
       {url && (
-        <section className="space-y-2">
-          <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Preview</h3>
-          <audio
-            key={url}
-            controls
-            src={url.startsWith('/') ? (process.env.NEXT_PUBLIC_API_URL?.replace('/api', '') ?? '') + url : url}
-            className="w-full rounded-lg"
-          />
+        <Group title="Preview">
+          <audio key={url} controls src={url.startsWith('/') ? API_BASE + url : url} style={{ width: '100%', borderRadius: 8 }} />
           <button type="button" onClick={() => onUrlChange('')}
-            className="text-xs text-red-500 hover:text-red-700 font-medium">
+            style={{ fontSize: 'var(--text-xs)', color: 'var(--danger)', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'var(--font-ui)', fontWeight: 500, textAlign: 'left' }}>
             Remove music
           </button>
-        </section>
+        </Group>
       )}
 
-      <section className="space-y-2">
-        <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Settings</h3>
-        <div className="flex items-center justify-between gap-3">
-          <FieldLabel hint="Music will restart from the beginning when it ends">Loop Music</FieldLabel>
+      <Group title="Settings" chipAnchor="Settings">
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+          <div>
+            <p style={{ margin: 0, fontSize: 'var(--text-sm)', fontWeight: 500, fontFamily: 'var(--font-ui)', color: 'var(--text-strong)' }}>Loop Music</p>
+            <p style={{ margin: '2px 0 0', fontSize: 'var(--text-xs)', color: 'var(--text-subtle)', fontFamily: 'var(--font-ui)' }}>Music restarts from the beginning when it ends</p>
+          </div>
           <ToggleSwitch value={loop} onChange={onLoopChange} />
         </div>
-      </section>
+      </Group>
     </div>
   );
 }
@@ -425,31 +531,33 @@ function BgImageField({ configKey, label, value, weddingId, onChange }: {
   };
 
   return (
-    <div className="space-y-1">
+    <div>
       {value ? (
-        <div className="relative rounded-lg overflow-hidden aspect-video shadow-sm group">
-          <img src={`${API_BASE}${value}`} alt={label} className="w-full h-full object-cover" />
-          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-            <button type="button" onClick={() => onChange('')}
-              className="bg-red-500 text-white text-xs px-3 py-1.5 rounded-lg font-medium">Remove</button>
+        <div style={{ position: 'relative', borderRadius: 8, overflow: 'hidden', aspectRatio: '16/9', boxShadow: 'var(--shadow-sm)' }}>
+          <img src={`${API_BASE}${value}`} alt={label} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+          <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.4)', opacity: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'opacity 150ms' }}
+            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.opacity = '1'; }}
+            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.opacity = '0'; }}>
+            <button type="button" onClick={() => onChange('')} style={{ background: 'var(--danger)', color: '#fff', fontSize: 11, padding: '6px 12px', borderRadius: 6, border: 'none', cursor: 'pointer', fontFamily: 'var(--font-ui)', fontWeight: 500 }}>Remove</button>
           </div>
         </div>
       ) : (
         <div onClick={() => inputRef.current?.click()}
-          className="aspect-video rounded-lg border-2 border-dashed border-gray-300 hover:border-rose-300 bg-gray-50 flex flex-col items-center justify-center cursor-pointer transition-colors">
-          {uploading
-            ? <p className="text-sm text-gray-400">Uploading…</p>
-            : <><span className="text-2xl mb-1">🖼️</span><p className="text-xs text-gray-500">Click to upload background image</p></>
+          style={{ aspectRatio: '16/9', borderRadius: 8, border: '2px dashed var(--border-default)', background: 'var(--surface-sunken)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', transition: 'var(--transition-control)' }}
+          onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--brand)'; }}
+          onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border-default)'; }}>
+          {uploading ? <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-muted)' }}>Uploading…</p>
+            : <><span style={{ fontSize: 22, marginBottom: 4 }}>🖼️</span><p style={{ margin: 0, fontSize: 'var(--text-xs)', color: 'var(--text-muted)', fontFamily: 'var(--font-ui)' }}>Click to upload background image</p></>
           }
         </div>
       )}
-      <input ref={inputRef} type="file" accept="image/*" className="hidden"
-        onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f); e.target.value = ''; }} />
+      <input ref={inputRef} type="file" accept="image/*" style={{ display: 'none' }}
+        onChange={e => { const f = e.target.files?.[0]; if (f) handleFile(f); e.target.value = ''; }} />
     </div>
   );
 }
 
-// ── Portrait photo slot (for T3 / T4) ────────────────────────────────────────
+// ── Portrait photo slot ───────────────────────────────────────────────────────
 
 function PhotoDropZone({ slot, label, photo, uploading, onDrop, onRemove }: {
   slot: number; label: string; photo: Photo | undefined; uploading: boolean;
@@ -458,30 +566,155 @@ function PhotoDropZone({ slot, label, photo, uploading, onDrop, onRemove }: {
   const [dragOver, setDragOver] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   return (
-    <div className="space-y-2">
-      <p className="text-sm font-medium text-gray-700">{label}</p>
+    <div>
+      <p style={{ margin: '0 0 6px', fontSize: 'var(--text-sm)', fontWeight: 500, color: 'var(--text-strong)', fontFamily: 'var(--font-ui)' }}>{label}</p>
       {photo ? (
-        <div className="relative rounded-xl overflow-hidden aspect-[3/4] shadow-sm group">
-          <img src={`${API_BASE}${photo.photoUrl}`} alt={label} className="w-full h-full object-cover" />
-          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-            <button type="button" onClick={() => onRemove(photo)}
-              className="bg-red-500 text-white text-xs px-3 py-1.5 rounded-lg font-medium">Remove</button>
+        <div style={{ position: 'relative', borderRadius: 12, overflow: 'hidden', aspectRatio: '3/4', boxShadow: 'var(--shadow-sm)' }}>
+          <img src={`${API_BASE}${photo.photoUrl}`} alt={label} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+          <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.4)', opacity: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'opacity 150ms' }}
+            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.opacity = '1'; }}
+            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.opacity = '0'; }}>
+            <button type="button" onClick={() => onRemove(photo)} style={{ background: 'var(--danger)', color: '#fff', fontSize: 11, padding: '6px 12px', borderRadius: 6, border: 'none', cursor: 'pointer', fontFamily: 'var(--font-ui)', fontWeight: 500 }}>Remove</button>
           </div>
         </div>
       ) : (
         <div onClick={() => inputRef.current?.click()}
-          onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+          onDragOver={e => { e.preventDefault(); setDragOver(true); }}
           onDragLeave={() => setDragOver(false)}
-          onDrop={(e) => { e.preventDefault(); setDragOver(false); const f = e.dataTransfer.files[0]; if (f?.type.startsWith('image/')) onDrop(slot, f); }}
-          className={`aspect-[3/4] rounded-xl border-2 border-dashed flex flex-col items-center justify-center cursor-pointer transition-colors ${dragOver ? 'border-rose-400 bg-rose-50' : 'border-gray-300 hover:border-gray-400 bg-gray-50'}`}>
-          {uploading
-            ? <div className="text-gray-400 text-sm">Uploading…</div>
-            : <><div className="text-3xl mb-2">📷</div><p className="text-xs text-gray-500 text-center px-2">Drop image here<br />or click to browse</p></>
+          onDrop={e => { e.preventDefault(); setDragOver(false); const f = e.dataTransfer.files[0]; if (f?.type.startsWith('image/')) onDrop(slot, f); }}
+          style={{ aspectRatio: '3/4', borderRadius: 12, border: `2px dashed ${dragOver ? 'var(--brand)' : 'var(--border-default)'}`, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', transition: 'var(--transition-control)', background: dragOver ? 'var(--brand-subtle)' : 'var(--surface-sunken)' }}>
+          {uploading ? <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-muted)', fontFamily: 'var(--font-ui)' }}>Uploading…</p>
+            : <><span style={{ fontSize: 28, marginBottom: 6 }}>📷</span><p style={{ margin: 0, fontSize: 'var(--text-xs)', color: 'var(--text-muted)', textAlign: 'center', padding: '0 8px', fontFamily: 'var(--font-ui)' }}>Drop image here<br />or click to browse</p></>
           }
         </div>
       )}
-      <input ref={inputRef} type="file" accept="image/*" className="hidden"
-        onChange={(e) => { const f = e.target.files?.[0]; if (f) onDrop(slot, f); e.target.value = ''; }} />
+      <input ref={inputRef} type="file" accept="image/*" style={{ display: 'none' }}
+        onChange={e => { const f = e.target.files?.[0]; if (f) onDrop(slot, f); e.target.value = ''; }} />
+    </div>
+  );
+}
+
+// ── Section Rail ──────────────────────────────────────────────────────────────
+
+const RAIL_SECTIONS = [
+  { id: 'details' as BlockId,   label: 'Details', icon: 'settings'   },
+  { id: 'welcome' as BlockId,   label: 'Cover',   icon: 'image'      },
+  { id: 'walimah' as BlockId,   label: 'Ceremony',icon: 'calendar'   },
+  { id: 'rsvp' as BlockId,      label: 'RSVP',    icon: 'star'       },
+  { id: 'itinerary' as BlockId, label: 'Itinerary',icon: 'clock'     },
+  { id: 'wishes' as BlockId,    label: 'Wishes',  icon: 'message-circle' },
+  { id: 'photobooth' as BlockId,label: 'Photos',  icon: 'camera'     },
+];
+
+function SectionRail({ mode, onToggle, activeBlock, sectionOrder, onSelectBlock }: {
+  mode: EditorMode;
+  onToggle: () => void;
+  activeBlock: BlockId;
+  sectionOrder: string[];
+  onSelectBlock: (block: BlockId) => void;
+}) {
+  const railItems = [
+    RAIL_SECTIONS[0], // details always first
+    ...sectionOrder.map(code => RAIL_SECTIONS.find(s => s.id === code)).filter(Boolean) as typeof RAIL_SECTIONS,
+    { id: 'music' as BlockId, label: 'Music', icon: 'music' }, // music always last
+  ];
+
+  return (
+    <div style={{
+      width: 60, flexShrink: 0,
+      display: 'flex', flexDirection: 'column', alignItems: 'center',
+      padding: '14px 0', gap: 4,
+      background: 'var(--surface-sunken)',
+      borderRight: '1px solid var(--border-subtle)',
+    }}>
+      {/* Toggle button */}
+      <button
+        onClick={onToggle}
+        title={mode === 'expanded' ? 'Collapse to icons' : mode === 'collapsed' ? 'Hide panel' : 'Show panel'}
+        style={{
+          width: 36, height: 36, borderRadius: 6,
+          display: 'grid', placeItems: 'center',
+          color: 'var(--text-muted)', border: 'none', cursor: 'pointer',
+          background: 'transparent', marginBottom: 10, transition: 'all 150ms',
+        }}
+        onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'var(--surface-raised)'; (e.currentTarget as HTMLElement).style.color = 'var(--text-strong)'; }}
+        onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent'; (e.currentTarget as HTMLElement).style.color = 'var(--text-muted)'; }}
+      >
+        <Icon name={mode === 'expanded' ? 'panel-left-close' : 'panel-left-open'} size={18} />
+      </button>
+
+      {/* Section items */}
+      {railItems.map((s, idx) => {
+        // Separator before Music
+        const isMusicSep = s.id === 'music' && idx > 0;
+        const isActive = activeBlock === s.id;
+        return (
+          <div key={s.id} style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+            {isMusicSep && <div style={{ width: 30, height: 1, background: 'var(--border-subtle)', margin: '6px 0' }} />}
+            <button
+              onClick={() => {
+                onSelectBlock(s.id);
+              }}
+              title={s.label}
+              style={{
+                width: 44, padding: '8px 0',
+                borderRadius: 10, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
+                color: isActive ? 'var(--text-strong)' : 'var(--text-muted)',
+                background: isActive ? 'var(--surface-card)' : 'transparent',
+                boxShadow: isActive ? 'var(--shadow-sm)' : 'none',
+                fontWeight: isActive ? 600 : 500,
+                fontSize: 9, letterSpacing: '0.06em', textTransform: 'uppercase',
+                fontFamily: 'var(--font-ui)', border: 'none', cursor: 'pointer',
+                position: 'relative', transition: 'all 150ms',
+              }}
+              onMouseEnter={e => { if (!isActive) { (e.currentTarget as HTMLElement).style.background = 'var(--surface-raised)'; (e.currentTarget as HTMLElement).style.color = 'var(--text-strong)'; }}}
+              onMouseLeave={e => { if (!isActive) { (e.currentTarget as HTMLElement).style.background = 'transparent'; (e.currentTarget as HTMLElement).style.color = 'var(--text-muted)'; }}}
+            >
+              {/* Left accent bar for active */}
+              {isActive && (
+                <span style={{
+                  position: 'absolute', left: -8, top: '50%', transform: 'translateY(-50%)',
+                  width: 3, height: 22, background: 'var(--brand)', borderRadius: 2,
+                }} />
+              )}
+              <span style={{ color: isActive ? 'var(--brand)' : 'inherit', display: 'grid', placeItems: 'center', width: 22, height: 22 }}>
+                <Icon name={s.icon} size={17} color="currentColor" />
+              </span>
+              <span>{s.label}</span>
+            </button>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// ── Save Bar ──────────────────────────────────────────────────────────────────
+
+function SaveBar({ dirty, saving, onSave }: { dirty: boolean; saving: boolean; onSave: () => void }) {
+  return (
+    <div style={{
+      position: 'absolute', bottom: 0, left: 60, right: 0, width: 320,
+      padding: '12px 22px',
+      background: 'linear-gradient(to bottom, rgba(255,255,255,0) 0%, var(--surface-card) 28%)',
+      display: 'flex', alignItems: 'center', gap: 10,
+      pointerEvents: 'none',
+    }}>
+      <div style={{ pointerEvents: 'auto', flex: 1, fontSize: 11, color: 'var(--text-muted)', fontFamily: 'var(--font-ui)', lineHeight: 1.4 }}>
+        {dirty
+          ? <><b style={{ color: 'var(--brand)' }}>●</b> Unsaved changes</>
+          : <>Last saved · <kbd style={{ display: 'inline-block', padding: '1px 5px', fontFamily: 'var(--font-mono)', fontSize: 10, background: 'var(--surface-card)', border: '1px solid var(--border-subtle)', borderBottomWidth: 2, borderRadius: 3, color: 'var(--text-muted)' }}>⌘</kbd> <kbd style={{ display: 'inline-block', padding: '1px 5px', fontFamily: 'var(--font-mono)', fontSize: 10, background: 'var(--surface-card)', border: '1px solid var(--border-subtle)', borderBottomWidth: 2, borderRadius: 3, color: 'var(--text-muted)' }}>S</kbd></>
+        }
+      </div>
+      <Button
+        variant="primary" tone="brand" size="sm"
+        onClick={onSave}
+        disabled={saving || !dirty}
+        loading={saving}
+        style={{ pointerEvents: 'auto' }}
+      >
+        {dirty ? 'Save changes' : 'All saved'}
+      </Button>
     </div>
   );
 }
@@ -490,165 +723,137 @@ function PhotoDropZone({ slot, label, photo, uploading, onDrop, onRemove }: {
 
 export default function CustomizePage() {
   const router = useRouter();
-  const user = getUser();
+  const [user, setUser] = useState<ReturnType<typeof getUser>>(null);
   const weddingId = user?.weddingId;
 
   const [wedding, setWedding] = useState<Wedding | null>(null);
   const [coupleMedia, setCoupleMedia] = useState<Photo[]>([]);
 
-  // Template config
   const [draftConfig, setDraftConfig] = useState<Record<string, string>>({});
   const [savedConfig, setSavedConfig] = useState<Record<string, string>>({});
 
-  // Wedding model fields (names, date, venue)
   const emptyWed = { brideName: '', groomName: '', weddingDate: '', venue: '', venueAddress: '', maxPax: 0 };
   const [weddingDraft, setWeddingDraft] = useState(emptyWed);
   const [weddingSaved, setWeddingSaved] = useState(emptyWed);
 
-  const [activeTab, setActiveTab] = useState<Tab>('welcome');
-  const [tabOrder, setTabOrder] = useState<Tab[]>(TABS.map((t) => t.id));
-  const [previewWidth, setPreviewWidth] = useState<number | null>(null);
-  const [previewHeight, setPreviewHeight] = useState<number | null>(null);
-  const [panelW, setPanelW] = useState(800);
-  const [panelH, setPanelH] = useState(600);
+  const [activeBlock, setActiveBlock] = useState<BlockId>('details');
+  const [sectionOrder, setSectionOrder] = useState<string[]>(DEFAULT_SECTION_ORDER.slice());
+  const [addMenuOpen, setAddMenuOpen] = useState(false);
+
+  // New: editor panel mode and preview device
+  const [editorMode, setEditorMode] = useState<EditorMode>('expanded');
+  const [device, setDevice] = useState<Device>('mobile');
+  const [manualZoom, setManualZoom] = useState<number | null>(null);
+  const [subSection, setSubSection] = useState('');
+
   const [itinerary, setItinerary] = useState<ItineraryItem[]>([]);
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
   const [uploadingSlot, setUploadingSlot] = useState<number | null>(null);
   const [photoBoothEnabled, setPhotoBoothEnabled] = useState(false);
-
-  const [zoom, setZoom] = useState(1);
-  const [panX, setPanX] = useState(0);
-  const [panY, setPanY] = useState(0);
-  const [isPanning, setIsPanning] = useState(false);
+  const [templates, setTemplates] = useState<Template[]>([]);
+  const [switchingTemplate, setSwitchingTemplate] = useState(false);
 
   const iframeRef = useRef<HTMLIFrameElement>(null);
-  const panelRef = useRef<HTMLDivElement>(null);
   const payloadRef = useRef<unknown>(null);
-  const panStartRef = useRef({ x: 0, y: 0, panX: 0, panY: 0 });
-  // Always-current view state for use inside imperative event handlers
-  const viewRef = useRef({ zoom: 1, panX: 0, panY: 0 });
+  const formScrollRef = useRef<HTMLDivElement>(null);
 
   const configDirty = JSON.stringify(draftConfig) !== JSON.stringify(savedConfig);
   const weddingDirty = JSON.stringify(weddingDraft) !== JSON.stringify(weddingSaved);
   const isDirty = configDirty || weddingDirty;
 
   useEffect(() => {
-    if (!weddingId) { router.push('/login'); return; }
-    load();
-  }, [weddingId]);
+    const u = getUser();
+    if (!u) { router.push('/login'); return; }
+    setUser(u);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Track preview panel dimensions for iframe scaling
   useEffect(() => {
-    const el = panelRef.current;
-    if (!el) return;
-    const ro = new ResizeObserver(([entry]) => {
-      setPanelW(Math.floor(entry.contentRect.width));
-      setPanelH(Math.floor(entry.contentRect.height));
-    });
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, []);
+    if (!weddingId) return;
+    load();
+  }, [weddingId]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Push draft state to iframe whenever anything changes
+  // Push draft to iframe
   useEffect(() => {
     if (!wedding) return;
     const payload = {
       wedding: { ...wedding, ...weddingDraft },
-      coupleMedia,
-      wishes: SAMPLE_WISHES,
-      photoBoothEnabled,
-      customConfig: draftConfig,
-      itinerary,
+      coupleMedia, wishes: SAMPLE_WISHES, photoBoothEnabled,
+      customConfig: draftConfig, itinerary,
     };
     payloadRef.current = payload;
     try { localStorage.setItem('preview_draft', JSON.stringify(payload)); } catch {}
-    iframeRef.current?.contentWindow?.postMessage(
-      { type: 'PREVIEW_UPDATE', payload },
-      window.location.origin,
-    );
+    iframeRef.current?.contentWindow?.postMessage({ type: 'PREVIEW_UPDATE', payload }, window.location.origin);
   }, [draftConfig, weddingDraft, coupleMedia, photoBoothEnabled, itinerary, wedding]);
 
-  // When iframe signals it's ready, replay the latest state (handles load-order race)
+  // Replay to iframe on PREVIEW_READY
   useEffect(() => {
     const handler = (event: MessageEvent) => {
       if (event.origin !== window.location.origin) return;
       if (event.data?.type === 'PREVIEW_READY' && payloadRef.current) {
-        iframeRef.current?.contentWindow?.postMessage(
-          { type: 'PREVIEW_UPDATE', payload: payloadRef.current },
-          window.location.origin,
-        );
+        iframeRef.current?.contentWindow?.postMessage({ type: 'PREVIEW_UPDATE', payload: payloadRef.current }, window.location.origin);
       }
     };
     window.addEventListener('message', handler);
     return () => window.removeEventListener('message', handler);
   }, []);
 
-  // Wheel-to-zoom — must be non-passive so we can preventDefault
+  // Keyboard shortcut: Cmd+S to save
   useEffect(() => {
-    const el = panelRef.current;
-    if (!el) return;
-    const handler = (e: WheelEvent) => {
-      e.preventDefault();
-      const rect = el.getBoundingClientRect();
-      const mx = e.clientX - rect.left - rect.width / 2;
-      const my = e.clientY - rect.top - rect.height / 2;
-      const { zoom: z, panX: px, panY: py } = viewRef.current;
-      const factor = e.deltaY < 0 ? 1.1 : 0.9;
-      const newZoom = Math.min(4, Math.max(0.1, z * factor));
-      const ratio = newZoom / z;
-      const next = { zoom: newZoom, panX: mx - ratio * (mx - px), panY: my - ratio * (my - py) };
-      viewRef.current = next;
-      setZoom(next.zoom);
-      setPanX(next.panX);
-      setPanY(next.panY);
+    const handler = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 's') { e.preventDefault(); if (isDirty) handleSave(); }
     };
-    el.addEventListener('wheel', handler, { passive: false });
-    return () => el.removeEventListener('wheel', handler);
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [isDirty]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Document-level mouse tracking while panning (captures events over the iframe too)
+  // Reset active chip + scroll position when block changes
   useEffect(() => {
-    if (!isPanning) return;
-    const onMove = (e: MouseEvent) => {
-      setPanX(panStartRef.current.panX + (e.clientX - panStartRef.current.x));
-      setPanY(panStartRef.current.panY + (e.clientY - panStartRef.current.y));
+    const firstChip = BLOCK_INFO[activeBlock]?.chips[0] ?? '';
+    setSubSection(firstChip);
+    if (formScrollRef.current) formScrollRef.current.scrollTop = 0;
+  }, [activeBlock]);
+
+  // Keep active chip in sync as user scrolls the form
+  useEffect(() => {
+    const container = formScrollRef.current;
+    if (!container) return;
+    const handler = () => {
+      const anchors = Array.from(container.querySelectorAll('[data-chip]')) as HTMLElement[];
+      const containerTop = container.getBoundingClientRect().top;
+      let active = anchors[0];
+      for (const el of anchors) {
+        const elTop = el.getBoundingClientRect().top - containerTop;
+        if (elTop <= 24) active = el;
+        else break;
+      }
+      if (active) setSubSection(active.dataset.chip ?? '');
     };
-    const onUp = () => setIsPanning(false);
-    document.addEventListener('mousemove', onMove);
-    document.addEventListener('mouseup', onUp);
-    return () => { document.removeEventListener('mousemove', onMove); document.removeEventListener('mouseup', onUp); };
-  }, [isPanning]);
+    container.addEventListener('scroll', handler, { passive: true });
+    return () => container.removeEventListener('scroll', handler);
+  }, [activeBlock, editorMode]);
 
   const load = async () => {
     if (!weddingId) return;
     try {
-      const [w, media, config, photoBooth] = await Promise.all([
+      const [w, media, config, photoBooth, tmpl] = await Promise.all([
         weddingService.getById(weddingId),
         photoService.getCoupleMediaByWeddingId(weddingId),
         templateConfigService.getByWeddingId(weddingId),
         weddingFeatureService.isFeatureEnabled(weddingId, 'PHOTO_BOOTH'),
+        templateService.getActive(),
       ]);
+      setTemplates(tmpl);
       setWedding(w);
       setCoupleMedia(media);
       setPhotoBoothEnabled(photoBooth);
-
-      const wd = {
-        brideName: w.brideName,
-        groomName: w.groomName,
-        weddingDate: w.weddingDate.slice(0, 16),
-        venue: w.venue,
-        venueAddress: w.venueAddress,
-        maxPax: w.maxPax ?? 0,
-      };
+      const wd = { brideName: w.brideName, groomName: w.groomName, weddingDate: w.weddingDate.slice(0, 16), venue: w.venue, venueAddress: w.venueAddress, maxPax: w.maxPax ?? 0 };
       setWeddingDraft(wd);
       setWeddingSaved(wd);
-
       const merged = { ...buildDefaultConfig(w.templateId), ...config };
       setDraftConfig(merged);
       setSavedConfig(merged);
-
-      if (merged['section.order']) setTabOrder(parseTabOrder(merged['section.order']));
+      setSectionOrder(parseSectionOrder(merged['section.order']));
     } finally {
       setLoading(false);
     }
@@ -662,17 +867,10 @@ export default function CustomizePage() {
     if (!weddingId || !wedding) return;
     setSaving(true);
     try {
-      const configToSave = { ...draftConfig, 'section.order': buildSectionOrder(tabOrder) };
+      const configToSave = { ...draftConfig, 'section.order': sectionOrder.join(',') };
       const tasks: Promise<unknown>[] = [templateConfigService.save(weddingId, configToSave)];
       if (weddingDirty) {
-        tasks.push(weddingService.update(weddingId, {
-          brideName: weddingDraft.brideName,
-          groomName: weddingDraft.groomName,
-          weddingDate: weddingDraft.weddingDate,
-          venue: weddingDraft.venue,
-          venueAddress: weddingDraft.venueAddress,
-          maxPax: weddingDraft.maxPax,
-        }));
+        tasks.push(weddingService.update(weddingId, { brideName: weddingDraft.brideName, groomName: weddingDraft.groomName, weddingDate: weddingDraft.weddingDate, venue: weddingDraft.venue, venueAddress: weddingDraft.venueAddress, maxPax: weddingDraft.maxPax }));
       }
       await Promise.all(tasks);
       setSavedConfig(configToSave);
@@ -685,29 +883,64 @@ export default function CustomizePage() {
     }
   };
 
-  const handleMoveTab = (tab: Tab, dir: 'up' | 'down') => {
-    const idx = tabOrder.indexOf(tab);
+  const handleSwitchTemplate = async (t: Template) => {
+    if (!weddingId || !wedding || t.templateId === wedding.templateId) return;
+    setSwitchingTemplate(true);
+    try {
+      await weddingService.updateTemplate(weddingId, t.templateId);
+      const updatedWedding = { ...wedding, templateId: t.templateId, templateName: t.templateName };
+      setWedding(updatedWedding);
+      const newDefaults = buildDefaultConfig(t.templateId);
+      const merged = { ...newDefaults, ...draftConfig };
+      setDraftConfig(merged);
+      setSavedConfig(merged);
+    } catch {
+      alert('Failed to switch template.');
+    } finally {
+      setSwitchingTemplate(false);
+    }
+  };
+
+  const handleChipClick = (chip: string) => {
+    setSubSection(chip);
+    const container = formScrollRef.current;
+    if (!container) return;
+    const el = container.querySelector(`[data-chip="${chip}"]`) as HTMLElement | null;
+    if (!el) return;
+    const elRect = el.getBoundingClientRect();
+    const containerRect = container.getBoundingClientRect();
+    container.scrollTo({ top: container.scrollTop + elRect.top - containerRect.top - 12, behavior: 'smooth' });
+  };
+
+  const selectBlock = (block: BlockId, order: string[] = sectionOrder) => {
+    setActiveBlock(block);
+    if (editorMode === 'collapsed') setEditorMode('expanded');
+    iframeRef.current?.contentWindow?.postMessage({ type: 'PREVIEW_SCROLL', fraction: scrollFractionFor(block, order) }, window.location.origin);
+  };
+
+  const handleMoveBlock = (code: string, dir: 'up' | 'down') => {
+    const idx = sectionOrder.indexOf(code);
     const swap = dir === 'up' ? idx - 1 : idx + 1;
-    if (swap < 0 || swap >= tabOrder.length) return;
-    const next = [...tabOrder];
+    if (swap < 0 || swap >= sectionOrder.length) return;
+    const next = [...sectionOrder];
     [next[idx], next[swap]] = [next[swap], next[idx]];
-    setTabOrder(next);
-    setConfig('section.order', buildSectionOrder(next));
+    setSectionOrder(next);
+    setConfig('section.order', next.join(','));
   };
 
-  const handleCanvasMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
-    if ((e.target as Element).tagName === 'IFRAME') return;
-    e.preventDefault();
-    setIsPanning(true);
-    panStartRef.current = { x: e.clientX, y: e.clientY, panX, panY };
+  const handleAddBlock = (code: string) => {
+    if (sectionOrder.includes(code)) return;
+    const next = [...sectionOrder, code];
+    setSectionOrder(next);
+    setConfig('section.order', next.join(','));
+    selectBlock(code as BlockId, next);
   };
 
-  const handleTabChange = (tab: Tab) => {
-    setActiveTab(tab);
-    iframeRef.current?.contentWindow?.postMessage(
-      { type: 'PREVIEW_SCROLL', fraction: TAB_SCROLL_FRACTION[tab] },
-      window.location.origin,
-    );
+  const handleRemoveBlock = (code: string) => {
+    const next = sectionOrder.filter((c) => c !== code);
+    setSectionOrder(next);
+    setConfig('section.order', next.join(','));
+    if (activeBlock === code) setActiveBlock('details');
   };
 
   const handlePhotoDrop = async (slot: number, file: File) => {
@@ -727,625 +960,595 @@ export default function CustomizePage() {
     } catch { alert('Could not remove photo.'); }
   };
 
+  const cycleEditorMode = () => {
+    setEditorMode(m => m === 'expanded' ? 'collapsed' : m === 'collapsed' ? 'hidden' : 'expanded');
+  };
+
   if (loading) {
-    return <div className="min-h-screen flex items-center justify-center"><p className="text-gray-500">Loading editor…</p></div>;
+    return <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><p style={{ color: 'var(--text-muted)', fontFamily: 'var(--font-ui)' }}>Loading editor…</p></div>;
   }
   if (!wedding) return null;
 
   const showPortraitSlots = [3, 4].includes(wedding.templateId);
   const portraitSlots = wedding.templateId === 4 ? PORTRAIT_SLOTS_T4 : PORTRAIT_SLOTS_T3;
+  const availableBlocks = SECTION_BLOCKS.filter((b) => !sectionOrder.includes(b.code));
+  const blockInfo = BLOCK_INFO[activeBlock] ?? BLOCK_INFO.details;
 
-  // Keep viewRef in sync so the imperative wheel handler always has fresh values
-  viewRef.current = { zoom, panX, panY };
+  // Inspector content per block
+  const inspectorContent = (
+    <>
+      {/* ═══════════════ DETAILS & THEME ═══════════════ */}
+      {activeBlock === 'details' && (
+        <>
+          <Group title="Invitation Layout" chipAnchor="Layout">
+            <FieldCard label="Layout Style">
+              <SelectField value={draftConfig['invite.layout'] ?? 'classic'} options={['classic', 'minimal', 'ornate']} onChange={v => setConfig('invite.layout', v)} />
+            </FieldCard>
+          </Group>
 
-  // Iframe sizing — scale uniformly so the full simulated viewport always fits the panel
-  const effectiveW = previewWidth ?? panelW;
-  const effectiveH = previewHeight ?? panelH;
-  const scale = Math.min(
-    effectiveW > panelW ? panelW / effectiveW : 1,
-    effectiveH > panelH ? panelH / effectiveH : 1,
+          <Group title="Wedding Details" count={2} chipAnchor="Details">
+            <FieldCard label="Bride's Name" count={weddingDraft.brideName.length} max={100}>
+              <input className="field-text-input" value={weddingDraft.brideName} onChange={e => setWeddingDraft(d => ({ ...d, brideName: e.target.value }))} placeholder="Bride's full name" maxLength={100}
+                style={{ width: '100%', fontSize: 14, fontWeight: 500, color: 'var(--text-strong)', background: 'transparent', border: 'none', outline: 'none', fontFamily: 'var(--font-ui)', padding: '2px 0' }} />
+              {wedding.templateId === 5 && (
+                <ColorRow value={draftConfig['names.bride.color'] ?? ''} onChange={v => setConfig('names.bride.color', v)} onClear={() => setConfig('names.bride.color', '')} presets={PRESETS.bride} />
+              )}
+              {wedding.templateId === 5 && (
+                <ShadowSeg value={draftConfig['names.bride.shadow'] ?? 'none'} onChange={v => setConfig('names.bride.shadow', v)} options={['none', 'soft', 'strong', 'glow']} />
+              )}
+            </FieldCard>
+
+            <FieldCard label="Groom's Name" count={weddingDraft.groomName.length} max={100}>
+              <input className="field-text-input" value={weddingDraft.groomName} onChange={e => setWeddingDraft(d => ({ ...d, groomName: e.target.value }))} placeholder="Groom's full name" maxLength={100}
+                style={{ width: '100%', fontSize: 14, fontWeight: 500, color: 'var(--text-strong)', background: 'transparent', border: 'none', outline: 'none', fontFamily: 'var(--font-ui)', padding: '2px 0' }} />
+              {wedding.templateId === 5 && (
+                <ColorRow value={draftConfig['names.groom.color'] ?? ''} onChange={v => setConfig('names.groom.color', v)} onClear={() => setConfig('names.groom.color', '')} presets={PRESETS.groom} />
+              )}
+              {wedding.templateId === 5 && (
+                <ShadowSeg value={draftConfig['names.groom.shadow'] ?? 'none'} onChange={v => setConfig('names.groom.shadow', v)} options={['none', 'soft', 'strong', 'glow']} />
+              )}
+            </FieldCard>
+
+            {wedding.templateId === 5 && (
+              <FieldCard label="Ampersand (&) Color">
+                <ColorRow value={draftConfig['names.ampersand.color'] ?? ''} onChange={v => setConfig('names.ampersand.color', v)} onClear={() => setConfig('names.ampersand.color', '')} presets={PRESETS.amp} />
+              </FieldCard>
+            )}
+
+            <FieldCard label="Wedding Date & Time">
+              <input type="datetime-local" value={weddingDraft.weddingDate} onChange={e => setWeddingDraft(d => ({ ...d, weddingDate: e.target.value }))}
+                style={{ width: '100%', fontSize: 14, fontWeight: 500, color: 'var(--text-strong)', background: 'transparent', border: 'none', outline: 'none', fontFamily: 'var(--font-ui)', padding: '2px 0' }} />
+              {wedding.templateId === 5 && (
+                <ColorRow value={draftConfig['date.color'] ?? ''} onChange={v => setConfig('date.color', v)} onClear={() => setConfig('date.color', '')} presets={PRESETS.date} />
+              )}
+            </FieldCard>
+
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+              <div>
+                <p style={{ margin: 0, fontSize: 13, fontWeight: 500, fontFamily: 'var(--font-ui)', color: 'var(--text-strong)' }}>Add to Calendar button</p>
+                <p style={{ margin: '2px 0 0', fontSize: 11, color: 'var(--text-subtle)', fontFamily: 'var(--font-ui)' }}>Guests can save the date in one tap</p>
+              </div>
+              <ToggleSwitch value={draftConfig['general.showAddToCalendar'] === 'true'} onChange={v => setConfig('general.showAddToCalendar', v ? 'true' : 'false')} />
+            </div>
+
+            <FieldCard label="Venue" count={weddingDraft.venue.length} max={200}>
+              <input className="field-text-input" value={weddingDraft.venue} onChange={e => setWeddingDraft(d => ({ ...d, venue: e.target.value }))} placeholder="e.g. Dewan Seri Mayang" maxLength={200}
+                style={{ width: '100%', fontSize: 14, fontWeight: 500, color: 'var(--text-strong)', background: 'transparent', border: 'none', outline: 'none', fontFamily: 'var(--font-ui)', padding: '2px 0' }} />
+              {wedding.templateId === 5 && (
+                <ColorRow value={draftConfig['venue.color'] ?? ''} onChange={v => setConfig('venue.color', v)} onClear={() => setConfig('venue.color', '')} presets={PRESETS.venue} />
+              )}
+            </FieldCard>
+
+            <FieldCard label="Venue Address" count={weddingDraft.venueAddress.length} max={500}>
+              <input value={weddingDraft.venueAddress} onChange={e => setWeddingDraft(d => ({ ...d, venueAddress: e.target.value }))} maxLength={500}
+                style={{ width: '100%', fontSize: 14, fontWeight: 500, color: 'var(--text-strong)', background: 'transparent', border: 'none', outline: 'none', fontFamily: 'var(--font-ui)', padding: '2px 0' }} />
+            </FieldCard>
+
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+              <p style={{ margin: 0, fontSize: 13, fontWeight: 500, fontFamily: 'var(--font-ui)', color: 'var(--text-strong)' }}>Show venue map</p>
+              <ToggleSwitch value={draftConfig['general.showVenueMap'] === 'true'} onChange={v => setConfig('general.showVenueMap', v ? 'true' : 'false')} />
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+              <div>
+                <p style={{ margin: 0, fontSize: 13, fontWeight: 500, fontFamily: 'var(--font-ui)', color: 'var(--text-strong)' }}>Max Pax per RSVP</p>
+                <p style={{ margin: '2px 0 0', fontSize: 11, color: 'var(--text-subtle)', fontFamily: 'var(--font-ui)' }}>Set to 0 for no limit</p>
+              </div>
+              <input type="number" min={0} value={weddingDraft.maxPax} onChange={e => setWeddingDraft(d => ({ ...d, maxPax: parseInt(e.target.value) || 0 }))}
+                style={{ width: 80, padding: '6px 10px', border: '1px solid var(--border-default)', borderRadius: 'var(--radius-sm)', fontSize: 'var(--text-sm)', fontFamily: 'var(--font-mono)', textAlign: 'right', color: 'var(--text-body)', background: 'var(--surface-card)', outline: 'none', boxSizing: 'border-box' }}
+                onFocus={e => { e.currentTarget.style.borderColor = 'var(--brand)'; }} onBlur={e => { e.currentTarget.style.borderColor = 'var(--border-default)'; }} />
+            </div>
+          </Group>
+
+          <Group title="Display" chipAnchor="Display">
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+              <div>
+                <p style={{ margin: 0, fontSize: 13, fontWeight: 500, fontFamily: 'var(--font-ui)', color: 'var(--text-strong)' }}>Bride&apos;s name first</p>
+                <p style={{ margin: '2px 0 0', fontSize: 11, color: 'var(--text-subtle)', fontFamily: 'var(--font-ui)' }}>Toggle to put groom&apos;s name first</p>
+              </div>
+              <ToggleSwitch value={draftConfig['general.brideFirst'] !== 'false'} onChange={v => setConfig('general.brideFirst', v ? 'true' : 'false')} />
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+              <div>
+                <p style={{ margin: 0, fontSize: 13, fontWeight: 500, fontFamily: 'var(--font-ui)', color: 'var(--text-strong)' }}>Show Islamic (Hijri) Date</p>
+                <p style={{ margin: '2px 0 0', fontSize: 11, color: 'var(--text-subtle)', fontFamily: 'var(--font-ui)' }}>Auto-calculated from wedding date</p>
+              </div>
+              <ToggleSwitch value={draftConfig['general.showIslamicDate'] === 'true'} onChange={v => setConfig('general.showIslamicDate', v ? 'true' : 'false')} />
+            </div>
+          </Group>
+
+          <Group title="Footer" chipAnchor="Footer">
+            <FieldCard label="Footer Tagline" count={draftConfig['footer.tagline']?.length ?? 0} max={80}>
+              <input value={draftConfig['footer.tagline'] ?? ''} onChange={e => setConfig('footer.tagline', e.target.value)} maxLength={80} placeholder="Made with love for our special day"
+                style={{ width: '100%', fontSize: 14, fontWeight: 500, color: 'var(--text-strong)', background: 'transparent', border: 'none', outline: 'none', fontFamily: 'var(--font-ui)', padding: '2px 0' }} />
+              {wedding.templateId === 5 && (
+                <ColorRow value={draftConfig['footer.tagline.color'] ?? ''} onChange={v => setConfig('footer.tagline.color', v)} onClear={() => setConfig('footer.tagline.color', '')} presets={PRESETS.generic} />
+              )}
+            </FieldCard>
+          </Group>
+
+          {templates.length > 0 && (
+            <Group title="Change Template" defaultOpen={false}>
+              {switchingTemplate && <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-muted)', fontFamily: 'var(--font-ui)' }}>Switching template…</p>}
+              <TemplateLibrary templates={templates} userTier={user?.tier ?? 'FREE'} currentTemplateId={wedding.templateId} onSelect={handleSwitchTemplate} compact />
+            </Group>
+          )}
+        </>
+      )}
+
+      {/* ═══════════════ COVER / WELCOME ═══════════════ */}
+      {activeBlock === 'welcome' && (
+        <>
+          <Group title="Heading" chipAnchor="Content">
+            <FieldCard label="Heading Text" count={draftConfig['invite.heading']?.length ?? 0} max={50}>
+              <input value={draftConfig['invite.heading'] ?? ''} onChange={e => setConfig('invite.heading', e.target.value)} maxLength={50}
+                style={{ width: '100%', fontSize: 14, fontWeight: 500, color: 'var(--text-strong)', background: 'transparent', border: 'none', outline: 'none', fontFamily: 'var(--font-ui)', padding: '2px 0' }} />
+              <ColorRow value={draftConfig['invite.heading.color'] ?? ''} onChange={v => setConfig('invite.heading.color', v)} onClear={() => setConfig('invite.heading.color', '')} presets={PRESETS.heading} />
+              <ShadowSeg value={draftConfig['invite.heading.shadow'] ?? 'none'} onChange={v => setConfig('invite.heading.shadow', v)} options={['none', 'soft', 'strong', 'glow']} />
+            </FieldCard>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <div style={{ flex: 1 }}>
+                <FieldLabel>Alignment</FieldLabel>
+                <SelectField value={draftConfig['invite.heading.align'] ?? 'center'} options={['left', 'center', 'right']} onChange={v => setConfig('invite.heading.align', v)} />
+              </div>
+              <div style={{ flex: 1 }}>
+                <FieldLabel>Animation</FieldLabel>
+                <SelectField value={draftConfig['invite.heading.animation'] ?? 'none'} options={['none', 'fade', 'slide', 'typewriter']} onChange={v => setConfig('invite.heading.animation', v)} />
+              </div>
+            </div>
+          </Group>
+
+          <Group title="Invitation Message">
+            <RichTextEditor value={draftConfig['invite.body'] ?? ''} onChange={html => setConfig('invite.body', html)} maxLength={200} />
+            <div>
+              <FieldLabel>Alignment</FieldLabel>
+              <SelectField value={draftConfig['invite.body.align'] ?? 'center'} options={['left', 'center', 'right']} onChange={v => setConfig('invite.body.align', v)} />
+            </div>
+          </Group>
+
+          {wedding.templateId === 5 && (
+            <Group title="Countdown" chipAnchor="Style">
+              <FieldCard label="Countdown Label" count={draftConfig['invite.countdown_prefix']?.length ?? 0} max={60}>
+                <input value={draftConfig['invite.countdown_prefix'] ?? ''} onChange={e => setConfig('invite.countdown_prefix', e.target.value)} maxLength={60} placeholder="Counting down to our special day"
+                  style={{ width: '100%', fontSize: 14, fontWeight: 500, color: 'var(--text-strong)', background: 'transparent', border: 'none', outline: 'none', fontFamily: 'var(--font-ui)', padding: '2px 0' }} />
+                <ColorRow value={draftConfig['countdown.label.color'] ?? ''} onChange={v => setConfig('countdown.label.color', v)} onClear={() => setConfig('countdown.label.color', '')} presets={PRESETS.date} />
+              </FieldCard>
+              <FieldCard label="Number Color">
+                <ColorRow value={draftConfig['countdown.number.color'] ?? ''} onChange={v => setConfig('countdown.number.color', v)} onClear={() => setConfig('countdown.number.color', '')} presets={PRESETS.heading} />
+              </FieldCard>
+            </Group>
+          )}
+
+          <Group title="Section Background" chipAnchor="Background">
+            <BgImageField configKey="section.welcome.bg" label="Welcome" value={draftConfig['section.welcome.bg'] ?? ''} weddingId={weddingId!} onChange={url => setConfig('section.welcome.bg', url)} />
+          </Group>
+
+          {wedding.templateId === 5 && (
+            <Group title="Page Background">
+              <BgImageField configKey="template.bg" label="Page Background" value={draftConfig['template.bg'] ?? ''} weddingId={weddingId!} onChange={url => setConfig('template.bg', url)} />
+              <div style={{ display: 'flex', gap: 8 }}>
+                <div style={{ flex: 1 }}>
+                  <FieldLabel>Size</FieldLabel>
+                  <SelectField value={draftConfig['template.bgSize'] ?? 'cover'} options={['cover', 'contain', 'auto']} labels={{ auto: 'Natural' }} onChange={v => setConfig('template.bgSize', v)} />
+                </div>
+                <div style={{ flex: 1 }}>
+                  <FieldLabel>Position</FieldLabel>
+                  <SelectField value={draftConfig['template.bgPosition'] ?? 'center'} options={['center', 'top center', 'bottom center', 'left center', 'right center']} labels={{ 'top center': 'Top', 'bottom center': 'Bottom', 'left center': 'Left', 'right center': 'Right' }} onChange={v => setConfig('template.bgPosition', v)} />
+                </div>
+              </div>
+            </Group>
+          )}
+        </>
+      )}
+
+      {/* ═══════════════ CEREMONY / WALIMAH ═══════════════ */}
+      {activeBlock === 'walimah' && (
+        <>
+          <Group title="Ceremony / Walimah" chipAnchor="Content">
+            <FieldCard label="Section Title" count={draftConfig['walimah.title']?.length ?? 0} max={40}>
+              <input value={draftConfig['walimah.title'] ?? ''} onChange={e => setConfig('walimah.title', e.target.value)} maxLength={40} placeholder="Walimatul Urus"
+                style={{ width: '100%', fontSize: 14, fontWeight: 500, color: 'var(--text-strong)', background: 'transparent', border: 'none', outline: 'none', fontFamily: 'var(--font-ui)', padding: '2px 0' }} />
+              {wedding.templateId === 5 && (
+                <ColorRow value={draftConfig['ceremony.title.color'] ?? ''} onChange={v => setConfig('ceremony.title.color', v)} onClear={() => setConfig('ceremony.title.color', '')} presets={PRESETS.heading} />
+              )}
+              {wedding.templateId === 5 && (
+                <ShadowSeg value={draftConfig['ceremony.title.shadow'] ?? 'none'} onChange={v => setConfig('ceremony.title.shadow', v)} options={['none', 'soft', 'strong', 'glow']} />
+              )}
+            </FieldCard>
+
+            <div>
+              <FieldLabel hint="Supports bold and italic formatting">Ceremony Details</FieldLabel>
+              <RichTextEditor value={draftConfig['walimah.body'] ?? ''} onChange={html => setConfig('walimah.body', html)} maxLength={500} />
+            </div>
+            <div>
+              <FieldLabel>Text Alignment</FieldLabel>
+              <SelectField value={draftConfig['walimah.body.align'] ?? 'center'} options={['left', 'center', 'right']} onChange={v => setConfig('walimah.body.align', v)} />
+            </div>
+            {wedding.templateId === 5 && (
+              <FieldCard label="Body Text Color">
+                <ColorRow value={draftConfig['walimah.body.color'] ?? ''} onChange={v => setConfig('walimah.body.color', v)} onClear={() => setConfig('walimah.body.color', '')} presets={PRESETS.body} />
+              </FieldCard>
+            )}
+          </Group>
+
+          {wedding.templateId === 5 && (
+            <Group title="Couple Names in Card" chipAnchor="Style">
+              <div style={{ display: 'flex', gap: 8 }}>
+                <div style={{ flex: 1 }}>
+                  <FieldLabel>Color</FieldLabel>
+                  <input type="color" value={draftConfig['ceremony.names.color'] || '#ffffff'} onChange={e => setConfig('ceremony.names.color', e.target.value)} style={{ width: '100%', height: 36, cursor: 'pointer', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-default)', padding: 2 }} />
+                </div>
+                <div style={{ flex: 1 }}>
+                  <FieldLabel>Shadow</FieldLabel>
+                  <SelectField value={draftConfig['ceremony.names.shadow'] ?? 'none'} options={['none', 'soft', 'strong', 'glow']} onChange={v => setConfig('ceremony.names.shadow', v)} />
+                </div>
+              </div>
+            </Group>
+          )}
+        </>
+      )}
+
+      {/* ═══════════════ RSVP ═══════════════ */}
+      {activeBlock === 'rsvp' && (
+        <Group title="RSVP" chipAnchor="RSVP">
+          <FieldCard label="RSVP Subtitle" count={draftConfig['rsvp.subtitle']?.length ?? 0} max={80}>
+            <input value={draftConfig['rsvp.subtitle'] ?? ''} onChange={e => setConfig('rsvp.subtitle', e.target.value)} maxLength={80}
+              style={{ width: '100%', fontSize: 14, fontWeight: 500, color: 'var(--text-strong)', background: 'transparent', border: 'none', outline: 'none', fontFamily: 'var(--font-ui)', padding: '2px 0' }} />
+            {wedding.templateId === 5 && (
+              <ColorRow value={draftConfig['rsvp.subtitle.color'] ?? ''} onChange={v => setConfig('rsvp.subtitle.color', v)} onClear={() => setConfig('rsvp.subtitle.color', '')} presets={PRESETS.body} />
+            )}
+          </FieldCard>
+        </Group>
+      )}
+
+      {/* ═══════════════ ITINERARY ═══════════════ */}
+      {activeBlock === 'itinerary' && (
+        <>
+          <Group title="Schedule / Itinerary" chipAnchor="Schedule">
+            <FieldCard label="Section Title" count={draftConfig['itinerary.title']?.length ?? 0} max={40}>
+              <input value={draftConfig['itinerary.title'] ?? ''} onChange={e => setConfig('itinerary.title', e.target.value)} maxLength={40} placeholder="Aturcara Majlis"
+                style={{ width: '100%', fontSize: 14, fontWeight: 500, color: 'var(--text-strong)', background: 'transparent', border: 'none', outline: 'none', fontFamily: 'var(--font-ui)', padding: '2px 0' }} />
+              {wedding.templateId === 5 && (
+                <ColorRow value={draftConfig['itinerary.title.color'] ?? ''} onChange={v => setConfig('itinerary.title.color', v)} onClear={() => setConfig('itinerary.title.color', '')} presets={PRESETS.heading} />
+              )}
+            </FieldCard>
+            {wedding.templateId === 5 && (
+              <FieldCard label="Item Text Color">
+                <ColorRow value={draftConfig['itinerary.item.color'] ?? ''} onChange={v => setConfig('itinerary.item.color', v)} onClear={() => setConfig('itinerary.item.color', '')} presets={PRESETS.body} />
+              </FieldCard>
+            )}
+            <ItineraryEditor weddingId={weddingId!} onItemsChange={setItinerary} />
+          </Group>
+          <Group title="Section Background" chipAnchor="Background">
+            <BgImageField configKey="section.ceremony.bg" label="Ceremony" value={draftConfig['section.ceremony.bg'] ?? ''} weddingId={weddingId!} onChange={url => setConfig('section.ceremony.bg', url)} />
+          </Group>
+        </>
+      )}
+
+      {/* ═══════════════ WISHES ═══════════════ */}
+      {activeBlock === 'wishes' && (
+        <Group title="Wishes & Guestbook" chipAnchor="Content">
+          <FieldCard label="Section Title" count={draftConfig['wish.title']?.length ?? 0} max={40}>
+            <input value={draftConfig['wish.title'] ?? ''} onChange={e => setConfig('wish.title', e.target.value)} maxLength={40} placeholder="Wishes & Blessings"
+              style={{ width: '100%', fontSize: 14, fontWeight: 500, color: 'var(--text-strong)', background: 'transparent', border: 'none', outline: 'none', fontFamily: 'var(--font-ui)', padding: '2px 0' }} />
+          </FieldCard>
+          <FieldCard label="Wish Prompt" count={draftConfig['wish.prompt']?.length ?? 0} max={80}>
+            <input value={draftConfig['wish.prompt'] ?? ''} onChange={e => setConfig('wish.prompt', e.target.value)} maxLength={80}
+              style={{ width: '100%', fontSize: 14, fontWeight: 500, color: 'var(--text-strong)', background: 'transparent', border: 'none', outline: 'none', fontFamily: 'var(--font-ui)', padding: '2px 0' }} />
+            {wedding.templateId === 5 && (
+              <ColorRow value={draftConfig['wish.prompt.color'] ?? ''} onChange={v => setConfig('wish.prompt.color', v)} onClear={() => setConfig('wish.prompt.color', '')} presets={PRESETS.body} />
+            )}
+          </FieldCard>
+        </Group>
+      )}
+
+      {/* ═══════════════ PHOTO BOOTH ═══════════════ */}
+      {activeBlock === 'photobooth' && (
+        <>
+          <Group title="Photo Booth" chipAnchor="Content">
+            <FieldCard label="Section Title" count={draftConfig['photobooth.title']?.length ?? 0} max={40}>
+              <input value={draftConfig['photobooth.title'] ?? ''} onChange={e => setConfig('photobooth.title', e.target.value)} maxLength={40} placeholder="Photo Booth"
+                style={{ width: '100%', fontSize: 14, fontWeight: 500, color: 'var(--text-strong)', background: 'transparent', border: 'none', outline: 'none', fontFamily: 'var(--font-ui)', padding: '2px 0' }} />
+            </FieldCard>
+            <FieldCard label="Navigation Label" count={draftConfig['nav.photos']?.length ?? 0} max={20}>
+              <input value={draftConfig['nav.photos'] ?? 'Photos'} onChange={e => setConfig('nav.photos', e.target.value)} maxLength={20}
+                style={{ width: '100%', fontSize: 14, fontWeight: 500, color: 'var(--text-strong)', background: 'transparent', border: 'none', outline: 'none', fontFamily: 'var(--font-ui)', padding: '2px 0' }} />
+            </FieldCard>
+            {photoBoothEnabled && (
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+                <div>
+                  <p style={{ margin: 0, fontSize: 13, fontWeight: 500, fontFamily: 'var(--font-ui)', color: 'var(--text-strong)' }}>Auto-approve Guest Photos</p>
+                  <p style={{ margin: '2px 0 0', fontSize: 11, color: 'var(--text-subtle)', fontFamily: 'var(--font-ui)' }}>When off, photos require manual approval</p>
+                </div>
+                <ToggleSwitch value={draftConfig['photobooth.autoApprove'] !== 'false'} onChange={v => setConfig('photobooth.autoApprove', v ? 'true' : 'false')} />
+              </div>
+            )}
+          </Group>
+
+          {showPortraitSlots && (
+            <Group title="Portrait & Gallery Slots" chipAnchor="Media">
+              {wedding.templateId === 4 && (
+                <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', fontFamily: 'var(--font-ui)', lineHeight: 1.6, margin: 0 }}>
+                  <strong>Hero Background</strong> appears full-screen behind the couple&apos;s names.
+                </p>
+              )}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+                {portraitSlots.map(({ slot, label }) => (
+                  <PhotoDropZone key={slot} slot={slot} label={label}
+                    photo={coupleMedia.find(m => m.templateSlot === slot)}
+                    uploading={uploadingSlot === slot}
+                    onDrop={handlePhotoDrop} onRemove={handlePhotoRemove} />
+                ))}
+              </div>
+            </Group>
+          )}
+
+          {wedding.templateId === 5 && (
+            <Group title="Section Headings">
+              <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', fontFamily: 'var(--font-ui)', margin: '0 0 8px' }}>Applies to Wishes &amp; Photo Booth headings</p>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <div style={{ flex: 1 }}>
+                  <FieldLabel>Color</FieldLabel>
+                  <input type="color" value={draftConfig['section.heading.color'] || '#ffffff'} onChange={e => setConfig('section.heading.color', e.target.value)} style={{ width: '100%', height: 36, cursor: 'pointer', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-default)', padding: 2 }} />
+                </div>
+                <div style={{ flex: 1 }}>
+                  <FieldLabel>Shadow</FieldLabel>
+                  <SelectField value={draftConfig['section.heading.shadow'] ?? 'none'} options={['none', 'soft', 'strong', 'glow']} onChange={v => setConfig('section.heading.shadow', v)} />
+                </div>
+              </div>
+            </Group>
+          )}
+
+          <Group title="Section Background" chipAnchor="Background">
+            <BgImageField configKey="section.celebration.bg" label="Celebration" value={draftConfig['section.celebration.bg'] ?? ''} weddingId={weddingId!} onChange={url => setConfig('section.celebration.bg', url)} />
+          </Group>
+        </>
+      )}
+
+      {/* ═══════════════ MUSIC ═══════════════ */}
+      {activeBlock === 'music' && (
+        <MusicTab
+          url={draftConfig['music.url'] ?? ''}
+          loop={draftConfig['music.loop'] !== 'false'}
+          weddingId={weddingId!}
+          onUrlChange={v => setConfig('music.url', v)}
+          onLoopChange={v => setConfig('music.loop', v ? 'true' : 'false')}
+        />
+      )}
+    </>
   );
-  const displayW = Math.round(effectiveW * scale);
-  const displayH = Math.round(effectiveH * scale);
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
-      {/* Sticky header */}
-      <div className="sticky top-0 z-50 bg-white border-b border-gray-200 shadow-sm">
-        <div className="max-w-screen-xl mx-auto px-6 h-14 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <button onClick={() => router.push('/couple-admin')} className="text-gray-500 hover:text-gray-700 text-sm">
-              ← Back
-            </button>
-            <h1 className="font-semibold text-gray-800">Customize Template</h1>
-            {isDirty && (
-              <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full">Unsaved changes</span>
-            )}
-          </div>
-          <button onClick={handleSave} disabled={saving || !isDirty}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${saving || !isDirty ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-rose-500 text-white hover:bg-rose-600 shadow-sm'}`}>
-            {saving ? 'Saving…' : 'Save Changes'}
-          </button>
+    <div style={{ height: '100vh', background: 'var(--surface-app)', display: 'flex', flexDirection: 'column', overflow: 'hidden', fontFamily: 'var(--font-ui)' }}>
+
+      {/* ── Page header ── */}
+      <div style={{ height: 52, flexShrink: 0, display: 'flex', alignItems: 'center', gap: 12, padding: '0 20px', borderBottom: '1px solid var(--border-subtle)', background: 'var(--surface-card)' }}>
+        <button onClick={() => router.push('/couple-admin')}
+          style={{ display: 'flex', alignItems: 'center', gap: 6, color: 'var(--text-muted)', background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, fontFamily: 'var(--font-ui)', padding: '6px 10px', borderRadius: 6, transition: 'background 150ms' }}
+          onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'var(--surface-sunken)'; (e.currentTarget as HTMLElement).style.color = 'var(--text-strong)'; }}
+          onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent'; (e.currentTarget as HTMLElement).style.color = 'var(--text-muted)'; }}>
+          <Icon name="arrow-left" size={14} /> Back
+        </button>
+
+        <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 22, fontWeight: 600, margin: 0, color: 'var(--text-strong)', letterSpacing: 'var(--tracking-tight)', whiteSpace: 'nowrap' }}>
+          Customize Template
+        </h1>
+
+        <div style={{ paddingLeft: 12, borderLeft: '1px solid var(--border-subtle)', color: 'var(--text-subtle)', fontSize: 12, letterSpacing: '0.08em', textTransform: 'uppercase', fontFamily: 'var(--font-ui)', whiteSpace: 'nowrap' }} className="hide-narrow">
+          {blockInfo.eyebrow.split(' · ').map((seg, i, arr) => (
+            <span key={i}>{i > 0 && ' · '}<b style={{ color: i === arr.length - 1 ? 'var(--text-strong)' : undefined, fontWeight: i === arr.length - 1 ? 600 : 400 }}>{seg}</b></span>
+          ))}
         </div>
+
+        <div style={{ flex: 1 }} />
+
+        {/* Undo/Redo (visual only for now) */}
+        <button title="Undo" style={{ width: 32, height: 32, display: 'grid', placeItems: 'center', border: 'none', borderRadius: 6, cursor: 'pointer', background: 'transparent', color: 'var(--text-muted)', transition: 'background 150ms' }}
+          onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'var(--surface-sunken)'; }} onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent'; }}>
+          <Icon name="undo" size={14} />
+        </button>
+        <button title="Redo" style={{ width: 32, height: 32, display: 'grid', placeItems: 'center', border: 'none', borderRadius: 6, cursor: 'pointer', background: 'transparent', color: 'var(--text-muted)', transition: 'background 150ms' }}
+          onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'var(--surface-sunken)'; }} onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent'; }}>
+          <Icon name="redo" size={14} />
+        </button>
+
+        <div style={{ width: 1, height: 22, background: 'var(--border-subtle)', margin: '0 4px' }} />
+
+        {wedding && (
+          <a href={`/wedding/${wedding.coupleName}`} target="_blank" rel="noreferrer"
+            style={{ display: 'flex', alignItems: 'center', gap: 6, color: 'var(--text-muted)', fontSize: 13, fontFamily: 'var(--font-ui)', padding: '9px 16px', borderRadius: 999, textDecoration: 'none', transition: 'background 150ms' }}
+            className="hide-narrow"
+            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'var(--surface-sunken)'; (e.currentTarget as HTMLElement).style.color = 'var(--text-strong)'; }}
+            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent'; (e.currentTarget as HTMLElement).style.color = 'var(--text-muted)'; }}>
+            <Icon name="eye" size={14} /> Preview
+          </a>
+        )}
+
+        <Button variant="secondary" tone="neutral" size="sm"
+          onClick={() => { if (wedding?.coupleName) navigator.clipboard?.writeText(`${window.location.origin}/wedding/${wedding.coupleName}`); }}
+          style={{ borderRadius: 999 }}>
+          <Icon name="share" size={14} /> Share
+        </Button>
+
+        <Button variant="primary" tone="brand" size="sm" onClick={handleSave} disabled={saving || !isDirty} loading={saving} style={{ borderRadius: 999 }}>
+          <Icon name="save" size={14} /> {saving ? 'Saving…' : 'Save changes'}
+        </Button>
       </div>
 
-      <div className="flex flex-1 max-w-screen-xl mx-auto w-full">
-        {/* LEFT: 3-tab editor */}
-        <div className="w-[420px] shrink-0 overflow-y-auto h-[calc(100vh-56px)] sticky top-14 border-r border-gray-200 bg-white">
+      {/* ── Body: Editor panel | Preview panel ── */}
+      <div style={{ display: 'flex', flex: 1, minHeight: 0 }}>
 
-          {/* Tab headers — reorderable tabs + fixed Music tab */}
-          <div className="flex border-b border-gray-200">
-            {tabOrder.map((tab, idx) => (
-              <div key={tab} className="flex-1 relative">
-                <button onClick={() => handleTabChange(tab)}
-                  className={`w-full py-3 text-sm font-medium transition-colors ${activeTab === tab ? 'text-rose-600 border-b-2 border-rose-500' : 'text-gray-500 hover:text-gray-700'}`}>
-                  {TABS.find((t) => t.id === tab)?.label}
-                </button>
-                <div className="absolute right-1 top-1 flex flex-col opacity-0 hover:opacity-100 group-hover:opacity-100 transition-opacity"
-                  style={{ opacity: undefined }}
-                  onMouseEnter={(e) => (e.currentTarget.style.opacity = '1')}
-                  onMouseLeave={(e) => (e.currentTarget.style.opacity = '')}>
-                  <button onClick={() => handleMoveTab(tab, 'up')} disabled={idx === 0}
-                    title="Move section up"
-                    className="text-[9px] text-gray-400 hover:text-rose-500 disabled:opacity-20 leading-tight p-0.5">▲</button>
-                  <button onClick={() => handleMoveTab(tab, 'down')} disabled={idx === tabOrder.length - 1}
-                    title="Move section down"
-                    className="text-[9px] text-gray-400 hover:text-rose-500 disabled:opacity-20 leading-tight p-0.5">▼</button>
+        {/* Left: Editor panel (rail + form) */}
+        <aside style={{
+          display: 'flex', flexShrink: 0,
+          background: 'var(--surface-card)',
+          borderRight: '1px solid var(--border-subtle)',
+          width: editorMode === 'expanded' ? 380 : editorMode === 'collapsed' ? 60 : 0,
+          transition: 'width 280ms cubic-bezier(0.22, 1, 0.36, 1)',
+          overflow: 'hidden',
+          position: 'relative',
+          zIndex: 10,
+        }}>
+          {/* Section rail (always visible when not hidden) */}
+          {editorMode !== 'hidden' && (
+            <SectionRail
+              mode={editorMode}
+              onToggle={cycleEditorMode}
+              activeBlock={activeBlock}
+              sectionOrder={sectionOrder}
+              onSelectBlock={selectBlock}
+            />
+          )}
+
+          {/* Form area (only when expanded) */}
+          {editorMode === 'expanded' && (
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, width: 320 }}>
+              {/* Form header */}
+              <div style={{ padding: '16px 20px 8px', borderBottom: '1px solid var(--border-subtle)' }}>
+                <div style={{ fontSize: 10, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-subtle)', fontWeight: 600, fontFamily: 'var(--font-ui)' }}>
+                  {blockInfo.eyebrow}
+                </div>
+                <div style={{ fontFamily: 'var(--font-display)', fontSize: 24, fontWeight: 600, lineHeight: 1.1, marginTop: 4, letterSpacing: '0.01em', color: 'var(--text-strong)' }}>
+                  {blockInfo.title}
+                </div>
+                <div style={{ color: 'var(--text-muted)', fontSize: 12.5, marginTop: 4, fontFamily: 'var(--font-ui)' }}>
+                  {blockInfo.subtitle}
                 </div>
               </div>
-            ))}
-            {/* Music — fixed, non-reorderable */}
-            <div className="flex-1 relative">
-              <button onClick={() => handleTabChange('music')}
-                className={`w-full py-3 text-sm font-medium transition-colors ${activeTab === 'music' ? 'text-rose-600 border-b-2 border-rose-500' : 'text-gray-500 hover:text-gray-700'}`}>
-                Music
-              </button>
-            </div>
-          </div>
 
-          <div className="p-5 space-y-7">
-
-            {/* ═══════════════ WELCOME TAB ═══════════════ */}
-            {activeTab === 'welcome' && <>
-
-              <section className="space-y-3">
-                <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Invitation Layout</h3>
-                <div>
-                  <FieldLabel>Layout Style</FieldLabel>
-                  <SelectField value={draftConfig['invite.layout'] ?? 'classic'} options={['classic', 'minimal', 'ornate']} onChange={(v) => setConfig('invite.layout', v)} />
-                </div>
-              </section>
-
-              <section className="space-y-3">
-                <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Wedding Details</h3>
-                <div>
-                  <FieldLabel>Bride&apos;s Name</FieldLabel>
-                  <TextField value={weddingDraft.brideName} onChange={(v) => setWeddingDraft((d) => ({ ...d, brideName: v }))} maxLength={100} />
-                  {wedding?.templateId === 5 && (
-                    <div className="grid grid-cols-2 gap-2 mt-2">
-                      <div>
-                        <FieldLabel>Name Color</FieldLabel>
-                        <ColorField value={draftConfig['names.bride.color'] ?? ''} onChange={(v) => setConfig('names.bride.color', v)} />
-                      </div>
-                      <div>
-                        <FieldLabel>Shadow</FieldLabel>
-                        <SelectField value={draftConfig['names.bride.shadow'] ?? 'none'} options={['none', 'soft', 'strong', 'glow']} onChange={(v) => setConfig('names.bride.shadow', v)} />
-                      </div>
-                    </div>
-                  )}
-                </div>
-                <div>
-                  <FieldLabel>Groom&apos;s Name</FieldLabel>
-                  <TextField value={weddingDraft.groomName} onChange={(v) => setWeddingDraft((d) => ({ ...d, groomName: v }))} maxLength={100} />
-                  {wedding?.templateId === 5 && (
-                    <div className="grid grid-cols-2 gap-2 mt-2">
-                      <div>
-                        <FieldLabel>Name Color</FieldLabel>
-                        <ColorField value={draftConfig['names.groom.color'] ?? ''} onChange={(v) => setConfig('names.groom.color', v)} />
-                      </div>
-                      <div>
-                        <FieldLabel>Shadow</FieldLabel>
-                        <SelectField value={draftConfig['names.groom.shadow'] ?? 'none'} options={['none', 'soft', 'strong', 'glow']} onChange={(v) => setConfig('names.groom.shadow', v)} />
-                      </div>
-                    </div>
-                  )}
-                </div>
-                {wedding?.templateId === 5 && (
-                  <div>
-                    <FieldLabel>Ampersand (&amp;) Color</FieldLabel>
-                    <ColorField value={draftConfig['names.ampersand.color'] ?? ''} onChange={(v) => setConfig('names.ampersand.color', v)} />
-                  </div>
-                )}
-                <div>
-                  <FieldLabel>Wedding Date &amp; Time</FieldLabel>
-                  <input type="datetime-local" value={weddingDraft.weddingDate}
-                    onChange={(e) => setWeddingDraft((d) => ({ ...d, weddingDate: e.target.value }))}
-                    className="w-full px-3 py-2 border-2 border-gray-200 rounded-lg text-sm text-gray-900 focus:border-rose-400 focus:outline-none" />
-                  {wedding?.templateId === 5 && (
-                    <div className="mt-2">
-                      <FieldLabel>Date Color</FieldLabel>
-                      <ColorField value={draftConfig['date.color'] ?? ''} onChange={(v) => setConfig('date.color', v)} />
-                    </div>
-                  )}
-                </div>
-                <div className="flex items-center justify-between gap-3">
-                  <FieldLabel>Add to Calendar button</FieldLabel>
-                  <ToggleSwitch
-                    value={draftConfig['general.showAddToCalendar'] === 'true'}
-                    onChange={(v) => setConfig('general.showAddToCalendar', v ? 'true' : 'false')}
-                  />
-                </div>
-                <div>
-                  <FieldLabel>Venue</FieldLabel>
-                  <TextField value={weddingDraft.venue} onChange={(v) => setWeddingDraft((d) => ({ ...d, venue: v }))} maxLength={200} />
-                  {wedding?.templateId === 5 && (
-                    <div className="mt-2">
-                      <FieldLabel>Venue Color</FieldLabel>
-                      <ColorField value={draftConfig['venue.color'] ?? ''} onChange={(v) => setConfig('venue.color', v)} />
-                    </div>
-                  )}
-                </div>
-                <div>
-                  <FieldLabel>Venue Address</FieldLabel>
-                  <TextField value={weddingDraft.venueAddress} onChange={(v) => setWeddingDraft((d) => ({ ...d, venueAddress: v }))} maxLength={500} />
-                </div>
-                <div className="flex items-center justify-between gap-3">
-                  <FieldLabel hint="Max guests per RSVP entry. Set to 0 for no limit.">Max Pax per RSVP</FieldLabel>
-                  <input
-                    type="number" min={0} value={weddingDraft.maxPax}
-                    onChange={(e) => setWeddingDraft((d) => ({ ...d, maxPax: parseInt(e.target.value) || 0 }))}
-                    className="w-24 px-3 py-2 border-2 border-gray-200 rounded-lg text-sm text-gray-900 focus:border-rose-400 focus:outline-none text-right"
-                  />
-                </div>
-                <div className="flex items-center justify-between gap-3">
-                  <FieldLabel>Show venue map</FieldLabel>
-                  <ToggleSwitch
-                    value={draftConfig['general.showVenueMap'] === 'true'}
-                    onChange={(v) => setConfig('general.showVenueMap', v ? 'true' : 'false')}
-                  />
-                </div>
-              </section>
-
-              <section>
-                <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Name Order</h3>
-                <div className="flex items-center justify-between gap-3">
-                  <FieldLabel hint="Toggle to put groom's name first">Bride&apos;s name first</FieldLabel>
-                  <ToggleSwitch
-                    value={draftConfig['general.brideFirst'] !== 'false'}
-                    onChange={(v) => setConfig('general.brideFirst', v ? 'true' : 'false')}
-                  />
-                </div>
-              </section>
-
-              <section>
-                <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Date Display</h3>
-                <div className="flex items-center justify-between gap-3">
-                  <FieldLabel hint="Auto-calculated from wedding date">Show Islamic (Hijri) Date</FieldLabel>
-                  <ToggleSwitch
-                    value={draftConfig['general.showIslamicDate'] === 'true'}
-                    onChange={(v) => setConfig('general.showIslamicDate', v ? 'true' : 'false')}
-                  />
-                </div>
-              </section>
-
-              <section className="space-y-3">
-                <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Heading</h3>
-                <div>
-                  <FieldLabel>Heading Text</FieldLabel>
-                  <TextField value={draftConfig['invite.heading'] ?? ''} onChange={(v) => setConfig('invite.heading', v)} maxLength={50} />
-                </div>
-                <div>
-                  <FieldLabel>Alignment</FieldLabel>
-                  <SelectField value={draftConfig['invite.heading.align'] ?? 'center'} options={['left', 'center', 'right']} onChange={(v) => setConfig('invite.heading.align', v)} />
-                </div>
-                <div>
-                  <FieldLabel>Animation</FieldLabel>
-                  <SelectField value={draftConfig['invite.heading.animation'] ?? 'none'} options={['none', 'fade', 'slide', 'typewriter']} onChange={(v) => setConfig('invite.heading.animation', v)} />
-                </div>
-                <div>
-                  <FieldLabel hint="Leave empty to use the template default">Color</FieldLabel>
-                  <ColorField value={draftConfig['invite.heading.color'] ?? ''} onChange={(v) => setConfig('invite.heading.color', v)} />
-                </div>
-                <div>
-                  <FieldLabel>Text Shadow</FieldLabel>
-                  <SelectField value={draftConfig['invite.heading.shadow'] ?? 'none'} options={['none', 'soft', 'strong', 'glow']} onChange={(v) => setConfig('invite.heading.shadow', v)} />
-                </div>
-              </section>
-
-              <section className="space-y-3">
-                <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Invitation Message</h3>
-                <RichTextEditor value={draftConfig['invite.body'] ?? ''} onChange={(html) => setConfig('invite.body', html)} maxLength={200} />
-                <div>
-                  <FieldLabel>Message Alignment</FieldLabel>
-                  <SelectField value={draftConfig['invite.body.align'] ?? 'center'} options={['left', 'center', 'right']} onChange={(v) => setConfig('invite.body.align', v)} />
-                </div>
-              </section>
-
-              <section>
-                <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Section Background</h3>
-                <BgImageField configKey="section.welcome.bg" label="Welcome" value={draftConfig['section.welcome.bg'] ?? ''} weddingId={weddingId!} onChange={(url) => setConfig('section.welcome.bg', url)} />
-              </section>
-
-              {wedding?.templateId === 5 && (
-                <section>
-                  <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Page Background</h3>
-                  <BgImageField
-                    configKey="template.bg"
-                    label="Page Background"
-                    value={draftConfig['template.bg'] ?? ''}
-                    weddingId={weddingId!}
-                    onChange={(url) => setConfig('template.bg', url)}
-                  />
-                  <div className="mt-3 grid grid-cols-2 gap-2">
-                    <div>
-                      <FieldLabel>Background Size</FieldLabel>
-                      <select
-                        value={draftConfig['template.bgSize'] ?? 'cover'}
-                        onChange={(e) => setConfig('template.bgSize', e.target.value)}
-                        className="w-full px-3 py-2 border-2 border-gray-200 rounded-lg text-sm text-gray-900 focus:border-rose-400 focus:outline-none mt-1"
-                      >
-                        <option value="cover">Cover</option>
-                        <option value="contain">Contain</option>
-                        <option value="auto">Natural</option>
-                      </select>
-                    </div>
-                    <div>
-                      <FieldLabel>Background Position</FieldLabel>
-                      <select
-                        value={draftConfig['template.bgPosition'] ?? 'center'}
-                        onChange={(e) => setConfig('template.bgPosition', e.target.value)}
-                        className="w-full px-3 py-2 border-2 border-gray-200 rounded-lg text-sm text-gray-900 focus:border-rose-400 focus:outline-none mt-1"
-                      >
-                        <option value="center">Center</option>
-                        <option value="top center">Top</option>
-                        <option value="bottom center">Bottom</option>
-                        <option value="left center">Left</option>
-                        <option value="right center">Right</option>
-                      </select>
-                    </div>
-                  </div>
-                </section>
-              )}
-
-
-              {wedding?.templateId === 5 && (
-                <section className="space-y-3">
-                  <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Countdown</h3>
-                  <div>
-                    <FieldLabel>Countdown Label</FieldLabel>
-                    <TextField value={draftConfig['invite.countdown_prefix'] ?? ''} onChange={(v) => setConfig('invite.countdown_prefix', v)} maxLength={60} placeholder="Counting down to our special day" />
-                  </div>
-                  <div className="grid grid-cols-2 gap-2">
-                    <div>
-                      <FieldLabel>Label Color</FieldLabel>
-                      <ColorField value={draftConfig['countdown.label.color'] ?? ''} onChange={(v) => setConfig('countdown.label.color', v)} />
-                    </div>
-                    <div>
-                      <FieldLabel>Number Color</FieldLabel>
-                      <ColorField value={draftConfig['countdown.number.color'] ?? ''} onChange={(v) => setConfig('countdown.number.color', v)} />
-                    </div>
-                  </div>
-                </section>
-              )}
-
-            </>}
-
-            {/* ═══════════════ CEREMONY TAB ═══════════════ */}
-            {activeTab === 'ceremony' && <>
-
-              <section className="space-y-3">
-                <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Ceremony / Walimah</h3>
-                <div>
-                  <FieldLabel>Section Title</FieldLabel>
-                  <TextField value={draftConfig['walimah.title'] ?? ''} onChange={(v) => setConfig('walimah.title', v)} maxLength={40} placeholder="Walimatul Urus" />
-                  {wedding?.templateId === 5 && (
-                    <div className="grid grid-cols-2 gap-2 mt-2">
-                      <div>
-                        <FieldLabel>Title Color</FieldLabel>
-                        <ColorField value={draftConfig['ceremony.title.color'] ?? ''} onChange={(v) => setConfig('ceremony.title.color', v)} />
-                      </div>
-                      <div>
-                        <FieldLabel>Shadow</FieldLabel>
-                        <SelectField value={draftConfig['ceremony.title.shadow'] ?? 'none'} options={['none', 'soft', 'strong', 'glow']} onChange={(v) => setConfig('ceremony.title.shadow', v)} />
-                      </div>
-                    </div>
-                  )}
-                </div>
-                <div>
-                  <FieldLabel hint="Supports bold and italic formatting">Ceremony Details</FieldLabel>
-                  <RichTextEditor value={draftConfig['walimah.body'] ?? ''} onChange={(html) => setConfig('walimah.body', html)} maxLength={500} />
-                </div>
-                <div>
-                  <FieldLabel>Text Alignment</FieldLabel>
-                  <SelectField value={draftConfig['walimah.body.align'] ?? 'center'} options={['left', 'center', 'right']} onChange={(v) => setConfig('walimah.body.align', v)} />
-                </div>
-                {wedding?.templateId === 5 && (
-                  <div>
-                    <FieldLabel hint="Leave empty for template default">Body Text Color</FieldLabel>
-                    <ColorField value={draftConfig['walimah.body.color'] ?? ''} onChange={(v) => setConfig('walimah.body.color', v)} />
-                  </div>
-                )}
-              </section>
-
-              {wedding?.templateId === 5 && (
-                <section className="space-y-3">
-                  <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Couple Names in Card</h3>
-                  <p className="text-xs text-gray-400">Names displayed inside the ceremony card</p>
-                  <div className="grid grid-cols-2 gap-2">
-                    <div>
-                      <FieldLabel>Color</FieldLabel>
-                      <ColorField value={draftConfig['ceremony.names.color'] ?? ''} onChange={(v) => setConfig('ceremony.names.color', v)} />
-                    </div>
-                    <div>
-                      <FieldLabel>Shadow</FieldLabel>
-                      <SelectField value={draftConfig['ceremony.names.shadow'] ?? 'none'} options={['none', 'soft', 'strong', 'glow']} onChange={(v) => setConfig('ceremony.names.shadow', v)} />
-                    </div>
-                  </div>
-                </section>
-              )}
-
-
-              <section>
-                <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">RSVP</h3>
-                <FieldLabel>RSVP Subtitle</FieldLabel>
-                <TextField value={draftConfig['rsvp.subtitle'] ?? ''} onChange={(v) => setConfig('rsvp.subtitle', v)} maxLength={80} />
-                {wedding?.templateId === 5 && (
-                  <div className="mt-2">
-                    <FieldLabel>Subtitle Color</FieldLabel>
-                    <ColorField value={draftConfig['rsvp.subtitle.color'] ?? ''} onChange={(v) => setConfig('rsvp.subtitle.color', v)} />
-                  </div>
-                )}
-              </section>
-
-              <section className="space-y-3">
-                <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Schedule / Itinerary</h3>
-                <div>
-                  <FieldLabel>Schedule Section Title</FieldLabel>
-                  <TextField value={draftConfig['itinerary.title'] ?? ''} onChange={(v) => setConfig('itinerary.title', v)} maxLength={40} placeholder="Aturcara Majlis" />
-                  {wedding?.templateId === 5 && (
-                    <div className="mt-2">
-                      <FieldLabel>Title Color</FieldLabel>
-                      <ColorField value={draftConfig['itinerary.title.color'] ?? ''} onChange={(v) => setConfig('itinerary.title.color', v)} />
-                    </div>
-                  )}
-                </div>
-                {wedding?.templateId === 5 && (
-                  <div>
-                    <FieldLabel>Item Text Color</FieldLabel>
-                    <ColorField value={draftConfig['itinerary.item.color'] ?? ''} onChange={(v) => setConfig('itinerary.item.color', v)} />
-                  </div>
-                )}
-                <ItineraryEditor weddingId={weddingId!} onItemsChange={setItinerary} />
-              </section>
-
-              <section>
-                <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Section Background</h3>
-                <BgImageField configKey="section.ceremony.bg" label="Ceremony" value={draftConfig['section.ceremony.bg'] ?? ''} weddingId={weddingId!} onChange={(url) => setConfig('section.ceremony.bg', url)} />
-              </section>
-
-            </>}
-
-            {/* ═══════════════ CELEBRATION TAB ═══════════════ */}
-            {activeTab === 'celebration' && <>
-
-              <section className="space-y-3">
-                <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Wishes &amp; Guestbook</h3>
-                <div>
-                  <FieldLabel>Section Title</FieldLabel>
-                  <TextField value={draftConfig['wish.title'] ?? ''} onChange={(v) => setConfig('wish.title', v)} maxLength={40} placeholder="Wishes &amp; Blessings" />
-                </div>
-                <div>
-                  <FieldLabel>Wish Prompt</FieldLabel>
-                  <TextField value={draftConfig['wish.prompt'] ?? ''} onChange={(v) => setConfig('wish.prompt', v)} maxLength={80} />
-                  {wedding?.templateId === 5 && (
-                    <div className="mt-2">
-                      <FieldLabel>Prompt Color</FieldLabel>
-                      <ColorField value={draftConfig['wish.prompt.color'] ?? ''} onChange={(v) => setConfig('wish.prompt.color', v)} />
-                    </div>
-                  )}
-                </div>
-              </section>
-
-              <section className="space-y-3">
-                <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Photo Booth</h3>
-                <div>
-                  <FieldLabel>Section Title</FieldLabel>
-                  <TextField value={draftConfig['photobooth.title'] ?? ''} onChange={(v) => setConfig('photobooth.title', v)} maxLength={40} placeholder="Photo Booth" />
-                </div>
-                <div>
-                  <FieldLabel>Navigation Label</FieldLabel>
-                  <TextField value={draftConfig['nav.photos'] ?? 'Photos'} onChange={(v) => setConfig('nav.photos', v)} maxLength={20} />
-                </div>
-                {photoBoothEnabled && (
-                  <div className="flex items-center justify-between gap-3">
-                    <FieldLabel hint="When off, submitted photos require manual approval in your dashboard">Auto-approve Guest Photos</FieldLabel>
-                    <ToggleSwitch
-                      value={draftConfig['photobooth.autoApprove'] !== 'false'}
-                      onChange={(v) => setConfig('photobooth.autoApprove', v ? 'true' : 'false')}
-                    />
-                  </div>
-                )}
-              </section>
-
-              {showPortraitSlots && (
-                <section>
-                  <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Portrait &amp; Gallery Slots</h3>
-                  {wedding.templateId === 4 && (
-                    <p className="text-xs text-gray-500 mb-4 leading-relaxed">
-                      <strong>Hero Background</strong> appears full-screen behind the couple&apos;s names.
-                      The three <strong>Photo Booth</strong> cards are the first images guests see in the swipe stack.
-                    </p>
-                  )}
-                  <div className="grid grid-cols-2 gap-4">
-                    {portraitSlots.map(({ slot, label }) => (
-                      <PhotoDropZone key={slot} slot={slot} label={label}
-                        photo={coupleMedia.find((m) => m.templateSlot === slot)}
-                        uploading={uploadingSlot === slot}
-                        onDrop={handlePhotoDrop} onRemove={handlePhotoRemove} />
-                    ))}
-                  </div>
-                </section>
-              )}
-
-              {wedding?.templateId === 5 && (
-                <section className="space-y-3">
-                  <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Section Headings</h3>
-                  <p className="text-xs text-gray-400">Applies to Wishes &amp; Photo Booth headings</p>
-                  <div className="grid grid-cols-2 gap-2">
-                    <div>
-                      <FieldLabel>Color</FieldLabel>
-                      <ColorField value={draftConfig['section.heading.color'] ?? ''} onChange={(v) => setConfig('section.heading.color', v)} />
-                    </div>
-                    <div>
-                      <FieldLabel>Shadow</FieldLabel>
-                      <SelectField value={draftConfig['section.heading.shadow'] ?? 'none'} options={['none', 'soft', 'strong', 'glow']} onChange={(v) => setConfig('section.heading.shadow', v)} />
-                    </div>
-                  </div>
-                </section>
-              )}
-
-              <section className="space-y-3">
-                <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Footer</h3>
-                <div>
-                  <FieldLabel>Footer Tagline</FieldLabel>
-                  <TextField value={draftConfig['footer.tagline'] ?? ''} onChange={(v) => setConfig('footer.tagline', v)} maxLength={80} placeholder="Made with love for our special day" />
-                </div>
-                {wedding?.templateId === 5 && (
-                  <div>
-                    <FieldLabel>Color</FieldLabel>
-                    <ColorField value={draftConfig['footer.tagline.color'] ?? ''} onChange={(v) => setConfig('footer.tagline.color', v)} />
-                  </div>
-                )}
-              </section>
-
-              <section>
-                <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Section Background</h3>
-                <BgImageField configKey="section.celebration.bg" label="Celebration" value={draftConfig['section.celebration.bg'] ?? ''} weddingId={weddingId!} onChange={(url) => setConfig('section.celebration.bg', url)} />
-              </section>
-
-            </>}
-
-            {/* ═══════════════ MUSIC TAB ═══════════════ */}
-            {activeTab === 'music' && (
-              <MusicTab
-                url={draftConfig['music.url'] ?? ''}
-                loop={draftConfig['music.loop'] !== 'false'}
-                weddingId={weddingId!}
-                onUrlChange={(v) => setConfig('music.url', v)}
-                onLoopChange={(v) => setConfig('music.loop', v ? 'true' : 'false')}
-              />
-            )}
-
-          </div>
-        </div>
-
-        {/* RIGHT: Live preview — iframe with its own viewport */}
-        <div className="flex-1 overflow-hidden flex flex-col bg-gray-100">
-          {/* Toolbar */}
-          <div className="px-4 pt-2 pb-2 bg-gray-200 border-b border-gray-300 shrink-0 space-y-1.5">
-            {/* Row 1: label + presets + reset */}
-            <div className="flex items-center justify-between">
-              <span className="text-xs text-gray-500 font-medium tracking-wide select-none">PREVIEW</span>
-              <div className="flex items-center gap-1.5">
-                {([
-                  { label: 'Mobile',  w: 390,  h: 844  },
-                  { label: 'Tablet',  w: 768,  h: 1024 },
-                  { label: 'Desktop', w: 1440, h: 900  },
-                ] as const).map(({ label, w, h }) => (
-                  <button key={label}
-                    onClick={() => { setPreviewWidth(w); setPreviewHeight(h); }}
-                    className={`px-2.5 py-1 text-xs rounded font-medium transition-all ${previewWidth === w && previewHeight === h ? 'bg-white text-gray-800 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
-                    {label}
+              {/* Sub-section chips */}
+              <div style={{ display: 'flex', gap: 4, padding: '10px 20px', borderBottom: '1px solid var(--border-subtle)', overflowX: 'auto', scrollbarWidth: 'none' }}>
+                {blockInfo.chips.map(chip => (
+                  <button key={chip}
+                    onClick={() => handleChipClick(chip)}
+                    style={{
+                      padding: '5px 11px', borderRadius: 999, fontSize: 11.5, fontWeight: 500,
+                      color: subSection === chip ? '#fff' : 'var(--text-muted)',
+                      background: subSection === chip ? 'var(--text-strong)' : 'transparent',
+                      border: 'none', cursor: 'pointer', whiteSpace: 'nowrap', fontFamily: 'var(--font-ui)',
+                      transition: 'all 150ms',
+                    }}
+                    onMouseEnter={e => { if (subSection !== chip) (e.currentTarget as HTMLElement).style.background = 'var(--surface-sunken)'; }}
+                    onMouseLeave={e => { if (subSection !== chip) (e.currentTarget as HTMLElement).style.background = 'transparent'; }}>
+                    {chip}
                   </button>
                 ))}
-                {(previewWidth !== null || previewHeight !== null || zoom !== 1 || panX !== 0 || panY !== 0) && (
-                  <button onClick={() => {
-                    setPreviewWidth(null); setPreviewHeight(null);
-                    setZoom(1); setPanX(0); setPanY(0);
-                    viewRef.current = { zoom: 1, panX: 0, panY: 0 };
-                  }} className="text-xs text-gray-500 hover:text-gray-700 border border-gray-300 rounded px-2 py-0.5 bg-white shrink-0 ml-1">
-                    Reset
-                  </button>
+              </div>
+
+              {/* Form scroll area */}
+              <div ref={formScrollRef} style={{ flex: 1, overflowY: 'auto', padding: '16px 20px 100px', scrollBehavior: 'smooth' }}
+                className="form-scroll-area">
+                {inspectorContent}
+
+                {/* Add / remove section blocks (only for welcome/walimah/etc blocks, not details/music) */}
+                {activeBlock !== 'details' && activeBlock !== 'music' && (
+                  <div style={{ marginTop: 12 }}>
+                    {availableBlocks.length > 0 && (
+                      <div style={{ position: 'relative' }}>
+                        <button
+                          onClick={() => setAddMenuOpen(o => !o)}
+                          style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '9px 11px', border: '1.5px dashed var(--border-default)', borderRadius: 'var(--radius-md)', background: 'transparent', color: 'var(--text-muted)', fontFamily: 'var(--font-ui)', fontSize: 'var(--text-sm)', cursor: 'pointer', transition: 'var(--transition-control)' }}
+                          onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--brand)'; e.currentTarget.style.color = 'var(--brand)'; }}
+                          onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border-default)'; e.currentTarget.style.color = 'var(--text-muted)'; }}
+                        >
+                          <Icon name="plus" size={14} /> Add section
+                        </button>
+                        {addMenuOpen && (
+                          <div style={{ position: 'absolute', top: 'calc(100% + 4px)', left: 0, right: 0, background: 'var(--surface-card)', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-md)', boxShadow: 'var(--shadow-lg)', padding: 6, zIndex: 30, display: 'flex', flexDirection: 'column', gap: 1 }}>
+                            {availableBlocks.map(b => (
+                              <button key={b.code} onClick={() => { handleAddBlock(b.code); setAddMenuOpen(false); }}
+                                style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '8px 10px', borderRadius: 'var(--radius-sm)', border: 'none', background: 'transparent', color: 'var(--text-body)', fontFamily: 'var(--font-ui)', fontSize: 'var(--text-sm)', cursor: 'pointer', textAlign: 'left' }}
+                                onMouseEnter={e => { e.currentTarget.style.background = 'var(--surface-sunken)'; }}
+                                onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}>
+                                <Icon name={b.icon} size={15} /> {b.label}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    {sectionOrder.includes(activeBlock) && (
+                      <div style={{ display: 'flex', gap: 6, marginTop: 8 }}>
+                        <button
+                          onClick={() => handleMoveBlock(activeBlock, 'up')}
+                          disabled={sectionOrder.indexOf(activeBlock) === 0}
+                          title="Move section up"
+                          style={{ flex: 1, padding: '7px 0', border: '1px solid var(--border-default)', borderRadius: 'var(--radius-md)', background: 'transparent', color: 'var(--text-muted)', fontFamily: 'var(--font-ui)', fontSize: 'var(--text-sm)', cursor: sectionOrder.indexOf(activeBlock) === 0 ? 'default' : 'pointer', opacity: sectionOrder.indexOf(activeBlock) === 0 ? 0.4 : 1, transition: 'background 150ms', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}
+                          onMouseEnter={e => { if (sectionOrder.indexOf(activeBlock) !== 0) e.currentTarget.style.background = 'var(--surface-sunken)'; }}
+                          onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}>
+                          ↑ Move up
+                        </button>
+                        <button
+                          onClick={() => handleMoveBlock(activeBlock, 'down')}
+                          disabled={sectionOrder.indexOf(activeBlock) === sectionOrder.length - 1}
+                          title="Move section down"
+                          style={{ flex: 1, padding: '7px 0', border: '1px solid var(--border-default)', borderRadius: 'var(--radius-md)', background: 'transparent', color: 'var(--text-muted)', fontFamily: 'var(--font-ui)', fontSize: 'var(--text-sm)', cursor: sectionOrder.indexOf(activeBlock) === sectionOrder.length - 1 ? 'default' : 'pointer', opacity: sectionOrder.indexOf(activeBlock) === sectionOrder.length - 1 ? 0.4 : 1, transition: 'background 150ms', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}
+                          onMouseEnter={e => { if (sectionOrder.indexOf(activeBlock) !== sectionOrder.length - 1) e.currentTarget.style.background = 'var(--surface-sunken)'; }}
+                          onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}>
+                          ↓ Move down
+                        </button>
+                        <button onClick={() => handleRemoveBlock(activeBlock)}
+                          style={{ padding: '7px 14px', border: '1px solid var(--danger-border, #fca5a5)', borderRadius: 'var(--radius-md)', background: 'transparent', color: 'var(--danger)', fontFamily: 'var(--font-ui)', fontSize: 'var(--text-sm)', cursor: 'pointer', transition: 'background 150ms', display: 'flex', alignItems: 'center', gap: 4 }}
+                          onMouseEnter={e => { e.currentTarget.style.background = 'var(--danger-subtle, #fef2f2)'; }}
+                          onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}>
+                          <Icon name="x" size={13} /> Remove
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 )}
               </div>
             </div>
-            {/* Row 2: W + H sliders + zoom controls */}
-            <div className="flex items-center gap-2">
-              <div className="flex items-center gap-1.5 flex-1 min-w-0">
-                <span className="text-[11px] font-medium text-gray-400 shrink-0">W</span>
-                <input type="range" min={320} max={1440} value={effectiveW}
-                  onChange={(e) => setPreviewWidth(Number(e.target.value))}
-                  className="flex-1 min-w-0 accent-rose-500 cursor-pointer" />
-                <input type="number" min={320} max={1440} value={effectiveW}
-                  onChange={(e) => { const v = Number(e.target.value); if (v >= 320 && v <= 1440) setPreviewWidth(v); }}
-                  onBlur={(e) => { const v = Math.min(1440, Math.max(320, Number(e.target.value))); setPreviewWidth(v); }}
-                  className="w-14 shrink-0 px-1.5 py-0.5 text-xs font-mono text-gray-700 bg-white border border-gray-300 rounded text-right focus:outline-none focus:border-rose-400 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" />
-              </div>
-              <div className="flex items-center gap-1.5 flex-1 min-w-0">
-                <span className="text-[11px] font-medium text-gray-400 shrink-0">H</span>
-                <input type="range" min={480} max={1200} value={effectiveH}
-                  onChange={(e) => setPreviewHeight(Number(e.target.value))}
-                  className="flex-1 min-w-0 accent-rose-500 cursor-pointer" />
-                <input type="number" min={480} max={1200} value={effectiveH}
-                  onChange={(e) => { const v = Number(e.target.value); if (v >= 480 && v <= 1200) setPreviewHeight(v); }}
-                  onBlur={(e) => { const v = Math.min(1200, Math.max(480, Number(e.target.value))); setPreviewHeight(v); }}
-                  className="w-14 shrink-0 px-1.5 py-0.5 text-xs font-mono text-gray-700 bg-white border border-gray-300 rounded text-right focus:outline-none focus:border-rose-400 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" />
-              </div>
-              {/* Zoom controls */}
-              <div className="flex items-center gap-1 shrink-0 border-l border-gray-300 pl-2">
-                <button
-                  onClick={() => { const z = Math.max(0.1, Math.round((zoom - 0.25) * 100) / 100); setZoom(z); viewRef.current.zoom = z; }}
-                  className="w-6 h-6 rounded text-gray-600 hover:bg-gray-300 flex items-center justify-center text-base leading-none">−</button>
-                <span className="text-xs font-mono text-gray-600 tabular-nums w-10 text-center select-none">{Math.round(zoom * 100)}%</span>
-                <button
-                  onClick={() => { const z = Math.min(4, Math.round((zoom + 0.25) * 100) / 100); setZoom(z); viewRef.current.zoom = z; }}
-                  className="w-6 h-6 rounded text-gray-600 hover:bg-gray-300 flex items-center justify-center text-base leading-none">+</button>
-              </div>
-            </div>
-          </div>
+          )}
 
-          {/* Canvas — zoom with scroll wheel, drag gray area to pan */}
-          <div
-            ref={panelRef}
-            className={`flex-1 overflow-hidden bg-[#d1d5db] relative select-none ${isPanning ? 'cursor-grabbing' : 'cursor-grab'}`}
-            onMouseDown={handleCanvasMouseDown}
-          >
-            {/* Content anchored to panel center, then panned + zoomed */}
-            <div style={{
-              position: 'absolute',
-              top: '50%',
-              left: '50%',
-              transform: `translate(calc(-50% + ${panX}px), calc(-50% + ${panY}px)) scale(${zoom})`,
-              transformOrigin: 'center center',
-            }}>
-              {/* Device clip wrapper — sized to post-device-scale visual dimensions */}
-              <div style={{
-                width: displayW,
-                height: displayH,
-                overflow: 'hidden',
-                background: '#fff',
-                boxShadow: '0 8px 32px rgba(0,0,0,0.25)',
-                borderRadius: 6,
-              }}>
-                <iframe
-                  ref={iframeRef}
-                  src="/couple-admin/preview"
-                  title="Invitation Preview"
-                  style={{
-                    width: effectiveW,
-                    height: effectiveH,
-                    border: 'none',
-                    display: 'block',
-                    transform: scale !== 1 ? `scale(${scale})` : undefined,
-                    transformOrigin: 'top left',
-                    pointerEvents: isPanning ? 'none' : 'auto',
-                  }}
-                />
-              </div>
-            </div>
-          </div>
-        </div>
+          {/* Sticky save bar */}
+          {editorMode === 'expanded' && (
+            <SaveBar dirty={isDirty} saving={saving} onSave={handleSave} />
+          )}
+        </aside>
+
+        {/* Right: Preview panel */}
+        <PreviewPanel
+          iframeRef={iframeRef}
+          device={device}
+          setDevice={d => { setDevice(d); setManualZoom(null); }}
+          manualZoom={manualZoom}
+          setManualZoom={setManualZoom}
+          activeBlock={activeBlock}
+          onSelectBlock={block => selectBlock(block as BlockId)}
+          sectionOrder={sectionOrder}
+          editorMode={editorMode}
+          onShowEditor={() => setEditorMode('expanded')}
+          wedding={wedding}
+        />
       </div>
+
+      <style>{`
+        .hide-narrow { display: flex; }
+        @media (max-width: 1180px) { .hide-narrow { display: none !important; } }
+        .form-scroll-area::-webkit-scrollbar { width: 6px; }
+        .form-scroll-area::-webkit-scrollbar-thumb { background: var(--border-default); border-radius: 999px; }
+      `}</style>
     </div>
   );
 }

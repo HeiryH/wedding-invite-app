@@ -9,5 +9,6 @@ namespace WeddingInvite.Data.Repositories
         Task<WeddingFeature> EnableFeatureAsync(int weddingId, int featureId, string? configuration = null);
         Task<bool> DisableFeatureAsync(int weddingId, int featureId);
         Task<bool> IsFeatureEnabledAsync(int weddingId, string featureCode);
+        Task<Dictionary<int, int>> GetEnabledCountsByFeatureAsync();
     }
 }

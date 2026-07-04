@@ -44,7 +44,11 @@ namespace WeddingInvite.Core.Services
             if (wedding.WeddingDate < DateTime.UtcNow)
                 throw new InvalidOperationException("Cannot RSVP to a past wedding");
 
-            // 2b. Check if RSVPs are open (only enforced on public submissions)
+            // 2b. Block RSVP on private (self-serve free) weddings
+            if (enforceRsvpOpen && !wedding.IsPublic)
+                throw new InvalidOperationException("This invitation is not yet shared publicly.");
+
+            // 2c. Check if RSVPs are open (only enforced on public submissions)
             if (enforceRsvpOpen && !wedding.IsRsvpOpen)
                 throw new ArgumentException("RSVPs are closed for this wedding.");
 

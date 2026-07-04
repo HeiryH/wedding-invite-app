@@ -3,7 +3,14 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { packageService, featureService, Package, Feature, CreatePackage, UpdatePackage } from '@/lib/api';
-import Icon from '@/components/admin/Icon';
+import { Icon } from '@/components/ui/Icon';
+import { Button } from '@/components/ui/Button';
+import { Input } from '@/components/ui/Input';
+import { Textarea } from '@/components/ui/Textarea';
+import { Switch } from '@/components/ui/Switch';
+import { Badge } from '@/components/ui/Badge';
+import { Card } from '@/components/ui/Card';
+import { EmptyState } from '@/components/ui/EmptyState';
 
 type FormMode = 'create' | 'edit' | null;
 
@@ -25,13 +32,6 @@ const emptyForm: PackageForm = {
   sortOrder: 0,
   isActive: true,
   featureIds: [],
-};
-
-const inputStyle: React.CSSProperties = {
-  width: '100%', padding: '10px 12px',
-  border: '1px solid var(--line-2)', borderRadius: 10,
-  fontSize: 14, color: 'var(--ink)', background: 'white',
-  outline: 'none', boxSizing: 'border-box',
 };
 
 export default function PackagesPage() {
@@ -112,8 +112,8 @@ export default function PackagesPage() {
   if (loading) return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '60vh' }}>
       <div style={{ textAlign: 'center' }}>
-        <div style={{ width: 48, height: 48, border: '3px solid var(--lavender-grey-ink)', borderTopColor: 'transparent', borderRadius: '50%', margin: '0 auto 14px', animation: 'spin 0.8s linear infinite' }} />
-        <p style={{ color: 'var(--muted)', fontSize: 14 }}>Loading packages…</p>
+        <div style={{ width: 40, height: 40, border: '2.5px solid var(--brand)', borderTopColor: 'transparent', borderRadius: '50%', margin: '0 auto 14px', animation: 'spin 0.7s linear infinite' }} />
+        <p style={{ color: 'var(--text-subtle)', fontSize: 'var(--text-sm)', fontFamily: 'var(--font-ui)' }}>Loading packages…</p>
         <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
       </div>
     </div>
@@ -122,240 +122,241 @@ export default function PackagesPage() {
   return (
     <div>
       {/* Page header */}
-      <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 16, marginBottom: 20 }}>
+      <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 16, marginBottom: 24 }}>
         <div>
-          <h1 style={{ margin: 0, fontFamily: 'var(--serif)', fontSize: 'clamp(30px, 5vw, 42px)', fontWeight: 400, letterSpacing: '-0.02em', lineHeight: 1, color: 'var(--ink)' }}>
-            Manage <em style={{ fontStyle: 'italic', color: 'var(--lavender-grey-deep)' }}>packages</em>
+          <h1 style={{ margin: 0, fontFamily: 'var(--font-display)', fontSize: 'clamp(28px, 5vw, 40px)', fontWeight: 400, letterSpacing: 'var(--tracking-tight)', lineHeight: 1, color: 'var(--text-strong)' }}>
+            Manage <em style={{ fontStyle: 'italic', color: 'var(--text-muted)' }}>packages</em>
           </h1>
-          <p style={{ margin: '6px 0 0', color: 'var(--muted)', fontSize: 13 }}>Create and manage feature bundles for weddings.</p>
+          <p style={{ margin: '6px 0 0', color: 'var(--text-subtle)', fontSize: 'var(--text-sm)', fontFamily: 'var(--font-ui)' }}>
+            Create and manage feature bundles for weddings.
+          </p>
         </div>
-        <button
+        <Button
+          variant="primary"
+          tone="brand"
+          iconLeft={<Icon name="plus" size={15} />}
           onClick={openCreateForm}
-          style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '10px 14px', borderRadius: 12, background: 'var(--lavender-grey-ink)', color: 'var(--floral)', border: 'none', cursor: 'pointer', fontSize: 13.5, fontWeight: 500, flexShrink: 0, boxShadow: '0 1px 0 rgba(255,255,255,.12) inset, 0 1px 2px rgba(0,0,0,.08)' }}
         >
-          <Icon name="plus" size={16} /> New package
-        </button>
+          New package
+        </Button>
       </div>
 
       {/* Create / Edit Form */}
       <AnimatePresence>
         {formMode && (
           <motion.div
-            initial={{ opacity: 0, y: -16 }}
+            initial={{ opacity: 0, y: -12 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -16 }}
-            style={{ background: 'white', border: '1px solid var(--line)', borderRadius: 'var(--radius-md)', padding: 24, marginBottom: 20 }}
+            exit={{ opacity: 0, y: -12 }}
+            style={{ marginBottom: 24 }}
           >
-            <h2 style={{ margin: '0 0 20px', fontFamily: 'var(--serif)', fontSize: 22, fontWeight: 400, color: 'var(--ink)', letterSpacing: '-0.01em' }}>
-              {formMode === 'create' ? 'Create new package' : 'Edit package'}
-            </h2>
+            <Card padding="24px">
+              <h2 style={{ margin: '0 0 20px', fontFamily: 'var(--font-display)', fontSize: 22, fontWeight: 400, color: 'var(--text-strong)', letterSpacing: 'var(--tracking-tight)' }}>
+                {formMode === 'create' ? 'Create new package' : 'Edit package'}
+              </h2>
 
-            {error && (
-              <div style={{ background: 'var(--thistle-soft)', border: '1px solid var(--thistle)', borderRadius: 10, padding: '10px 14px', marginBottom: 16 }}>
-                <p style={{ color: 'var(--danger)', fontSize: 13, margin: 0 }}>{error}</p>
-              </div>
-            )}
+              {error && (
+                <div style={{ background: 'color-mix(in srgb, var(--danger) 8%, transparent)', border: '1px solid color-mix(in srgb, var(--danger) 30%, transparent)', borderRadius: 'var(--radius-md)', padding: '10px 14px', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <Icon name="alert-circle" size={14} style={{ color: 'var(--danger)', flexShrink: 0 }} />
+                  <p style={{ color: 'var(--danger)', fontSize: 'var(--text-sm)', margin: 0, fontFamily: 'var(--font-ui)' }}>{error}</p>
+                </div>
+              )}
 
-            <form onSubmit={handleSubmit}>
-              <div className="grid md:grid-cols-2 gap-5" style={{ marginBottom: 16 }}>
-                <div>
-                  <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: 'var(--muted)', letterSpacing: '0.04em', textTransform: 'uppercase', marginBottom: 6 }}>Package Name *</label>
-                  <input
-                    type="text" value={form.packageName}
+              <form onSubmit={handleSubmit}>
+                <div className="grid md:grid-cols-2 gap-5" style={{ marginBottom: 16 }}>
+                  <Input
+                    label="Package Name"
+                    required
+                    value={form.packageName}
                     onChange={e => setForm({ ...form, packageName: e.target.value })}
-                    style={inputStyle}
-                    onFocus={e => { e.currentTarget.style.borderColor = 'var(--lavender-grey)'; e.currentTarget.style.boxShadow = '0 0 0 4px var(--lavender)'; }}
-                    onBlur={e => { e.currentTarget.style.borderColor = 'var(--line-2)'; e.currentTarget.style.boxShadow = 'none'; }}
-                    placeholder="e.g., Starter, Premium" required
+                    placeholder="e.g., Starter, Premium"
                   />
-                </div>
-                <div>
-                  <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: 'var(--muted)', letterSpacing: '0.04em', textTransform: 'uppercase', marginBottom: 6 }}>
-                    Package Code * {formMode === 'edit' && <span style={{ fontWeight: 400, textTransform: 'none' }}>(read-only)</span>}
-                  </label>
-                  <input
-                    type="text" value={form.packageCode}
+                  <Input
+                    label={formMode === 'edit' ? 'Package Code (read-only)' : 'Package Code'}
+                    required
+                    value={form.packageCode}
                     onChange={e => setForm({ ...form, packageCode: e.target.value.toUpperCase() })}
-                    style={{ ...inputStyle, background: formMode === 'edit' ? 'var(--floral)' : 'white', color: formMode === 'edit' ? 'var(--muted)' : 'var(--ink)' }}
-                    onFocus={e => { if (formMode !== 'edit') { e.currentTarget.style.borderColor = 'var(--lavender-grey)'; e.currentTarget.style.boxShadow = '0 0 0 4px var(--lavender)'; } }}
-                    onBlur={e => { e.currentTarget.style.borderColor = 'var(--line-2)'; e.currentTarget.style.boxShadow = 'none'; }}
-                    placeholder="e.g., STARTER" required disabled={formMode === 'edit'}
+                    placeholder="e.g., STARTER"
+                    disabled={formMode === 'edit'}
                   />
                 </div>
-              </div>
 
-              <div style={{ marginBottom: 16 }}>
-                <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: 'var(--muted)', letterSpacing: '0.04em', textTransform: 'uppercase', marginBottom: 6 }}>Description</label>
-                <textarea
-                  value={form.description}
-                  onChange={e => setForm({ ...form, description: e.target.value })}
-                  rows={2}
-                  style={{ ...inputStyle, resize: 'none' }}
-                  onFocus={e => { e.currentTarget.style.borderColor = 'var(--lavender-grey)'; e.currentTarget.style.boxShadow = '0 0 0 4px var(--lavender)'; }}
-                  onBlur={e => { e.currentTarget.style.borderColor = 'var(--line-2)'; e.currentTarget.style.boxShadow = 'none'; }}
-                  placeholder="Brief description of this package"
-                />
-              </div>
+                <div style={{ marginBottom: 16 }}>
+                  <Textarea
+                    label="Description"
+                    value={form.description}
+                    onChange={e => setForm({ ...form, description: e.target.value })}
+                    rows={2}
+                    placeholder="Brief description of this package"
+                  />
+                </div>
 
-              <div className="grid md:grid-cols-3 gap-5" style={{ marginBottom: 16 }}>
-                <div>
-                  <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: 'var(--muted)', letterSpacing: '0.04em', textTransform: 'uppercase', marginBottom: 6 }}>Price ($)</label>
-                  <input
-                    type="number" min="0" step="0.01" value={form.price}
+                <div className="grid md:grid-cols-3 gap-5" style={{ marginBottom: 16 }}>
+                  <Input
+                    label="Price ($)"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={String(form.price)}
                     onChange={e => setForm({ ...form, price: parseFloat(e.target.value) || 0 })}
-                    style={inputStyle}
-                    onFocus={e => { e.currentTarget.style.borderColor = 'var(--lavender-grey)'; e.currentTarget.style.boxShadow = '0 0 0 4px var(--lavender)'; }}
-                    onBlur={e => { e.currentTarget.style.borderColor = 'var(--line-2)'; e.currentTarget.style.boxShadow = 'none'; }}
                   />
-                </div>
-                <div>
-                  <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: 'var(--muted)', letterSpacing: '0.04em', textTransform: 'uppercase', marginBottom: 6 }}>Sort Order</label>
-                  <input
-                    type="number" min="0" value={form.sortOrder}
+                  <Input
+                    label="Sort Order"
+                    type="number"
+                    min="0"
+                    value={String(form.sortOrder)}
                     onChange={e => setForm({ ...form, sortOrder: parseInt(e.target.value) || 0 })}
-                    style={inputStyle}
-                    onFocus={e => { e.currentTarget.style.borderColor = 'var(--lavender-grey)'; e.currentTarget.style.boxShadow = '0 0 0 4px var(--lavender)'; }}
-                    onBlur={e => { e.currentTarget.style.borderColor = 'var(--line-2)'; e.currentTarget.style.boxShadow = 'none'; }}
                   />
-                </div>
-                {formMode === 'edit' && (
-                  <div style={{ display: 'flex', alignItems: 'flex-end', paddingBottom: 2 }}>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
-                      <input
-                        type="checkbox" checked={form.isActive}
-                        onChange={e => setForm({ ...form, isActive: e.target.checked })}
-                        style={{ width: 16, height: 16, accentColor: 'var(--lavender-grey-ink)' }}
-                      />
-                      <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--ink-2)' }}>Active</span>
-                    </label>
-                  </div>
-                )}
-              </div>
-
-              <div style={{ marginBottom: 20 }}>
-                <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: 'var(--muted)', letterSpacing: '0.04em', textTransform: 'uppercase', marginBottom: 8 }}>Included Features</label>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                  {allFeatures.map(feature => {
-                    const checked = form.featureIds.includes(feature.featureId);
-                    return (
-                      <label
-                        key={feature.featureId}
-                        style={{
-                          display: 'flex', alignItems: 'center', gap: 8,
-                          padding: '10px 12px', borderRadius: 10, cursor: 'pointer',
-                          border: `1px solid ${checked ? 'var(--lavender-deep)' : 'var(--line-2)'}`,
-                          background: checked ? 'var(--lavender)' : 'white',
-                          opacity: feature.isActive ? 1 : 0.5,
-                          transition: 'all .15s ease',
-                        }}
-                      >
-                        <input
-                          type="checkbox" checked={checked}
-                          onChange={() => toggleFeature(feature.featureId)}
-                          style={{ width: 15, height: 15, accentColor: 'var(--lavender-grey-ink)', flexShrink: 0 }}
+                  {formMode === 'edit' && (
+                    <div style={{ display: 'flex', alignItems: 'flex-end', paddingBottom: 2 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10, height: 'var(--control-md)' }}>
+                        <Switch
+                          checked={form.isActive}
+                          onChange={e => setForm({ ...form, isActive: e.target.checked })}
                         />
-                        <div>
-                          <p style={{ fontSize: 13, fontWeight: 500, color: 'var(--ink)', margin: 0 }}>{feature.featureName}</p>
-                          {feature.isPremium && <span style={{ fontSize: 11, color: 'var(--lavender-grey-deep)' }}>Premium</span>}
-                          {!feature.isActive && <span style={{ fontSize: 11, color: 'var(--muted)' }}>Inactive</span>}
-                        </div>
-                      </label>
-                    );
-                  })}
+                        <span style={{ fontFamily: 'var(--font-ui)', fontSize: 'var(--text-sm)', fontWeight: 500, color: 'var(--text-body)' }}>
+                          Active
+                        </span>
+                      </div>
+                    </div>
+                  )}
                 </div>
-              </div>
 
-              <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', paddingTop: 16, borderTop: '1px solid var(--line)' }}>
-                <button
-                  type="button"
-                  onClick={() => { setFormMode(null); setError(null); }}
-                  style={{ padding: '9px 18px', borderRadius: 10, background: 'white', border: '1px solid var(--line-2)', color: 'var(--ink-2)', fontSize: 13.5, fontWeight: 500, cursor: 'pointer' }}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit" disabled={saving}
-                  style={{ padding: '9px 18px', borderRadius: 10, background: saving ? 'var(--muted)' : 'var(--lavender-grey-ink)', color: 'var(--floral)', border: 'none', fontSize: 13.5, fontWeight: 500, cursor: saving ? 'not-allowed' : 'pointer' }}
-                >
-                  {saving ? 'Saving…' : formMode === 'create' ? 'Create package' : 'Save changes'}
-                </button>
-              </div>
-            </form>
+                {/* Feature checkboxes */}
+                <div style={{ marginBottom: 20 }}>
+                  <p style={{ fontFamily: 'var(--font-ui)', fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--text-strong)', margin: '0 0 10px' }}>
+                    Included Features
+                  </p>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                    {allFeatures.map(feature => {
+                      const checked = form.featureIds.includes(feature.featureId);
+                      return (
+                        <label
+                          key={feature.featureId}
+                          style={{
+                            display: 'flex', alignItems: 'center', gap: 10,
+                            padding: '10px 12px', borderRadius: 'var(--radius-md)', cursor: 'pointer',
+                            border: `1px solid ${checked ? 'var(--brand-border)' : 'var(--border-default)'}`,
+                            background: checked ? 'var(--brand-subtle)' : 'var(--surface-card)',
+                            opacity: feature.isActive ? 1 : 0.5,
+                            transition: 'var(--transition-control)',
+                          }}
+                        >
+                          <input
+                            type="checkbox" checked={checked}
+                            onChange={() => toggleFeature(feature.featureId)}
+                            style={{ width: 15, height: 15, accentColor: 'var(--brand)', flexShrink: 0 }}
+                          />
+                          <div>
+                            <p style={{ fontSize: 'var(--text-sm)', fontWeight: 500, color: 'var(--text-strong)', margin: 0, fontFamily: 'var(--font-ui)' }}>
+                              {feature.featureName}
+                            </p>
+                            {feature.isPremium && (
+                              <span style={{ fontFamily: 'var(--font-ui)', fontSize: 10, color: 'var(--gold-500)', fontWeight: 600 }}>Premium</span>
+                            )}
+                            {!feature.isActive && (
+                              <span style={{ fontFamily: 'var(--font-ui)', fontSize: 10, color: 'var(--text-subtle)' }}>Inactive</span>
+                            )}
+                          </div>
+                        </label>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', paddingTop: 16, borderTop: '1px solid var(--border-subtle)' }}>
+                  <Button
+                    variant="secondary"
+                    tone="neutral"
+                    type="button"
+                    onClick={() => { setFormMode(null); setError(null); }}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    variant="primary"
+                    tone="brand"
+                    type="submit"
+                    disabled={saving}
+                  >
+                    {saving ? 'Saving…' : formMode === 'create' ? 'Create package' : 'Save changes'}
+                  </Button>
+                </div>
+              </form>
+            </Card>
           </motion.div>
         )}
       </AnimatePresence>
 
       {/* Packages list */}
       {packages.length === 0 ? (
-        <div style={{ padding: '32px 16px', textAlign: 'center', color: 'var(--muted)', fontSize: 13, border: '1px dashed var(--line-2)', borderRadius: 12, background: 'var(--floral)' }}>
-          No packages yet. Create one to get started!
-        </div>
+        <EmptyState
+          icon="package"
+          title="No packages yet"
+          description="Create your first package to bundle features for weddings."
+          action={<Button variant="primary" tone="brand" iconLeft={<Icon name="plus" size={15} />} onClick={openCreateForm}>New package</Button>}
+        />
       ) : (
         <div className="grid md:grid-cols-2 gap-5">
           {packages.map((pkg, index) => (
             <motion.div
               key={pkg.packageId}
-              initial={{ opacity: 0, y: 20 }}
+              initial={{ opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.05 }}
-              style={{
-                background: 'white', border: '1px solid var(--line)',
-                borderRadius: 'var(--radius-md)', padding: 20,
-                opacity: pkg.isActive ? 1 : 0.6,
-              }}
             >
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 }}>
-                <div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-                    <h3 style={{ margin: 0, fontSize: 16, fontWeight: 600, color: 'var(--ink)' }}>{pkg.packageName}</h3>
-                    {!pkg.isActive && (
-                      <span style={{ fontSize: 11, background: 'var(--thistle-soft)', color: 'var(--muted)', padding: '2px 8px', borderRadius: 999, border: '1px solid var(--thistle)' }}>Inactive</span>
-                    )}
+              <Card padding="20px" style={{ opacity: pkg.isActive ? 1 : 0.6 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 }}>
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                      <h3 style={{ margin: 0, fontFamily: 'var(--font-ui)', fontSize: 'var(--text-base)', fontWeight: 600, color: 'var(--text-strong)' }}>
+                        {pkg.packageName}
+                      </h3>
+                      {!pkg.isActive && <Badge tone="neutral">Inactive</Badge>}
+                    </div>
+                    <span style={{ fontSize: 11, fontFamily: 'var(--font-mono)', color: 'var(--text-subtle)', background: 'var(--surface-sunken)', padding: '2px 8px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-subtle)' }}>
+                      {pkg.packageCode}
+                    </span>
                   </div>
-                  <span style={{ fontSize: 12, fontFamily: 'var(--mono)', color: 'var(--muted)', background: 'var(--floral)', padding: '2px 8px', borderRadius: 6, border: '1px solid var(--line)' }}>
-                    {pkg.packageCode}
-                  </span>
-                </div>
-                <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                  {pkg.price > 0
-                    ? <span style={{ fontSize: 20, fontFamily: 'var(--serif)', color: 'var(--ink)', letterSpacing: '-0.01em' }}>${pkg.price}</span>
-                    : <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--lavender-grey-deep)' }}>Free</span>}
-                </div>
-              </div>
-
-              {pkg.description && (
-                <p style={{ fontSize: 13, color: 'var(--ink-2)', margin: '0 0 14px' }}>{pkg.description}</p>
-              )}
-
-              {pkg.features.length > 0 ? (
-                <div style={{ marginBottom: 14 }}>
-                  <p style={{ fontSize: 11, fontWeight: 500, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.04em', margin: '0 0 8px' }}>Included features</p>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                    {pkg.features.map(f => (
-                      <span key={f.featureId} style={{ fontSize: 12, background: 'var(--lavender)', color: 'var(--lavender-grey-ink)', padding: '4px 10px', borderRadius: 999, border: '1px solid var(--lavender-deep)', fontWeight: 500 }}>
-                        {f.featureName}
-                      </span>
-                    ))}
+                  <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                    {pkg.price > 0
+                      ? <span style={{ fontSize: 20, fontFamily: 'var(--font-display)', color: 'var(--text-strong)', letterSpacing: 'var(--tracking-tight)' }}>${pkg.price}</span>
+                      : <span style={{ fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--success)' }}>Free</span>}
                   </div>
                 </div>
-              ) : (
-                <p style={{ fontSize: 12, color: 'var(--muted)', fontStyle: 'italic', margin: '0 0 14px' }}>No features included</p>
-              )}
 
-              <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', paddingTop: 12, borderTop: '1px solid var(--line)' }}>
-                <button
-                  onClick={() => openEditForm(pkg)}
-                  style={{ padding: '7px 14px', background: 'var(--lavender)', color: 'var(--lavender-grey-ink)', border: '1px solid var(--lavender-deep)', borderRadius: 8, fontSize: 12.5, fontWeight: 500, cursor: 'pointer' }}
-                >
-                  Edit
-                </button>
-                <button
-                  onClick={() => handleDelete(pkg)}
-                  style={{ padding: '7px 14px', background: 'var(--thistle-soft)', color: 'var(--ink-2)', border: '1px solid var(--thistle)', borderRadius: 8, fontSize: 12.5, fontWeight: 500, cursor: 'pointer' }}
-                >
-                  Delete
-                </button>
-              </div>
+                {pkg.description && (
+                  <p style={{ fontSize: 'var(--text-sm)', fontFamily: 'var(--font-ui)', color: 'var(--text-body)', margin: '0 0 14px', lineHeight: 1.5 }}>
+                    {pkg.description}
+                  </p>
+                )}
+
+                {pkg.features.length > 0 ? (
+                  <div style={{ marginBottom: 14 }}>
+                    <p style={{ fontSize: 11, fontWeight: 500, fontFamily: 'var(--font-ui)', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: 'var(--tracking-caps)', margin: '0 0 8px' }}>
+                      Included features
+                    </p>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                      {pkg.features.map(f => (
+                        <Badge key={f.featureId} tone="brand">{f.featureName}</Badge>
+                      ))}
+                    </div>
+                  </div>
+                ) : (
+                  <p style={{ fontSize: 'var(--text-sm)', fontFamily: 'var(--font-ui)', color: 'var(--text-subtle)', fontStyle: 'italic', margin: '0 0 14px' }}>
+                    No features included
+                  </p>
+                )}
+
+                <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', paddingTop: 12, borderTop: '1px solid var(--border-subtle)' }}>
+                  <Button variant="soft" tone="brand" size="sm" onClick={() => openEditForm(pkg)}>
+                    Edit
+                  </Button>
+                  <Button variant="soft" tone="danger" size="sm" onClick={() => handleDelete(pkg)}>
+                    Delete
+                  </Button>
+                </div>
+              </Card>
             </motion.div>
           ))}
         </div>
