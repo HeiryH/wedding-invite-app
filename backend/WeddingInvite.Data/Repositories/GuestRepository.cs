@@ -20,14 +20,23 @@ namespace WeddingInvite.Data.Repositories
                 .FirstOrDefaultAsync(g => g.GuestId == id);
         }
 
-        public async Task<IEnumerable<Guest>> GetByWeddingIdAsync(int weddingId)
+        public async Task<IEnumerable<Guest>> GetByWeddingIdAsync(int weddingId, int? skip = null, int? take = null)
         {
-            return await _context.Guests
+            IQueryable<Guest> query = _context.Guests
                 .AsNoTracking() // read-only list for display — skip change-tracking overhead
                 .Include(g => g.Table)
                 .Where(g => g.WeddingId == weddingId)
-                .OrderBy(g => g.GuestName)
-                .ToListAsync();
+                .OrderBy(g => g.GuestName);
+
+            if (skip is int s) query = query.Skip(s);
+            if (take is int t) query = query.Take(t);
+
+            return await query.ToListAsync();
+        }
+
+        public async Task<int> CountByWeddingIdAsync(int weddingId)
+        {
+            return await _context.Guests.CountAsync(g => g.WeddingId == weddingId);
         }
         
         public async Task<Guest> CreateAsync(Guest guest)

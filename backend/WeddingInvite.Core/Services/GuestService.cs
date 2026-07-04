@@ -25,10 +25,21 @@ namespace WeddingInvite.Core.Services
             return MapToDto(guest);
         }
         
-        public async Task<IEnumerable<GuestDto>> GetByWeddingIdAsync(int weddingId)
+        public async Task<IEnumerable<GuestDto>> GetByWeddingIdAsync(int weddingId, int? page = null, int? pageSize = null)
         {
-            var guests = await _guestRepo.GetByWeddingIdAsync(weddingId);
+            int? skip = null, take = null;
+            if (page is > 0 && pageSize is > 0)
+            {
+                skip = (page.Value - 1) * pageSize.Value;
+                take = pageSize.Value;
+            }
+            var guests = await _guestRepo.GetByWeddingIdAsync(weddingId, skip, take);
             return guests.Select(MapToDto);
+        }
+
+        public async Task<int> GetCountAsync(int weddingId)
+        {
+            return await _guestRepo.CountByWeddingIdAsync(weddingId);
         }
         
         public async Task<GuestDto> CreateAsync(int weddingId, CreateGuestDto createDto, bool enforceRsvpOpen = false)

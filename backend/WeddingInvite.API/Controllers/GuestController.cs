@@ -32,16 +32,22 @@ namespace WeddingInvite.API.Controllers
             return Ok(guest);
         }
         
-        // GET: api/guest/wedding/1
+        // GET: api/guest/wedding/1            (full list — unchanged)
+        // GET: api/guest/wedding/1?page=1&pageSize=50   (opt-in pagination; total in X-Total-Count)
         [HttpGet("wedding/{weddingId}")]
-        public async Task<ActionResult<IEnumerable<GuestDto>>> GetByWeddingId(int weddingId)
+        public async Task<ActionResult<IEnumerable<GuestDto>>> GetByWeddingId(
+            int weddingId, [FromQuery] int? page = null, [FromQuery] int? pageSize = null)
         {
             // ✅ Check authorization
             var userEmail = User.Identity?.Name;
             if (!await _weddingAuthorizationService.CanAccessWeddingAsync(userEmail!, weddingId))
                 return Forbid();
 
-            var guests = await _guestService.GetByWeddingIdAsync(weddingId);
+            // Expose the unpaged total so clients can build page controls without a second call.
+            if (page is > 0 && pageSize is > 0)
+                Response.Headers["X-Total-Count"] = (await _guestService.GetCountAsync(weddingId)).ToString();
+
+            var guests = await _guestService.GetByWeddingIdAsync(weddingId, page, pageSize);
             return Ok(guests);
         }
 
