@@ -43,9 +43,10 @@ All repos/services are registered as **scoped** in `Program.cs`. When adding new
 
 ### Auth
 - JWT tokens stored in **HttpOnly cookies** (cookie name: `token`)
-- Roles: `SUPER_ADMIN`, `COUPLE_ADMIN`
+- Roles: `SUPER_ADMIN`, `HOST_ADMIN` (reseller/agency — owns weddings via `Wedding.CreatedByUserId`), `COUPLE_ADMIN` (see `UserRoles` in `User.cs`)
 - Token is read from cookies in `Program.cs` via `OnMessageReceived` event
-- `IWeddingAuthorizationService` / `CanAccessWeddingAsync` enforces couple admin can only access their own wedding
+- `IWeddingAuthorizationService` / `CanAccessWeddingAsync` enforces couple/host admin can only access their own wedding(s)
+- Tiers: `User.Tier` and `Template.Tier` are `FREE | PREMIUM | PRO` — templates are tier-gated. **No billing/payment integration exists yet** (tier changes are manual)
 
 ### Frontend API Layer
 All API calls go through `frontend/lib/api/` and are exported from `index.ts`. Each service file wraps an `apiClient` (Axios instance). **Always add new service methods to the relevant service file and re-export from `index.ts`.**
@@ -53,9 +54,11 @@ All API calls go through `frontend/lib/api/` and are exported from `index.ts`. E
 ### Routing (Next.js App Router)
 - `/` — public landing
 - `/login` — shared login; redirects by role
-- `/super-admin/*` — SUPER_ADMIN dashboard (weddings, packages, per-wedding tabs)
+- `/super-admin/*` — SUPER_ADMIN dashboard (weddings, packages, features, themes, hosts, per-wedding tabs)
+- `/host-admin/*` — HOST_ADMIN (reseller) dashboard; create/manage owned weddings
 - `/couple-admin/*` — COUPLE_ADMIN dashboard + customize page
 - `/wedding/[coupleName]/*` — public invitation pages (feature-gated)
+- `/home`, `/templates`, `/try` — public self-serve funnel
 
 ### Frontend → Backend Proxy
 `next.config.ts` rewrites:
@@ -65,20 +68,13 @@ All API calls go through `frontend/lib/api/` and are exported from `index.ts`. E
 So all frontend fetches use relative paths (`/api/...`). `NEXT_PUBLIC_API_URL=/api` means `API_BASE = ''` for photo/static URLs.
 
 ### Feature Gating
-Features (e.g. `PHOTO_BOOTH`, `RSVP`, `WISHES`) are toggled per-wedding via `WeddingFeature` junction table. Public pages check feature state before rendering tabs/sections.
+Features are toggled per-wedding via `WeddingFeature` junction table. Codes in `FeatureCodes.cs`: `RSVP`, `WISHES`, `PHOTO_BOOTH`, `SEATING`, `GALLERY`, `COUNTDOWN`, `CUSTOM_DOMAIN`. Public pages check feature state before rendering tabs/sections.
 
 ### Template Customization
 `WeddingTemplateConfig` stores key-value config per wedding. Schema defined in `frontend/lib/templateConfigSchema.ts` via `getConfigFields(templateId, role)`. Templates use a `t(key, fallback)` helper to resolve config values. `invite.body` is rich text (TipTap v3) rendered via `dangerouslySetInnerHTML`.
 
-### EF Migrations (in order)
-1. `AddFeaturesAndPhotos`
-2. `AddTemplates`
-3. `AddUsers`
-4. `AddPhotoModeration`
-5. `AddPackages`
-6. `AddTemplateConfig`
-7. `AddUserIsActive`
-8. `AddItinerary` — (planned) ItineraryItem table
+### EF Migrations (23 total, in order)
+`InitialCreate` → `AddFeaturesAndPhotos` → `AddTemplates` → `RenameTemplateToTemplates` → `AddUsers` → `AddPhotoModeration` → `AddPackages` → `AddWeddingMedia` → `MergeWeddingMediaIntoPhoto` → `AddTemplateConfig` → `AddUserIsActive` → `AddSeatingTables` → `AddTemplate4MinimalNoir` → `AddTemplate5DreamingFloralSky` → `AddItinerary` → `AddTemplate6FairyGarden` → `AddWeddingMaxPax` → `AddWeddingCapacity` → `AddWeddingIsRsvpOpen` → `AddWeddingCreatedBy` → `AddTemplateTier` → `AddUserTier` → `AddWeddingIsPublic`
 
 ## Template 5 — Envelope Scroll Animation (GSAP ScrollTrigger)
 
@@ -122,45 +118,21 @@ ScrollTrigger.create({
 **Canvas visibility on mount:** use a self-retrying rAF loop — `draw()` re-queues itself via `requestAnimationFrame` until `video.readyState >= 2` (HAVE_CURRENT_DATA). `readyState >= 1` only gives dimensions, not decoded pixel data.
 
 ## Known Issues
-- `guestService.create` posts to `/guest/wedding/${weddingId}` but the backend create endpoint is `POST /api/guest` with `WeddingId` in body — admin-side guest creation is broken
+- Admin-side guest creation: `guestService` posts to `/guest/rsvp`; re-verify the admin create path works end-to-end (historically broken; endpoint changed).
 
-## Planned Feature Roadmap (approved Apr 2026)
+## Content Roadmap — SHIPPED (approved Apr 2026, delivered)
+Phases 1–4 are done and in production:
+- **Phase 1** — Itinerary data model (`ItineraryItem`, `AddItinerary` migration, `/api/itinerary` CRUD + reorder)
+- **Phase 2** — Config schema expansion: `walimah.body`, `general.showIslamicDate`, `section.order`, per-element `.align`/`.animation`/`.color`/`.shadow`, `section.*.bg` (all in `WeddingTemplateConfig`, no migration)
+- **Phase 3** — Customize page 3-tab redesign (Welcome / Ceremony / Celebration) with live preview
+- **Phase 4** — Templates 1–4 render dynamic sections, Islamic date, walimah rich text, itinerary list, per-element styling
+- **Phase 5** — Template 5 envelope/canvas/GSAP (separate; structure documented above)
 
-### Phase 1 — Backend: Itinerary data model
-- New model: `ItineraryItem(Id, WeddingId, Label, Detail, SortOrder)`
-- Migration: `AddItinerary`
-- Repo → Service → Controller pattern (standard)
-- Endpoints: `GET /api/itinerary/wedding/{weddingId}` (public), `POST`, `PUT /{id}`, `DELETE /{id}`, `PUT /wedding/{weddingId}/reorder`
-
-### Phase 2 — Template config schema expansion
-New config keys (stored in existing `WeddingTemplateConfig`, no migration):
-- `walimah.body` — rich text (TipTap), Ceremony tab
-- `general.showIslamicDate` — boolean toggle, Welcome tab (date auto-calculated via Hijri library from WeddingDate)
-- `section.order` — comma-separated section codes (welcome,walimah,rsvp,itinerary,wishes,photobooth)
-- `invite.heading.align`, `invite.body.align`, `walimah.body.align` — left/center/right
-- `invite.heading.animation` — none/fade/slide/typewriter
-- `invite.heading.color`, `invite.heading.shadow` — hex + preset
-- `section.welcome.bg`, `section.ceremony.bg`, `section.celebration.bg` — image upload
-
-### Phase 3 — Customize page: 3-tab Option B redesign
-3 tabs map 1-to-1 to scroll sections of live invitation:
-- **Welcome tab**: Bride/groom names, date, venue (edit Wedding model directly), Islamic date toggle, heading/body text + alignment/animation/color
-- **Ceremony tab**: `walimah.body` (TipTap WYSIWYG), `rsvp.subtitle`, itinerary editor (Label+Detail rows, add/remove/reorder)
-- **Celebration tab**: `wish.prompt`, photo booth label, background image
-- Section reorder: up/down arrows on tabs → writes to `section.order`
-- Preview: full-page on right, auto-scrolls to active section on tab switch
-
-### Phase 4 — Templates 1–4 render new content
-Each template refactored to:
-- Render sections as dynamic array driven by `section.order` config
-- Show Islamic date (Hijri) next to Gregorian if toggle enabled
-- Render `walimah.body` rich text as a section
-- Render itinerary as a styled schedule list
-- Apply per-element alignment, animation, color, shadow from config
-- Support background image per section
-
-### Phase 5 — Template 5 (discuss after Phase 4)
-T5 envelope/canvas/GSAP structure is fundamentally different — planned separately.
+## Active Roadmap — Harden → Stabilize → Scale (approved Jul 2026)
+Billing/monetization deferred. Plan file: `~/.claude/plans/c-pls-then-lets-cached-cocke.md`.
+- **Phase 1 Harden** — rate-limit auth (`AddRateLimiter`), JWT secret hygiene + fail-fast startup (real key was committed in `appsettings.json`), global exception handler + `ILogger` (0 loggers today), upload magic-byte validation
+- **Phase 2 Stabilize** — commit hygiene, add `WeddingInvite.Tests` (xUnit) for auth / tenant isolation / RSVP capacity (no tests exist yet), frontend smoke tests
+- **Phase 3 Scale** — SQLite → Postgres, `AsNoTracking` + pagination on list endpoints, offload heavy work
 
 ## Quick Deploy ("again")
 When the user says **"again"**, **"deploy"**, or **"push it"**:
