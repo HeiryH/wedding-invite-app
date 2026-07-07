@@ -15,12 +15,21 @@ namespace WeddingInvite.API.Controllers
         private readonly IAuthService _authService;
         private readonly IUserRepository _userRepo;
         private readonly IWeddingRepository _weddingRepo;
+        private readonly IGuestService _guestService;
+        private readonly IWishService _wishService;
 
-        public AuthController(IAuthService authService, IUserRepository userRepo, IWeddingRepository weddingRepo)
+        public AuthController(
+            IAuthService authService,
+            IUserRepository userRepo,
+            IWeddingRepository weddingRepo,
+            IGuestService guestService,
+            IWishService wishService)
         {
             _authService = authService;
             _userRepo = userRepo;
             _weddingRepo = weddingRepo;
+            _guestService = guestService;
+            _wishService = wishService;
         }
 
         // POST: api/auth/login
@@ -312,6 +321,39 @@ namespace WeddingInvite.API.Controllers
         {
             Response.Cookies.Delete("token");
             return Ok(new { message = "Logged out successfully" });
+        }
+
+        // GET: api/auth/me/export  (GDPR — the signed-in user downloads their own data)
+        [HttpGet("me/export")]
+        [Authorize]
+        public async Task<IActionResult> ExportMyData()
+        {
+            var email = User.Identity?.Name;
+            var user = string.IsNullOrEmpty(email) ? null : await _userRepo.GetByEmailAsync(email);
+            if (user == null) return Unauthorized();
+
+            object? wedding = null;
+            object guests = Array.Empty<object>();
+            object wishes = Array.Empty<object>();
+
+            if (user.WeddingId is int wid)
+            {
+                wedding = await _weddingRepo.GetByIdAsync(wid);
+                guests = await _guestService.GetByWeddingIdAsync(wid);
+                wishes = await _wishService.GetByWeddingIdAsync(wid);
+            }
+
+            var export = new
+            {
+                exportedAt = DateTime.UtcNow,
+                account = new { user.Email, user.Role, user.Tier, user.CreatedDate },
+                wedding,
+                guests,
+                wishes,
+            };
+
+            Response.Headers["Content-Disposition"] = "attachment; filename=my-data.json";
+            return Ok(export);
         }
 
         // POST: api/auth/forgot-password  (public — emails a reset link)
