@@ -11,6 +11,19 @@ using System.Security.Claims;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Error monitoring — only active when a DSN is provided (Sentry__Dsn / SENTRY_DSN env).
+// Without a DSN this is a no-op, so local/dev runs are unaffected.
+var sentryDsn = builder.Configuration["Sentry:Dsn"];
+if (!string.IsNullOrWhiteSpace(sentryDsn))
+{
+    builder.WebHost.UseSentry(o =>
+    {
+        o.Dsn = sentryDsn;
+        o.Environment = builder.Environment.EnvironmentName;
+        o.TracesSampleRate = 0.1;
+    });
+}
+
 // Add services to the container.
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
@@ -149,7 +162,33 @@ builder.Services.AddRateLimiter(options =>
                 Window = TimeSpan.FromMinutes(1),
                 QueueLimit = 0,
             }));
+
+    // Public guest actions (RSVP, wishes). Generous — many legitimate guests can share one
+    // venue/NAT IP, so this only stops bot-scale spam, not normal use.
+    options.AddPolicy("public-write", httpContext =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey: httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            factory: _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 20,
+                Window = TimeSpan.FromMinutes(1),
+                QueueLimit = 0,
+            }));
+
+    // Photo uploads happen in bursts at the venue (shared WiFi) → higher ceiling.
+    options.AddPolicy("public-upload", httpContext =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey: httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            factory: _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 60,
+                Window = TimeSpan.FromMinutes(1),
+                QueueLimit = 0,
+            }));
 });
+
+// Health checks — liveness + DB connectivity probe for uptime monitoring / load balancers.
+builder.Services.AddHealthChecks().AddCheck<WeddingInvite.API.DbHealthCheck>("database");
 
 var app = builder.Build();
 
@@ -176,4 +215,5 @@ app.UseRateLimiter();
 app.UseAuthentication(); // ADD THIS - Must be before UseAuthorization
 app.UseAuthorization();
 app.MapControllers();
+app.MapHealthChecks("/health");
 app.Run();

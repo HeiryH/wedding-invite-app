@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using WeddingInvite.Core.DTOs;
 using WeddingInvite.Core.Services;
 
@@ -74,6 +75,7 @@ namespace WeddingInvite.API.Controllers
         
         // POST: api/photo/wedding/1 (Upload photo — guest or couple)
         [HttpPost("wedding/{weddingId}")]
+        [EnableRateLimiting("public-upload")]
         public async Task<ActionResult<PhotoDto>> Upload(
             int weddingId,
             [FromForm] PhotoUploadDto uploadDto)

@@ -19,6 +19,7 @@ services:
       - Email__From=${EMAIL_FROM}
       - Email__FromName=${EMAIL_FROM_NAME}
       - Email__UseStartTls=${EMAIL_USE_STARTTLS}
+      - Sentry__Dsn=${SENTRY_DSN}
 
   frontend:
     build:

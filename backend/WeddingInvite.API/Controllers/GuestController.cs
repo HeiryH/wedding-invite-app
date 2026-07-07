@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using WeddingInvite.Core.DTOs;
 using WeddingInvite.Core.Services;
 
@@ -97,6 +98,7 @@ namespace WeddingInvite.API.Controllers
         // POST: api/guest/rsvp (public — for wedding invitation page)
         [HttpPost("rsvp")]
         [AllowAnonymous]
+        [EnableRateLimiting("public-write")]
         public async Task<ActionResult<GuestDto>> Rsvp([FromBody] CreateGuestDto createDto)
         {
             try

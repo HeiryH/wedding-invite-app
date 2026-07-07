@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using WeddingInvite.Core.DTOs;
 using WeddingInvite.Core.Services;
 
@@ -30,6 +31,7 @@ namespace WeddingInvite.API.Controllers
         
         // POST: api/wish/wedding/5  (public — for wedding invitation page)
         [HttpPost("wedding/{weddingId}")]
+        [EnableRateLimiting("public-write")]
         public async Task<ActionResult<WishDto>> Create(
             int weddingId,
             [FromBody] CreateWishDto createDto)
