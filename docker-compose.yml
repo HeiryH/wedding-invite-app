@@ -33,5 +33,6 @@ services:
     environment:
       - NEXT_PUBLIC_API_URL=/api
       - BACKEND_URL=http://backend:5000
+      - NEXT_PUBLIC_SITE_URL=${SITE_URL:-https://oddstudio.app}
     depends_on:
       - backend

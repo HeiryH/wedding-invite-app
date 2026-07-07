@@ -31,9 +31,30 @@ export const viewport: Viewport = {
   initialScale: 1,
 };
 
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://oddstudio.app';
+
 export const metadata: Metadata = {
-  title: 'ODDSTUDIO',
-  description: 'by ODDSTUDIO',
+  metadataBase: new URL(siteUrl),
+  title: {
+    default: 'ODDSTUDIO — Beautiful digital wedding invitations',
+    template: '%s · ODDSTUDIO',
+  },
+  description:
+    'Create a stunning digital wedding invitation with RSVP, photo booth, wishes, and more — crafted by ODDSTUDIO.',
+  applicationName: 'ODDSTUDIO',
+  openGraph: {
+    type: 'website',
+    siteName: 'ODDSTUDIO',
+    title: 'ODDSTUDIO — Beautiful digital wedding invitations',
+    description:
+      'Create a stunning digital wedding invitation with RSVP, photo booth, wishes, and more.',
+    url: siteUrl,
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'ODDSTUDIO — Beautiful digital wedding invitations',
+    description: 'Create a stunning digital wedding invitation.',
+  },
 };
 
 export default function RootLayout({
