@@ -56,6 +56,17 @@ namespace WeddingInvite.Core.DTOs
         public string NewPassword { get; set; } = string.Empty;
     }
 
+    public class ForgotPasswordDto
+    {
+        public string Email { get; set; } = string.Empty;
+    }
+
+    public class ResetPasswordWithTokenDto
+    {
+        public string Token { get; set; } = string.Empty;
+        public string NewPassword { get; set; } = string.Empty;
+    }
+
     public class CreateHostAdminDto
     {
         public string Email { get; set; } = string.Empty;

@@ -29,6 +29,7 @@ namespace WeddingInvite.Data
         public DbSet<WeddingTemplateConfig> TemplateConfigs { get; set; } = null!;
         public DbSet<Table> Tables { get; set; } = null!;
         public DbSet<ItineraryItem> ItineraryItems { get; set; } = null!;
+        public DbSet<PasswordResetToken> PasswordResetTokens { get; set; } = null!;
 
 
         // Configure database schema
@@ -412,6 +413,18 @@ namespace WeddingInvite.Data
                         .OnDelete(DeleteBehavior.SetNull);
                 }
             );
+
+            // Password reset token configuration
+            modelBuilder.Entity<PasswordResetToken>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.TokenHash).IsRequired().HasMaxLength(128);
+                entity.HasIndex(e => e.TokenHash);
+                entity.HasOne(e => e.User)
+                    .WithMany()
+                    .HasForeignKey(e => e.UserId)
+                    .OnDelete(DeleteBehavior.Cascade);
+            });
 
             // Package configuration
             modelBuilder.Entity<Package>(entity =>

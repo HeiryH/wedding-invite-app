@@ -314,6 +314,41 @@ namespace WeddingInvite.API.Controllers
             return Ok(new { message = "Logged out successfully" });
         }
 
+        // POST: api/auth/forgot-password  (public — emails a reset link)
+        [HttpPost("forgot-password")]
+        [AllowAnonymous]
+        [EnableRateLimiting("auth")]
+        public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordDto dto)
+        {
+            // Build the reset link against the request origin so it works in any environment.
+            var origin = Request.Headers.Origin.FirstOrDefault()
+                         ?? $"{Request.Scheme}://{Request.Host}";
+            await _authService.RequestPasswordResetAsync(dto.Email.Trim().ToLower(), $"{origin}/reset-password");
+            // Always 200 — never reveal whether the email is registered.
+            return Ok(new { message = "If that email is registered, a reset link has been sent." });
+        }
+
+        // POST: api/auth/reset-password  (public — completes reset with a token)
+        [HttpPost("reset-password")]
+        [AllowAnonymous]
+        [EnableRateLimiting("auth")]
+        public async Task<IActionResult> ResetPasswordWithToken([FromBody] ResetPasswordWithTokenDto dto)
+        {
+            try
+            {
+                await _authService.ResetPasswordWithTokenAsync(dto.Token, dto.NewPassword);
+                return Ok(new { message = "Your password has been reset. You can now log in." });
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
         // ── Ownership helpers ──────────────────────────────────────────────────
 
         private static string GenerateSelfSlug(string brideName, string groomName)

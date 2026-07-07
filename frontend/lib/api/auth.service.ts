@@ -110,4 +110,13 @@ export const authService = {
     const response = await apiClient.get<HostAdminUser[]>('/auth/host-admins');
     return response.data;
   },
+
+  // Public self-service password reset
+  forgotPassword: async (email: string): Promise<void> => {
+    await apiClient.post('/auth/forgot-password', { email });
+  },
+
+  resetPasswordWithToken: async (token: string, newPassword: string): Promise<void> => {
+    await apiClient.post('/auth/reset-password', { token, newPassword });
+  },
 };

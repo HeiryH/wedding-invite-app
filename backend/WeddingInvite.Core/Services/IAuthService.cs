@@ -13,6 +13,9 @@ namespace WeddingInvite.Core.Services
         Task<UserDto> SetActiveAsync(int userId, bool isActive);
         Task<UserDto> SetTierAsync(int userId, string tier);
         Task ResetPasswordAsync(int userId, string newPassword);
+        // Self-service reset. RequestPasswordResetAsync never reveals whether the email exists.
+        Task RequestPasswordResetAsync(string email, string resetLinkBase);
+        Task ResetPasswordWithTokenAsync(string token, string newPassword);
         Task DeleteUserAsync(int userId);
         string GenerateJwtToken(string email, string role, int? weddingId);
     }
