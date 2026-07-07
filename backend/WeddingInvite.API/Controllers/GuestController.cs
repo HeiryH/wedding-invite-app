@@ -11,13 +11,19 @@ namespace WeddingInvite.API.Controllers
     {
         private readonly IGuestService _guestService;
         private readonly IWeddingAuthorizationService _weddingAuthorizationService;
-        
+        private readonly IEmailService _emailService;
+        private readonly IAuthService _authService;
+
         public GuestController(
             IGuestService guestService,
-            IWeddingAuthorizationService weddingAuthorizationService)
+            IWeddingAuthorizationService weddingAuthorizationService,
+            IEmailService emailService,
+            IAuthService authService)
         {
             _guestService = guestService;
             _weddingAuthorizationService = weddingAuthorizationService;
+            _emailService = emailService;
+            _authService = authService;
         }
 
         // GET: api/guest/5
@@ -96,6 +102,7 @@ namespace WeddingInvite.API.Controllers
             try
             {
                 var guest = await _guestService.CreateAsync(createDto.WeddingId, createDto, enforceRsvpOpen: true);
+                await SendRsvpEmailsAsync(createDto.WeddingId, guest);
                 return Ok(guest);
             }
             catch (ArgumentException ex)
@@ -105,6 +112,33 @@ namespace WeddingInvite.API.Controllers
             catch (InvalidOperationException ex)
             {
                 return BadRequest(new { message = ex.Message });
+            }
+        }
+
+        // Notify the couple of a new RSVP, and confirm to the guest if they left an email.
+        // Email is fail-soft, so this never affects the RSVP response.
+        private async Task SendRsvpEmailsAsync(int weddingId, GuestDto guest)
+        {
+            if (!_emailService.IsConfigured) return;
+
+            var attending = guest.IsAttending ? "attending" : "not attending";
+            var couple = await _authService.GetCoupleAdminAsync(weddingId);
+            if (couple != null && !string.IsNullOrWhiteSpace(couple.Email))
+            {
+                var html = $@"<p>You have a new RSVP.</p>
+<ul>
+  <li><strong>{guest.GuestName}</strong> ({guest.BrideOrGroomSide} side)</li>
+  <li>Status: {attending} &middot; {guest.NumberOfAttendees} guest(s)</li>
+</ul>";
+                await _emailService.SendAsync(couple.Email, $"New RSVP: {guest.GuestName}", html);
+            }
+
+            if (!string.IsNullOrWhiteSpace(guest.Email))
+            {
+                var html = $@"<p>Hi {guest.GuestName},</p>
+<p>Thanks — your RSVP has been received ({attending}, {guest.NumberOfAttendees} guest(s)).</p>
+<p>We look forward to celebrating with you!</p>";
+                await _emailService.SendAsync(guest.Email, "Your RSVP is confirmed", html);
             }
         }
         
