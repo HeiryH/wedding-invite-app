@@ -24,7 +24,8 @@ public class PasswordResetTests : IDisposable
         }).Build();
 
         _tokenRepo = new PasswordResetTokenRepository(_db.Context);
-        _sut = new AuthService(new UserRepository(_db.Context), config, _tokenRepo, _email);
+        _sut = new AuthService(new UserRepository(_db.Context), config, _tokenRepo, _email,
+            new WeddingRepository(_db.Context));
     }
 
     private User SeedUser(string email = "user@x.com", string password = "OldPass1", bool active = true)

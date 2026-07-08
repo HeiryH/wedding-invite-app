@@ -31,6 +31,10 @@
         public int MaxPax { get; set; } = 0;          // 0 = no limit (per-RSVP entry cap)
         public int MaxCapacity { get; set; } = 0;     // 0 = no limit (total wedding capacity)
         public bool ShowCapacityWarning { get; set; } = false;
+
+        // Custom domain (PRO tier) — e.g. "john-and-mary.com". null = use the platform URL.
+        public string? Domain { get; set; }
+
         public DateTime CreatedDate { get; set; } = DateTime.UtcNow;
 
         // Owner — null = created by super admin (Platform/Direct group)

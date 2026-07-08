@@ -33,6 +33,13 @@ namespace WeddingInvite.Data.Repositories
                 .FirstOrDefaultAsync(w => w.CoupleName == coupleName);
         }
 
+        public async Task<Wedding?> GetByDomainAsync(string domain)
+        {
+            return await _context.Weddings
+                .Include(w => w.Template)
+                .FirstOrDefaultAsync(w => w.Domain == domain);
+        }
+
         public async Task<IEnumerable<Wedding>> GetAllAsync()
         {
             return await _context.Weddings

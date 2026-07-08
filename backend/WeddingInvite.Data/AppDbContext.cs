@@ -49,6 +49,14 @@ namespace WeddingInvite.Data
                 entity.HasIndex(e => e.CoupleName)
                     .IsUnique(); // No two weddings can have same couple name
 
+                entity.Property(e => e.Domain)
+                    .HasMaxLength(253); // max DNS hostname length
+
+                // Custom domains must be globally unique, but many weddings have none (null).
+                entity.HasIndex(e => e.Domain)
+                    .IsUnique()
+                    .HasFilter("[Domain] IS NOT NULL");
+
                 entity.Property(e => e.BrideName)
                     .IsRequired()
                     .HasMaxLength(100);

@@ -1,0 +1,40 @@
+# Caddy reverse proxy with automatic TLS.
+#
+# Handles two cases:
+#   1. The platform's own domain            → normal automatic TLS
+#   2. PRO couples' custom domains (any host) → ON-DEMAND TLS, gated by the backend
+#
+# The gate ("ask") is the existing public endpoint GET /api/wedding/by-domain, which
+# returns 200 only for a domain that is actually mapped to a wedding (404 otherwise).
+# Caddy issues a certificate only when the ask returns 2xx, so nobody can point a random
+# domain at the server and burn Let's Encrypt rate limits.
+#
+# Set ACME_EMAIL and PLATFORM_DOMAIN in the caddy service's environment (see CUSTOM_DOMAINS.md).
+
+{
+	email {$ACME_EMAIL}
+
+	on_demand_tls {
+		# Caddy appends ?domain=<sni>; the endpoint 200s only for registered domains.
+		ask http://backend:5000/api/wedding/by-domain
+		# Secondary safety net on top of the ask: cap new issuances.
+		interval 2m
+		burst 5
+	}
+}
+
+# ── 1. Platform domain: standard automatic TLS ─────────────────────────────────
+{$PLATFORM_DOMAIN}, www.{$PLATFORM_DOMAIN} {
+	encode zstd gzip
+	reverse_proxy frontend:3000
+}
+
+# ── 2. Couple custom domains: on-demand TLS, guarded by the ask endpoint ───────
+# `https://` with no hostname matches every other host arriving on :443.
+https:// {
+	tls {
+		on_demand
+	}
+	encode zstd gzip
+	reverse_proxy frontend:3000
+}

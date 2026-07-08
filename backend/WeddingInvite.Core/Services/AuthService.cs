@@ -4,6 +4,7 @@ using System.Security.Cryptography;
 using System.Text;
 using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
+using WeddingInvite.Core.Constants;
 using WeddingInvite.Core.DTOs;
 using WeddingInvite.Data.Repositories;
 using WeddingInvite.Models;
@@ -16,17 +17,20 @@ namespace WeddingInvite.Core.Services
         private readonly IConfiguration _configuration;
         private readonly IPasswordResetTokenRepository _resetTokenRepo;
         private readonly IEmailService _emailService;
+        private readonly IWeddingRepository _weddingRepo;
 
         public AuthService(
             IUserRepository userRepo,
             IConfiguration configuration,
             IPasswordResetTokenRepository resetTokenRepo,
-            IEmailService emailService)
+            IEmailService emailService,
+            IWeddingRepository weddingRepo)
         {
             _userRepo = userRepo;
             _configuration = configuration;
             _resetTokenRepo = resetTokenRepo;
             _emailService = emailService;
+            _weddingRepo = weddingRepo;
         }
 
         public async Task<LoginResponseDto> LoginAsync(LoginDto loginDto)
@@ -46,7 +50,7 @@ namespace WeddingInvite.Core.Services
                 throw new UnauthorizedAccessException("Account is disabled. Please contact your administrator.");
 
             // Generate JWT token
-            var token = GenerateJwtToken(user.Email, user.Role, user.WeddingId);
+            var token = GenerateJwtToken(user.Email, user.Role, user.WeddingId, user.Tier);
 
             return new LoginResponseDto
             {
@@ -81,7 +85,7 @@ namespace WeddingInvite.Core.Services
             var createdUser = await _userRepo.CreateAsync(user);
 
             // Generate JWT token
-            var token = GenerateJwtToken(createdUser.Email, createdUser.Role, createdUser.WeddingId);
+            var token = GenerateJwtToken(createdUser.Email, createdUser.Role, createdUser.WeddingId, createdUser.Tier);
 
             return new LoginResponseDto
             {
@@ -171,6 +175,20 @@ namespace WeddingInvite.Core.Services
 
             user.Tier = tier.ToUpper();
             var updated = await _userRepo.UpdateAsync(user);
+
+            // Upgrading to a paid tier publishes the (previously private) free-tier wedding
+            // so the couple can share it and collect real RSVPs.
+            if (TierEntitlements.Rank(updated.Tier) >= TierEntitlements.Rank(TierEntitlements.Premium)
+                && updated.WeddingId.HasValue)
+            {
+                var wedding = await _weddingRepo.GetByIdAsync(updated.WeddingId.Value);
+                if (wedding != null && !wedding.IsPublic)
+                {
+                    wedding.IsPublic = true;
+                    await _weddingRepo.UpdateAsync(wedding);
+                }
+            }
+
             return MapToDto(updated);
         }
 
@@ -248,7 +266,7 @@ namespace WeddingInvite.Core.Services
             CreatedDate = user.CreatedDate
         };
 
-        public string GenerateJwtToken(string email, string role, int? weddingId)
+        public string GenerateJwtToken(string email, string role, int? weddingId, string tier = "FREE")
         {
             var jwtSettings = _configuration.GetSection("JwtSettings");
             var secretKey = jwtSettings["SecretKey"];
@@ -261,6 +279,7 @@ namespace WeddingInvite.Core.Services
                 new Claim(ClaimTypes.Email, email),
                 new Claim(ClaimTypes.Role, role),
                 new Claim(ClaimTypes.Name, email), // ✅ ADD THIS - This is what User.Identity.Name reads
+                new Claim("Tier", string.IsNullOrWhiteSpace(tier) ? "FREE" : tier),
                 new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
             };
 

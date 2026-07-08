@@ -172,6 +172,46 @@ namespace WeddingInvite.API.Controllers
             }
         }
 
+        // PUT: api/wedding/5/domain  (set or clear a custom domain — PRO tier)
+        [HttpPut("{id}/domain")]
+        [Authorize]
+        public async Task<ActionResult<WeddingDto>> SetDomain(int id, [FromBody] SetDomainDto dto)
+        {
+            var userEmail = User.Identity?.Name;
+            if (!await _authorizationService.CanAccessWeddingAsync(userEmail!, id))
+                return Forbid();
+
+            try
+            {
+                var wedding = await _weddingService.SetDomainAsync(id, dto.Domain);
+                return Ok(wedding);
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(new { message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                // InvalidOperationException (tier) + ArgumentException (format/taken) → 400
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
+        // GET: api/wedding/by-domain?domain=john-and-mary.com  (public — host resolution)
+        [HttpGet("by-domain")]
+        [AllowAnonymous]
+        public async Task<ActionResult<WeddingDto>> GetByDomain([FromQuery] string domain)
+        {
+            if (string.IsNullOrWhiteSpace(domain))
+                return BadRequest(new { message = "domain is required" });
+
+            var wedding = await _weddingService.GetByDomainAsync(domain);
+            if (wedding == null)
+                return NotFound(new { message = "No wedding is mapped to that domain" });
+
+            return Ok(wedding);
+        }
+
         // DELETE: api/wedding/5
         [HttpDelete("{id}")]
         [Authorize(Roles = "SUPER_ADMIN,HOST_ADMIN")]

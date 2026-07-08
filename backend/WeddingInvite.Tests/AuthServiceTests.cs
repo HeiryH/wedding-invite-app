@@ -26,7 +26,8 @@ public class AuthServiceTests : IDisposable
 
         _sut = new AuthService(
             new UserRepository(_db.Context), config,
-            new PasswordResetTokenRepository(_db.Context), new FakeEmailService());
+            new PasswordResetTokenRepository(_db.Context), new FakeEmailService(),
+            new WeddingRepository(_db.Context));
     }
 
     private void SeedUser(string email, string password, bool isActive = true, string tier = "FREE")

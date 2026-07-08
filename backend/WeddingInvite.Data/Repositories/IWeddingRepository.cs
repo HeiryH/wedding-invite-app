@@ -7,6 +7,7 @@ namespace WeddingInvite.Data.Repositories
     {
         Task<Wedding?> GetByIdAsync(int id);
         Task<Wedding?> GetByCoupleNameAsync(string coupleName);
+        Task<Wedding?> GetByDomainAsync(string domain);
         Task<IEnumerable<Wedding>> GetAllAsync();
         Task<Wedding> CreateAsync(Wedding wedding);
         Task<Wedding> UpdateAsync(Wedding wedding);

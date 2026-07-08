@@ -30,6 +30,7 @@ namespace WeddingInvite.Core.DTOs
         public bool ShowCapacityWarning { get; set; }
         public int? CreatedByUserId { get; set; }
         public string? CreatedByEmail { get; set; }
+        public string? Domain { get; set; }
     }
 
     // What clients send when creating a wedding
@@ -73,6 +74,12 @@ namespace WeddingInvite.Core.DTOs
     public class ToggleRsvpDto
     {
         public bool IsRsvpOpen { get; set; }
+    }
+
+    // Set (or clear, when null/empty) a wedding's custom domain. PRO tier only.
+    public class SetDomainDto
+    {
+        public string? Domain { get; set; }
     }
 
 }

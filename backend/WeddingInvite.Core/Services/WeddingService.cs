@@ -1,3 +1,4 @@
+using WeddingInvite.Core.Constants;
 using WeddingInvite.Core.DTOs;
 using WeddingInvite.Data.Repositories;
 using WeddingInvite.Models;
@@ -10,17 +11,23 @@ namespace WeddingInvite.Core.Services
         private readonly IGuestRepository _guestRepo;
         private readonly IPackageRepository _packageRepo;
         private readonly IWeddingFeatureRepository _weddingFeatureRepo;
+        private readonly ITemplateRepository _templateRepo;
+        private readonly IUserRepository _userRepo;
 
         public WeddingService(
             IWeddingRepository weddingRepo,
             IGuestRepository guestRepo,
             IPackageRepository packageRepo,
-            IWeddingFeatureRepository weddingFeatureRepo)
+            IWeddingFeatureRepository weddingFeatureRepo,
+            ITemplateRepository templateRepo,
+            IUserRepository userRepo)
         {
             _weddingRepo = weddingRepo;
             _guestRepo = guestRepo;
             _packageRepo = packageRepo;
             _weddingFeatureRepo = weddingFeatureRepo;
+            _templateRepo = templateRepo;
+            _userRepo = userRepo;
         }
 
         public async Task<WeddingDto?> GetByIdAsync(int id)
@@ -170,6 +177,17 @@ namespace WeddingInvite.Core.Services
             if (templateId < 1)
                 throw new ArgumentException("Invalid template ID");
 
+            var template = await _templateRepo.GetByIdAsync(templateId);
+            if (template == null)
+                throw new ArgumentException("Invalid template ID");
+
+            // Tier ceiling: a wedding can only adopt a template within its tier.
+            var owner = await _userRepo.GetByWeddingIdAsync(id);
+            var tier = owner?.Tier ?? TierEntitlements.Free;
+            if (!TierEntitlements.AllowsTemplateTier(tier, template.Tier))
+                throw new InvalidOperationException(
+                    $"The '{template.TemplateName}' template isn't available on the {tier} tier. Upgrade the wedding to use it.");
+
             wedding.TemplateId = templateId;
 
             var updated = await _weddingRepo.UpdateAsync(wedding);
@@ -220,6 +238,66 @@ namespace WeddingInvite.Core.Services
             return await MapToDto(updated);
         }
 
+        public async Task<WeddingDto> SetDomainAsync(int id, string? domain)
+        {
+            var wedding = await _weddingRepo.GetByIdAsync(id);
+            if (wedding == null)
+                throw new KeyNotFoundException($"Wedding with ID {id} not found");
+
+            // Clearing the domain (back to the platform URL) is always allowed.
+            if (string.IsNullOrWhiteSpace(domain))
+            {
+                wedding.Domain = null;
+                var cleared = await _weddingRepo.UpdateAsync(wedding);
+                return await MapToDto(cleared);
+            }
+
+            var normalized = NormalizeDomain(domain);
+            if (!IsValidDomain(normalized))
+                throw new ArgumentException("Enter a valid domain, e.g. 'john-and-mary.com'.");
+
+            // Custom domain is a PRO-tier entitlement.
+            var owner = await _userRepo.GetByWeddingIdAsync(id);
+            var tier = owner?.Tier ?? TierEntitlements.Free;
+            if (!TierEntitlements.AllowsFeature(tier, FeatureCodes.CustomDomain))
+                throw new InvalidOperationException(
+                    $"Custom domains are a PRO feature. This wedding is on the {tier} tier.");
+
+            // Globally unique across weddings.
+            var existing = await _weddingRepo.GetByDomainAsync(normalized);
+            if (existing != null && existing.WeddingId != id)
+                throw new ArgumentException($"The domain '{normalized}' is already in use.");
+
+            wedding.Domain = normalized;
+            var updated = await _weddingRepo.UpdateAsync(wedding);
+            return await MapToDto(updated);
+        }
+
+        public async Task<WeddingDto?> GetByDomainAsync(string domain)
+        {
+            var wedding = await _weddingRepo.GetByDomainAsync(NormalizeDomain(domain));
+            return wedding == null ? null : await MapToDto(wedding);
+        }
+
+        // Strip scheme / path / leading www and lower-case, so "https://WWW.Foo.com/" → "foo.com".
+        private static string NormalizeDomain(string domain)
+        {
+            var d = domain.Trim().ToLowerInvariant();
+            d = System.Text.RegularExpressions.Regex.Replace(d, "^https?://", "");
+            d = d.Split('/')[0];
+            if (d.StartsWith("www.")) d = d.Substring(4);
+            return d.TrimEnd('.');
+        }
+
+        private static bool IsValidDomain(string domain)
+        {
+            if (domain.Length > 253) return false;
+            // one or more DNS labels, then a 2+ letter TLD
+            return System.Text.RegularExpressions.Regex.IsMatch(
+                domain,
+                @"^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,}$");
+        }
+
         // HELPER METHODS
 
         private async Task EnablePackageFeaturesAsync(int weddingId, int packageId)
@@ -265,7 +343,8 @@ namespace WeddingInvite.Core.Services
                 PackageId = wedding.PackageId,
                 PackageName = wedding.Package?.PackageName,
                 CreatedByUserId = wedding.CreatedByUserId,
-                CreatedByEmail = wedding.CreatedBy?.Email
+                CreatedByEmail = wedding.CreatedBy?.Email,
+                Domain = wedding.Domain
             };
         }
 

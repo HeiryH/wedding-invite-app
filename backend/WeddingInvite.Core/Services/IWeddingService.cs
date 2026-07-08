@@ -15,6 +15,8 @@ namespace WeddingInvite.Core.Services
         Task<WeddingDto> UpdatePackageAsync(int id, int packageId);
         Task<WeddingDto> ToggleActiveAsync(int id, bool isActive);
         Task<WeddingDto> ToggleRsvpAsync(int id, bool isRsvpOpen);
+        Task<WeddingDto> SetDomainAsync(int id, string? domain);
+        Task<WeddingDto?> GetByDomainAsync(string domain);
         Task<int> PruneStalePrivateAsync(int daysOld);
     }
 }

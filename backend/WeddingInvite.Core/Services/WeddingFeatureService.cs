@@ -1,3 +1,4 @@
+using WeddingInvite.Core.Constants;
 using WeddingInvite.Core.DTOs;
 using WeddingInvite.Data.Repositories;
 
@@ -8,15 +9,18 @@ namespace WeddingInvite.Core.Services
         private readonly IWeddingFeatureRepository _weddingFeatureRepo;
         private readonly IWeddingRepository _weddingRepo;
         private readonly IFeatureRepository _featureRepo;
-        
+        private readonly IUserRepository _userRepo;
+
         public WeddingFeatureService(
             IWeddingFeatureRepository weddingFeatureRepo,
             IWeddingRepository weddingRepo,
-            IFeatureRepository featureRepo)
+            IFeatureRepository featureRepo,
+            IUserRepository userRepo)
         {
             _weddingFeatureRepo = weddingFeatureRepo;
             _weddingRepo = weddingRepo;
             _featureRepo = featureRepo;
+            _userRepo = userRepo;
         }
         
         public async Task<IEnumerable<WeddingFeatureDto>> GetWeddingFeaturesAsync(int weddingId)
@@ -110,6 +114,14 @@ namespace WeddingInvite.Core.Services
             // Toggle feature
             if (toggleDto.IsEnabled)
             {
+                // Tier ceiling: a wedding can only enable features its tier permits.
+                // The governing tier is the couple admin's tier (manual, admin-set).
+                var owner = await _userRepo.GetByWeddingIdAsync(weddingId);
+                var tier = owner?.Tier ?? TierEntitlements.Free;
+                if (!TierEntitlements.AllowsFeature(tier, feature.FeatureCode))
+                    throw new InvalidOperationException(
+                        $"'{feature.FeatureName}' isn't available on the {tier} tier. Upgrade the wedding to enable it.");
+
                 var weddingFeature = await _weddingFeatureRepo.EnableFeatureAsync(
                     weddingId, 
                     toggleDto.FeatureId, 
