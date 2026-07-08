@@ -2,6 +2,7 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.Tokens;
 using WeddingInvite.Core.DTOs;
 using WeddingInvite.Data.Repositories;
@@ -13,16 +14,21 @@ namespace WeddingInvite.Core.Services
     {
         private readonly IUserRepository _userRepo;
         private readonly IWeddingRepository _weddingRepo;
+        private readonly ILogger<WeddingAuthorizationService> _logger;
 
-        public WeddingAuthorizationService(IUserRepository userRepo, IWeddingRepository weddingRepo)
+        public WeddingAuthorizationService(
+            IUserRepository userRepo,
+            IWeddingRepository weddingRepo,
+            ILogger<WeddingAuthorizationService> logger)
         {
             _userRepo = userRepo;
             _weddingRepo = weddingRepo;
+            _logger = logger;
         }
 
         public async Task<bool> CanAccessWeddingAsync(string userEmail, int weddingId)
         {
-            Console.WriteLine($"[AUTH] Checking access for email: '{userEmail}' to wedding: {weddingId}");
+            _logger.LogDebug("Checking wedding access for {WeddingId}", weddingId);
 
             if (string.IsNullOrEmpty(userEmail))
                 return false;

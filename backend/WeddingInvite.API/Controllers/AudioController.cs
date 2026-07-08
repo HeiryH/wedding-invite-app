@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using WeddingInvite.Core.Services;
 using WeddingInvite.Core.Utilities;
 
 namespace WeddingInvite.API.Controllers;
@@ -12,9 +13,20 @@ public class AudioController : ControllerBase
     private static readonly string[] AllowedExtensions = { ".mp3", ".ogg", ".wav", ".aac", ".m4a", ".flac" };
     private const long MaxFileSizeBytes = 20 * 1024 * 1024; // 20 MB
 
+    private readonly IWeddingAuthorizationService _weddingAuthorizationService;
+
+    public AudioController(IWeddingAuthorizationService weddingAuthorizationService)
+    {
+        _weddingAuthorizationService = weddingAuthorizationService;
+    }
+
     [HttpPost("wedding/{weddingId}")]
     public async Task<IActionResult> Upload(int weddingId, [FromForm] IFormFile file)
     {
+        var userEmail = User.Identity?.Name;
+        if (!await _weddingAuthorizationService.CanAccessWeddingAsync(userEmail!, weddingId))
+            return Forbid();
+
         if (file == null || file.Length == 0)
             return BadRequest(new { message = "Audio file is required" });
 

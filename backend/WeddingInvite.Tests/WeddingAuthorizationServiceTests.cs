@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging.Abstractions;
 using WeddingInvite.Core.Services;
 using WeddingInvite.Data.Repositories;
 using WeddingInvite.Models;
@@ -18,7 +19,8 @@ public class WeddingAuthorizationServiceTests : IDisposable
     {
         _sut = new WeddingAuthorizationService(
             new UserRepository(_db.Context),
-            new WeddingRepository(_db.Context));
+            new WeddingRepository(_db.Context),
+            NullLogger<WeddingAuthorizationService>.Instance);
     }
 
     private (User user, Wedding wedding) SeedCoupleWithWedding(string email, int weddingId)

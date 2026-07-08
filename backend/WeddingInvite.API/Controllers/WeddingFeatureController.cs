@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using WeddingInvite.Core.DTOs;
 using WeddingInvite.Core.Services;
@@ -9,10 +10,14 @@ namespace WeddingInvite.API.Controllers
     public class WeddingFeatureController : ControllerBase
     {
         private readonly IWeddingFeatureService _weddingFeatureService;
-        
-        public WeddingFeatureController(IWeddingFeatureService weddingFeatureService)
+        private readonly IWeddingAuthorizationService _weddingAuthorizationService;
+
+        public WeddingFeatureController(
+            IWeddingFeatureService weddingFeatureService,
+            IWeddingAuthorizationService weddingAuthorizationService)
         {
             _weddingFeatureService = weddingFeatureService;
+            _weddingAuthorizationService = weddingAuthorizationService;
         }
         
         // GET: api/weddingfeature/wedding/5
@@ -40,10 +45,15 @@ namespace WeddingInvite.API.Controllers
         
         // POST: api/weddingfeature/wedding/5/toggle
         [HttpPost("wedding/{weddingId}/toggle")]
+        [Authorize]
         public async Task<ActionResult<WeddingFeatureDto>> ToggleFeature(
-            int weddingId, 
+            int weddingId,
             [FromBody] ToggleFeatureDto toggleDto)
         {
+            var userEmail = User.Identity?.Name;
+            if (!await _weddingAuthorizationService.CanAccessWeddingAsync(userEmail!, weddingId))
+                return Forbid();
+
             try
             {
                 var result = await _weddingFeatureService.ToggleFeatureAsync(weddingId, toggleDto);
@@ -61,10 +71,15 @@ namespace WeddingInvite.API.Controllers
         
         // POST: api/weddingfeature/wedding/5/bulk-toggle
         [HttpPost("wedding/{weddingId}/bulk-toggle")]
+        [Authorize]
         public async Task<ActionResult> BulkToggleFeatures(
-            int weddingId, 
+            int weddingId,
             [FromBody] List<ToggleFeatureDto> features)
         {
+            var userEmail = User.Identity?.Name;
+            if (!await _weddingAuthorizationService.CanAccessWeddingAsync(userEmail!, weddingId))
+                return Forbid();
+
             try
             {
                 await _weddingFeatureService.BulkToggleFeaturesAsync(weddingId, features);
