@@ -22,6 +22,8 @@ import { Card, StatCard } from '@/components/ui/Card';
 import { Tabs } from '@/components/ui/Tabs';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { UpgradeDialog } from '@/components/templates/UpgradeDialog';
+import { CustomDomainCard } from '@/components/couple/CustomDomainCard';
+import { GettingStartedChecklist } from '@/components/couple/GettingStartedChecklist';
 import { tierRank } from '@/lib/tierRank';
 
 type ActiveTab = 'guests' | 'wishes' | 'photos' | 'seating';
@@ -480,6 +482,18 @@ export default function CoupleAdminDashboard() {
         )}
       </div>
 
+      {/* ── Getting started checklist ─────────────────────────────────────── */}
+      {wedding && (
+        <GettingStartedChecklist
+          coupleName={wedding.coupleName}
+          detailsComplete={!!(wedding.brideName && wedding.groomName && wedding.venue && wedding.venue !== 'TBD' && wedding.weddingDate)}
+          guestCount={guests.length}
+          isPublic={wedding.isPublic}
+          onEditDetails={startEdit}
+          onAddGuests={() => setActiveTab('guests')}
+        />
+      )}
+
       {/* ── Private invitation nudge (free tier only) ─────────────────────── */}
       {isFree && (
         <div style={{ borderRadius: 'var(--radius-lg)', padding: '12px 16px', background: 'color-mix(in srgb, var(--gold-400) 10%, transparent)', border: '1px solid var(--gold-200)', display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -496,6 +510,11 @@ export default function CoupleAdminDashboard() {
             Upgrade
           </a>
         </div>
+      )}
+
+      {/* ── Custom domain (PREMIUM sees the PRO upsell, PRO can set it) ────── */}
+      {!isFree && wedding && weddingId && (
+        <CustomDomainCard weddingId={weddingId} domain={wedding.domain} isPro={tierRank(userTier) >= 2} />
       )}
 
       {/* ── Stat cards ────────────────────────────────────────────────────── */}
