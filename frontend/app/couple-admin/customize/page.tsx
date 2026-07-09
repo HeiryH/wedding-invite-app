@@ -534,7 +534,7 @@ function BgImageField({ configKey, label, value, weddingId, onChange }: {
     <div>
       {value ? (
         <div style={{ position: 'relative', borderRadius: 8, overflow: 'hidden', aspectRatio: '16/9', boxShadow: 'var(--shadow-sm)' }}>
-          <img src={`${API_BASE}${value}`} alt={label} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+          <img src={`${API_BASE}${value}`} alt={label} loading="lazy" decoding="async" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
           <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.4)', opacity: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'opacity 150ms' }}
             onMouseEnter={e => { (e.currentTarget as HTMLElement).style.opacity = '1'; }}
             onMouseLeave={e => { (e.currentTarget as HTMLElement).style.opacity = '0'; }}>
@@ -570,7 +570,7 @@ function PhotoDropZone({ slot, label, photo, uploading, onDrop, onRemove }: {
       <p style={{ margin: '0 0 6px', fontSize: 'var(--text-sm)', fontWeight: 500, color: 'var(--text-strong)', fontFamily: 'var(--font-ui)' }}>{label}</p>
       {photo ? (
         <div style={{ position: 'relative', borderRadius: 12, overflow: 'hidden', aspectRatio: '3/4', boxShadow: 'var(--shadow-sm)' }}>
-          <img src={`${API_BASE}${photo.photoUrl}`} alt={label} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+          <img src={`${API_BASE}${photo.photoUrl}`} alt={label} loading="lazy" decoding="async" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
           <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.4)', opacity: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'opacity 150ms' }}
             onMouseEnter={e => { (e.currentTarget as HTMLElement).style.opacity = '1'; }}
             onMouseLeave={e => { (e.currentTarget as HTMLElement).style.opacity = '0'; }}>

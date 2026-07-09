@@ -1501,7 +1501,7 @@ const NAV_EMOJIS: Record<string, string> = {
                   <input type="file" accept="image/*" onChange={handleFileSelect} className={styles.fileInput} />
                   {previewUrl ? (
                     <div className={styles.photoPreviewWrapper}>
-                      <img src={previewUrl} alt="Preview" className={styles.photoPreview} />
+                      <img src={previewUrl} alt="Preview" loading="lazy" decoding="async" className={styles.photoPreview} />
                       <button
                         type="button"
                         onClick={(e) => { e.preventDefault(); handleRemovePhoto(); }}
@@ -1670,7 +1670,7 @@ const NAV_EMOJIS: Record<string, string> = {
                         onClick={() => setLightboxPhoto(photo)}>
                         <div className={styles.polaroidTape} />
                         <img src={`${API_BASE}${photo.photoUrl}`} alt={photo.caption ?? ''}
-                          className={styles.polaroidPhoto} />
+                          loading="lazy" decoding="async" className={styles.polaroidPhoto} />
                         {photo.caption && (
                           <span className={styles.polaroidCaption}>{photo.caption}</span>
                         )}

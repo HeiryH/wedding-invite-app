@@ -211,7 +211,7 @@ function PhotosPanel({ photos, weddingId, onRefresh }: { photos: Photo[]; weddin
                 </div>
                 <div style={{ position: 'relative', aspectRatio: '1' }}>
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={photo.photoUrl} alt={photo.caption || 'Photo'} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  <img src={photo.photoUrl} alt={photo.caption || 'Photo'} loading="lazy" decoding="async" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                   <div
                     style={{ position: 'absolute', inset: 0, background: 'rgba(28,32,40,0)', transition: 'background .2s', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                     className="group-hover:bg-[rgba(28,32,40,0.7)]"

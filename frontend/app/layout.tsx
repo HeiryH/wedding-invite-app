@@ -3,6 +3,7 @@ import { Cormorant_Garamond, Hanken_Grotesk, JetBrains_Mono } from "next/font/go
 
 import "./globals.css";
 import { CookieConsent } from "@/components/CookieConsent";
+import { MotionProvider } from "@/components/MotionProvider";
 
 const cormorant = Cormorant_Garamond({
   variable: "--font-cormorant",
@@ -67,7 +68,7 @@ export default function RootLayout({
       <body
         className={`${cormorant.variable} ${hanken.variable} ${jetbrains.variable} antialiased`}
       >
-        {children}
+        <MotionProvider>{children}</MotionProvider>
         <CookieConsent />
       </body>
     </html>

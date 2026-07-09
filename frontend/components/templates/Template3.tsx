@@ -584,7 +584,7 @@ export default function Template3({
                   />
                   <label className="block border-2 border-dashed border-green-300 rounded-xl p-6 text-center cursor-pointer hover:border-green-500 transition-colors">
                     {previewUrl ? (
-                      <img src={previewUrl} alt="Preview" className="max-h-48 mx-auto rounded-lg object-cover" />
+                      <img src={previewUrl} alt="Preview" loading="lazy" decoding="async" className="max-h-48 mx-auto rounded-lg object-cover" />
                     ) : (
                       <div className="text-green-400">
                         <div className="text-4xl mb-2">📸</div>

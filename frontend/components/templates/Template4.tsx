@@ -297,7 +297,7 @@ function UploadSheet({
                 <label className="block cursor-pointer">
                   {preview ? (
                     <div className="relative w-full h-44 rounded-xl overflow-hidden">
-                      <img src={preview} alt="Preview" className="w-full h-full object-cover" />
+                      <img src={preview} alt="Preview" loading="lazy" decoding="async" className="w-full h-full object-cover" />
                       <div className="absolute inset-0 bg-black/20 flex items-center justify-center">
                         <p className="text-white text-xs tracking-widest uppercase">Tap to change</p>
                       </div>
@@ -745,7 +745,7 @@ export default function Template4({
         {/* Mid couple photo */}
         {midPhoto && (
           <div className="w-full overflow-hidden" style={{ maxHeight: 440 }}>
-            <img src={midPhoto} alt="Couple" className="w-full object-cover" style={{ maxHeight: 440 }} />
+            <img src={midPhoto} alt="Couple" loading="lazy" decoding="async" className="w-full object-cover" style={{ maxHeight: 440 }} />
           </div>
         )}
         <div className="pb-2" />
