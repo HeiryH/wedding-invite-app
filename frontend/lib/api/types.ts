@@ -25,6 +25,7 @@ export interface Wedding {
   isRsvpOpen?: boolean;
   createdByUserId?: number;
   createdByEmail?: string;
+  domain?: string | null;
 }
 
 export interface CreateWedding {

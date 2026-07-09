@@ -62,6 +62,12 @@ export const weddingService = {
     return response.data;
   },
 
+  // Set (or clear, with an empty string) the wedding's custom domain. PRO tier only.
+  setDomain: async (id: number, domain: string): Promise<Wedding> => {
+    const response = await apiClient.put<Wedding>(`/wedding/${id}/domain`, { domain });
+    return response.data;
+  },
+
   // Delete wedding
   delete: async (id: number): Promise<void> => {
     await apiClient.delete(`/wedding/${id}`);

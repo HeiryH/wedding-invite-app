@@ -140,7 +140,7 @@ export default function HostWeddingDetailPage() {
 
   const handleToggleFeature = async (featureId: number, featureCode: string, currentStatus: boolean) => {
     try { await weddingFeatureService.toggleFeature(weddingId, { featureId, featureCode, isEnabled: !currentStatus }); await fetchData(); }
-    catch { alert('Failed'); }
+    catch (err: any) { alert(err.response?.data?.message || 'Failed to update feature'); }
   };
 
   const handleChangeTemplate = async (templateId: number) => {

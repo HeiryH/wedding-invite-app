@@ -235,8 +235,9 @@ export default function WeddingDetailPage() {
         isEnabled: !currentStatus,
       });
       await fetchData();
-    } catch (err) {
-      alert('Failed to toggle feature');
+    } catch (err: any) {
+      // Surfaces the tier-ceiling message, e.g. "'Photo Booth' isn't available on the FREE tier."
+      alert(err.response?.data?.message || 'Failed to toggle feature');
     }
   };
 
