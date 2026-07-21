@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Cormorant_Garamond, Hanken_Grotesk, JetBrains_Mono } from "next/font/google";
+import { Cormorant_Garamond, Hanken_Grotesk, JetBrains_Mono, Playfair_Display, Great_Vibes, Fredoka } from "next/font/google";
 
 import "./globals.css";
 import { CookieConsent } from "@/components/CookieConsent";
@@ -24,6 +24,29 @@ const jetbrains = JetBrains_Mono({
   variable: "--font-jetbrains",
   subsets: ["latin"],
   weight: ["400", "500", "600"],
+  display: "swap",
+});
+
+// ── Marketing (The Invit_e) landing fonts ─────────────────────────────
+const playfair = Playfair_Display({
+  variable: "--font-playfair",
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700", "900"],
+  style: ["normal", "italic"],
+  display: "swap",
+});
+
+const greatVibes = Great_Vibes({
+  variable: "--font-vibes",
+  subsets: ["latin"],
+  weight: ["400"],
+  display: "swap",
+});
+
+const fredoka = Fredoka({
+  variable: "--font-fredoka",
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
   display: "swap",
 });
 
@@ -66,7 +89,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${cormorant.variable} ${hanken.variable} ${jetbrains.variable} antialiased`}
+        className={`${cormorant.variable} ${hanken.variable} ${jetbrains.variable} ${playfair.variable} ${greatVibes.variable} ${fredoka.variable} antialiased`}
       >
         <MotionProvider>{children}</MotionProvider>
         <CookieConsent />

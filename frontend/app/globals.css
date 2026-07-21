@@ -18,7 +18,7 @@
 }
 
 /* ════════════════════════════════════════════════════════════════
-   Convive Design System tokens (admin UI)
+   Design System tokens (admin UI)
    Brand recolor: dusk-blue #436a8a replaces claret red.
    Gold accent + ivory/sand neutrals + warm shadows kept as-is.
    ════════════════════════════════════════════════════════════════ */
@@ -361,3 +361,109 @@ body {
 
 /* Hero edit inputs (on gradient dark background) */
 .hero-inp::placeholder { color: rgba(255,255,255,.6); }
+
+/* ════════════════════════════════════════════════════════════════
+   The Invit_e — marketing / landing theme (public pages only).
+   Scoped under .mkt so it never touches the admin design tokens.
+   Warm parchment + chunky black outlines + hard offset shadows.
+   ════════════════════════════════════════════════════════════════ */
+.mkt {
+  --mkt-parchment: #f3e9db;
+  --mkt-card: #fbf7ef;
+  --mkt-sand: #efe6d6;
+  --mkt-ink: #17130d;
+  --mkt-gold: #e2a23c;
+  --mkt-gold-ink: #a9762e;
+  --mkt-muted: #8a7a63;
+  --mkt-muted-2: #6b5d48;
+
+  --mkt-serif: var(--font-playfair), Georgia, serif;
+  --mkt-script: var(--font-vibes), cursive;
+  --mkt-sans: var(--font-fredoka), system-ui, sans-serif;
+
+  font-family: var(--mkt-sans);
+  color: var(--mkt-ink);
+  background: var(--mkt-parchment);
+}
+
+/* Chunky outlined surface with hard offset shadow (the comp signature) */
+.mkt-card {
+  background: var(--mkt-card);
+  border: 2px solid var(--mkt-ink);
+  border-radius: 20px;
+  box-shadow: 0 5px 0 rgba(23, 19, 13, 0.1);
+}
+
+/* Pill button — light (outline) variant */
+.mkt-btn {
+  font-family: var(--mkt-sans);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--mkt-ink);
+  background: var(--mkt-card);
+  border: 2.5px solid var(--mkt-ink);
+  border-radius: 999px;
+  box-shadow: 0 8px 0 rgba(23, 19, 13, 0.14);
+  cursor: pointer;
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+.mkt-btn:hover { transform: translateY(2px); box-shadow: 0 6px 0 rgba(23, 19, 13, 0.14); }
+.mkt-btn:active { transform: translateY(8px); box-shadow: 0 0 0 rgba(23, 19, 13, 0.14); }
+
+/* Pill button — dark (solid ink) variant */
+.mkt-btn-dark {
+  color: var(--mkt-card);
+  background: var(--mkt-ink);
+  border-color: var(--mkt-ink);
+  box-shadow: 0 8px 0 rgba(23, 19, 13, 0.18);
+}
+
+.mkt a { color: var(--mkt-gold); text-decoration: none; }
+.mkt a:hover { color: var(--mkt-gold-ink); }
+
+/* The Invit_e wordmark lockup */
+.mkt-wordmark {
+  font-family: var(--mkt-serif);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  display: inline-flex;
+  align-items: baseline;
+  color: var(--mkt-ink);
+}
+.mkt-wordmark .u { font-weight: 400; }
+.mkt-wordmark .e {
+  font-family: var(--mkt-script);
+  font-weight: 400;
+  color: var(--mkt-gold);
+  margin-left: 2px;
+}
+
+@keyframes mkt-fadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes mkt-scrIn { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+@keyframes mkt-menuIn { from { opacity: 0; transform: translateY(-8px) scale(.96); } to { opacity: 1; transform: none; } }
+@keyframes mkt-pop { 0% { transform: scale(.7); opacity: 0; } 60% { transform: scale(1.06); } 100% { transform: scale(1); opacity: 1; } }
+
+/* ── Personalise page: side rail (desktop) → bottom sheet (mobile) ─────── */
+.pers-shell { display: flex; height: 100dvh; overflow: hidden; }
+.pers-preview { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+.pers-form {
+  width: 380px; flex: none; display: flex; flex-direction: column;
+  border-right: 2px solid var(--mkt-ink); background: var(--mkt-parchment); overflow: hidden;
+}
+.pers-handle { display: none; } /* mobile-only drag/expand handle */
+.pers-form-header { display: flex; }
+
+@media (max-width: 768px) {
+  .pers-shell { position: relative; }
+  .pers-preview { position: absolute; inset: 0; }
+  .pers-form {
+    position: fixed; left: 0; right: 0; bottom: 0; width: auto; z-index: 40;
+    height: 68px; /* collapsed — only the handle shows, invite behind */
+    border-right: none; border-top: 2px solid var(--mkt-ink);
+    border-radius: 20px 20px 0 0; box-shadow: 0 -10px 30px rgba(23, 19, 13, .18);
+    transition: height .3s cubic-bezier(.2, .8, .2, 1);
+  }
+  .pers-form.open { height: 86dvh; }
+  .pers-handle { display: flex; }
+  .pers-form-header { display: none; } /* the handle replaces the header on mobile */
+}

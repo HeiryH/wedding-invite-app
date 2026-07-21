@@ -28,6 +28,10 @@ export interface SelfRegisterRequest {
   venue: string;
   venueAddress: string;
   templateId: number;
+  /** Optional guest-personalised template config bag (carried through from the draft). */
+  config?: Record<string, string>;
+  /** Optional guest-personalised itinerary rows (carried through from the draft). */
+  itinerary?: { label: string; detail: string; sortOrder: number }[];
 }
 
 export interface CoupleAdminUser {
