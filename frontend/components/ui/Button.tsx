@@ -115,7 +115,7 @@ export function Button({
 function Spinner() {
   return (
     <>
-      <style>{`@keyframes convive-spin{to{transform:rotate(360deg)}}`}</style>
+      <style>{`@keyframes ui-spin{to{transform:rotate(360deg)}}`}</style>
       <span
         aria-hidden="true"
         style={{
@@ -126,7 +126,7 @@ function Spinner() {
           borderStyle: "solid",
           borderColor: "transparent currentColor currentColor currentColor",
           display: "inline-block",
-          animation: "convive-spin 0.6s linear infinite",
+          animation: "ui-spin 0.6s linear infinite",
         }}
       />
     </>

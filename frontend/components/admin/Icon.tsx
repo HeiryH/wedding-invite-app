@@ -1,5 +1,5 @@
 'use client';
-// Compatibility shim — maps old admin icon names to Convive icon names.
+// Compatibility shim — maps old admin icon names to current icon names.
 // New code should import directly from '@/components/ui/Icon'.
 
 import { Icon as DSIcon } from '@/components/ui/Icon';

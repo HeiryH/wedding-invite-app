@@ -84,29 +84,24 @@ export default function AdminShell({
         <Icon name="menu" size={19} />
       </button>
 
-      {/* Brand */}
+      {/* Brand — the yellow "e" logo mark */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, flex: '1 1 auto', minWidth: 0 }}>
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src="/brand/convive-mark.svg"
-          alt=""
-          style={{ width: 28, height: 28, flexShrink: 0 }}
-        />
-        <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
-          <span style={{
-            fontFamily: 'var(--font-display)', fontSize: 18, lineHeight: 1,
-            color: 'var(--text-strong)', letterSpacing: 'var(--tracking-tight)',
-          }}>
-            Eveline
-          </span>
-          <span style={{
-            fontSize: 10, color: 'var(--text-subtle)',
-            letterSpacing: 'var(--tracking-caps)', textTransform: 'uppercase', marginTop: 2,
-            fontFamily: 'var(--font-ui)',
-          }}>
-            {role}
-          </span>
-        </div>
+        <span
+          aria-label="The Invit_e"
+          style={{
+            width: 34, height: 34, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontFamily: 'var(--font-vibes), cursive', color: '#e2a23c', fontSize: 34, lineHeight: 1,
+          }}
+        >
+          e
+        </span>
+        <span style={{
+          fontSize: 10, color: 'var(--text-subtle)',
+          letterSpacing: 'var(--tracking-caps)', textTransform: 'uppercase',
+          fontFamily: 'var(--font-ui)', minWidth: 0,
+        }}>
+          {role}
+        </span>
       </div>
 
       {/* Bell */}

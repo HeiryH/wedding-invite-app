@@ -1,4 +1,4 @@
-// Convive Design System — UI component library
+// Design System — UI component library
 // All components read CSS-variable tokens from globals.css
 
 export { Icon, iconNames } from "./Icon";

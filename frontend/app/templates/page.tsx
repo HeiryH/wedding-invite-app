@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { templateService, Template } from '@/lib/api';
 import { TemplateLibrary } from '@/components/templates/TemplateLibrary';
+import { Wordmark } from '@/components/marketing/Wordmark';
 import { getUser } from '@/lib/auth';
 
 export default function TemplatesPage() {
@@ -40,9 +41,7 @@ export default function TemplatesPage() {
       }}>
         <div style={{ maxWidth: 1200, margin: '0 auto', padding: '0 24px', height: 60, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <a href="/" style={{ textDecoration: 'none' }}>
-            <span style={{ fontFamily: 'var(--font-display)', fontSize: 22, fontWeight: 700, color: 'var(--em)', letterSpacing: '-0.02em' }}>
-              Convive
-            </span>
+            <Wordmark size={22} />
           </a>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
             {user ? (

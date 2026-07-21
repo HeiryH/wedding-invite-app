@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, useCallback, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { templateService, Template, authService } from '@/lib/api';
 import { TemplateLibrary } from '@/components/templates/TemplateLibrary';
+import { Wordmark } from '@/components/marketing/Wordmark';
 import { getUser } from '@/lib/auth';
 
 // ── Minimal field/input primitives ────────────────────────────────────────────
@@ -261,7 +262,7 @@ function TryEditor() {
           {/* Header */}
           <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
             <a href="/" style={{ textDecoration: 'none' }}>
-              <span style={{ fontFamily: 'var(--font-display)', fontSize: 18, fontWeight: 700, color: 'var(--em)' }}>Convive</span>
+              <Wordmark size={18} />
             </a>
             <a href="/login" style={{ fontFamily: 'var(--font-ui)', fontSize: 'var(--text-xs)', color: 'var(--text-muted)', textDecoration: 'none' }}>Sign in</a>
           </div>

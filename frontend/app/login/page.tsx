@@ -7,6 +7,7 @@ import { authService } from '@/lib/api';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
 import { Icon } from '@/components/ui/Icon';
+import { Wordmark } from '@/components/marketing/Wordmark';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -79,14 +80,9 @@ export default function LoginPage() {
           alignItems: 'center', justifyContent: 'center',
           padding: 48, textAlign: 'center',
         }}>
-          <p style={{
-            fontFamily: 'var(--font-display)', fontStyle: 'italic',
-            fontSize: 48, color: '#fff', lineHeight: 1.1, margin: '0 0 16px',
-            letterSpacing: '-0.5px',
-            textShadow: '0 2px 12px rgba(0,0,0,.2)',
-          }}>
-            Convive
-          </p>
+          <div style={{ margin: '0 0 16px' }}>
+            <Wordmark size={44} ink="#fff" />
+          </div>
           <p style={{
             fontFamily: 'var(--font-ui)', fontSize: 14, color: 'rgba(255,255,255,.72)',
             letterSpacing: '0.12em', textTransform: 'uppercase', margin: 0,
@@ -119,12 +115,9 @@ export default function LoginPage() {
         >
           {/* Mobile wordmark — hidden on desktop where the left panel shows */}
           <div style={{ textAlign: 'center', marginBottom: 36 }} className="mobile-wordmark">
-            <p style={{
-              fontFamily: 'var(--font-display)', fontStyle: 'italic',
-              fontSize: 36, color: 'var(--brand)', lineHeight: 1.1, margin: '0 0 6px',
-            }}>
-              Convive
-            </p>
+            <div style={{ display: 'flex', justifyContent: 'center', margin: '0 0 6px' }}>
+              <Wordmark size={34} />
+            </div>
             <p style={{
               fontFamily: 'var(--font-ui)', fontSize: 11, color: 'var(--text-muted)',
               letterSpacing: '0.12em', textTransform: 'uppercase', margin: 0,
