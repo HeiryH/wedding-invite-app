@@ -37,4 +37,14 @@ export const templateService = {
     const response = await apiClient.get<Template>(`/template/code/${code}`);
     return response.data;
   },
+
+  // Set a template's picker thumbnail (super admin) — e.g. from the screenshot tool
+  uploadThumbnail: async (id: number, file: File | Blob, filename = 'thumbnail.png'): Promise<Template> => {
+    const form = new FormData();
+    form.append('file', file, filename);
+    const response = await apiClient.post<Template>(`/template/${id}/thumbnail`, form, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return response.data;
+  },
 };

@@ -149,7 +149,7 @@ export default function ThemesPage() {
                 {/* Thumbnail */}
                 <div style={{ position: 'relative', borderBottom: '1px solid var(--border-subtle)' }}>
                   <div style={{ maxHeight: 220, overflow: 'hidden' }}>
-                    <TemplatePreview templateCode={theme.templateCode} />
+                    <TemplatePreview templateCode={theme.templateCode} thumbnailUrl={theme.thumbnailUrl} />
                   </div>
                   {/* Color swatches */}
                   <div style={{ position: 'absolute', bottom: 10, right: 10, display: 'flex', gap: 6 }}>

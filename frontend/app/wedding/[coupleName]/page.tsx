@@ -23,8 +23,15 @@ export default function WeddingInvitationPage() {
   const searchParams = useSearchParams();
   const coupleName = params.coupleName as string;
   const previewTemplateId = searchParams.get('preview');
+  // Clean-render mode for the super-admin screenshot tool: suppresses the debug banners so
+  // the capture is just the invite. Signals readiness via data-preview-ready once the actual
+  // template component (not just the data fetch) has mounted — mirrors the convention used by
+  // app/template-preview/[code]/page.tsx.
+  const capture = searchParams.get('capture') === '1';
 
   const [wedding, setWedding] = useState<Wedding | null>(null);
+  const [templateLoaded, setTemplateLoaded] = useState(false);
+  const [captureReady, setCaptureReady] = useState(false);
   // ❌ REMOVED: const [guests, setGuests] = useState<Guest[]>([]);
   const [wishes, setWishes] = useState<Wish[]>([]);
   const [photos, setPhotos] = useState<Photo[]>([]);
@@ -110,6 +117,15 @@ export default function WeddingInvitationPage() {
     fetchData();
   }, [coupleName, previewTemplateId]);
 
+  // Fires once the actual template component has mounted (not just the data fetch) — the
+  // dynamic import in TemplateRenderer is a second async step after `loading` goes false.
+  useEffect(() => {
+    if (!loading && templateLoaded) {
+      const t = setTimeout(() => setCaptureReady(true), 900); // fonts + image decode
+      return () => clearTimeout(t);
+    }
+  }, [loading, templateLoaded]);
+
   const handleRSVP = async (data: any) => {
     if (!wedding) return;
     await guestService.rsvp(wedding.weddingId, {
@@ -175,7 +191,9 @@ export default function WeddingInvitationPage() {
     const viewer = typeof window !== 'undefined'
       ? (() => { try { return JSON.parse(localStorage.getItem('user') ?? 'null'); } catch { return null; } })()
       : null;
-    const isOwner = viewer?.weddingId === wedding.weddingId;
+    // A super admin can always view/capture a wedding, even one that isn't public yet —
+    // mirrors CanAccessWeddingAsync on the backend, which already special-cases this role.
+    const isOwner = viewer?.weddingId === wedding.weddingId || viewer?.role === 'SUPER_ADMIN';
 
     if (!isOwner) {
       return (
@@ -205,14 +223,14 @@ export default function WeddingInvitationPage() {
   return (
     <>
       {/* Preview Mode Banner */}
-      {previewTemplateId && (
+      {previewTemplateId && !capture && (
         <div className="fixed top-0 left-0 right-0 z-50 bg-yellow-500 text-white px-4 py-3 text-center font-semibold shadow-lg">
           🔍 PREVIEW MODE - Viewing Template {currentTemplateId} (Not Saved)
         </div>
       )}
 
       {/* Private preview banner (owner viewing their own private wedding) */}
-      {!wedding.isPublic && !previewTemplateId && (
+      {!wedding.isPublic && !previewTemplateId && !capture && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 50, background: '#059669', color: '#fff', padding: '10px 20px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, fontSize: 13, fontFamily: 'system-ui, sans-serif' }}>
           <span>🔒 Private preview — only you can see this</span>
           <a href="/couple-admin" style={{ color: '#fff', fontWeight: 700, textDecoration: 'underline', fontSize: 12 }}>
@@ -222,7 +240,10 @@ export default function WeddingInvitationPage() {
       )}
 
       {/* Render Template */}
-      <div className={previewTemplateId ? 'pt-12' : ''}>
+      <div
+        className={previewTemplateId && !capture ? 'pt-12' : ''}
+        {...(captureReady ? { 'data-preview-ready': 'true' } : {})}
+      >
         <TemplateRenderer
           key={currentTemplateId}
           templateId={currentTemplateId}
@@ -238,6 +259,7 @@ export default function WeddingInvitationPage() {
           coupleMedia={coupleMedia}
           customConfig={customConfig}
           itinerary={itinerary}
+          onReady={() => setTemplateLoaded(true)}
         />
       </div>
     </>
@@ -259,6 +281,7 @@ function TemplateRenderer({
   coupleMedia,
   customConfig,
   itinerary,
+  onReady,
 }: {
   templateId: number;
   wedding: Wedding;
@@ -273,6 +296,7 @@ function TemplateRenderer({
   coupleMedia?: Photo[];
   customConfig?: Record<string, string>;
   itinerary?: ItineraryItem[];
+  onReady?: () => void;
 }) {
   const [TemplateComponent, setTemplateComponent] = useState<any>(null);
 
@@ -292,6 +316,11 @@ function TemplateRenderer({
 
     loadTemplate();
   }, [templateId]);
+
+  useEffect(() => {
+    if (TemplateComponent) onReady?.();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [TemplateComponent]);
 
   if (!TemplateComponent) {
     return (

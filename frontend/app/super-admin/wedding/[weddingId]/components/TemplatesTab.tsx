@@ -86,7 +86,7 @@ export default function TemplatesTab({
                   )}
 
                   {/* Template Preview */}
-                  <TemplatePreview templateCode={template.templateCode} />
+                  <TemplatePreview templateCode={template.templateCode} thumbnailUrl={template.thumbnailUrl} />
 
                   {/* Template Info */}
                   <div className="p-4">

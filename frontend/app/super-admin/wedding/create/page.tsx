@@ -220,7 +220,7 @@ export default function CreateWeddingPage() {
                     boxShadow: formData.templateId === template.templateId ? '0 0 0 3px var(--lavender)' : 'none',
                   }}
                 >
-                  <TemplatePreview templateCode={template.templateCode} />
+                  <TemplatePreview templateCode={template.templateCode} thumbnailUrl={template.thumbnailUrl} />
                   <div style={{ padding: '10px 14px 14px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 4 }}>
                       <div>

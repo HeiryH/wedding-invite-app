@@ -68,7 +68,7 @@ export function TemplateLibrary({
               >
                 {/* Thumbnail — clipped to ~120px tall */}
                 <div style={{ height: 120, overflow: 'hidden', background: '#f3f4f6' }}>
-                  <TemplatePreview templateCode={t.templateCode} />
+                  <TemplatePreview templateCode={t.templateCode} thumbnailUrl={t.thumbnailUrl} />
                 </div>
 
                 {/* Lock overlay */}
@@ -140,7 +140,7 @@ export function TemplateLibrary({
                 marginBottom: 20,
               }}
             >
-              <TemplatePreview templateCode={t.templateCode} />
+              <TemplatePreview templateCode={t.templateCode} thumbnailUrl={t.thumbnailUrl} />
 
               {/* Lock overlay */}
               {locked && (

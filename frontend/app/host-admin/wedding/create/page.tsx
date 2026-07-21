@@ -216,7 +216,7 @@ export default function HostCreateWeddingPage() {
                     transition: 'all .15s ease',
                   }}
                 >
-                  <TemplatePreview templateCode={template.templateCode} />
+                  <TemplatePreview templateCode={template.templateCode} thumbnailUrl={template.thumbnailUrl} />
                   <div style={{ padding: '10px 14px 14px', background: 'var(--surface-card)' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 4 }}>
                       <div>
