@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using WeddingInvite.Data;
 
@@ -10,9 +11,11 @@ using WeddingInvite.Data;
 namespace WeddingInvite.Data.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260713150148_AddTemplate7RomanGarden")]
+    partial class AddTemplate7RomanGarden
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "10.0.2");
@@ -61,7 +64,7 @@ namespace WeddingInvite.Data.Migrations
                         new
                         {
                             FeatureId = 1,
-                            CreatedDate = new DateTime(2026, 7, 20, 11, 57, 3, 370, DateTimeKind.Utc).AddTicks(3910),
+                            CreatedDate = new DateTime(2026, 7, 13, 15, 1, 47, 571, DateTimeKind.Utc).AddTicks(7060),
                             Description = "Allow guests to upload and share photos from the wedding",
                             FeatureCode = "PHOTO_BOOTH",
                             FeatureName = "Photo Booth",
@@ -72,7 +75,7 @@ namespace WeddingInvite.Data.Migrations
                         new
                         {
                             FeatureId = 2,
-                            CreatedDate = new DateTime(2026, 7, 20, 11, 57, 3, 370, DateTimeKind.Utc).AddTicks(4000),
+                            CreatedDate = new DateTime(2026, 7, 13, 15, 1, 47, 571, DateTimeKind.Utc).AddTicks(7150),
                             Description = "Online gift registry with payment links",
                             FeatureCode = "E_GIFTS",
                             FeatureName = "E-Gifts Registry",
@@ -83,7 +86,7 @@ namespace WeddingInvite.Data.Migrations
                         new
                         {
                             FeatureId = 3,
-                            CreatedDate = new DateTime(2026, 7, 20, 11, 57, 3, 370, DateTimeKind.Utc).AddTicks(4000),
+                            CreatedDate = new DateTime(2026, 7, 13, 15, 1, 47, 571, DateTimeKind.Utc).AddTicks(7160),
                             Description = "Use your own domain name (e.g., johnandmary.wedding)",
                             FeatureCode = "CUSTOM_DOMAIN",
                             FeatureName = "Custom Domain",
@@ -94,7 +97,7 @@ namespace WeddingInvite.Data.Migrations
                         new
                         {
                             FeatureId = 4,
-                            CreatedDate = new DateTime(2026, 7, 20, 11, 57, 3, 370, DateTimeKind.Utc).AddTicks(4000),
+                            CreatedDate = new DateTime(2026, 7, 13, 15, 1, 47, 571, DateTimeKind.Utc).AddTicks(7160),
                             Description = "Guest RSVP and attendance tracking",
                             FeatureCode = "RSVP",
                             FeatureName = "RSVP Management",
@@ -105,7 +108,7 @@ namespace WeddingInvite.Data.Migrations
                         new
                         {
                             FeatureId = 5,
-                            CreatedDate = new DateTime(2026, 7, 20, 11, 57, 3, 370, DateTimeKind.Utc).AddTicks(4000),
+                            CreatedDate = new DateTime(2026, 7, 13, 15, 1, 47, 571, DateTimeKind.Utc).AddTicks(7160),
                             Description = "Guests can leave wishes and messages",
                             FeatureCode = "WISHES",
                             FeatureName = "Wishes & Guestbook",
@@ -207,87 +210,6 @@ namespace WeddingInvite.Data.Migrations
                     b.HasIndex("WeddingId");
 
                     b.ToTable("ItineraryItems");
-                });
-
-            modelBuilder.Entity("WeddingInvite.Models.LandingContentItem", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
-
-                    b.Property<string>("ContentKey")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("ContentValue")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("LandingContent");
-                });
-
-            modelBuilder.Entity("WeddingInvite.Models.LandingItem", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
-
-                    b.Property<string>("Body")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("ImageUrl")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<string>("Meta")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("SectionKey")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<int>("SortOrder")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<string>("Title")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("LandingItems");
-                });
-
-            modelBuilder.Entity("WeddingInvite.Models.LandingSection", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
-
-                    b.Property<bool>("IsVisible")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<string>("SectionKey")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<int>("SortOrder")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<string>("Title")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("LandingSections");
                 });
 
             modelBuilder.Entity("WeddingInvite.Models.Package", b =>
@@ -625,7 +547,7 @@ namespace WeddingInvite.Data.Migrations
                         {
                             TemplateId = 1,
                             ComponentPath = "Template1",
-                            CreatedDate = new DateTime(2026, 7, 20, 11, 57, 3, 372, DateTimeKind.Utc).AddTicks(9700),
+                            CreatedDate = new DateTime(2026, 7, 13, 15, 1, 47, 574, DateTimeKind.Utc).AddTicks(4360),
                             Description = "Elegant rose and pink design with top navigation",
                             IsActive = true,
                             IsPremium = false,
@@ -641,7 +563,7 @@ namespace WeddingInvite.Data.Migrations
                         {
                             TemplateId = 2,
                             ComponentPath = "Template2",
-                            CreatedDate = new DateTime(2026, 7, 20, 11, 57, 3, 372, DateTimeKind.Utc).AddTicks(9820),
+                            CreatedDate = new DateTime(2026, 7, 13, 15, 1, 47, 574, DateTimeKind.Utc).AddTicks(4450),
                             Description = "Luxurious yellow and gold single-page design with floating navigation",
                             IsActive = true,
                             IsPremium = true,
@@ -765,10 +687,10 @@ namespace WeddingInvite.Data.Migrations
                         new
                         {
                             UserId = 1,
-                            CreatedDate = new DateTime(2026, 7, 20, 11, 57, 3, 543, DateTimeKind.Utc).AddTicks(5160),
+                            CreatedDate = new DateTime(2026, 7, 13, 15, 1, 47, 745, DateTimeKind.Utc).AddTicks(9800),
                             Email = "admin@wedding-cms.com",
                             IsActive = true,
-                            PasswordHash = "$2a$11$fhtovvfQsvQ0h6xkl/L8gurGK94RdeuQRDtOz8PAIfjFT2/tuvEvm",
+                            PasswordHash = "$2a$11$bRzRU0a73auFvRZ2NlIB3eAvYswewr4D96kGrwDLkdxjrPRaUC1Va",
                             Role = "SUPER_ADMIN",
                             Tier = "FREE"
                         });
@@ -904,7 +826,7 @@ namespace WeddingInvite.Data.Migrations
 
                     b.Property<string>("ConfigValue")
                         .IsRequired()
-                        .HasMaxLength(4000)
+                        .HasMaxLength(1000)
                         .HasColumnType("TEXT");
 
                     b.Property<DateTime>("UpdatedDate")

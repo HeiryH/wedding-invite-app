@@ -30,6 +30,9 @@ namespace WeddingInvite.Data
         public DbSet<Table> Tables { get; set; } = null!;
         public DbSet<ItineraryItem> ItineraryItems { get; set; } = null!;
         public DbSet<PasswordResetToken> PasswordResetTokens { get; set; } = null!;
+        public DbSet<LandingContentItem> LandingContent { get; set; } = null!;
+        public DbSet<LandingSection> LandingSections { get; set; } = null!;
+        public DbSet<LandingItem> LandingItems { get; set; } = null!;
 
 
         // Configure database schema
@@ -394,6 +397,21 @@ namespace WeddingInvite.Data
                     Tier = "PREMIUM",
                     SortOrder = 6,
                     CreatedDate = new DateTime(2026, 5, 19, 0, 0, 0, DateTimeKind.Utc)
+                },
+                new Template
+                {
+                    TemplateId = 7,
+                    TemplateName = "Roman Garden",
+                    TemplateCode = "roman-garden",
+                    Description = "Sepia line-engraved Roman garden with parallax scenes, a sideways-panning ceremony colonnade, and an expanding RSVP seating chart",
+                    PrimaryColor = "#3D3833",
+                    SecondaryColor = "#C9BFAE",
+                    ComponentPath = "Template7",
+                    IsActive = true,
+                    IsPremium = true,
+                    Tier = "PRO",
+                    SortOrder = 7,
+                    CreatedDate = new DateTime(2026, 7, 13, 0, 0, 0, DateTimeKind.Utc)
                 }
             );
 
@@ -568,9 +586,13 @@ namespace WeddingInvite.Data
                     .IsRequired()
                     .HasMaxLength(100);
 
+                // 4000 so a serialized stage layout blob (t7.layout.*) fits. No migration accompanies
+                // this: SQLite stores every string column as TEXT regardless of length, so the store
+                // model is unchanged. It's enforced by TemplateConfigPolicy.Validate, and the cap will
+                // start mattering at the DB level if we move to Postgres.
                 entity.Property(e => e.ConfigValue)
                     .IsRequired()
-                    .HasMaxLength(1000);
+                    .HasMaxLength(4000);
 
                 entity.HasIndex(e => new { e.WeddingId, e.ConfigKey })
                     .IsUnique();
