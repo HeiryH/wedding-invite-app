@@ -1,12 +1,12 @@
-# Convive Design System
+# Admin Design System
 
-Reference document for the **Convive** design system applied to this project. All token values come from the zip at `~/Documents/e-Invite Saas/Convive Design System.zip`.
+Reference document for the **admin UI** design system applied to this project (the token set used by the couple/host/super-admin dashboards). The public marketing landing uses a separate theme — see the `.mkt` scope in `app/globals.css`.
 
 ---
 
 ## Brand & voice
 
-**Convive** — "one who feasts together." A SaaS platform for digital invitations and event management.
+A SaaS platform for digital invitations and event management. The consumer-facing brand is **The Invit_e by ODDSTUDIO**.
 
 **Personality:** Warm, gracious, quietly elegant — a thoughtful host, never a loud salesperson.
 
