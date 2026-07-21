@@ -29,7 +29,11 @@ services:
         - BACKEND_URL=http://backend:5000
     restart: unless-stopped
     ports:
-      - "3000:3000"
+      # Localhost-only — nginx reverse-proxies to this from the host, and Docker's own
+      # iptables rules bypass ufw for published ports, so binding "3000:3000" to all
+      # interfaces would make the app directly reachable over plain HTTP, skipping nginx
+      # and TLS entirely regardless of the firewall.
+      - "127.0.0.1:3000:3000"
     environment:
       - NEXT_PUBLIC_API_URL=/api
       - BACKEND_URL=http://backend:5000
