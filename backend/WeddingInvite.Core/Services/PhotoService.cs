@@ -14,7 +14,7 @@ namespace WeddingInvite.Core.Services
         private readonly IWeddingFeatureRepository _weddingFeatureRepo;
         private readonly ITemplateConfigService _templateConfigService;
         private const long MaxFileSizeBytes = 10 * 1024 * 1024; // 10MB
-        private static readonly string[] AllowedExtensions = { ".jpg", ".jpeg", ".png", ".gif" };
+        private static readonly string[] AllowedExtensions = { ".jpg", ".jpeg", ".png", ".gif", ".webp" };
 
         public PhotoService(
             IPhotoRepository photoRepo,
@@ -103,8 +103,9 @@ namespace WeddingInvite.Core.Services
             if (!FileSignatureValidator.IsValidImage(file, extension))
                 throw new ArgumentException("File content does not match a valid image format");
 
-            // 5. For couple uploads: upsert (delete existing slot if any)
-            if (isCouple && uploadDto.TemplateSlot.HasValue)
+            // 5. For couple uploads: upsert (delete existing slot if any). LayerImage is exempt — a
+            //    stage can hold many, so those uploads always insert a fresh row.
+            if (isCouple && uploadDto.TemplateSlot.HasValue && uploadDto.TemplateSlot.Value != TemplateSlots.LayerImage)
             {
                 var existing = await _photoRepo.GetByTemplateSlotAsync(weddingId, uploadDto.TemplateSlot.Value);
                 if (existing != null)

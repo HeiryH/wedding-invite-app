@@ -16,6 +16,8 @@ namespace WeddingInvite.Core.Utilities
             [".jpeg"] = new[] { (0, new byte[] { 0xFF, 0xD8, 0xFF }) },
             [".png"]  = new[] { (0, new byte[] { 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A }) },
             [".gif"]  = new[] { (0, "GIF87a"u8.ToArray()), (0, "GIF89a"u8.ToArray()) },
+            // WebP is a RIFF container; the "WEBP" fourCC at offset 8 is what distinguishes it from WAV.
+            [".webp"] = new[] { (8, "WEBP"u8.ToArray()) },
         };
 
         private static readonly Dictionary<string, (int Offset, byte[] Magic)[]> AudioSignatures = new()

@@ -55,6 +55,10 @@ namespace WeddingInvite.Models
         // Template-wide background slots (13+)
         public const int Template5GlobalBg = 13;
 
-        public static readonly int[] All = [GroomPortrait, BridePortrait, Extra1, Extra2, Extra3, WelcomeBg, CeremonyBg, CelebrationBg, Template5GlobalBg];
+        // Adjust-panel layer images (20). Unlike every other couple slot, this one is NOT upsert-by-
+        // slot: a stage can hold many layer images, so uploads always insert a new row.
+        public const int LayerImage = 20;
+
+        public static readonly int[] All = [GroomPortrait, BridePortrait, Extra1, Extra2, Extra3, WelcomeBg, CeremonyBg, CelebrationBg, Template5GlobalBg, LayerImage];
     }
 }

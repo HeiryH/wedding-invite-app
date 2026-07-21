@@ -3,6 +3,6 @@ namespace WeddingInvite.Core.Services
     public interface ITemplateConfigService
     {
         Task<Dictionary<string, string>> GetConfigAsync(int weddingId);
-        Task SaveConfigAsync(int weddingId, Dictionary<string, string> config);
+        Task SaveConfigAsync(int weddingId, Dictionary<string, string> config, string role, string? tier);
     }
 }

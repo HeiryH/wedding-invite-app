@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using WeddingInvite.Core.Config;
 using WeddingInvite.Core.Services;
 
 namespace WeddingInvite.API.Controllers
@@ -39,7 +40,18 @@ namespace WeddingInvite.API.Controllers
             if (!await _authService.CanAccessWeddingAsync(email, weddingId))
                 return Forbid();
 
-            await _configService.SaveConfigAsync(weddingId, config);
+            var error = TemplateConfigPolicy.Validate(config);
+            if (error != null)
+                return BadRequest(new { message = error });
+
+            var role = User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value
+                       ?? User.FindFirst("role")?.Value
+                       ?? string.Empty;
+
+            // Tier gates the stage-layout (t*.layout.*) keys — the Adjust panel is PRO-only.
+            var tier = User.FindFirst("Tier")?.Value;
+
+            await _configService.SaveConfigAsync(weddingId, config, role, tier);
             return NoContent();
         }
     }
