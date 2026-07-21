@@ -9,13 +9,15 @@ import Template3 from '@/components/templates/Template3';
 import Template4 from '@/components/templates/Template4';
 import Template5 from '@/components/templates/Template5';
 import Template6 from '@/components/templates/Template6';
+import Template7 from '@/components/templates/Template7';
 
 const DUMMY: Wedding = {
   weddingId: 0,
   coupleName: 'preview',
   brideName: 'Aisha',
   groomName: 'Adam',
-  weddingDate: '2025-06-15T11:00:00Z',
+  // Must stay in the future, or every thumbnail renders with its countdown already expired.
+  weddingDate: '2027-06-15T11:00:00Z',
   venue: 'Grand Ballroom',
   venueAddress: 'Kuala Lumpur, Malaysia',
   totalGuests: 0,
@@ -62,6 +64,7 @@ export default function TemplatePreviewPage() {
       {code === 'minimal-noir'        && <Template4 {...PROPS} />}
       {code === 'dreaming-floral-sky' && <Template5 {...PROPS} />}
       {code === 'fairy-garden'        && <Template6 {...PROPS} />}
+      {code === 'roman-garden'        && <Template7 {...PROPS} />}
     </div>
   );
 }

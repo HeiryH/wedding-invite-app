@@ -1,12 +1,13 @@
 'use client';
 
-import { Wedding, Guest, Wish, Photo, ItineraryItem } from '@/lib/api';
+import { Wedding, Guest, Wish, Photo, ItineraryItem, SeatingTable } from '@/lib/api';
 import Template1 from './Template1';
 import Template2 from './Template2';
 import Template3 from './Template3';
 import Template4 from './Template4';
 import Template5 from './Template5';
 import Template6 from './Template6';
+import Template7 from './Template7';
 
 interface TemplateWrapperProps {
   wedding: Wedding;
@@ -20,6 +21,11 @@ interface TemplateWrapperProps {
   coupleMedia?: Photo[];
   customConfig?: Record<string, string>;
   itinerary?: ItineraryItem[];
+  // Template 7 needs these to render its seating step and its Adjust panel. They were never
+  // forwarded, which is why the preview iframe showed a seating-less RSVP.
+  seatingEnabled?: boolean;
+  tables?: SeatingTable[];
+  editor?: unknown;
 }
 
 export default function TemplateWrapper({
@@ -34,6 +40,9 @@ export default function TemplateWrapper({
   coupleMedia,
   customConfig,
   itinerary,
+  seatingEnabled,
+  tables,
+  editor,
 }: TemplateWrapperProps) {
   // Map templateId to component
   const getTemplate = () => {
@@ -50,12 +59,16 @@ export default function TemplateWrapper({
         return Template5;
       case 6:
         return Template6;
+      case 7:
+        return Template7;
       default:
         return Template1; // Fallback to Template1
     }
   };
 
-  const TemplateComponent = getTemplate();
+  // The seven templates take overlapping but not identical prop sets, so the union isn't
+  // directly callable. Each ignores the props it doesn't declare.
+  const TemplateComponent = getTemplate() as unknown as React.ComponentType<TemplateWrapperProps>;
 
   return (
     <TemplateComponent
@@ -70,6 +83,9 @@ export default function TemplateWrapper({
       coupleMedia={coupleMedia}
       customConfig={customConfig}
       itinerary={itinerary}
+      seatingEnabled={seatingEnabled}
+      tables={tables}
+      editor={editor}
     />
   );
 }

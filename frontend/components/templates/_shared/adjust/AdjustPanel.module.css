@@ -1,0 +1,258 @@
+/* Docked column filling the right rail of the customize page (was a floating overlay inside the
+   preview iframe). It keeps its own dark "workbench" theme so it reads as a tool, distinct from
+   the invitation being edited. */
+.panel {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: rgba(28, 24, 18, 0.98);
+  color: #ECE2D1;
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-size: 14px;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 15px 11px;
+  user-select: none;
+  border-bottom: 1px solid #3A3125;
+  flex-shrink: 0;
+}
+
+.title {
+  font-size: 13px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: #CD9A6A;
+}
+
+.close {
+  background: none;
+  border: none;
+  color: #ECE2D1;
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px 15px 16px;
+}
+
+.label {
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #8A7A63;
+  margin: 12px 0 6px;
+}
+.label:first-child { margin-top: 0; }
+
+.tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.tab {
+  padding: 5px 9px;
+  border-radius: 7px;
+  border: 1px solid #4A4034;
+  background: #151109;
+  color: #A99A83;
+  font-family: inherit;
+  font-size: 12.5px;
+  cursor: pointer;
+}
+.tabActive {
+  border-color: #C98A54;
+  background: #4A3821;
+  color: #F0DCC0;
+}
+
+.layers {
+  max-height: 180px;
+  overflow-y: auto;
+  background: #120E08;
+  border: 1px solid #3A3125;
+  border-radius: 9px;
+  padding: 5px;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 6px;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  margin-bottom: 2px;
+}
+.rowActive {
+  background: #4A3821;
+  border-color: #C98A54;
+}
+
+.grip {
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+  color: #7D6E59;
+  padding: 0 2px;
+  min-width: 12px;
+  text-align: center;
+}
+
+.caret {
+  background: none;
+  border: none;
+  color: #A99A83;
+  cursor: pointer;
+  font-size: 11px;
+  padding: 0 2px;
+  min-width: 12px;
+}
+
+.rowDragging {
+  opacity: 0.4;
+}
+
+.bgRow {
+  color: #A99A83;
+  font-style: italic;
+}
+
+.name {
+  flex: 1;
+  font-size: 14px;
+  cursor: pointer;
+  color: #ECE2D1;
+  user-select: none;
+  text-align: left;
+  background: none;
+  border: none;
+  font-family: inherit;
+}
+.nameHidden {
+  color: #6F6252;
+  text-decoration: line-through;
+}
+
+.iconBtn {
+  background: none;
+  border: none;
+  color: #C98A54;
+  font-size: 13px;
+  line-height: 1;
+  padding: 2px 4px;
+  cursor: pointer;
+}
+.iconBtnOff { color: #6F6252; }
+.iconBtnDanger { color: #B06A4E; }
+
+.control {
+  display: grid;
+  grid-template-columns: 54px 1fr 54px;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 7px;
+}
+
+.control span {
+  font-size: 13px;
+  color: #BCAE98;
+}
+
+.control input[type='range'] {
+  accent-color: #C98A54;
+  width: 100%;
+}
+
+.num {
+  width: 100%;
+  padding: 3px 5px;
+  background: #151109;
+  color: #E6D8C0;
+  border: 1px solid #3A3125;
+  border-radius: 5px;
+  font-family: 'SF Mono', ui-monospace, monospace;
+  font-size: 11px;
+  text-align: right;
+}
+
+.select {
+  width: 100%;
+  padding: 6px 7px;
+  background: #151109;
+  color: #ECE2D1;
+  border: 1px solid #4A4034;
+  border-radius: 8px;
+  font-family: inherit;
+  font-size: 14px;
+}
+
+.btnRow {
+  display: flex;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.btn {
+  flex: 1;
+  padding: 7px 0;
+  background: #2D2213;
+  border: 1px solid #6D5433;
+  color: #E6C79C;
+  border-radius: 7px;
+  font-family: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+.btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.btnGhost {
+  background: #3A3226;
+  border-color: #574A39;
+  color: #C3B49C;
+}
+
+.chain {
+  width: 100%;
+  padding: 6px 0;
+  margin-bottom: 7px;
+  border-radius: 7px;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 12px;
+  letter-spacing: 0.02em;
+  background: #2D2213;
+  border: 1px solid #6D5433;
+  color: #E6C79C;
+}
+.chainOff {
+  background: #3A3226;
+  border-color: #574A39;
+  color: #C3B49C;
+}
+
+.divider {
+  border-top: 1px solid #3A3125;
+  margin-top: 12px;
+  padding-top: 10px;
+}
+
+.note {
+  font-size: 12px;
+  color: #8FAE7A;
+  text-align: center;
+  min-height: 15px;
+  margin-top: 5px;
+}

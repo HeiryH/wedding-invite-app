@@ -3,6 +3,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Icon } from '@/components/ui/Icon';
 import type { Wedding } from '@/lib/api';
+import { REVEAL_VPAD } from '@/components/templates/_shared/types';
 
 export type Device = 'mobile' | 'tablet' | 'desktop';
 export type EditorMode = 'expanded' | 'collapsed' | 'hidden';
@@ -40,7 +41,13 @@ interface PreviewPanelProps {
   editorMode: EditorMode;
   onShowEditor: () => void;
   wedding: Wedding | null;
+  /** "Reveal off-screen" (PRO Adjust): widen the canvas so art cropped by the device edge spills
+   *  into view around the (dashed-framed) device column instead of being clipped. */
+  revealOverflow?: boolean;
 }
+
+/** How much wider than the device the reveal canvas is (extra room = bleed you can see). */
+const REVEAL_FACTOR = 2.2;
 
 const numInputStyle: React.CSSProperties = {
   width: 54, padding: '3px 6px',
@@ -56,6 +63,7 @@ const numInputStyle: React.CSSProperties = {
 export function PreviewPanel({
   iframeRef, device, setDevice, manualZoom, setManualZoom,
   activeBlock, onSelectBlock, sectionOrder, editorMode, onShowEditor, wedding,
+  revealOverflow = false,
 }: PreviewPanelProps) {
   const stageRef = useRef<HTMLDivElement>(null);
   const [autoZoom, setAutoZoom] = useState(80);
@@ -66,6 +74,12 @@ export function PreviewPanel({
   const zoom = manualZoom ?? autoZoom;
   const defaultW = DEVICE_DEFAULT_W[device];
   const defaultH = DEVICE_DEFAULT_H[device];
+
+  // Reveal mode enlarges the canvas around a pinned device-sized stage so cropped art spills into
+  // the extra room on all four sides. Width uses REVEAL_FACTOR; height adds REVEAL_VPAD top+bottom
+  // (kept in sync with Stage's margin-block).
+  const iframeW = revealOverflow ? Math.round(DEVICE_DIMS[device].w * REVEAL_FACTOR) : customW;
+  const iframeH = revealOverflow ? Math.round(DEVICE_DIMS[device].h * (1 + 2 * REVEAL_VPAD)) : customH;
 
   // When device preset changes, reset custom dims to device defaults
   useEffect(() => {
@@ -81,8 +95,8 @@ export function PreviewPanel({
     const compute = () => {
       const rect = el.getBoundingClientRect();
       const pad = 80;
-      const fitW = (rect.width  - pad) / customW;
-      const fitH = (rect.height - pad) / customH;
+      const fitW = (rect.width  - pad) / iframeW;
+      const fitH = (rect.height - pad) / iframeH;
       const auto = Math.min(fitW, fitH, 1);
       if (auto > 0.05) setAutoZoom(Math.round(auto * 100));
     };
@@ -90,7 +104,7 @@ export function PreviewPanel({
     const ro = new ResizeObserver(compute);
     ro.observe(el);
     return () => ro.disconnect();
-  }, [customW, customH, device, editorMode]);
+  }, [iframeW, iframeH, device, editorMode]);
 
   const changeZoom = (delta: number) => {
     const base = manualZoom ?? autoZoom;
@@ -259,13 +273,14 @@ export function PreviewPanel({
         flex: 1, display: 'grid', placeItems: 'center',
         padding: '72px 56px 80px', overflow: 'hidden', minHeight: 0, minWidth: 0,
       }}>
-        {/* Clip box sized exactly to the scaled iframe — no bezel, no padding */}
+        {/* Clip box sized exactly to the scaled iframe — no bezel, no padding. In reveal mode it
+            grows to the widened canvas; the per-stage dashed frame marks the real device bounds. */}
         <div style={{
-          width: customW * zoom / 100,
-          height: customH * zoom / 100,
+          width: iframeW * zoom / 100,
+          height: iframeH * zoom / 100,
           overflow: 'hidden',
-          background: '#fff',
-          borderRadius: DEVICE_RADIUS[device],
+          background: revealOverflow ? 'var(--surface-sunken)' : '#fff',
+          borderRadius: revealOverflow ? 8 : DEVICE_RADIUS[device],
           boxShadow: '0 32px 80px -16px rgba(26,23,24,0.22), 0 12px 24px -8px rgba(26,23,24,0.10)',
           flexShrink: 0,
         }}>
@@ -274,8 +289,8 @@ export function PreviewPanel({
             src="/couple-admin/preview"
             title="Invitation Preview"
             style={{
-              width: customW,
-              height: customH,
+              width: iframeW,
+              height: iframeH,
               border: 'none',
               display: 'block',
               transform: `scale(${zoom / 100})`,

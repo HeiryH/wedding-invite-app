@@ -1,0 +1,82 @@
+/* Shared entrance-reveal animation, data-attribute driven so both Stage layer boxes
+   (`.layerInner`) and Template 7's hero sub-elements can reuse one implementation without
+   CSS-module duplication.
+
+   An element opts in with `data-sl-anim="<type>"`. It sits in its initial (hidden/offset) state
+   and transitions to rest when an ancestor gains `data-seen="true"` — set per stage by
+   `useStageReveal` (T7) or hardcoded by `SectionOverlay` (T5 decorative). Stagger comes from
+   `--sl-delay` (from the layer's `order`); duration from `--sl-dur`; target opacity from
+   `--sl-opacity`. `scroll-fade` is the exception: continuous opacity from `--sl-fade` (written by
+   useParallax), not a one-shot entrance. */
+
+[data-sl-anim] {
+  opacity: 0;
+}
+
+/* Initial offset per type. */
+[data-sl-anim='rise'],
+[data-sl-anim='slide-up']    { transform: translateY(42px); }
+[data-sl-anim='slide-down']  { transform: translateY(-42px); }
+[data-sl-anim='slide-left']  { transform: translateX(42px); }
+[data-sl-anim='slide-right'] { transform: translateX(-42px); }
+[data-sl-anim='zoom-in']     { transform: scale(0.82); }
+[data-sl-anim='zoom-out']    { transform: scale(1.16); }
+[data-sl-anim='fade']        { transform: none; }
+[data-sl-anim='none']        { opacity: 1; transform: none; }
+
+/* Revealed (rest) state — one-shot entrance. */
+[data-seen='true'] [data-sl-anim] {
+  opacity: var(--sl-opacity, 1);
+  transform: none;
+  transition:
+    opacity var(--sl-dur, 1s) ease var(--sl-delay, 0s),
+    transform var(--sl-dur, 1.05s) cubic-bezier(0.22, 0.61, 0.36, 1) var(--sl-delay, 0s);
+}
+
+/* Continuous scroll-linked fade — opacity tracks scroll position (`--sl-fade`), no entrance.
+   Placed after the one-shot rules so it wins at equal specificity. */
+[data-sl-anim='scroll-fade'],
+[data-seen='true'] [data-sl-anim='scroll-fade'] {
+  opacity: calc(var(--sl-opacity, 1) * var(--sl-fade, 1));
+  transform: none;
+  transition: opacity 0.12s linear;
+}
+
+/* Scroll-scrubbed exit — a separate element whose transform/opacity is driven continuously by
+   `--sl-out` (0 = in view, 1 = scrolled out the top; written by useParallax). Reversible: scrolling
+   back down runs it in reverse. The short transition just smooths the per-frame steps. */
+[data-sl-out] {
+  transition: opacity 0.1s linear, transform 0.1s linear;
+}
+[data-sl-out='fade-out']        { opacity: calc(1 - var(--sl-out, 0)); }
+[data-sl-out='slide-out-up']    { transform: translateY(calc(var(--sl-out, 0) * -60%)); }
+[data-sl-out='slide-out-down']  { transform: translateY(calc(var(--sl-out, 0) * 60%)); }
+[data-sl-out='slide-out-left']  { transform: translateX(calc(var(--sl-out, 0) * -60%)); }
+[data-sl-out='slide-out-right'] { transform: translateX(calc(var(--sl-out, 0) * 60%)); }
+[data-sl-out='zoom-out'] {
+  transform: scale(calc(1 - var(--sl-out, 0) * 0.4));
+  opacity: calc(1 - var(--sl-out, 0) * 0.6);
+}
+[data-sl-out='zoom-in'] {
+  transform: scale(calc(1 + var(--sl-out, 0) * 0.5));
+  opacity: calc(1 - var(--sl-out, 0));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-sl-anim],
+  [data-seen='true'] [data-sl-anim] {
+    opacity: var(--sl-opacity, 1);
+    transform: none;
+    transition: none;
+  }
+  [data-sl-anim='scroll-fade'],
+  [data-seen='true'] [data-sl-anim='scroll-fade'] {
+    opacity: var(--sl-opacity, 1);
+  }
+  /* No scroll-out motion under reduced-motion. */
+  [data-sl-out] {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+}

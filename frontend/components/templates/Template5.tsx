@@ -5,7 +5,12 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { Wedding, Wish, Photo, SeatingTable, ItineraryItem } from '@/lib/api';
+import { calendarLinks } from '@/lib/templateUtils';
 import SeatingStep from './SeatingStep';
+import type { Breakpoint, EditorHandle } from '@/components/templates/_shared/types';
+import { useBreakpoint } from '@/components/templates/_shared/hooks/useBreakpoint';
+import SectionOverlay from './Template5-dreamingfloral/SectionOverlay';
+import { useAnchors } from './Template5-dreamingfloral/useAnchors';
 import styles from './Template5.module.css';
 
 gsap.registerPlugin(ScrollTrigger);
@@ -26,6 +31,8 @@ interface Template5Props {
   coupleMedia?: Photo[];
   customConfig?: Record<string, string>;
   itinerary?: ItineraryItem[];
+  /** Set only by the customize preview iframe — drives the decorative-layer overlay editing. */
+  editor?: EditorHandle;
 }
 
 // ── RSVP Modal ────────────────────────────────────────────────────────────────
@@ -417,21 +424,6 @@ function useCountdown(target: Date) {
   return ct;
 }
 
-// ── Calendar link generator ───────────────────────────────────────────────────
-
-function calendarLinks(wedding: Wedding) {
-  const start = new Date(wedding.weddingDate);
-  const end   = new Date(start.getTime() + 4 * 3600000);
-  const fmt   = (d: Date) => d.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
-  const title = encodeURIComponent(`${wedding.brideName} & ${wedding.groomName} Wedding`);
-  const loc   = encodeURIComponent(wedding.venueAddress || wedding.venue || '');
-  return {
-    google:  `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&dates=${fmt(start)}/${fmt(end)}&location=${loc}`,
-    outlook: `https://outlook.live.com/calendar/0/deeplink/compose?subject=${title}&startdt=${start.toISOString()}&enddt=${end.toISOString()}&location=${loc}`,
-    ical:    `data:text/calendar;charset=utf8,BEGIN:VCALENDAR%0AVERSION:2.0%0ABEGIN:VEVENT%0ADTSTART:${fmt(start)}%0ADTEND:${fmt(end)}%0ASUMMARY:${title}%0ALOCATION:${loc}%0AEND:VEVENT%0AEND:VCALENDAR`,
-  };
-}
-
 // ── Shadow preset → CSS ───────────────────────────────────────────────────────
 
 function shadowOf(preset: string): string {
@@ -456,8 +448,15 @@ export default function Template5({
   tables = [],
   customConfig,
   itinerary = [],
+  editor,
 }: Template5Props) {
   const t = (key: string, fallback: string) => customConfig?.[key] || fallback;
+
+  // Decorative-overlay breakpoint: pinned by the Adjust panel while editing, else responsive.
+  const overlayBreakpoint: Breakpoint = useBreakpoint(editor?.enabled ? editor.breakpoint : undefined);
+  const overlayProps = { breakpoint: overlayBreakpoint, config: customConfig, editor };
+  // `a(stageId, elementId, baseStyle?)` merges an anchor nudge onto an existing DOM element.
+  const a = useAnchors(customConfig, overlayBreakpoint, editor);
 
   const brideFirst = t('general.brideFirst', 'true') !== 'false';
   const firstName  = brideFirst ? wedding.brideName  : wedding.groomName;
@@ -885,6 +884,7 @@ const NAV_EMOJIS: Record<string, string> = {
 
       {/* ── Section 1: Welcome ───────────────────────────────────────── */}
       <section ref={welcomeRef} id="welcome" className={styles.sectionWelcome}>
+        <SectionOverlay stageId="welcome" {...overlayProps} />
         <motion.p
           initial={{ opacity: 0, letterSpacing: '0.1em' }}
           animate={{ opacity: 1, letterSpacing: '0.25em' }}
@@ -1153,17 +1153,18 @@ const NAV_EMOJIS: Record<string, string> = {
 
       {/* ── Countdown Timer ──────────────────────────────────────────── */}
       <section className={styles.countdownSection}>
-        <p className={styles.countdownLabel} style={{ color: cdLabelColor || undefined }}>
+        <SectionOverlay stageId="countdown" {...overlayProps} />
+        <p className={styles.countdownLabel} style={a('countdown', 'label', { color: cdLabelColor || undefined })}>
           {t('invite.countdown_prefix', 'Counting down to our special day')}
         </p>
-        <div className={styles.countdownGrid}>
+        <div className={styles.countdownGrid} style={a('countdown', 'grid')}>
           {[
-            { val: countdown.days,    label: 'Days' },
-            { val: countdown.hours,   label: 'Hours' },
-            { val: countdown.minutes, label: 'Min' },
-            { val: countdown.seconds, label: 'Sec' },
-          ].map(({ val, label }) => (
-            <div key={label} className={styles.countdownBlock}>
+            { val: countdown.days,    label: 'Days',  anchor: 'blk-days' },
+            { val: countdown.hours,   label: 'Hours', anchor: 'blk-hours' },
+            { val: countdown.minutes, label: 'Min',   anchor: 'blk-min' },
+            { val: countdown.seconds, label: 'Sec',   anchor: 'blk-sec' },
+          ].map(({ val, label, anchor }) => (
+            <div key={label} className={styles.countdownBlock} style={a('countdown', anchor)}>
               <span className={styles.countdownNumber} style={{ color: cdNumColor || undefined }}>
                 {String(val).padStart(2, '0')}
               </span>
@@ -1175,19 +1176,20 @@ const NAV_EMOJIS: Record<string, string> = {
 
       {/* ── Section 2: Ceremony ──────────────────────────────────────── */}
       <section ref={ceremonyRef} id="ceremony" className={styles.sectionCeremony}>
-        <p className={styles.ceremonyTitle} style={{ color: cerTitleColor || undefined, textShadow: cerTitleShadow || undefined }}>{t('walimah.title', 'Walimatul Urus')}</p>
+        <SectionOverlay stageId="ceremony" {...overlayProps} />
+        <p className={styles.ceremonyTitle} style={a('ceremony', 'title', { color: cerTitleColor || undefined, textShadow: cerTitleShadow || undefined })}>{t('walimah.title', 'Walimatul Urus')}</p>
 
         {/* Glassmorphism card: walimah body + couple names */}
-        <div className={styles.ceremonyCard}>
+        <div className={styles.ceremonyCard} style={a('ceremony', 'card')}>
           {customConfig?.['walimah.body'] && (
             <div
               className={styles.walimahBody}
-              style={{ color: walimahBodyColor || undefined }}
+              style={a('ceremony', 'body', { color: walimahBodyColor || undefined })}
               dangerouslySetInnerHTML={{ __html: customConfig['walimah.body'] }}
             />
           )}
           {(wedding.brideName || wedding.groomName) && (
-            <p className={styles.ceremonyCoupleNames} style={{ color: cerNamesColor || undefined, textShadow: cerNamesShadow || undefined }}>
+            <p className={styles.ceremonyCoupleNames} style={a('ceremony', 'names', { color: cerNamesColor || undefined, textShadow: cerNamesShadow || undefined })}>
               {firstName} <br /> &amp; <br /> {secondName}
             </p>
           )}
@@ -1374,8 +1376,9 @@ const NAV_EMOJIS: Record<string, string> = {
 
       {/* ── Section 5: Wishes ────────────────────────────────────────── */}
       <section ref={wishesRef} id="wishes" className={styles.sectionWishes}>
+        <SectionOverlay stageId="wishes" {...overlayProps} />
         <div className={styles.sectionContainer}>
-          <div className={styles.sectionHeader}>
+          <div className={styles.sectionHeader} style={a('wishes', 'header')}>
             <h2 className={styles.sectionHeading} style={{ color: secHeadColor || undefined, textShadow: secHeadShadow || undefined }}>{t('wish.title', 'Wishes & Blessings')}</h2>
             <p className={styles.sectionSubheading} style={{ color: wishPromptColor || undefined }}>
               {t('wish.prompt', 'Leave a heartfelt message for the happy couple')}
@@ -1477,8 +1480,9 @@ const NAV_EMOJIS: Record<string, string> = {
       {/* ── Section 4: Photos ────────────────────────────────────────── */}
       {photoBoothEnabled && (
         <section ref={photosRef} id="photos" className={styles.sectionPhotos}>
+          <SectionOverlay stageId="photos" {...overlayProps} />
           <div className={styles.sectionContainer}>
-            <div className={styles.sectionHeader}>
+            <div className={styles.sectionHeader} style={a('photos', 'header')}>
               <h2 className={styles.sectionHeading} style={{ color: secHeadColor || undefined, textShadow: secHeadShadow || undefined }}>Photo Booth</h2>
               <p className={styles.sectionSubheading}>Share your favourite moments 📸</p>
             </div>

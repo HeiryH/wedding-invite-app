@@ -1,0 +1,88 @@
+/* A pinned horizontal "room": the tall outer wrapper provides vertical scroll distance, the sticky
+   inner stays on screen while a passive scroll listener translates the track sideways (--rail-x)
+   and drifts the shared background slower (--rail-bg-x) for parallax. */
+.rail {
+  position: relative;
+  width: 100%;
+}
+
+/* Zero-size scroll targets carrying each panel's stage id, at the vertical offset that pans the
+   pin to that panel. */
+.anchor {
+  position: absolute;
+  left: 0;
+  width: 1px;
+  height: 1px;
+  pointer-events: none;
+}
+
+.sticky {
+  position: sticky;
+  top: 0;
+  height: 100svh;
+  overflow: hidden;
+  isolation: isolate;
+  background: #e8e0d2;
+}
+@supports not (height: 100svh) {
+  .sticky { height: 100vh; }
+}
+
+/* Shared background — wider than the viewport so its parallax drift never uncovers an edge. The
+   wrapper owns only the drift; the img inside owns fit/position/scale (adjustable in the panel). */
+.bg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 150vw;
+  height: 100%;
+  transform: translateX(var(--rail-bg-x, 0));
+  will-change: transform;
+  z-index: 0;
+}
+.bgImg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  user-select: none;
+}
+
+/* Shared frame art plane — spans the full row and pans in lockstep with the track. Sits below the
+   track so the deco art (lower z) stays behind each beat's slot content (higher z), matching the
+   in-stage stacking order. Art is inert; the layers themselves carry no pointer events. */
+.plane {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  transform: translateX(var(--rail-x, 0));
+  will-change: transform;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.track {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  display: flex;
+  transform: translateX(var(--rail-x, 0));
+  will-change: transform;
+  z-index: 2;
+}
+
+.panel {
+  position: relative;
+  flex: 0 0 100vw;
+  height: 100%;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bg,
+  .plane,
+  .track {
+    transform: none;
+  }
+}

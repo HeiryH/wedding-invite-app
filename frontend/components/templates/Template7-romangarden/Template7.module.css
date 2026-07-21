@@ -1,0 +1,678 @@
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=EB+Garamond:ital,wght@0,400;0,500;1,400&display=swap');
+
+/* Layer geometry lives in data/stages.ts, not here — this file only styles what a layer
+   *contains*. If you find yourself writing a `top:` or `left:` for a piece of art, it belongs
+   in the stage data instead, where the Adjust panel can reach it. */
+
+/* ── Tokens ──────────────────────────────────────────────────────────────── */
+.wrapper {
+  --t7-ink:        #3d3833;
+  --t7-ink-soft:   #6f675c;
+  --t7-ink-faint:  #9b9284;
+  --t7-stone:      #c9bfae;
+  --t7-parchment:  #f4f1ea;
+  --t7-cream:      #efebe1;
+  --t7-rule:       rgba(61, 56, 51, 0.28);
+
+  --t7-display: 'Cinzel', serif;              /* Roman inscriptional caps */
+  --t7-serif:   'Cormorant Garamond', serif;
+  --t7-body:    'EB Garamond', serif;
+
+  position: relative;
+  width: 100%;
+  overflow-x: clip; /* wide props must never widen the page */
+  background: var(--t7-parchment);
+  color: var(--t7-ink);
+  font-family: var(--t7-body);
+}
+
+/* Ink tint + paper grain over the whole template. The art is baked monochrome sepia, so one
+   multiply pass re-tones every stage at once. Fixed, not absolute: the stages are full-height
+   and the overlay has to sit on whichever one is currently on screen. */
+.tint,
+.grain {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+}
+.tint {
+  mix-blend-mode: multiply;
+  opacity: 0.16;
+  z-index: 3;
+}
+.grain {
+  z-index: 4;
+  opacity: 0.05;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* ── Plaque: the signature dark inscription tablet ───────────────────────── */
+.plaque {
+  display: inline-block;
+  padding: 0.55rem 1.6rem;
+  background: var(--t7-ink);
+  color: var(--t7-cream);
+  font-family: var(--t7-display);
+  font-size: clamp(0.66rem, 1.5cqi, 0.9rem);
+  font-weight: 500;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  border: 1px solid var(--t7-ink);
+  box-shadow: inset 0 0 0 1px var(--t7-cream), inset 0 0 0 2px var(--t7-ink);
+  white-space: nowrap;
+  text-decoration: none;
+}
+.plaqueBtn {
+  cursor: pointer;
+  transition: background 0.25s ease, color 0.25s ease;
+}
+.plaqueBtn:hover:not(:disabled) {
+  background: var(--t7-cream);
+  color: var(--t7-ink);
+}
+.plaqueBtn:disabled { opacity: 0.55; cursor: default; }
+
+/* Thin double rule + fleuron, used between blocks */
+.fleuron {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.85rem;
+  margin: 0.7rem 0;
+  color: var(--t7-ink-faint);
+  font-size: 0.8rem;
+}
+.fleuron::before,
+.fleuron::after {
+  content: '';
+  height: 1px;
+  width: clamp(1.5rem, 6cqi, 4rem);
+  background: var(--t7-rule);
+}
+
+.sectionLead {
+  font-family: var(--t7-serif);
+  font-size: clamp(0.9rem, 1.8cqi, 1.1rem);
+  font-style: italic;
+  color: var(--t7-ink-soft);
+  text-align: center;
+  margin: 0 0 0.75rem;
+}
+
+/* ── Hero (the `countdown` slot) ─────────────────────────────────────────── */
+.heroInner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  text-align: center;
+  /* The arch opening behind this is busy engraving — without a scrim the names disappear. */
+  background: radial-gradient(ellipse at center, rgba(244, 241, 234, 0.88) 0%, rgba(244, 241, 234, 0.62) 55%, transparent 78%);
+}
+.themeLabel {
+  font-family: var(--t7-display);
+  font-size: clamp(0.6rem, 1.5cqi, 0.78rem);
+  letter-spacing: 0.32em;
+  text-transform: uppercase;
+  color: var(--t7-ink-soft);
+  margin: 0 0 0.9rem;
+}
+.coupleNames {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  font-family: var(--t7-display);
+  font-size: clamp(1.5rem, 5.5cqi, 3rem);
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  line-height: 1.15;
+  margin: 0;
+  text-wrap: balance;
+}
+.amp {
+  font-family: var(--t7-serif);
+  font-style: italic;
+  font-weight: 400;
+  font-size: 0.5em;
+  letter-spacing: 0.1em;
+  color: var(--t7-ink-soft);
+  text-transform: lowercase;
+}
+.weddingDate {
+  font-family: var(--t7-serif);
+  font-size: clamp(0.85rem, 2cqi, 1.05rem);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  margin: 0;
+}
+.hijriDate {
+  font-family: var(--t7-serif);
+  font-style: italic;
+  font-size: clamp(0.75rem, 1.7cqi, 0.9rem);
+  color: var(--t7-ink-soft);
+  margin: 0.25rem 0 0;
+}
+/* Groups the Gregorian + Hijri dates into one hero sub-layer, centred and stacked. */
+.heroDate {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.countdown {
+  display: flex;
+  gap: clamp(0.5rem, 2.5cqi, 1.4rem);
+  margin-top: 1.1rem;
+}
+.countUnit {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 2.6rem;
+}
+.countNum {
+  font-family: var(--t7-display);
+  font-size: clamp(1rem, 3cqi, 1.6rem);
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+.countLabel {
+  font-family: var(--t7-serif);
+  font-size: clamp(0.55rem, 1.2cqi, 0.68rem);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--t7-ink-soft);
+  margin-top: 0.3rem;
+}
+
+.scrollCue {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+  width: 100%;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-family: var(--t7-display);
+  font-size: 0.68rem;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: var(--t7-ink-soft);
+}
+.scrollCue span {
+  animation: t7-bob 2.2s ease-in-out infinite;
+}
+@keyframes t7-bob {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(5px); }
+}
+
+/* ── Panel: the parchment card every content slot sits on ────────────────── */
+.panel {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-height: 100%;
+  padding: clamp(1rem, 3cqi, 1.6rem);
+  text-align: center;
+  /* Slots float over engraved stone, so text needs *some* backing to stay legible. It has to be
+     a soft radial falloff, not a filled rectangle: several stages put an ornate frame directly
+     behind the slot, and a hard-edged wash paints straight over the artwork it's sitting in. */
+  background: radial-gradient(
+    ellipse at center,
+    rgba(244, 241, 234, 0.82) 0%,
+    rgba(244, 241, 234, 0.66) 45%,
+    rgba(244, 241, 234, 0.28) 72%,
+    transparent 88%
+  );
+}
+.panelTitle {
+  font-family: var(--t7-display);
+  font-size: clamp(1.05rem, 3cqi, 1.7rem);
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  margin: 0;
+}
+.panelBody {
+  font-family: var(--t7-serif);
+  font-size: clamp(0.9rem, 1.9cqi, 1.05rem);
+  line-height: 1.75;
+  color: var(--t7-ink-soft);
+  margin: 0;
+}
+.panelBody :global(p)      { margin: 0 0 0.6rem; }
+.panelBody :global(strong) { color: var(--t7-ink); font-weight: 600; }
+
+.coupleRow {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.2rem;
+  margin: 0.9rem 0;
+}
+.coupleName {
+  font-family: var(--t7-display);
+  font-size: clamp(1.1rem, 3.4cqi, 1.9rem);
+  letter-spacing: 0.05em;
+}
+.coupleAmp {
+  font-family: var(--t7-serif);
+  font-style: italic;
+  font-size: 1.1rem;
+  color: var(--t7-ink-faint);
+}
+
+.detailRow { margin: 0.9rem 0; }
+.detailLabel {
+  font-family: var(--t7-display);
+  font-size: 0.62rem;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--t7-ink-faint);
+  margin-bottom: 0.3rem;
+}
+.detailValue {
+  font-family: var(--t7-serif);
+  font-size: clamp(0.95rem, 2cqi, 1.1rem);
+  letter-spacing: 0.04em;
+}
+.detailActions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.6rem;
+  margin-top: 1.1rem;
+}
+
+/* ── Programme ───────────────────────────────────────────────────────────── */
+.itineraryList {
+  position: relative;
+  list-style: none;
+  margin: 0.6rem 0 0;
+  padding: 0 0 0 1.5rem;
+  text-align: left;
+}
+.itineraryList::before {
+  content: '';
+  position: absolute;
+  left: 0.28rem;
+  top: 0.4rem;
+  bottom: 0.4rem;
+  width: 1px;
+  background: var(--t7-rule);
+}
+.itineraryItem {
+  position: relative;
+  padding: 0.55rem 0;
+}
+.itineraryItem::before {
+  content: '';
+  position: absolute;
+  left: -1.5rem;
+  top: 0.95rem;
+  width: 7px;
+  height: 7px;
+  transform: rotate(45deg);
+  background: var(--t7-ink);
+}
+.itineraryTime {
+  display: block;
+  font-family: var(--t7-display);
+  font-size: 0.62rem;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--t7-ink-faint);
+}
+.itineraryTitle {
+  font-family: var(--t7-serif);
+  font-size: clamp(0.95rem, 2cqi, 1.1rem);
+  font-weight: 400;
+  margin: 0.15rem 0 0;
+}
+
+/* ── Forms ───────────────────────────────────────────────────────────────── */
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  margin-top: 0.6rem;
+}
+.field {
+  width: 100%;
+  padding: 0.62rem 0.8rem;
+  background: rgba(255, 255, 255, 0.6);
+  border: 1px solid var(--t7-rule);
+  border-radius: 0;
+  font-family: var(--t7-serif);
+  font-size: 0.95rem;
+  color: var(--t7-ink);
+  outline: none;
+  box-sizing: border-box;
+}
+.field:focus { border-color: var(--t7-ink); }
+.field::placeholder { color: var(--t7-ink-faint); font-style: italic; }
+
+.fieldRow { display: flex; gap: 0.55rem; }
+.fieldRow > * { flex: 1; min-width: 0; }
+
+.choiceRow { display: flex; gap: 0.55rem; }
+.choice {
+  flex: 1;
+  padding: 0.6rem 0.4rem;
+  background: transparent;
+  border: 1px solid var(--t7-rule);
+  font-family: var(--t7-serif);
+  font-size: 0.85rem;
+  color: var(--t7-ink-soft);
+  cursor: pointer;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+.choiceActive {
+  background: var(--t7-ink);
+  border-color: var(--t7-ink);
+  color: var(--t7-cream);
+}
+
+.formActions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.8rem;
+  margin-top: 0.8rem;
+}
+.linkBtn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-family: var(--t7-serif);
+  font-style: italic;
+  font-size: 0.9rem;
+  color: var(--t7-ink-soft);
+  text-decoration: underline;
+}
+.notice {
+  font-family: var(--t7-serif);
+  font-style: italic;
+  font-size: 1rem;
+  color: var(--t7-ink-soft);
+  margin: 1.2rem 0;
+}
+
+/* ── Seating ─────────────────────────────────────────────────────────────── */
+.seating { margin-top: 0.4rem; }
+.tableGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(5.2rem, 1fr));
+  gap: 0.7rem;
+  margin-top: 0.8rem;
+}
+.tableCard {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.2rem;
+  padding: 0.5rem 0.3rem;
+  background: transparent;
+  border: 1px solid transparent;
+  cursor: pointer;
+}
+.tableCard:hover:not(:disabled) { border-color: var(--t7-rule); }
+.tableCard:disabled { opacity: 0.35; cursor: default; }
+
+.tableIconWrap {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 3.1rem;
+  height: 3.1rem;
+}
+.tableIcon {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+.tableNum {
+  position: absolute;
+  font-family: var(--t7-display);
+  font-size: 0.78rem;
+  color: var(--t7-ink);
+}
+.tableName {
+  font-family: var(--t7-serif);
+  font-size: 0.78rem;
+}
+.tableSeats {
+  font-family: var(--t7-serif);
+  font-size: 0.66rem;
+  color: var(--t7-ink-faint);
+}
+.tableSelected .tableIconWrap::after {
+  content: '';
+  position: absolute;
+  inset: -3px;
+  border: 1px solid var(--t7-ink);
+}
+
+/* ── Wishes ──────────────────────────────────────────────────────────────── */
+
+/* Text for an engraved title plate (wishes/title.webp is an empty cartouche). No scrim — the
+   plate art already provides the backing. */
+.plateTitle {
+  display: grid;
+  place-items: center;
+  height: 100%;
+}
+.plateTitle h2 {
+  font-family: var(--t7-display);
+  font-size: clamp(0.85rem, 2.6cqi, 1.35rem);
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  text-align: center;
+  margin: 0;
+  text-wrap: balance;
+}
+.wishCardBody {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  justify-content: center;
+  height: 100%;
+  padding: 0 clamp(0.5rem, 2cqi, 1.2rem);
+}
+.wishTextarea {
+  width: 100%;
+  min-height: 4.5rem;
+  padding: 0.62rem 0.8rem;
+  background: rgba(255, 255, 255, 0.55);
+  border: 1px solid var(--t7-rule);
+  font-family: var(--t7-serif);
+  font-size: 0.95rem;
+  color: var(--t7-ink);
+  resize: vertical;
+  outline: none;
+  box-sizing: border-box;
+}
+.wishTextarea::placeholder { color: var(--t7-ink-faint); font-style: italic; }
+
+/* The engraved button face is this element's background rather than its own layer — a separate
+   layer would have to be re-aligned with the button every time either one moved. */
+.wishSubmit {
+  align-self: center;
+  min-width: 11rem;
+  padding: 0.85rem 2rem;
+  background: url('/templates/t7/wishes/submit-btn.webp') center / 100% 100% no-repeat;
+  border: none;
+  cursor: pointer;
+  font-family: var(--t7-display);
+  font-size: 0.7rem;
+  font-weight: 500;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--t7-ink);
+  transition: opacity 0.2s ease;
+}
+.wishSubmit:hover:not(:disabled) { opacity: 0.78; }
+.wishSubmit:disabled { opacity: 0.5; cursor: default; }
+
+.wishList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+.wishItem {
+  margin: 0;
+  padding: 0.6rem 0.9rem;
+  background: rgba(244, 241, 234, 0.82);
+  border-left: 2px solid var(--t7-ink);
+  text-align: left;
+}
+.wishFrom {
+  font-family: var(--t7-display);
+  font-size: 0.62rem;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--t7-ink-soft);
+}
+.wishMsg {
+  font-family: var(--t7-serif);
+  font-style: italic;
+  font-size: 0.92rem;
+  margin: 0.2rem 0 0;
+}
+.empty {
+  font-family: var(--t7-serif);
+  font-style: italic;
+  font-size: 0.9rem;
+  color: var(--t7-ink-faint);
+  text-align: center;
+  margin: 0;
+}
+
+/* ── Photo booth ─────────────────────────────────────────────────────────── */
+.steps {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin: 0.8rem 0;
+}
+.step { text-align: center; }
+.stepTitle {
+  font-family: var(--t7-display);
+  font-size: 0.7rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+.stepDesc {
+  font-family: var(--t7-serif);
+  font-style: italic;
+  font-size: 0.85rem;
+  color: var(--t7-ink-soft);
+  margin: 0.15rem 0 0;
+}
+.uploadRow {
+  display: flex;
+  justify-content: center;
+  margin: 0.6rem 0;
+}
+.hiddenInput { display: none; }
+
+.gallery {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(6rem, 1fr));
+  gap: 0.7rem;
+  margin-top: 0.8rem;
+}
+.photoFrame {
+  position: relative;
+  margin: 0;
+  aspect-ratio: 1;
+}
+.photoFrame img.photo {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: sepia(0.35) contrast(1.05);
+}
+.photoFrameArt {
+  position: absolute;
+  inset: -6%;
+  width: 112%;
+  height: 112%;
+  object-fit: contain;
+  pointer-events: none;
+}
+
+/* ── Chrome ──────────────────────────────────────────────────────────────── */
+.footer {
+  position: relative;
+  z-index: 5;
+  padding: 2.5rem 1rem 3rem;
+  text-align: center;
+  background: var(--t7-parchment);
+}
+.footerTagline {
+  font-family: var(--t7-serif);
+  font-style: italic;
+  font-size: 0.9rem;
+  color: var(--t7-ink-soft);
+  margin: 0.4rem 0 0;
+}
+
+.nav {
+  position: fixed;
+  left: 50%;
+  bottom: 1rem;
+  transform: translateX(-50%);
+  z-index: 40;
+  display: flex;
+  gap: 0.15rem;
+  padding: 0.3rem;
+  max-width: calc(100cqi - 2rem);
+  overflow-x: auto;
+  scrollbar-width: none;
+  background: rgba(61, 56, 51, 0.92);
+  border: 1px solid rgba(239, 235, 225, 0.25);
+  backdrop-filter: blur(6px);
+}
+.nav::-webkit-scrollbar { display: none; }
+
+.navBtn {
+  padding: 0.42rem 0.7rem;
+  background: none;
+  border: none;
+  cursor: pointer;
+  white-space: nowrap;
+  font-family: var(--t7-display);
+  font-size: 0.6rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: rgba(239, 235, 225, 0.62);
+  transition: color 0.2s ease, background 0.2s ease;
+}
+.navActive {
+  background: var(--t7-cream);
+  color: var(--t7-ink);
+}
+
+.musicBtn {
+  position: fixed;
+  right: 1rem;
+  top: 1rem;
+  z-index: 40;
+  width: 2.4rem;
+  height: 2.4rem;
+  display: grid;
+  place-items: center;
+  background: rgba(61, 56, 51, 0.92);
+  border: 1px solid rgba(239, 235, 225, 0.25);
+  color: var(--t7-cream);
+  cursor: pointer;
+  font-size: 0.85rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .scrollCue span { animation: none; }
+}

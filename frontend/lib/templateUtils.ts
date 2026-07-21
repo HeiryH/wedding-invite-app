@@ -121,6 +121,26 @@ export function resolveSectionOrder(
   });
 }
 
+// ── Calendar links ───────────────────────────────────────────────────────────
+export function calendarLinks(wedding: {
+  weddingDate: string;
+  brideName: string;
+  groomName: string;
+  venue?: string;
+  venueAddress?: string;
+}) {
+  const start = new Date(wedding.weddingDate);
+  const end   = new Date(start.getTime() + 4 * 3600000);
+  const fmt   = (d: Date) => d.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+  const title = encodeURIComponent(`${wedding.brideName} & ${wedding.groomName} Wedding`);
+  const loc   = encodeURIComponent(wedding.venueAddress || wedding.venue || '');
+  return {
+    google:  `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&dates=${fmt(start)}/${fmt(end)}&location=${loc}`,
+    outlook: `https://outlook.live.com/calendar/0/deeplink/compose?subject=${title}&startdt=${start.toISOString()}&enddt=${end.toISOString()}&location=${loc}`,
+    ical:    `data:text/calendar;charset=utf8,BEGIN:VCALENDAR%0AVERSION:2.0%0ABEGIN:VEVENT%0ADTSTART:${fmt(start)}%0ADTEND:${fmt(end)}%0ASUMMARY:${title}%0ALOCATION:${loc}%0AEND:VEVENT%0AEND:VCALENDAR`,
+  };
+}
+
 // ── Section background-image style ───────────────────────────────────────────
 export function sectionBgStyle(
   url: string | undefined,

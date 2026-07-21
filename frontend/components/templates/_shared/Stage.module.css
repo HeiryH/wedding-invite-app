@@ -1,0 +1,130 @@
+/* One stage = one screen. `svh` (not `dvh`) on purpose: dvh re-sizes every stage as the mobile
+   URL bar animates, which re-fires the IntersectionObserver and makes the reveal flicker. */
+.stage {
+  position: relative;
+  width: 100%;
+  height: 100svh;
+  min-height: 100svh;
+  overflow: hidden;
+  isolation: isolate;
+  background: #E8E0D2;
+  /* Size content relative to the stage, not the browser viewport, so `cqi`-based type stays
+     device-sized when "Reveal off-screen" pins the stage narrower than the widened iframe. In
+     normal mode the stage fills the viewport, so cqi == vw and nothing changes. */
+  container-type: inline-size;
+}
+
+@supports not (height: 100svh) {
+  .stage {
+    height: 100vh;
+    min-height: 100vh;
+  }
+}
+
+/* Editor-only: "Reveal off-screen". The preview widens the iframe and this pins the stage to the
+   real device width (set inline), centred, with overflow unclipped — so art that bleeds past the
+   phone's edges spills into the space around it at full size (no zoom-out). The dashed frame marks
+   the true device bounds; anything outside it is what gets cropped on the real invitation. */
+.stage[data-reveal='true'] {
+  overflow: visible;
+}
+.stage[data-reveal='true']::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border: 2px dashed #c98a54;
+  pointer-events: none;
+  z-index: 900;
+}
+
+.bg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+}
+
+/* Two elements, one per concern. The box owns placement (x/y/scale) and the parallax offset;
+   the inner element owns the reveal. Collapsing these into one transform would make the
+   entrance animation fight the layer's position every frame. */
+.layerBox {
+  position: absolute;
+  transform:
+    translate(-50%, -50%)
+    translate(var(--sl-par-x, 0px), var(--sl-par, 0px))
+    scale(var(--sl-scale, 1));
+  transform-origin: center center;
+  will-change: transform;
+}
+
+/* Structure only. The entrance animation (initial state + `[data-seen]` reveal + reduced-motion)
+   lives in the shared `reveal.css`, keyed on the `data-sl-anim` this element carries. */
+.layerInner {
+  width: 100%;
+  height: 100%;
+}
+/* Structure only. The scroll-out exit (driven by `--sl-out`) lives in reveal.css, keyed on
+   `data-sl-out`. Separate element so its transform can't fight the entrance's. */
+.layerExit {
+  width: 100%;
+  height: 100%;
+}
+
+.img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  pointer-events: none;
+  user-select: none;
+}
+
+/* A slot holds real content — a form, a list — so it must be able to scroll on a short phone
+   rather than clip. */
+.slot {
+  width: 100%;
+  height: 100%;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+.slot::-webkit-scrollbar {
+  display: none;
+}
+
+.text {
+  width: 100%;
+  text-align: center;
+  line-height: 1.25;
+  letter-spacing: 0.01em;
+}
+
+.shape {
+  width: 100%;
+  height: 100%;
+}
+
+/* Art is inert; slots stay interactive. Inside the Adjust panel every layer becomes clickable
+   so you can select it straight off the canvas. */
+.layerBox[data-kind='img'],
+.layerBox[data-kind='shape'],
+.layerBox[data-kind='text'] {
+  pointer-events: none;
+}
+[data-editing='true'] .layerBox {
+  pointer-events: auto;
+  cursor: pointer;
+}
+.layerBox[data-selected='true'] {
+  outline: 2px dashed #C98A54;
+  outline-offset: 3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .layerBox {
+    --sl-par: 0px !important;
+  }
+  /* The `.layerInner` reduced-motion reset now lives in reveal.css (keyed on data-sl-anim). */
+}

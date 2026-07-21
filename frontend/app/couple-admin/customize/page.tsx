@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback, useRef } from 'react';
+import { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { getUser } from '@/lib/auth';
 import {
@@ -18,7 +18,15 @@ import {
   TemplateSlots,
 } from '@/lib/api';
 import { TemplateLibrary } from '@/components/templates/TemplateLibrary';
-import { buildDefaultConfig } from '@/lib/templateConfigSchema';
+import { buildDefaultConfig, getConfigFields } from '@/lib/templateConfigSchema';
+import { TemplateConfigField } from '@/lib/api';
+import { resolveSectionOrder } from '@/lib/templateUtils';
+import { PRESETS, isShadowField, chipOf, useSchemaIndex } from './_components/SchemaField';
+// The stage-layout dock (shared engine). The stage-definition map + key prefix are still
+// T7-specific here; extending to other templates means selecting these by wedding.templateId.
+import AdjustPanel from '@/components/templates/_shared/adjust/AdjustPanel';
+import { T7_STAGES, STAGE_GROUPS } from '@/components/templates/Template7-romangarden/data/stages';
+import { T5_STAGES, t5StageIds } from '@/components/templates/Template5-dreamingfloral/data/t5Stages';
 import { Button } from '@/components/ui/Button';
 import { Switch } from '@/components/ui/Switch';
 import { Icon } from '@/components/ui/Icon';
@@ -77,28 +85,37 @@ function scrollFractionFor(block: BlockId, order: string[]): number {
   return i <= 0 ? 0 : i / Math.max(1, order.length);
 }
 
-// Block metadata for form header
-const BLOCK_INFO: Record<string, { eyebrow: string; title: string; subtitle: string; chips: string[] }> = {
-  details:    { eyebrow: 'Global', title: 'Details & Theme', subtitle: 'Wedding info and template settings.', chips: ['Layout', 'Details', 'Display', 'Footer'] },
-  welcome:    { eyebrow: 'Section · Cover', title: 'Welcome screen', subtitle: 'The first thing guests see when they open the invitation.', chips: ['Content', 'Style', 'Background'] },
-  walimah:    { eyebrow: 'Section · Ceremony', title: 'The ceremony', subtitle: 'Ceremony details and walimah text.', chips: ['Content', 'Style'] },
-  rsvp:       { eyebrow: 'Section · RSVP', title: 'RSVP', subtitle: 'Guest confirmation section.', chips: ['RSVP'] },
-  itinerary:  { eyebrow: 'Section · Itinerary', title: 'Schedule', subtitle: 'Event timeline and programme.', chips: ['Schedule', 'Background'] },
-  wishes:     { eyebrow: 'Section · Wishes', title: 'Wishes & Guestbook', subtitle: 'Messages from your guests.', chips: ['Content'] },
-  photobooth: { eyebrow: 'Section · Photo Booth', title: 'Photo Booth', subtitle: 'Guest photo gallery.', chips: ['Content', 'Media', 'Background'] },
-  music:      { eyebrow: 'Background Music', title: 'Music & playlist', subtitle: 'Audio that plays while guests browse.', chips: ['Audio', 'Settings'] },
+// Block metadata for the form header. Chips are NOT listed here — they're derived from the
+// chips the template's schema fields actually declare, so a chip can never scroll to a group
+// that doesn't exist for this template.
+const BLOCK_INFO: Record<string, { eyebrow: string; title: string; subtitle: string }> = {
+  details:    { eyebrow: 'Global', title: 'Details & Theme', subtitle: 'Wedding info and template settings.' },
+  welcome:    { eyebrow: 'Section · Cover', title: 'Welcome screen', subtitle: 'The first thing guests see when they open the invitation.' },
+  walimah:    { eyebrow: 'Section · Ceremony', title: 'The ceremony', subtitle: 'Ceremony details and walimah text.' },
+  rsvp:       { eyebrow: 'Section · RSVP', title: 'RSVP', subtitle: 'Guest confirmation section.' },
+  itinerary:  { eyebrow: 'Section · Itinerary', title: 'Schedule', subtitle: 'Event timeline and programme.' },
+  wishes:     { eyebrow: 'Section · Wishes', title: 'Wishes & Guestbook', subtitle: 'Messages from your guests.' },
+  photobooth: { eyebrow: 'Section · Photo Booth', title: 'Photo Booth', subtitle: 'Guest photo gallery.' },
+  music:      { eyebrow: 'Background Music', title: 'Music & playlist', subtitle: 'Audio that plays while guests browse.' },
 };
 
-// Preset color swatches per field type
-const PRESETS = {
-  bride:   ['#9a244f', '#b0506b', '#6f5bb5', '#1a1718', '#b8945a', '#ffffff'],
-  groom:   ['#1a1718', '#6f5bb5', '#0a3a5c', '#2d6a4f', '#4a90d9', '#b8945a'],
-  amp:     ['#1a1718', '#b8945a', '#6f5bb5', '#ffffff', '#9a244f', '#cccccc'],
-  heading: ['#ffffff', '#f4d9e2', '#e8e2f4', '#b8945a', '#1a1718', '#9a244f'],
-  date:    ['#ffffff', '#d6c4a3', '#b8945a', '#9a244f', '#6f5bb5', '#1a1718'],
-  venue:   ['#ffffff', '#d6c4a3', '#b8945a', '#6f5bb5', '#9a244f', '#1a1718'],
-  body:    ['#ffffff', '#f0ebe0', '#d6c4a3', '#b8945a', '#1a1718', '#6b6469'],
-  generic: ['#ffffff', '#1a1718', '#b8945a', '#6f5bb5', '#9a244f', '#6b6469'],
+// Group render order per rail block. Groups the schema declares but this list omits are
+// appended at the end, so a newly-added field always surfaces somewhere rather than vanishing.
+const GROUP_ORDER: Record<BlockId, string[]> = {
+  details:    ['Invitation Layout', 'Wedding Details', 'Display', 'Navigation Labels', 'Advanced', 'Footer', 'Change Template'],
+  welcome:    ['Heading', 'Invitation Message', 'Countdown', 'Roman Garden Scene', 'Fairy Garden Scene', 'Stage Layout', 'Decorative Layers', 'Section Background', 'Page Background'],
+  walimah:    ['Ceremony / Walimah', 'Ceremony Stages', 'Couple Names in Card'],
+  rsvp:       ['RSVP'],
+  itinerary:  ['Schedule / Itinerary', 'Section Background'],
+  wishes:     ['Wishes & Guestbook'],
+  photobooth: ['Photo Booth', 'Portrait & Gallery Slots', 'Section Headings', 'Section Background'],
+  music:      [],
+};
+
+// Groups that exist only to host a hand-written widget — they hold no schema fields.
+const SYNTHETIC_GROUPS: Partial<Record<BlockId, string[]>> = {
+  details:    ['Change Template'],
+  photobooth: ['Portrait & Gallery Slots'],
 };
 
 // ── Existing sub-components (functional, restyled inputs) ─────────────────────
@@ -188,6 +205,13 @@ function Group({ title, children, count, defaultOpen = true, chipAnchor }: {
     </div>
   );
 }
+
+// Borderless input used inside a FieldCard — the card supplies the chrome.
+const BARE_INPUT: React.CSSProperties = {
+  width: '100%', fontSize: 14, fontWeight: 500, color: 'var(--text-strong)',
+  background: 'transparent', border: 'none', outline: 'none',
+  fontFamily: 'var(--font-ui)', padding: '2px 0',
+};
 
 // Styled field card
 function FieldCard({ label, count, max, children }: {
@@ -557,6 +581,8 @@ function BgImageField({ configKey, label, value, weddingId, onChange }: {
   );
 }
 
+// ── Stage layout launcher ─────────────────────────────────────────────────────
+
 // ── Portrait photo slot ───────────────────────────────────────────────────────
 
 function PhotoDropZone({ slot, label, photo, uploading, onDrop, onRemove }: {
@@ -606,17 +632,19 @@ const RAIL_SECTIONS = [
   { id: 'photobooth' as BlockId,label: 'Photos',  icon: 'camera'     },
 ];
 
-function SectionRail({ mode, onToggle, activeBlock, sectionOrder, onSelectBlock }: {
+function SectionRail({ mode, onToggle, activeBlock, sectionOrder, onSelectBlock, hasMusic }: {
   mode: EditorMode;
   onToggle: () => void;
   activeBlock: BlockId;
   sectionOrder: string[];
   onSelectBlock: (block: BlockId) => void;
+  hasMusic: boolean;
 }) {
   const railItems = [
     RAIL_SECTIONS[0], // details always first
     ...sectionOrder.map(code => RAIL_SECTIONS.find(s => s.id === code)).filter(Boolean) as typeof RAIL_SECTIONS,
-    { id: 'music' as BlockId, label: 'Music', icon: 'music' }, // music always last
+    // only templates that actually play audio get a Music tab
+    ...(hasMusic ? [{ id: 'music' as BlockId, label: 'Music', icon: 'music' }] : []),
   ];
 
   return (
@@ -745,6 +773,12 @@ export default function CustomizePage() {
   const [device, setDevice] = useState<Device>('mobile');
   const [manualZoom, setManualZoom] = useState<number | null>(null);
   const [subSection, setSubSection] = useState('');
+  // Adjust (stage-layout) dock: open state + which layer is selected, so the preview can outline it.
+  const [adjusting, setAdjusting] = useState(false);
+  const [selectedStage, setSelectedStage] = useState<string>('');
+  const [selectedLayer, setSelectedLayer] = useState<string | undefined>();
+  // "Reveal off-screen" relaxes the stage clip in the preview so nudged-out layers stay grabbable.
+  const [revealOverflow, setRevealOverflow] = useState(false);
 
   const [itinerary, setItinerary] = useState<ItineraryItem[]>([]);
   const [saving, setSaving] = useState(false);
@@ -762,6 +796,104 @@ export default function CustomizePage() {
   const weddingDirty = JSON.stringify(weddingDraft) !== JSON.stringify(weddingSaved);
   const isDirty = configDirty || weddingDirty;
 
+  // The schema decides which controls exist for this template + role — never a templateId check.
+  const fields = useMemo(
+    () => getConfigFields(wedding?.templateId ?? 1, user?.role ?? 'COUPLE_ADMIN', user?.tier),
+    [wedding?.templateId, user?.role, user?.tier],
+  );
+  const schema = useSchemaIndex(fields);
+
+  // ── Stage-layout Adjust dock ────────────────────────────────────────────────
+  const isPro = user?.tier === 'PRO';
+
+  // Which layer engine (if any) this template exposes, and the stages it can edit — gated exactly
+  // like the template renders them. Adding a template to the Adjust feature means a case here.
+  const layout = useMemo(() => {
+    const id = wedding?.templateId;
+    if (id === 7) {
+      const codes = resolveSectionOrder(
+        sectionOrder.join(','),
+        Boolean(draftConfig['walimah.body']),
+        itinerary.length > 0,
+        photoBoothEnabled,
+      );
+      // reveal: T7 is the full-screen Stage compositor, so "Reveal off-screen" (widen canvas +
+      // pin stage width) applies. T5 is fluid DOM overlay — widening would just reflow it larger.
+      const flat = codes.flatMap((c) => STAGE_GROUPS[c] ?? []);
+      // In the compiled ceremony row the frame art is deduped into the shared "Ceremony Backdrop"
+      // stage, and each beat renders only its own content — so surface the backdrop entry (before
+      // the beats) and strip the now-unused per-beat art from the beats' panel entries.
+      if (draftConfig['scene.ceremony.layout'] === 'row') {
+        const CEREMONY_BEATS = ['ceremony-walimah', 'ceremony-couple', 'ceremony-details'];
+        const wi = flat.indexOf('ceremony-walimah');
+        const ids = wi >= 0 ? [...flat.slice(0, wi), 'ceremony-rail', ...flat.slice(wi)] : flat;
+        const stages: typeof T7_STAGES = { ...T7_STAGES };
+        for (const id of CEREMONY_BEATS) {
+          const s = T7_STAGES[id];
+          // Beats render slot-only in row mode and share one background owned by the backdrop stage,
+          // so hide their per-beat art rows and their (now inert) Background control.
+          if (s) stages[id] = { ...s, bg: '', layers: s.layers.filter((l) => l.kind === 'slot' || l.kind === 'anchor') };
+        }
+        return { stages, keyPrefix: 't7', stageIds: ids, reveal: true };
+      }
+      return { stages: T7_STAGES, keyPrefix: 't7', stageIds: flat, reveal: true };
+    }
+    if (id === 5) {
+      return { stages: T5_STAGES, keyPrefix: 't5', stageIds: t5StageIds(photoBoothEnabled), reveal: false };
+    }
+    return null;
+  }, [wedding?.templateId, sectionOrder, draftConfig, itinerary.length, photoBoothEnabled]);
+
+  const canAdjust = isPro && !!layout;
+  const canReveal = Boolean(layout?.reveal);
+  const stageIds = layout?.stageIds ?? [];
+  const activeStage = selectedStage && stageIds.includes(selectedStage) ? selectedStage : stageIds[0];
+
+  // The dock owns config directly (it lives in this tree, not the iframe): '' deletes the key,
+  // restoring a stage to its shipped defaults. This is the whole cross-iframe patch protocol,
+  // collapsed to a setState now that the panel and draftConfig share a component tree.
+  const handleLayoutChange = useCallback((key: string, value: string) => {
+    setDraftConfig((prev) => {
+      const next = { ...prev };
+      if (value === '') delete next[key];
+      else next[key] = value;
+      return next;
+    });
+  }, []);
+
+  // Opening the dock collapses the left inspector to its icon rail so the centred preview keeps room.
+  const toggleAdjust = useCallback(() => {
+    setAdjusting((a) => {
+      const next = !a;
+      setEditorMode(next ? 'collapsed' : 'expanded');
+      if (!next) setRevealOverflow(false); // don't leave the clip relaxed after closing the dock
+      return next;
+    });
+  }, []);
+
+  // Upload an image for the Adjust panel (a layer image, or a stage-background replacement). Uses
+  // the LAYER_IMAGE slot, which — unlike the portrait/bg slots — never upserts, so a stage can hold
+  // many. Returns the /uploads/… URL the layer's `src` / `bgSrc` points at.
+  const handleAdjustUpload = useCallback(async (file: File): Promise<string> => {
+    if (!weddingId) throw new Error('no wedding');
+    const photo = await photoService.upload(weddingId, '', 'Layer image', file, 'COUPLE', TemplateSlots.LAYER_IMAGE);
+    return photo.photoUrl;
+  }, [weddingId]);
+
+  // Quick-nav chips for the active block, in the same order the groups render.
+  const blockChips = useMemo(() => {
+    if (activeBlock === 'music') return ['Audio', 'Settings'];
+    const groups = schema.groupsFor(activeBlock);
+    const ordered = GROUP_ORDER[activeBlock] ?? [];
+    const titles = [...ordered.filter((t) => groups.has(t)), ...[...groups.keys()].filter((t) => !ordered.includes(t))];
+    const chips: string[] = [];
+    for (const t of titles) {
+      const chip = chipOf(groups.get(t) ?? []);
+      if (chip && !chips.includes(chip)) chips.push(chip);
+    }
+    return chips;
+  }, [schema, activeBlock]);
+
   useEffect(() => {
     const u = getUser();
     if (!u) { router.push('/login'); return; }
@@ -773,20 +905,38 @@ export default function CustomizePage() {
     load();
   }, [weddingId]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Push draft to iframe
+  // Push draft to iframe. Coalesced to one post per animation frame: dragging an Adjust slider
+  // fires setDraftConfig many times a second, and re-serialising the whole payload each tick would
+  // make the preview stutter.
+  const postFrameRef = useRef(0);
   useEffect(() => {
     if (!wedding) return;
     const payload = {
       wedding: { ...wedding, ...weddingDraft },
       coupleMedia, wishes: SAMPLE_WISHES, photoBoothEnabled,
       customConfig: draftConfig, itinerary,
+      // Selection rides along so the preview can outline the layer being edited; the config
+      // itself flows through customConfig, one-way — the panel no longer lives in the iframe.
+      editor: {
+        enabled: adjusting,
+        breakpoint: device === 'mobile' ? 'mobile' : 'desktop',
+        selectedStage: activeStage,
+        selectedLayer,
+        revealOverflow: revealOverflow && canReveal,
+      },
     };
     payloadRef.current = payload;
     try { localStorage.setItem('preview_draft', JSON.stringify(payload)); } catch {}
-    iframeRef.current?.contentWindow?.postMessage({ type: 'PREVIEW_UPDATE', payload }, window.location.origin);
-  }, [draftConfig, weddingDraft, coupleMedia, photoBoothEnabled, itinerary, wedding]);
+    if (postFrameRef.current) return;
+    postFrameRef.current = requestAnimationFrame(() => {
+      postFrameRef.current = 0;
+      iframeRef.current?.contentWindow?.postMessage(
+        { type: 'PREVIEW_UPDATE', payload: payloadRef.current }, window.location.origin,
+      );
+    });
+  }, [draftConfig, weddingDraft, coupleMedia, photoBoothEnabled, itinerary, wedding, adjusting, device, activeStage, selectedLayer, revealOverflow, canReveal]);
 
-  // Replay to iframe on PREVIEW_READY
+  // Replay the latest payload when the iframe (re)mounts.
   useEffect(() => {
     const handler = (event: MessageEvent) => {
       if (event.origin !== window.location.origin) return;
@@ -809,10 +959,9 @@ export default function CustomizePage() {
 
   // Reset active chip + scroll position when block changes
   useEffect(() => {
-    const firstChip = BLOCK_INFO[activeBlock]?.chips[0] ?? '';
-    setSubSection(firstChip);
+    setSubSection(blockChips[0] ?? '');
     if (formScrollRef.current) formScrollRef.current.scrollTop = 0;
-  }, [activeBlock]);
+  }, [activeBlock, blockChips]);
 
   // Keep active chip in sync as user scrolls the form
   useEffect(() => {
@@ -890,8 +1039,18 @@ export default function CustomizePage() {
       await weddingService.updateTemplate(weddingId, t.templateId);
       const updatedWedding = { ...wedding, templateId: t.templateId, templateName: t.templateName };
       setWedding(updatedWedding);
+      // Keep only what the new template understands: its own defaults, overlaid with the
+      // couple's existing values for keys it shares, plus any layout blobs scoped to it.
+      // Anything else is dropped here so the next save prunes it server-side, rather than
+      // accumulating dead keys across every template switch.
       const newDefaults = buildDefaultConfig(t.templateId);
-      const merged = { ...newDefaults, ...draftConfig };
+      const layoutPrefix = `t${t.templateId}.layout.`;
+      const carried = Object.fromEntries(
+        Object.entries(draftConfig).filter(
+          ([k]) => k in newDefaults || k.startsWith(layoutPrefix),
+        ),
+      );
+      const merged = { ...newDefaults, ...carried };
       setDraftConfig(merged);
       setSavedConfig(merged);
     } catch {
@@ -974,369 +1133,253 @@ export default function CustomizePage() {
   const availableBlocks = SECTION_BLOCKS.filter((b) => !sectionOrder.includes(b.code));
   const blockInfo = BLOCK_INFO[activeBlock] ?? BLOCK_INFO.details;
 
-  // Inspector content per block
-  const inspectorContent = (
-    <>
-      {/* ═══════════════ DETAILS & THEME ═══════════════ */}
-      {activeBlock === 'details' && (
-        <>
-          <Group title="Invitation Layout" chipAnchor="Layout">
-            <FieldCard label="Layout Style">
-              <SelectField value={draftConfig['invite.layout'] ?? 'classic'} options={['classic', 'minimal', 'ornate']} onChange={v => setConfig('invite.layout', v)} />
-            </FieldCard>
-          </Group>
+  // ── Schema-driven inspector ─────────────────────────────────────────────────
+  // Every control below comes from getConfigFields(templateId, role). There are no
+  // `templateId === N` branches: if a template's schema doesn't declare a key, the control
+  // for it simply isn't there. Hand-written widgets (wedding-record inputs, the itinerary
+  // editor, photo slots, the template library) are injected into named groups.
 
-          <Group title="Wedding Details" count={2} chipAnchor="Details">
-            <FieldCard label="Bride's Name" count={weddingDraft.brideName.length} max={100}>
-              <input className="field-text-input" value={weddingDraft.brideName} onChange={e => setWeddingDraft(d => ({ ...d, brideName: e.target.value }))} placeholder="Bride's full name" maxLength={100}
-                style={{ width: '100%', fontSize: 14, fontWeight: 500, color: 'var(--text-strong)', background: 'transparent', border: 'none', outline: 'none', fontFamily: 'var(--font-ui)', padding: '2px 0' }} />
-              {wedding.templateId === 5 && (
-                <ColorRow value={draftConfig['names.bride.color'] ?? ''} onChange={v => setConfig('names.bride.color', v)} onClear={() => setConfig('names.bride.color', '')} presets={PRESETS.bride} />
-              )}
-              {wedding.templateId === 5 && (
-                <ShadowSeg value={draftConfig['names.bride.shadow'] ?? 'none'} onChange={v => setConfig('names.bride.shadow', v)} options={['none', 'soft', 'strong', 'glow']} />
-              )}
-            </FieldCard>
-
-            <FieldCard label="Groom's Name" count={weddingDraft.groomName.length} max={100}>
-              <input className="field-text-input" value={weddingDraft.groomName} onChange={e => setWeddingDraft(d => ({ ...d, groomName: e.target.value }))} placeholder="Groom's full name" maxLength={100}
-                style={{ width: '100%', fontSize: 14, fontWeight: 500, color: 'var(--text-strong)', background: 'transparent', border: 'none', outline: 'none', fontFamily: 'var(--font-ui)', padding: '2px 0' }} />
-              {wedding.templateId === 5 && (
-                <ColorRow value={draftConfig['names.groom.color'] ?? ''} onChange={v => setConfig('names.groom.color', v)} onClear={() => setConfig('names.groom.color', '')} presets={PRESETS.groom} />
-              )}
-              {wedding.templateId === 5 && (
-                <ShadowSeg value={draftConfig['names.groom.shadow'] ?? 'none'} onChange={v => setConfig('names.groom.shadow', v)} options={['none', 'soft', 'strong', 'glow']} />
-              )}
-            </FieldCard>
-
-            {wedding.templateId === 5 && (
-              <FieldCard label="Ampersand (&) Color">
-                <ColorRow value={draftConfig['names.ampersand.color'] ?? ''} onChange={v => setConfig('names.ampersand.color', v)} onClear={() => setConfig('names.ampersand.color', '')} presets={PRESETS.amp} />
-              </FieldCard>
-            )}
-
-            <FieldCard label="Wedding Date & Time">
-              <input type="datetime-local" value={weddingDraft.weddingDate} onChange={e => setWeddingDraft(d => ({ ...d, weddingDate: e.target.value }))}
-                style={{ width: '100%', fontSize: 14, fontWeight: 500, color: 'var(--text-strong)', background: 'transparent', border: 'none', outline: 'none', fontFamily: 'var(--font-ui)', padding: '2px 0' }} />
-              {wedding.templateId === 5 && (
-                <ColorRow value={draftConfig['date.color'] ?? ''} onChange={v => setConfig('date.color', v)} onClear={() => setConfig('date.color', '')} presets={PRESETS.date} />
-              )}
-            </FieldCard>
-
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-              <div>
-                <p style={{ margin: 0, fontSize: 13, fontWeight: 500, fontFamily: 'var(--font-ui)', color: 'var(--text-strong)' }}>Add to Calendar button</p>
-                <p style={{ margin: '2px 0 0', fontSize: 11, color: 'var(--text-subtle)', fontFamily: 'var(--font-ui)' }}>Guests can save the date in one tap</p>
-              </div>
-              <ToggleSwitch value={draftConfig['general.showAddToCalendar'] === 'true'} onChange={v => setConfig('general.showAddToCalendar', v ? 'true' : 'false')} />
+  // Renders the colour / shadow / toggle fields that attach to a given anchor, inside its card.
+  const renderAttachments = (anchor: string) =>
+    schema.attachmentsFor(anchor).map((f) => {
+      const value = draftConfig[f.key] ?? f.defaultValue;
+      if (f.fieldType === 'color') {
+        return (
+          <ColorRow
+            key={f.key}
+            value={draftConfig[f.key] ?? ''}
+            onChange={(v) => setConfig(f.key, v)}
+            onClear={() => setConfig(f.key, '')}
+            presets={f.presets ? PRESETS[f.presets] : undefined}
+          />
+        );
+      }
+      if (isShadowField(f)) {
+        return <ShadowSeg key={f.key} value={value || 'none'} onChange={(v) => setConfig(f.key, v)} options={f.options} />;
+      }
+      if (f.fieldType === 'boolean') {
+        return (
+          <div key={f.key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginTop: 10, paddingTop: 10, borderTop: '1px dashed var(--border-subtle)' }}>
+            <div>
+              <p style={{ margin: 0, fontSize: 12, fontWeight: 500, fontFamily: 'var(--font-ui)', color: 'var(--text-strong)' }}>{f.label}</p>
+              {f.hint && <p style={{ margin: '2px 0 0', fontSize: 11, color: 'var(--text-subtle)', fontFamily: 'var(--font-ui)' }}>{f.hint}</p>}
             </div>
+            <ToggleSwitch value={value === 'true'} onChange={(v) => setConfig(f.key, v ? 'true' : 'false')} />
+          </div>
+        );
+      }
+      return null;
+    });
 
-            <FieldCard label="Venue" count={weddingDraft.venue.length} max={200}>
-              <input className="field-text-input" value={weddingDraft.venue} onChange={e => setWeddingDraft(d => ({ ...d, venue: e.target.value }))} placeholder="e.g. Dewan Seri Mayang" maxLength={200}
-                style={{ width: '100%', fontSize: 14, fontWeight: 500, color: 'var(--text-strong)', background: 'transparent', border: 'none', outline: 'none', fontFamily: 'var(--font-ui)', padding: '2px 0' }} />
-              {wedding.templateId === 5 && (
-                <ColorRow value={draftConfig['venue.color'] ?? ''} onChange={v => setConfig('venue.color', v)} onClear={() => setConfig('venue.color', '')} presets={PRESETS.venue} />
-              )}
-            </FieldCard>
+  // One schema field → the matching primitive.
+  const renderField = (f: TemplateConfigField) => {
+    const value = draftConfig[f.key] ?? f.defaultValue;
 
-            <FieldCard label="Venue Address" count={weddingDraft.venueAddress.length} max={500}>
-              <input value={weddingDraft.venueAddress} onChange={e => setWeddingDraft(d => ({ ...d, venueAddress: e.target.value }))} maxLength={500}
-                style={{ width: '100%', fontSize: 14, fontWeight: 500, color: 'var(--text-strong)', background: 'transparent', border: 'none', outline: 'none', fontFamily: 'var(--font-ui)', padding: '2px 0' }} />
-            </FieldCard>
+    switch (f.fieldType) {
+      case 'text':
+        return (
+          <FieldCard key={f.key} label={f.label} count={value.length} max={f.maxLength}>
+            <input
+              value={value}
+              onChange={(e) => setConfig(f.key, e.target.value)}
+              maxLength={f.maxLength}
+              placeholder={f.defaultValue}
+              style={BARE_INPUT}
+            />
+            {f.hint && <p style={{ margin: '4px 0 0', fontSize: 11, color: 'var(--text-subtle)', fontFamily: 'var(--font-ui)' }}>{f.hint}</p>}
+            {renderAttachments(f.key)}
+          </FieldCard>
+        );
 
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-              <p style={{ margin: 0, fontSize: 13, fontWeight: 500, fontFamily: 'var(--font-ui)', color: 'var(--text-strong)' }}>Show venue map</p>
-              <ToggleSwitch value={draftConfig['general.showVenueMap'] === 'true'} onChange={v => setConfig('general.showVenueMap', v ? 'true' : 'false')} />
+      case 'richtext':
+        return (
+          <div key={f.key}>
+            <FieldLabel hint={f.hint}>{f.label}</FieldLabel>
+            <RichTextEditor value={draftConfig[f.key] ?? ''} onChange={(html) => setConfig(f.key, html)} maxLength={f.maxLength} />
+          </div>
+        );
+
+      case 'boolean':
+        return (
+          <div key={f.key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+            <div>
+              <p style={{ margin: 0, fontSize: 13, fontWeight: 500, fontFamily: 'var(--font-ui)', color: 'var(--text-strong)' }}>{f.label}</p>
+              {f.hint && <p style={{ margin: '2px 0 0', fontSize: 11, color: 'var(--text-subtle)', fontFamily: 'var(--font-ui)' }}>{f.hint}</p>}
             </div>
+            <ToggleSwitch value={value === 'true'} onChange={(v) => setConfig(f.key, v ? 'true' : 'false')} />
+          </div>
+        );
 
+      case 'select':
+        if (isShadowField(f)) {
+          return (
+            <FieldCard key={f.key} label={f.label}>
+              <ShadowSeg value={value || 'none'} onChange={(v) => setConfig(f.key, v)} options={f.options} />
+            </FieldCard>
+          );
+        }
+        return (
+          <div key={f.key} style={{ flex: 1 }}>
+            <FieldLabel hint={f.hint}>{f.label}</FieldLabel>
+            <SelectField value={value} options={f.options ?? []} labels={f.optionLabels} onChange={(v) => setConfig(f.key, v)} />
+          </div>
+        );
+
+      case 'color':
+        return (
+          <FieldCard key={f.key} label={f.label}>
+            {f.hint && <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', fontFamily: 'var(--font-ui)', margin: '0 0 8px' }}>{f.hint}</p>}
+            <ColorRow
+              value={draftConfig[f.key] ?? ''}
+              onChange={(v) => setConfig(f.key, v)}
+              onClear={() => setConfig(f.key, f.defaultValue)}
+              presets={f.presets ? PRESETS[f.presets] : undefined}
+            />
+          </FieldCard>
+        );
+
+      case 'image':
+        return (
+          <BgImageField
+            key={f.key}
+            configKey={f.key}
+            label={f.label}
+            value={draftConfig[f.key] ?? ''}
+            weddingId={weddingId!}
+            onChange={(url) => setConfig(f.key, url)}
+          />
+        );
+
+      default:
+        return null;
+    }
+  };
+
+  // A wedding-record input (not a config key) that can still host schema attachments.
+  const recordField = (
+    anchor: string,
+    label: string,
+    value: string,
+    max: number,
+    onChange: (v: string) => void,
+    type?: string,
+    placeholder?: string,
+  ) => (
+    <FieldCard key={anchor} label={label} count={type ? undefined : value.length} max={max}>
+      <input
+        type={type ?? 'text'}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        maxLength={max}
+        placeholder={placeholder}
+        style={BARE_INPUT}
+      />
+      {renderAttachments(anchor)}
+    </FieldCard>
+  );
+
+  // Hand-written widgets, injected into the named group they belong to.
+  const groupExtras = (block: BlockId, title: string): { before?: React.ReactNode; after?: React.ReactNode } => {
+    if (block === 'details' && title === 'Wedding Details') {
+      return {
+        before: (
+          <>
+            {recordField('wedding.brideName', "Bride's Name", weddingDraft.brideName, 100, (v) => setWeddingDraft((d) => ({ ...d, brideName: v })), undefined, "Bride's full name")}
+            {recordField('wedding.groomName', "Groom's Name", weddingDraft.groomName, 100, (v) => setWeddingDraft((d) => ({ ...d, groomName: v })), undefined, "Groom's full name")}
+            {recordField('wedding.weddingDate', 'Wedding Date & Time', weddingDraft.weddingDate, 16, (v) => setWeddingDraft((d) => ({ ...d, weddingDate: v })), 'datetime-local')}
+            {recordField('wedding.venue', 'Venue', weddingDraft.venue, 200, (v) => setWeddingDraft((d) => ({ ...d, venue: v })), undefined, 'e.g. Dewan Seri Mayang')}
+            {recordField('wedding.venueAddress', 'Venue Address', weddingDraft.venueAddress, 500, (v) => setWeddingDraft((d) => ({ ...d, venueAddress: v })))}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
               <div>
                 <p style={{ margin: 0, fontSize: 13, fontWeight: 500, fontFamily: 'var(--font-ui)', color: 'var(--text-strong)' }}>Max Pax per RSVP</p>
                 <p style={{ margin: '2px 0 0', fontSize: 11, color: 'var(--text-subtle)', fontFamily: 'var(--font-ui)' }}>Set to 0 for no limit</p>
               </div>
-              <input type="number" min={0} value={weddingDraft.maxPax} onChange={e => setWeddingDraft(d => ({ ...d, maxPax: parseInt(e.target.value) || 0 }))}
-                style={{ width: 80, padding: '6px 10px', border: '1px solid var(--border-default)', borderRadius: 'var(--radius-sm)', fontSize: 'var(--text-sm)', fontFamily: 'var(--font-mono)', textAlign: 'right', color: 'var(--text-body)', background: 'var(--surface-card)', outline: 'none', boxSizing: 'border-box' }}
-                onFocus={e => { e.currentTarget.style.borderColor = 'var(--brand)'; }} onBlur={e => { e.currentTarget.style.borderColor = 'var(--border-default)'; }} />
+              <input type="number" min={0} value={weddingDraft.maxPax} onChange={(e) => setWeddingDraft((d) => ({ ...d, maxPax: parseInt(e.target.value) || 0 }))}
+                style={{ width: 80, padding: '6px 10px', border: '1px solid var(--border-default)', borderRadius: 'var(--radius-sm)', fontSize: 'var(--text-sm)', fontFamily: 'var(--font-mono)', textAlign: 'right', color: 'var(--text-body)', background: 'var(--surface-card)', outline: 'none', boxSizing: 'border-box' }} />
             </div>
-          </Group>
+          </>
+        ),
+      };
+    }
 
-          <Group title="Display" chipAnchor="Display">
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-              <div>
-                <p style={{ margin: 0, fontSize: 13, fontWeight: 500, fontFamily: 'var(--font-ui)', color: 'var(--text-strong)' }}>Bride&apos;s name first</p>
-                <p style={{ margin: '2px 0 0', fontSize: 11, color: 'var(--text-subtle)', fontFamily: 'var(--font-ui)' }}>Toggle to put groom&apos;s name first</p>
-              </div>
-              <ToggleSwitch value={draftConfig['general.brideFirst'] !== 'false'} onChange={v => setConfig('general.brideFirst', v ? 'true' : 'false')} />
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-              <div>
-                <p style={{ margin: 0, fontSize: 13, fontWeight: 500, fontFamily: 'var(--font-ui)', color: 'var(--text-strong)' }}>Show Islamic (Hijri) Date</p>
-                <p style={{ margin: '2px 0 0', fontSize: 11, color: 'var(--text-subtle)', fontFamily: 'var(--font-ui)' }}>Auto-calculated from wedding date</p>
-              </div>
-              <ToggleSwitch value={draftConfig['general.showIslamicDate'] === 'true'} onChange={v => setConfig('general.showIslamicDate', v ? 'true' : 'false')} />
-            </div>
-          </Group>
+    if (block === 'details' && title === 'Change Template') {
+      return {
+        before: (
+          <>
+            {switchingTemplate && <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-muted)', fontFamily: 'var(--font-ui)' }}>Switching template…</p>}
+            <TemplateLibrary templates={templates} userTier={user?.tier ?? 'FREE'} currentTemplateId={wedding.templateId} onSelect={handleSwitchTemplate} compact />
+          </>
+        ),
+      };
+    }
 
-          <Group title="Footer" chipAnchor="Footer">
-            <FieldCard label="Footer Tagline" count={draftConfig['footer.tagline']?.length ?? 0} max={80}>
-              <input value={draftConfig['footer.tagline'] ?? ''} onChange={e => setConfig('footer.tagline', e.target.value)} maxLength={80} placeholder="Made with love for our special day"
-                style={{ width: '100%', fontSize: 14, fontWeight: 500, color: 'var(--text-strong)', background: 'transparent', border: 'none', outline: 'none', fontFamily: 'var(--font-ui)', padding: '2px 0' }} />
-              {wedding.templateId === 5 && (
-                <ColorRow value={draftConfig['footer.tagline.color'] ?? ''} onChange={v => setConfig('footer.tagline.color', v)} onClear={() => setConfig('footer.tagline.color', '')} presets={PRESETS.generic} />
-              )}
-            </FieldCard>
-          </Group>
+    if (block === 'itinerary' && title === 'Schedule / Itinerary') {
+      return { after: <ItineraryEditor weddingId={weddingId!} onItemsChange={setItinerary} /> };
+    }
 
-          {templates.length > 0 && (
-            <Group title="Change Template" defaultOpen={false}>
-              {switchingTemplate && <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-muted)', fontFamily: 'var(--font-ui)' }}>Switching template…</p>}
-              <TemplateLibrary templates={templates} userTier={user?.tier ?? 'FREE'} currentTemplateId={wedding.templateId} onSelect={handleSwitchTemplate} compact />
-            </Group>
-          )}
-        </>
-      )}
-
-      {/* ═══════════════ COVER / WELCOME ═══════════════ */}
-      {activeBlock === 'welcome' && (
-        <>
-          <Group title="Heading" chipAnchor="Content">
-            <FieldCard label="Heading Text" count={draftConfig['invite.heading']?.length ?? 0} max={50}>
-              <input value={draftConfig['invite.heading'] ?? ''} onChange={e => setConfig('invite.heading', e.target.value)} maxLength={50}
-                style={{ width: '100%', fontSize: 14, fontWeight: 500, color: 'var(--text-strong)', background: 'transparent', border: 'none', outline: 'none', fontFamily: 'var(--font-ui)', padding: '2px 0' }} />
-              <ColorRow value={draftConfig['invite.heading.color'] ?? ''} onChange={v => setConfig('invite.heading.color', v)} onClear={() => setConfig('invite.heading.color', '')} presets={PRESETS.heading} />
-              <ShadowSeg value={draftConfig['invite.heading.shadow'] ?? 'none'} onChange={v => setConfig('invite.heading.shadow', v)} options={['none', 'soft', 'strong', 'glow']} />
-            </FieldCard>
-            <div style={{ display: 'flex', gap: 8 }}>
-              <div style={{ flex: 1 }}>
-                <FieldLabel>Alignment</FieldLabel>
-                <SelectField value={draftConfig['invite.heading.align'] ?? 'center'} options={['left', 'center', 'right']} onChange={v => setConfig('invite.heading.align', v)} />
-              </div>
-              <div style={{ flex: 1 }}>
-                <FieldLabel>Animation</FieldLabel>
-                <SelectField value={draftConfig['invite.heading.animation'] ?? 'none'} options={['none', 'fade', 'slide', 'typewriter']} onChange={v => setConfig('invite.heading.animation', v)} />
-              </div>
-            </div>
-          </Group>
-
-          <Group title="Invitation Message">
-            <RichTextEditor value={draftConfig['invite.body'] ?? ''} onChange={html => setConfig('invite.body', html)} maxLength={200} />
-            <div>
-              <FieldLabel>Alignment</FieldLabel>
-              <SelectField value={draftConfig['invite.body.align'] ?? 'center'} options={['left', 'center', 'right']} onChange={v => setConfig('invite.body.align', v)} />
-            </div>
-          </Group>
-
-          {wedding.templateId === 5 && (
-            <Group title="Countdown" chipAnchor="Style">
-              <FieldCard label="Countdown Label" count={draftConfig['invite.countdown_prefix']?.length ?? 0} max={60}>
-                <input value={draftConfig['invite.countdown_prefix'] ?? ''} onChange={e => setConfig('invite.countdown_prefix', e.target.value)} maxLength={60} placeholder="Counting down to our special day"
-                  style={{ width: '100%', fontSize: 14, fontWeight: 500, color: 'var(--text-strong)', background: 'transparent', border: 'none', outline: 'none', fontFamily: 'var(--font-ui)', padding: '2px 0' }} />
-                <ColorRow value={draftConfig['countdown.label.color'] ?? ''} onChange={v => setConfig('countdown.label.color', v)} onClear={() => setConfig('countdown.label.color', '')} presets={PRESETS.date} />
-              </FieldCard>
-              <FieldCard label="Number Color">
-                <ColorRow value={draftConfig['countdown.number.color'] ?? ''} onChange={v => setConfig('countdown.number.color', v)} onClear={() => setConfig('countdown.number.color', '')} presets={PRESETS.heading} />
-              </FieldCard>
-            </Group>
-          )}
-
-          <Group title="Section Background" chipAnchor="Background">
-            <BgImageField configKey="section.welcome.bg" label="Welcome" value={draftConfig['section.welcome.bg'] ?? ''} weddingId={weddingId!} onChange={url => setConfig('section.welcome.bg', url)} />
-          </Group>
-
-          {wedding.templateId === 5 && (
-            <Group title="Page Background">
-              <BgImageField configKey="template.bg" label="Page Background" value={draftConfig['template.bg'] ?? ''} weddingId={weddingId!} onChange={url => setConfig('template.bg', url)} />
-              <div style={{ display: 'flex', gap: 8 }}>
-                <div style={{ flex: 1 }}>
-                  <FieldLabel>Size</FieldLabel>
-                  <SelectField value={draftConfig['template.bgSize'] ?? 'cover'} options={['cover', 'contain', 'auto']} labels={{ auto: 'Natural' }} onChange={v => setConfig('template.bgSize', v)} />
-                </div>
-                <div style={{ flex: 1 }}>
-                  <FieldLabel>Position</FieldLabel>
-                  <SelectField value={draftConfig['template.bgPosition'] ?? 'center'} options={['center', 'top center', 'bottom center', 'left center', 'right center']} labels={{ 'top center': 'Top', 'bottom center': 'Bottom', 'left center': 'Left', 'right center': 'Right' }} onChange={v => setConfig('template.bgPosition', v)} />
-                </div>
-              </div>
-            </Group>
-          )}
-        </>
-      )}
-
-      {/* ═══════════════ CEREMONY / WALIMAH ═══════════════ */}
-      {activeBlock === 'walimah' && (
-        <>
-          <Group title="Ceremony / Walimah" chipAnchor="Content">
-            <FieldCard label="Section Title" count={draftConfig['walimah.title']?.length ?? 0} max={40}>
-              <input value={draftConfig['walimah.title'] ?? ''} onChange={e => setConfig('walimah.title', e.target.value)} maxLength={40} placeholder="Walimatul Urus"
-                style={{ width: '100%', fontSize: 14, fontWeight: 500, color: 'var(--text-strong)', background: 'transparent', border: 'none', outline: 'none', fontFamily: 'var(--font-ui)', padding: '2px 0' }} />
-              {wedding.templateId === 5 && (
-                <ColorRow value={draftConfig['ceremony.title.color'] ?? ''} onChange={v => setConfig('ceremony.title.color', v)} onClear={() => setConfig('ceremony.title.color', '')} presets={PRESETS.heading} />
-              )}
-              {wedding.templateId === 5 && (
-                <ShadowSeg value={draftConfig['ceremony.title.shadow'] ?? 'none'} onChange={v => setConfig('ceremony.title.shadow', v)} options={['none', 'soft', 'strong', 'glow']} />
-              )}
-            </FieldCard>
-
-            <div>
-              <FieldLabel hint="Supports bold and italic formatting">Ceremony Details</FieldLabel>
-              <RichTextEditor value={draftConfig['walimah.body'] ?? ''} onChange={html => setConfig('walimah.body', html)} maxLength={500} />
-            </div>
-            <div>
-              <FieldLabel>Text Alignment</FieldLabel>
-              <SelectField value={draftConfig['walimah.body.align'] ?? 'center'} options={['left', 'center', 'right']} onChange={v => setConfig('walimah.body.align', v)} />
-            </div>
-            {wedding.templateId === 5 && (
-              <FieldCard label="Body Text Color">
-                <ColorRow value={draftConfig['walimah.body.color'] ?? ''} onChange={v => setConfig('walimah.body.color', v)} onClear={() => setConfig('walimah.body.color', '')} presets={PRESETS.body} />
-              </FieldCard>
+    if (block === 'photobooth' && title === 'Portrait & Gallery Slots') {
+      return {
+        before: (
+          <>
+            {wedding.templateId === 4 && (
+              <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', fontFamily: 'var(--font-ui)', lineHeight: 1.6, margin: 0 }}>
+                <strong>Hero Background</strong> appears full-screen behind the couple&apos;s names.
+              </p>
             )}
-          </Group>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+              {portraitSlots.map(({ slot, label }) => (
+                <PhotoDropZone key={slot} slot={slot} label={label}
+                  photo={coupleMedia.find((m) => m.templateSlot === slot)}
+                  uploading={uploadingSlot === slot}
+                  onDrop={handlePhotoDrop} onRemove={handlePhotoRemove} />
+              ))}
+            </div>
+          </>
+        ),
+      };
+    }
 
-          {wedding.templateId === 5 && (
-            <Group title="Couple Names in Card" chipAnchor="Style">
-              <div style={{ display: 'flex', gap: 8 }}>
-                <div style={{ flex: 1 }}>
-                  <FieldLabel>Color</FieldLabel>
-                  <input type="color" value={draftConfig['ceremony.names.color'] || '#ffffff'} onChange={e => setConfig('ceremony.names.color', e.target.value)} style={{ width: '100%', height: 36, cursor: 'pointer', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-default)', padding: 2 }} />
-                </div>
-                <div style={{ flex: 1 }}>
-                  <FieldLabel>Shadow</FieldLabel>
-                  <SelectField value={draftConfig['ceremony.names.shadow'] ?? 'none'} options={['none', 'soft', 'strong', 'glow']} onChange={v => setConfig('ceremony.names.shadow', v)} />
-                </div>
-              </div>
-            </Group>
-          )}
-        </>
-      )}
+    return {};
+  };
 
-      {/* ═══════════════ RSVP ═══════════════ */}
-      {activeBlock === 'rsvp' && (
-        <Group title="RSVP" chipAnchor="RSVP">
-          <FieldCard label="RSVP Subtitle" count={draftConfig['rsvp.subtitle']?.length ?? 0} max={80}>
-            <input value={draftConfig['rsvp.subtitle'] ?? ''} onChange={e => setConfig('rsvp.subtitle', e.target.value)} maxLength={80}
-              style={{ width: '100%', fontSize: 14, fontWeight: 500, color: 'var(--text-strong)', background: 'transparent', border: 'none', outline: 'none', fontFamily: 'var(--font-ui)', padding: '2px 0' }} />
-            {wedding.templateId === 5 && (
-              <ColorRow value={draftConfig['rsvp.subtitle.color'] ?? ''} onChange={v => setConfig('rsvp.subtitle.color', v)} onClear={() => setConfig('rsvp.subtitle.color', '')} presets={PRESETS.body} />
-            )}
-          </FieldCard>
+  const renderBlock = (block: BlockId) => {
+    const groups = schema.groupsFor(block);
+    const synthetic = (SYNTHETIC_GROUPS[block] ?? []).filter((title) =>
+      // the photo slots only exist on templates that have portrait slots
+      title === 'Portrait & Gallery Slots' ? showPortraitSlots : templates.length > 0,
+    );
+
+    const ordered = GROUP_ORDER[block] ?? [];
+    const titles = [
+      ...ordered.filter((t) => groups.has(t) || synthetic.includes(t)),
+      ...[...groups.keys()].filter((t) => !ordered.includes(t)),
+    ];
+
+    return titles.map((title) => {
+      const groupFields = groups.get(title) ?? [];
+      const extras = groupExtras(block, title);
+      return (
+        <Group key={title} title={title} chipAnchor={chipOf(groupFields)} defaultOpen={title !== 'Change Template'}>
+          {extras.before}
+          {groupFields.map(renderField)}
+          {extras.after}
         </Group>
-      )}
+      );
+    });
+  };
 
-      {/* ═══════════════ ITINERARY ═══════════════ */}
-      {activeBlock === 'itinerary' && (
-        <>
-          <Group title="Schedule / Itinerary" chipAnchor="Schedule">
-            <FieldCard label="Section Title" count={draftConfig['itinerary.title']?.length ?? 0} max={40}>
-              <input value={draftConfig['itinerary.title'] ?? ''} onChange={e => setConfig('itinerary.title', e.target.value)} maxLength={40} placeholder="Aturcara Majlis"
-                style={{ width: '100%', fontSize: 14, fontWeight: 500, color: 'var(--text-strong)', background: 'transparent', border: 'none', outline: 'none', fontFamily: 'var(--font-ui)', padding: '2px 0' }} />
-              {wedding.templateId === 5 && (
-                <ColorRow value={draftConfig['itinerary.title.color'] ?? ''} onChange={v => setConfig('itinerary.title.color', v)} onClear={() => setConfig('itinerary.title.color', '')} presets={PRESETS.heading} />
-              )}
-            </FieldCard>
-            {wedding.templateId === 5 && (
-              <FieldCard label="Item Text Color">
-                <ColorRow value={draftConfig['itinerary.item.color'] ?? ''} onChange={v => setConfig('itinerary.item.color', v)} onClear={() => setConfig('itinerary.item.color', '')} presets={PRESETS.body} />
-              </FieldCard>
-            )}
-            <ItineraryEditor weddingId={weddingId!} onItemsChange={setItinerary} />
-          </Group>
-          <Group title="Section Background" chipAnchor="Background">
-            <BgImageField configKey="section.ceremony.bg" label="Ceremony" value={draftConfig['section.ceremony.bg'] ?? ''} weddingId={weddingId!} onChange={url => setConfig('section.ceremony.bg', url)} />
-          </Group>
-        </>
-      )}
-
-      {/* ═══════════════ WISHES ═══════════════ */}
-      {activeBlock === 'wishes' && (
-        <Group title="Wishes & Guestbook" chipAnchor="Content">
-          <FieldCard label="Section Title" count={draftConfig['wish.title']?.length ?? 0} max={40}>
-            <input value={draftConfig['wish.title'] ?? ''} onChange={e => setConfig('wish.title', e.target.value)} maxLength={40} placeholder="Wishes & Blessings"
-              style={{ width: '100%', fontSize: 14, fontWeight: 500, color: 'var(--text-strong)', background: 'transparent', border: 'none', outline: 'none', fontFamily: 'var(--font-ui)', padding: '2px 0' }} />
-          </FieldCard>
-          <FieldCard label="Wish Prompt" count={draftConfig['wish.prompt']?.length ?? 0} max={80}>
-            <input value={draftConfig['wish.prompt'] ?? ''} onChange={e => setConfig('wish.prompt', e.target.value)} maxLength={80}
-              style={{ width: '100%', fontSize: 14, fontWeight: 500, color: 'var(--text-strong)', background: 'transparent', border: 'none', outline: 'none', fontFamily: 'var(--font-ui)', padding: '2px 0' }} />
-            {wedding.templateId === 5 && (
-              <ColorRow value={draftConfig['wish.prompt.color'] ?? ''} onChange={v => setConfig('wish.prompt.color', v)} onClear={() => setConfig('wish.prompt.color', '')} presets={PRESETS.body} />
-            )}
-          </FieldCard>
-        </Group>
-      )}
-
-      {/* ═══════════════ PHOTO BOOTH ═══════════════ */}
-      {activeBlock === 'photobooth' && (
-        <>
-          <Group title="Photo Booth" chipAnchor="Content">
-            <FieldCard label="Section Title" count={draftConfig['photobooth.title']?.length ?? 0} max={40}>
-              <input value={draftConfig['photobooth.title'] ?? ''} onChange={e => setConfig('photobooth.title', e.target.value)} maxLength={40} placeholder="Photo Booth"
-                style={{ width: '100%', fontSize: 14, fontWeight: 500, color: 'var(--text-strong)', background: 'transparent', border: 'none', outline: 'none', fontFamily: 'var(--font-ui)', padding: '2px 0' }} />
-            </FieldCard>
-            <FieldCard label="Navigation Label" count={draftConfig['nav.photos']?.length ?? 0} max={20}>
-              <input value={draftConfig['nav.photos'] ?? 'Photos'} onChange={e => setConfig('nav.photos', e.target.value)} maxLength={20}
-                style={{ width: '100%', fontSize: 14, fontWeight: 500, color: 'var(--text-strong)', background: 'transparent', border: 'none', outline: 'none', fontFamily: 'var(--font-ui)', padding: '2px 0' }} />
-            </FieldCard>
-            {photoBoothEnabled && (
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-                <div>
-                  <p style={{ margin: 0, fontSize: 13, fontWeight: 500, fontFamily: 'var(--font-ui)', color: 'var(--text-strong)' }}>Auto-approve Guest Photos</p>
-                  <p style={{ margin: '2px 0 0', fontSize: 11, color: 'var(--text-subtle)', fontFamily: 'var(--font-ui)' }}>When off, photos require manual approval</p>
-                </div>
-                <ToggleSwitch value={draftConfig['photobooth.autoApprove'] !== 'false'} onChange={v => setConfig('photobooth.autoApprove', v ? 'true' : 'false')} />
-              </div>
-            )}
-          </Group>
-
-          {showPortraitSlots && (
-            <Group title="Portrait & Gallery Slots" chipAnchor="Media">
-              {wedding.templateId === 4 && (
-                <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', fontFamily: 'var(--font-ui)', lineHeight: 1.6, margin: 0 }}>
-                  <strong>Hero Background</strong> appears full-screen behind the couple&apos;s names.
-                </p>
-              )}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-                {portraitSlots.map(({ slot, label }) => (
-                  <PhotoDropZone key={slot} slot={slot} label={label}
-                    photo={coupleMedia.find(m => m.templateSlot === slot)}
-                    uploading={uploadingSlot === slot}
-                    onDrop={handlePhotoDrop} onRemove={handlePhotoRemove} />
-                ))}
-              </div>
-            </Group>
-          )}
-
-          {wedding.templateId === 5 && (
-            <Group title="Section Headings">
-              <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', fontFamily: 'var(--font-ui)', margin: '0 0 8px' }}>Applies to Wishes &amp; Photo Booth headings</p>
-              <div style={{ display: 'flex', gap: 8 }}>
-                <div style={{ flex: 1 }}>
-                  <FieldLabel>Color</FieldLabel>
-                  <input type="color" value={draftConfig['section.heading.color'] || '#ffffff'} onChange={e => setConfig('section.heading.color', e.target.value)} style={{ width: '100%', height: 36, cursor: 'pointer', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-default)', padding: 2 }} />
-                </div>
-                <div style={{ flex: 1 }}>
-                  <FieldLabel>Shadow</FieldLabel>
-                  <SelectField value={draftConfig['section.heading.shadow'] ?? 'none'} options={['none', 'soft', 'strong', 'glow']} onChange={v => setConfig('section.heading.shadow', v)} />
-                </div>
-              </div>
-            </Group>
-          )}
-
-          <Group title="Section Background" chipAnchor="Background">
-            <BgImageField configKey="section.celebration.bg" label="Celebration" value={draftConfig['section.celebration.bg'] ?? ''} weddingId={weddingId!} onChange={url => setConfig('section.celebration.bg', url)} />
-          </Group>
-        </>
-      )}
-
-      {/* ═══════════════ MUSIC ═══════════════ */}
-      {activeBlock === 'music' && (
-        <MusicTab
-          url={draftConfig['music.url'] ?? ''}
-          loop={draftConfig['music.loop'] !== 'false'}
-          weddingId={weddingId!}
-          onUrlChange={v => setConfig('music.url', v)}
-          onLoopChange={v => setConfig('music.loop', v ? 'true' : 'false')}
-        />
-      )}
-    </>
-  );
+  const inspectorContent =
+    activeBlock === 'music' ? (
+      <MusicTab
+        url={draftConfig['music.url'] ?? ''}
+        loop={draftConfig['music.loop'] !== 'false'}
+        weddingId={weddingId!}
+        onUrlChange={(v) => setConfig('music.url', v)}
+        onLoopChange={(v) => setConfig('music.loop', v ? 'true' : 'false')}
+      />
+    ) : (
+      <>{renderBlock(activeBlock)}</>
+    );
 
   return (
     <div style={{ height: '100vh', background: 'var(--surface-app)', display: 'flex', flexDirection: 'column', overflow: 'hidden', fontFamily: 'var(--font-ui)' }}>
@@ -1371,6 +1414,13 @@ export default function CustomizePage() {
           onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'var(--surface-sunken)'; }} onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent'; }}>
           <Icon name="redo" size={14} />
         </button>
+
+        {canAdjust && (
+          <Button variant={adjusting ? 'secondary' : 'primary'} tone="brand" size="sm"
+            onClick={toggleAdjust} style={{ borderRadius: 999 }}>
+            <Icon name="sliders" size={14} /> {adjusting ? 'Close Adjust' : 'Adjust'}
+          </Button>
+        )}
 
         <div style={{ width: 1, height: 22, background: 'var(--border-subtle)', margin: '0 4px' }} />
 
@@ -1417,6 +1467,7 @@ export default function CustomizePage() {
               activeBlock={activeBlock}
               sectionOrder={sectionOrder}
               onSelectBlock={selectBlock}
+              hasMusic={schema.has('music.url')}
             />
           )}
 
@@ -1438,7 +1489,7 @@ export default function CustomizePage() {
 
               {/* Sub-section chips */}
               <div style={{ display: 'flex', gap: 4, padding: '10px 20px', borderBottom: '1px solid var(--border-subtle)', overflowX: 'auto', scrollbarWidth: 'none' }}>
-                {blockInfo.chips.map(chip => (
+                {blockChips.map(chip => (
                   <button key={chip}
                     onClick={() => handleChipClick(chip)}
                     style={{
@@ -1527,7 +1578,7 @@ export default function CustomizePage() {
           )}
         </aside>
 
-        {/* Right: Preview panel */}
+        {/* Centre: Preview panel */}
         <PreviewPanel
           iframeRef={iframeRef}
           device={device}
@@ -1540,7 +1591,44 @@ export default function CustomizePage() {
           editorMode={editorMode}
           onShowEditor={() => setEditorMode('expanded')}
           wedding={wedding}
+          revealOverflow={canAdjust && adjusting && revealOverflow && canReveal}
         />
+
+        {/* Right: stage-layout Adjust dock (PRO, Template 7). Config flows straight into
+            draftConfig; the Save button persists it like any other change. */}
+        {canAdjust && adjusting && activeStage && (
+          <aside style={{
+            width: 340, flexShrink: 0,
+            borderLeft: '1px solid var(--border-subtle)',
+            background: 'var(--surface-card)',
+            display: 'flex', flexDirection: 'column', minHeight: 0,
+          }}>
+            <AdjustPanel
+              stages={layout!.stages}
+              keyPrefix={layout!.keyPrefix}
+              stageIds={stageIds}
+              breakpoint={device === 'mobile' ? 'mobile' : 'desktop'}
+              config={draftConfig}
+              onLayoutChange={handleLayoutChange}
+              selectedStage={activeStage}
+              selectedLayer={selectedLayer}
+              onSelectStage={(id) => {
+                setSelectedStage(id);
+                setSelectedLayer(undefined);
+                // Scroll the preview iframe to the picked stage (it can't reach its own DOM here).
+                iframeRef.current?.contentWindow?.postMessage(
+                  { type: 'PREVIEW_SCROLL', sectionId: id }, window.location.origin,
+                );
+              }}
+              onSelectLayer={setSelectedLayer}
+              onClose={toggleAdjust}
+              canReveal={canReveal}
+              revealOverflow={revealOverflow}
+              onToggleReveal={() => setRevealOverflow((r) => !r)}
+              onUploadImage={handleAdjustUpload}
+            />
+          </aside>
+        )}
       </div>
 
       <style>{`

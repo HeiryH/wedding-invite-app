@@ -131,6 +131,8 @@ export const TemplateSlots = {
   CEREMONY_BG: 11,
   CELEBRATION_BG: 12,
   TEMPLATE5_GLOBAL_BG: 13,
+  // Adjust-panel layer images — non-upserting, so a stage can hold many.
+  LAYER_IMAGE: 20,
 } as const;
 
 export interface ApprovePhotoRequest {
@@ -279,7 +281,22 @@ export type TemplateConfigFieldType =
   | 'boolean'
   | 'select'
   | 'color'
-  | 'image';
+  | 'image'
+  /** Opens the stage-layer Adjust panel rather than rendering an input. */
+  | 'layout'
+  /** A stored key with no inspector control — driven by some other UI (e.g. the section rail). */
+  | 'hidden';
+
+/** Rail blocks in the customize inspector. */
+export type TemplateConfigBlock =
+  | 'details'
+  | 'welcome'
+  | 'walimah'
+  | 'rsvp'
+  | 'itinerary'
+  | 'wishes'
+  | 'photobooth'
+  | 'music';
 
 export interface TemplateConfigField {
   key: string;
@@ -293,6 +310,70 @@ export interface TemplateConfigField {
   options?: string[];
   adminOnly: boolean;
   section: TemplateConfigSection;
+
+  // ── Presentation hints for the schema-driven inspector ──────────────────────
+  /** Which rail block renders this field. Defaults to SECTION_BLOCK[section]. */
+  block?: TemplateConfigBlock;
+  /** Group() heading this field sits under. */
+  group?: string;
+  /** chipAnchor for the group's quick-nav chip. */
+  chip?: string;
+  /** Sub-label shown under the field name. */
+  hint?: string;
+  /** Named colour-swatch palette (see PRESETS in the customize page). */
+  presets?: string;
+  /**
+   * Renders this field inside another field's card rather than standalone —
+   * e.g. `names.bride.color` attaches to the Bride's Name card.
+   */
+  attachTo?: string;
+  /** Friendlier labels for select options, keyed by option value. */
+  optionLabels?: Record<string, string>;
+  /**
+   * Templates that actually read this key. Omitted ⇒ every template.
+   * Without this, a shared field renders a control that does nothing on templates
+   * whose markup never looks the key up.
+   */
+  templateIds?: number[];
+  /**
+   * Minimum user tier to see/edit this field. Omitted ⇒ FREE (everyone). The stage-layout
+   * launcher is PRO. Enforced client-side by getConfigFields and server-side by
+   * TemplateConfigPolicy — keep the two in step.
+   */
+  minTier?: 'FREE' | 'PREMIUM' | 'PRO';
+  /**
+   * Overrides whether the field appears in the guest self-serve Personalise page
+   * (getGuestFields). Omitted ⇒ the default content heuristic decides. Set `true`
+   * to force-include a field the heuristic skips, `false` to hide one it would keep.
+   */
+  guestEssential?: boolean;
+}
+
+// ========== Landing CMS Types ==========
+
+export interface LandingSectionDto {
+  id: number;
+  sectionKey: string;
+  title: string;
+  sortOrder: number;
+  isVisible: boolean;
+}
+
+export interface LandingItemDto {
+  id: number;
+  sectionKey: string;
+  sortOrder: number;
+  isActive: boolean;
+  title: string;
+  body: string;
+  imageUrl: string;
+  meta: string;
+}
+
+export interface LandingDto {
+  content: Record<string, string>;
+  sections: LandingSectionDto[];
+  items: LandingItemDto[];
 }
 
 // ========== Itinerary Types ==========

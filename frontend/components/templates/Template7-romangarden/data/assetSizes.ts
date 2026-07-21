@@ -1,0 +1,35 @@
+// Intrinsic pixel dimensions of every Template 7 art file, so each <img> can carry width/height
+// and reserve its box before decode (no layout shift on a slow phone connection).
+// Regenerate after changing the art:
+//   cd frontend/public/templates/t7 && for f in */*.webp; do sips -g pixelWidth -g pixelHeight "$f"; done
+export const T7_ASSET_SIZES: Record<string, [number, number]> = {
+  'ceremony/background.webp': [1920, 1445],
+  'ceremony/bench.webp': [900, 458],
+  'ceremony/left-plant-pot.webp': [420, 598],
+  'ceremony/pillars.webp': [1920, 1338],
+  'ceremony/right-plant-pot.webp': [360, 570],
+  'photobooth/background.webp': [1920, 1857],
+  'photobooth/bottom-deco.webp': [600, 152],
+  'photobooth/frame.webp': [1400, 1238],
+  'photobooth/icon-msg.webp': [500, 161],
+  'photobooth/left-column.webp': [400, 676],
+  'photobooth/oval-frame.webp': [600, 772],
+  'photobooth/square-frame.webp': [500, 501],
+  'photobooth/title-partition.webp': [600, 73],
+  'rsvp/background.webp': [1920, 1855],
+  'rsvp/frame.webp': [1400, 1088],
+  'rsvp/plant-pots.webp': [1600, 662],
+  'rsvp/table-icon.webp': [200, 198],
+  'welcome/arch.webp': [1000, 1267],
+  'welcome/background.webp': [1920, 1666],
+  'welcome/barrier.webp': [1920, 433],
+  'welcome/plant-column.webp': [460, 947],
+  'welcome/stairs.webp': [1100, 482],
+  'welcome/water-fountain.webp': [520, 933],
+  'wishes/background.webp': [1920, 1974],
+  'wishes/leaf-deco.webp': [1400, 330],
+  'wishes/msg.webp': [1400, 907],
+  'wishes/submit-btn.webp': [700, 116],
+  'wishes/title-partition.webp': [600, 70],
+  'wishes/title.webp': [1200, 549],
+};
