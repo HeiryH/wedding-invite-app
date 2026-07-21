@@ -17,19 +17,28 @@ namespace WeddingInvite.API.Controllers
         private readonly IWeddingRepository _weddingRepo;
         private readonly IGuestService _guestService;
         private readonly IWishService _wishService;
+        private readonly ITemplateConfigService _configService;
+        private readonly IItineraryService _itineraryService;
+        private readonly ILogger<AuthController> _logger;
 
         public AuthController(
             IAuthService authService,
             IUserRepository userRepo,
             IWeddingRepository weddingRepo,
             IGuestService guestService,
-            IWishService wishService)
+            IWishService wishService,
+            ITemplateConfigService configService,
+            IItineraryService itineraryService,
+            ILogger<AuthController> logger)
         {
             _authService = authService;
             _userRepo = userRepo;
             _weddingRepo = weddingRepo;
             _guestService = guestService;
             _wishService = wishService;
+            _configService = configService;
+            _itineraryService = itineraryService;
+            _logger = logger;
         }
 
         // POST: api/auth/login
@@ -280,6 +289,45 @@ namespace WeddingInvite.API.Controllers
                     CreatedDate   = DateTime.UtcNow,
                 };
                 var createdWedding = await _weddingRepo.CreateAsync(wedding);
+
+                // Carry through any guest-personalised content. Best-effort: a bad
+                // config or itinerary row must never block account creation. The
+                // config service applies the same FREE-tier write policy as the
+                // customize page, so PRO/adminOnly keys are silently dropped.
+                if (dto.Config is { Count: > 0 })
+                {
+                    try
+                    {
+                        await _configService.SaveConfigAsync(
+                            createdWedding.WeddingId, dto.Config, UserRoles.CoupleAdmin, "FREE");
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogWarning(ex, "self-register: failed to save guest config for wedding {WeddingId}", createdWedding.WeddingId);
+                    }
+                }
+
+                if (dto.Itinerary is { Count: > 0 })
+                {
+                    var index = 0;
+                    foreach (var item in dto.Itinerary)
+                    {
+                        if (string.IsNullOrWhiteSpace(item.Label) && string.IsNullOrWhiteSpace(item.Detail)) continue;
+                        try
+                        {
+                            await _itineraryService.CreateAsync(createdWedding.WeddingId, new CreateItineraryItemDto
+                            {
+                                Label = item.Label,
+                                Detail = item.Detail,
+                                SortOrder = index++,
+                            });
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.LogWarning(ex, "self-register: failed to save itinerary row for wedding {WeddingId}", createdWedding.WeddingId);
+                        }
+                    }
+                }
 
                 // Create the couple-admin account
                 var user = await _authService.CreateCoupleAdminForWeddingAsync(

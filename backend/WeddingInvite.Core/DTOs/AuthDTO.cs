@@ -30,6 +30,18 @@ namespace WeddingInvite.Core.DTOs
         public string Venue { get; set; } = string.Empty;
         public string VenueAddress { get; set; } = string.Empty;
         public int TemplateId { get; set; } = 1;
+
+        // Optional guest-personalised content carried through from the public
+        // Personalise draft, so the new account is populated with their work.
+        public Dictionary<string, string>? Config { get; set; }
+        public List<SelfRegisterItineraryDto>? Itinerary { get; set; }
+    }
+
+    public class SelfRegisterItineraryDto
+    {
+        public string Label { get; set; } = string.Empty;
+        public string Detail { get; set; } = string.Empty;
+        public int SortOrder { get; set; }
     }
 
     public class RegisterCoupleDto
