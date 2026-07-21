@@ -9,6 +9,11 @@ COPY package*.json ./
 RUN npm ci
 
 COPY . .
+# The deploy VPS is a 1-CPU/955MB box — Turbopack's build worker hits its default V8 heap
+# ceiling there well before physical RAM is exhausted (ERR_WORKER_OUT_OF_MEMORY). There's a
+# 3GB swapfile already configured on that host with room to spare, so raise the ceiling rather
+# than shrink the app; the build is a one-time cost, not something serving live traffic.
+ENV NODE_OPTIONS="--max-old-space-size=2048"
 RUN npm run build
 
 # Debian-slim, not alpine — Playwright's downloaded Chromium is a glibc build and won't run
