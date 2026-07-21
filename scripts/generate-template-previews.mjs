@@ -14,6 +14,8 @@ const CODES = [
   'garden-romance',
   'minimal-noir',
   'dreaming-floral-sky',
+  'fairy-garden',
+  'roman-garden',
 ];
 
 // CWD is frontend/ when called via npm script
