@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Http;
 using WeddingInvite.Core.DTOs;
 
 namespace WeddingInvite.Core.Services
@@ -10,5 +11,6 @@ namespace WeddingInvite.Core.Services
         Task<IEnumerable<TemplateDto>> GetActiveAsync();
         Task<IEnumerable<TemplateUsageDto>> GetAllWithUsageAsync();
         Task<TemplateDto> UpdateAsync(int id, UpdateTemplateMetaDto updateDto);
+        Task<TemplateDto> SetThumbnailAsync(int id, IFormFile file);
     }
 }

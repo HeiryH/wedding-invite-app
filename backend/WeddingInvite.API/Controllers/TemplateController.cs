@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using WeddingInvite.Core.DTOs;
 using WeddingInvite.Core.Services;
 
@@ -74,6 +75,29 @@ namespace WeddingInvite.API.Controllers
             catch (KeyNotFoundException ex)
             {
                 return NotFound(new { message = ex.Message });
+            }
+        }
+
+        // POST: api/template/5/thumbnail — set the picker thumbnail (e.g. from the super-admin
+        // screenshot tool). Persisted under wwwroot/uploads, not frontend/public — see
+        // TemplateService.SetThumbnailAsync for why.
+        [HttpPost("{id}/thumbnail")]
+        [Authorize(Roles = "SUPER_ADMIN")]
+        [EnableRateLimiting("public-upload")]
+        public async Task<ActionResult<TemplateDto>> SetThumbnail(int id, [FromForm] IFormFile file)
+        {
+            try
+            {
+                var template = await _templateService.SetThumbnailAsync(id, file);
+                return Ok(template);
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(new { message = ex.Message });
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(new { message = ex.Message });
             }
         }
     }
