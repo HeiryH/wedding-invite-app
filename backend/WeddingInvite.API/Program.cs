@@ -51,6 +51,7 @@ builder.Services.AddScoped<ITemplateConfigRepository, TemplateConfigRepository>(
 builder.Services.AddScoped<ITableRepository, TableRepository>();
 builder.Services.AddScoped<IItineraryRepository, ItineraryRepository>();
 builder.Services.AddScoped<IPasswordResetTokenRepository, PasswordResetTokenRepository>();
+builder.Services.AddScoped<ILandingRepository, LandingRepository>();
 
 // Services
 builder.Services.AddScoped<IWeddingService, WeddingService>();
@@ -67,6 +68,7 @@ builder.Services.AddScoped<ITemplateConfigService, TemplateConfigService>();
 builder.Services.AddScoped<ITableService, TableService>();
 builder.Services.AddScoped<IItineraryService, ItineraryService>();
 builder.Services.AddScoped<IEmailService, EmailService>();
+builder.Services.AddScoped<ILandingService, LandingService>();
 
 // JWT Authentication
 var jwtSettings = builder.Configuration.GetSection("JwtSettings");
