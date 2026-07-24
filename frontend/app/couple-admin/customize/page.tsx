@@ -22,11 +22,11 @@ import { buildDefaultConfig, getConfigFields } from '@/lib/templateConfigSchema'
 import { TemplateConfigField } from '@/lib/api';
 import { resolveSectionOrder } from '@/lib/templateUtils';
 import { PRESETS, isShadowField, chipOf, useSchemaIndex } from './_components/SchemaField';
-// The stage-layout dock (shared engine). The stage-definition map + key prefix are still
-// T7-specific here; extending to other templates means selecting these by wedding.templateId.
+// The stage-layout dock (shared engine). `TEMPLATE_ENGINES` is the single per-template registry
+// selecting {stages, keyPrefix, stageIds, reveal} — adding a template to the Adjust feature means
+// a registry entry there, not a branch here.
 import AdjustPanel from '@/components/templates/_shared/adjust/AdjustPanel';
-import { T7_STAGES, STAGE_GROUPS } from '@/components/templates/Template7-romangarden/data/stages';
-import { T5_STAGES, t5StageIds } from '@/components/templates/Template5-dreamingfloral/data/t5Stages';
+import { TEMPLATE_ENGINES } from '@/components/templates/_shared/registry';
 import { Button } from '@/components/ui/Button';
 import { Switch } from '@/components/ui/Switch';
 import { Icon } from '@/components/ui/Icon';
@@ -807,41 +807,25 @@ export default function CustomizePage() {
   const isPro = user?.tier === 'PRO';
 
   // Which layer engine (if any) this template exposes, and the stages it can edit — gated exactly
-  // like the template renders them. Adding a template to the Adjust feature means a case here.
+  // like the template renders them. Adding a template to the Adjust feature means a
+  // `TEMPLATE_ENGINES` registry entry (see _shared/registry.ts), not a branch here.
   const layout = useMemo(() => {
     const id = wedding?.templateId;
-    if (id === 7) {
-      const codes = resolveSectionOrder(
-        sectionOrder.join(','),
-        Boolean(draftConfig['walimah.body']),
-        itinerary.length > 0,
-        photoBoothEnabled,
-      );
-      // reveal: T7 is the full-screen Stage compositor, so "Reveal off-screen" (widen canvas +
-      // pin stage width) applies. T5 is fluid DOM overlay — widening would just reflow it larger.
-      const flat = codes.flatMap((c) => STAGE_GROUPS[c] ?? []);
-      // In the compiled ceremony row the frame art is deduped into the shared "Ceremony Backdrop"
-      // stage, and each beat renders only its own content — so surface the backdrop entry (before
-      // the beats) and strip the now-unused per-beat art from the beats' panel entries.
-      if (draftConfig['scene.ceremony.layout'] === 'row') {
-        const CEREMONY_BEATS = ['ceremony-walimah', 'ceremony-couple', 'ceremony-details'];
-        const wi = flat.indexOf('ceremony-walimah');
-        const ids = wi >= 0 ? [...flat.slice(0, wi), 'ceremony-rail', ...flat.slice(wi)] : flat;
-        const stages: typeof T7_STAGES = { ...T7_STAGES };
-        for (const id of CEREMONY_BEATS) {
-          const s = T7_STAGES[id];
-          // Beats render slot-only in row mode and share one background owned by the backdrop stage,
-          // so hide their per-beat art rows and their (now inert) Background control.
-          if (s) stages[id] = { ...s, bg: '', layers: s.layers.filter((l) => l.kind === 'slot' || l.kind === 'anchor') };
-        }
-        return { stages, keyPrefix: 't7', stageIds: ids, reveal: true };
-      }
-      return { stages: T7_STAGES, keyPrefix: 't7', stageIds: flat, reveal: true };
-    }
-    if (id === 5) {
-      return { stages: T5_STAGES, keyPrefix: 't5', stageIds: t5StageIds(photoBoothEnabled), reveal: false };
-    }
-    return null;
+    const engine = id ? TEMPLATE_ENGINES[id] : undefined;
+    if (!engine) return null;
+    const codes = resolveSectionOrder(
+      sectionOrder.join(','),
+      Boolean(draftConfig['walimah.body']),
+      itinerary.length > 0,
+      photoBoothEnabled,
+    );
+    const ctx = { codes, photoBoothEnabled, draftConfig };
+    return {
+      stages: engine.resolveStages(ctx),
+      keyPrefix: engine.keyPrefix,
+      stageIds: engine.stageIds(ctx),
+      reveal: engine.reveal,
+    };
   }, [wedding?.templateId, sectionOrder, draftConfig, itinerary.length, photoBoothEnabled]);
 
   const canAdjust = isPro && !!layout;
