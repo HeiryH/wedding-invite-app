@@ -31,9 +31,4 @@ namespace WeddingInvite.Core.DTOs
         public int SortOrder { get; set; }
         public List<int> FeatureIds { get; set; } = new List<int>();
     }
-
-    public class AssignPackageDto
-    {
-        public int PackageId { get; set; }
-    }
 }

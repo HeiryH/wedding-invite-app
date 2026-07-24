@@ -14,15 +14,18 @@ namespace WeddingInvite.API.Controllers
         private readonly IWeddingService _weddingService;
         private readonly IWeddingAuthorizationService _authorizationService;
         private readonly IUserRepository _userRepo;
+        private readonly IWeddingExportService _weddingExportService;
 
         public WeddingController(
             IWeddingService weddingService,
             IWeddingAuthorizationService authorizationService,
-            IUserRepository userRepo)
+            IUserRepository userRepo,
+            IWeddingExportService weddingExportService)
         {
             _weddingService = weddingService;
             _authorizationService = authorizationService;
             _userRepo = userRepo;
+            _weddingExportService = weddingExportService;
         }
 
         // GET: api/wedding — super admin only, returns all weddings with creator info for grouping
@@ -229,6 +232,29 @@ namespace WeddingInvite.API.Controllers
             return NoContent();
         }
 
+        // GET: api/wedding/5/export — a zip of everything belonging to this wedding (RSVPs, wishes,
+        // seating, itinerary, full customization config, photos, audio). Same role/access gate as
+        // Delete — pairs naturally as "back this up before you remove it," but stands on its own too.
+        [HttpGet("{id}/export")]
+        [Authorize(Roles = "SUPER_ADMIN,HOST_ADMIN")]
+        public async Task<IActionResult> Export(int id)
+        {
+            var userEmail = User.Identity?.Name;
+            if (!await _authorizationService.CanAccessWeddingAsync(userEmail!, id))
+                return Forbid();
+
+            var wedding = await _weddingService.GetByIdAsync(id);
+            if (wedding == null)
+                return NotFound(new { message = $"Wedding with ID {id} not found" });
+
+            var zipBytes = await _weddingExportService.BuildExportZipAsync(id);
+            if (zipBytes == null)
+                return NotFound(new { message = $"Wedding with ID {id} not found" });
+
+            var filename = $"{wedding.CoupleName}-export-{DateTime.UtcNow:yyyy-MM-dd}.zip";
+            return File(zipBytes, "application/zip", filename);
+        }
+
         [HttpPut("{id}/template")]
         [Authorize(Roles = "SUPER_ADMIN,HOST_ADMIN,COUPLE_ADMIN")]
         public async Task<ActionResult<WeddingDto>> UpdateTemplate(int id, [FromBody] UpdateTemplateDto dto)
@@ -240,33 +266,6 @@ namespace WeddingInvite.API.Controllers
             try
             {
                 var updated = await _weddingService.UpdateTemplateAsync(id, dto.TemplateId);
-                return Ok(updated);
-            }
-            catch (KeyNotFoundException ex)
-            {
-                return NotFound(new { message = ex.Message });
-            }
-            catch (ArgumentException ex)
-            {
-                return BadRequest(new { message = ex.Message });
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(new { message = ex.Message });
-            }
-        }
-
-        [HttpPut("{id}/package")]
-        [Authorize(Roles = "SUPER_ADMIN,HOST_ADMIN")]
-        public async Task<ActionResult<WeddingDto>> UpdatePackage(int id, [FromBody] AssignPackageDto dto)
-        {
-            var userEmail = User.Identity?.Name;
-            if (!await _authorizationService.CanAccessWeddingAsync(userEmail!, id))
-                return Forbid();
-
-            try
-            {
-                var updated = await _weddingService.UpdatePackageAsync(id, dto.PackageId);
                 return Ok(updated);
             }
             catch (KeyNotFoundException ex)

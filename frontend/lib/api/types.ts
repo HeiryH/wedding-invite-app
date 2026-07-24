@@ -17,8 +17,8 @@ export interface Wedding {
   enabledFeaturesCount: number;  // NEW
   templateId: number;
   templateName: string;
-  packageId?: number;
-  packageName?: string;
+  /** Only set when the template is authored (data, not a React component) — see TemplateWrapper. */
+  templateStagesJson?: string | null;
   maxPax?: number;
   maxCapacity?: number;
   showCapacityWarning?: boolean;
@@ -36,7 +36,6 @@ export interface CreateWedding {
   venue: string;
   venueAddress: string;
   templateId?: number;
-  packageId?: number;
 }
 
 export interface UpdateWeddingDto {
@@ -215,6 +214,7 @@ export interface Template {
   isPremium: boolean;
   tier: 'FREE' | 'PREMIUM' | 'PRO';
   sortOrder: number;
+  isAuthored: boolean;
 }
 
 export interface TemplateWithUsage extends Template {

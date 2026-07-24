@@ -1,3 +1,4 @@
+using WeddingInvite.Core.Constants;
 using WeddingInvite.Core.DTOs;
 using WeddingInvite.Data.Repositories;
 using WeddingInvite.Models;
@@ -6,6 +7,14 @@ namespace WeddingInvite.Core.Services
 {
     public class PackageService : IPackageService
     {
+        // Package rows ARE the tier definitions now (see TierEntitlements/IPackageRepository).
+        // Nothing else in the app recognizes a tier outside this set, so package rows are
+        // locked to exactly these three codes — no ad-hoc extra bundles.
+        private static readonly HashSet<string> TierCodes = new(StringComparer.OrdinalIgnoreCase)
+        {
+            TierEntitlements.Free, TierEntitlements.Premium, TierEntitlements.Pro,
+        };
+
         private readonly IPackageRepository _packageRepo;
         private readonly IFeatureRepository _featureRepo;
 
@@ -46,6 +55,9 @@ namespace WeddingInvite.Core.Services
 
             if (string.IsNullOrWhiteSpace(createDto.PackageCode))
                 throw new ArgumentException("Package code is required");
+
+            if (!TierCodes.Contains(createDto.PackageCode.Trim()))
+                throw new ArgumentException("Package code must be one of FREE, PREMIUM, or PRO — these are the platform's tiers.");
 
             if (await _packageRepo.NameExistsAsync(createDto.PackageName))
                 throw new ArgumentException($"Package name '{createDto.PackageName}' already exists");
@@ -111,6 +123,11 @@ namespace WeddingInvite.Core.Services
 
         public async Task<bool> DeleteAsync(int id)
         {
+            var package = await _packageRepo.GetByIdAsync(id);
+            if (package != null && TierCodes.Contains(package.PackageCode))
+                throw new InvalidOperationException(
+                    $"'{package.PackageName}' defines the {package.PackageCode} tier and can't be deleted — every wedding on that tier depends on it.");
+
             return await _packageRepo.DeleteAsync(id);
         }
 

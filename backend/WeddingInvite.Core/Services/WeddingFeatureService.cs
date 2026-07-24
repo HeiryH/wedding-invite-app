@@ -10,17 +10,20 @@ namespace WeddingInvite.Core.Services
         private readonly IWeddingRepository _weddingRepo;
         private readonly IFeatureRepository _featureRepo;
         private readonly IUserRepository _userRepo;
+        private readonly IPackageRepository _packageRepo;
 
         public WeddingFeatureService(
             IWeddingFeatureRepository weddingFeatureRepo,
             IWeddingRepository weddingRepo,
             IFeatureRepository featureRepo,
-            IUserRepository userRepo)
+            IUserRepository userRepo,
+            IPackageRepository packageRepo)
         {
             _weddingFeatureRepo = weddingFeatureRepo;
             _weddingRepo = weddingRepo;
             _featureRepo = featureRepo;
             _userRepo = userRepo;
+            _packageRepo = packageRepo;
         }
         
         public async Task<IEnumerable<WeddingFeatureDto>> GetWeddingFeaturesAsync(int weddingId)
@@ -118,7 +121,7 @@ namespace WeddingInvite.Core.Services
                 // The governing tier is the couple admin's tier (manual, admin-set).
                 var owner = await _userRepo.GetByWeddingIdAsync(weddingId);
                 var tier = owner?.Tier ?? TierEntitlements.Free;
-                if (!TierEntitlements.AllowsFeature(tier, feature.FeatureCode))
+                if (!await _packageRepo.TierIncludesFeatureAsync(tier, feature.FeatureCode))
                     throw new InvalidOperationException(
                         $"'{feature.FeatureName}' isn't available on the {tier} tier. Upgrade the wedding to enable it.");
 

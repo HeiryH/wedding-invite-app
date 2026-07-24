@@ -14,20 +14,23 @@ namespace WeddingInvite.Tests;
 /// </summary>
 public class TierEnforcementTests
 {
-    // ── Pure entitlement-map logic ─────────────────────────────────────────────
+    // ── Package-driven entitlement lookup (replaces the old hardcoded FeatureMinRank dict) ────
     [Theory]
     [InlineData("FREE", "RSVP", true)]
     [InlineData("FREE", "WISHES", true)]
     [InlineData("FREE", "PHOTO_BOOTH", false)]
     [InlineData("FREE", "SEATING", false)]
+    [InlineData("FREE", "CUSTOM_DOMAIN", false)]
     [InlineData("PREMIUM", "PHOTO_BOOTH", true)]
     [InlineData("PREMIUM", "SEATING", true)]
     [InlineData("PREMIUM", "CUSTOM_DOMAIN", false)]
     [InlineData("PRO", "CUSTOM_DOMAIN", true)]
-    [InlineData(null, "PHOTO_BOOTH", false)] // missing tier ⇒ FREE
-    public void AllowsFeature_RespectsTierCeiling(string? tier, string code, bool expected)
+    [InlineData(null, "PHOTO_BOOTH", false)] // missing tier ⇒ no matching package
+    public async Task TierIncludesFeature_RespectsPackageDefinition(string? tier, string code, bool expected)
     {
-        Assert.Equal(expected, TierEntitlements.AllowsFeature(tier, code));
+        using var db = new TestDb();
+        var repo = new PackageRepository(db.Context);
+        Assert.Equal(expected, await repo.TierIncludesFeatureAsync(tier, code));
     }
 
     [Theory]
@@ -45,6 +48,15 @@ public class TierEnforcementTests
         new WeddingFeatureRepository(db.Context),
         new WeddingRepository(db.Context),
         new FeatureRepository(db.Context),
+        new UserRepository(db.Context),
+        new PackageRepository(db.Context));
+
+    private static WeddingService BuildWeddingService(TestDb db) => new(
+        new WeddingRepository(db.Context),
+        new GuestRepository(db.Context),
+        new PackageRepository(db.Context),
+        new WeddingFeatureRepository(db.Context),
+        new TemplateRepository(db.Context),
         new UserRepository(db.Context));
 
     private static void SeedCouple(TestDb db, int weddingId, string tier)
@@ -61,7 +73,8 @@ public class TierEnforcementTests
         db.Context.SaveChanges();
     }
 
-    private const int PhotoBoothFeatureId = 1; // seeded PHOTO_BOOTH
+    private const int PhotoBoothFeatureId = 1;  // seeded PHOTO_BOOTH
+    private const int CustomDomainFeatureId = 3; // seeded CUSTOM_DOMAIN
     private const int RsvpFeatureId = 4;        // seeded RSVP (FREE)
 
     [Fact]
@@ -108,5 +121,44 @@ public class TierEnforcementTests
         // Disabling a premium feature must never be blocked by the ceiling.
         var result = await svc.ToggleFeatureAsync(103, new ToggleFeatureDto { FeatureId = PhotoBoothFeatureId, IsEnabled = false });
         Assert.False(result.IsEnabled);
+    }
+
+    // ── Custom domain: tier ceiling AND explicit per-wedding toggle (same two-step gate) ───────
+    [Fact]
+    public async Task PremiumWedding_CannotSetDomain_NotOnTier()
+    {
+        using var db = new TestDb();
+        SeedCouple(db, 104, TierEntitlements.Premium);
+        var weddingSvc = BuildWeddingService(db);
+
+        var ex = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            weddingSvc.SetDomainAsync(104, "example.com"));
+        Assert.Contains("PRO", ex.Message);
+    }
+
+    [Fact]
+    public async Task ProWedding_CannotSetDomain_UntilToggleIsEnabled()
+    {
+        using var db = new TestDb();
+        SeedCouple(db, 105, TierEntitlements.Pro);
+        var weddingSvc = BuildWeddingService(db);
+
+        var ex = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            weddingSvc.SetDomainAsync(105, "example.com"));
+        Assert.Contains("enabled", ex.Message);
+    }
+
+    [Fact]
+    public async Task ProWedding_CanSetDomain_OnceToggleIsEnabled()
+    {
+        using var db = new TestDb();
+        SeedCouple(db, 106, TierEntitlements.Pro);
+        var featureSvc = BuildService(db);
+        var weddingSvc = BuildWeddingService(db);
+
+        await featureSvc.ToggleFeatureAsync(106, new ToggleFeatureDto { FeatureId = CustomDomainFeatureId, IsEnabled = true });
+
+        var updated = await weddingSvc.SetDomainAsync(106, "example.com");
+        Assert.Equal("example.com", updated.Domain);
     }
 }

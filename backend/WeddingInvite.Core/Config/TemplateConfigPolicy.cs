@@ -32,6 +32,15 @@ namespace WeddingInvite.Core.Config
         // admin keys has an obvious home.
         private static readonly string[] AdminOnlyPrefixes = System.Array.Empty<string>();
 
+        // Keys that hold a *specific couple's* content rather than the template's visual design.
+        // Excluded when capturing a template's starting design (SetDefaultFromWeddingAsync), so a new
+        // invite is seeded with the layout/colours/scene but not the reference couple's wording or
+        // uploaded music. A blacklist, so any future *visual* key is captured by default.
+        private static readonly HashSet<string> CoupleContentKeys = new(StringComparer.Ordinal)
+        {
+            "invite.body", "walimah.body", "music.url",
+        };
+
         private static readonly Regex KeyPattern = new(@"^[a-zA-Z0-9._-]+$", RegexOptions.Compiled);
 
         // Stage-layer layout keys: t5.layout.mobile.welcome, t7.layout.desktop.rsvp, … The Adjust
@@ -44,6 +53,11 @@ namespace WeddingInvite.Core.Config
             AdminOnlyPrefixes.Any(p => key.StartsWith(p, StringComparison.Ordinal));
 
         public static bool IsLayoutKey(string key) => LayoutKeyPattern.IsMatch(key);
+
+        /// <summary>
+        /// Whether a key holds couple-specific content (excluded from a captured template default).
+        /// </summary>
+        public static bool IsCoupleContent(string key) => CoupleContentKeys.Contains(key);
 
         /// <summary>
         /// Whether a caller of the given role + tier may write this key. Super admins bypass both

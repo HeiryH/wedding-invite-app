@@ -28,6 +28,17 @@ namespace WeddingInvite.API.Controllers
             return Ok(config);
         }
 
+        // GET: api/template-config/template/7/default  (public — the sample/thumbnail preview
+        // renders no real wedding, so it reads the template's captured "starting design" directly.
+        // Already couple-content-free by construction (SetDefaultFromWeddingAsync strips it), so
+        // this is safe to expose with no auth — same posture as the wedding-config GET above.)
+        [HttpGet("template/{templateId}/default")]
+        public async Task<ActionResult<Dictionary<string, string>>> GetTemplateDefault(int templateId)
+        {
+            var config = await _configService.GetDefaultAsync(templateId);
+            return Ok(config);
+        }
+
         // PUT: api/template-config/wedding/5  (authorized — couple admin or super admin)
         [HttpPut("wedding/{weddingId}")]
         [Authorize]

@@ -21,6 +21,12 @@ namespace WeddingInvite.Models
         public bool IsPremium { get; set; } = false; // kept in sync with Tier (Tier != FREE)
         public string Tier { get; set; } = "FREE"; // FREE | PREMIUM | PRO
         public int SortOrder { get; set; } = 0;
+
+        // Authored templates: a Record<StageId, StageDef> JSON blob (frontend
+        // _shared/DataTemplate.tsx's shape) rendered through the shared stage/layer engine instead
+        // of a per-template React component. Null/IsAuthored=false for every hand-coded template.
+        public bool IsAuthored { get; set; } = false;
+        public string? StagesJson { get; set; }
         
         public DateTime CreatedDate { get; set; } = DateTime.UtcNow;
         

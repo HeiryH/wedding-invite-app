@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using WeddingInvite.Data;
 
@@ -10,9 +11,11 @@ using WeddingInvite.Data;
 namespace WeddingInvite.Data.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260723135311_UnifyTierGatingUnderPackages")]
+    partial class UnifyTierGatingUnderPackages
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "10.0.2");
@@ -55,7 +58,7 @@ namespace WeddingInvite.Data.Migrations
                     b.HasIndex("FeatureCode")
                         .IsUnique();
 
-                    b.ToTable("Features", (string)null);
+                    b.ToTable("Features");
 
                     b.HasData(
                         new
@@ -177,7 +180,7 @@ namespace WeddingInvite.Data.Migrations
 
                     b.HasIndex("WeddingId");
 
-                    b.ToTable("Guests", (string)null);
+                    b.ToTable("Guests");
                 });
 
             modelBuilder.Entity("WeddingInvite.Models.ItineraryItem", b =>
@@ -206,7 +209,7 @@ namespace WeddingInvite.Data.Migrations
 
                     b.HasIndex("WeddingId");
 
-                    b.ToTable("ItineraryItems", (string)null);
+                    b.ToTable("ItineraryItems");
                 });
 
             modelBuilder.Entity("WeddingInvite.Models.LandingContentItem", b =>
@@ -225,7 +228,7 @@ namespace WeddingInvite.Data.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("LandingContent", (string)null);
+                    b.ToTable("LandingContent");
                 });
 
             modelBuilder.Entity("WeddingInvite.Models.LandingItem", b =>
@@ -262,7 +265,7 @@ namespace WeddingInvite.Data.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("LandingItems", (string)null);
+                    b.ToTable("LandingItems");
                 });
 
             modelBuilder.Entity("WeddingInvite.Models.LandingSection", b =>
@@ -287,7 +290,7 @@ namespace WeddingInvite.Data.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("LandingSections", (string)null);
+                    b.ToTable("LandingSections");
                 });
 
             modelBuilder.Entity("WeddingInvite.Models.Package", b =>
@@ -331,7 +334,7 @@ namespace WeddingInvite.Data.Migrations
                     b.HasIndex("PackageName")
                         .IsUnique();
 
-                    b.ToTable("Packages", (string)null);
+                    b.ToTable("Packages");
 
                     b.HasData(
                         new
@@ -388,7 +391,7 @@ namespace WeddingInvite.Data.Migrations
                     b.HasIndex("PackageId", "FeatureId")
                         .IsUnique();
 
-                    b.ToTable("PackageFeatures", (string)null);
+                    b.ToTable("PackageFeatures");
 
                     b.HasData(
                         new
@@ -488,7 +491,7 @@ namespace WeddingInvite.Data.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("PasswordResetTokens", (string)null);
+                    b.ToTable("PasswordResetTokens");
                 });
 
             modelBuilder.Entity("WeddingInvite.Models.Photo", b =>
@@ -568,7 +571,7 @@ namespace WeddingInvite.Data.Migrations
 
                     b.HasIndex("WeddingId");
 
-                    b.ToTable("Photos", (string)null);
+                    b.ToTable("Photos");
                 });
 
             modelBuilder.Entity("WeddingInvite.Models.Table", b =>
@@ -595,7 +598,7 @@ namespace WeddingInvite.Data.Migrations
 
                     b.HasIndex("WeddingId");
 
-                    b.ToTable("Tables", (string)null);
+                    b.ToTable("Tables");
                 });
 
             modelBuilder.Entity("WeddingInvite.Models.Template", b =>
@@ -620,9 +623,6 @@ namespace WeddingInvite.Data.Migrations
                     b.Property<bool>("IsActive")
                         .HasColumnType("INTEGER");
 
-                    b.Property<bool>("IsAuthored")
-                        .HasColumnType("INTEGER");
-
                     b.Property<bool>("IsPremium")
                         .HasColumnType("INTEGER");
 
@@ -638,9 +638,6 @@ namespace WeddingInvite.Data.Migrations
 
                     b.Property<int>("SortOrder")
                         .HasColumnType("INTEGER");
-
-                    b.Property<string>("StagesJson")
-                        .HasColumnType("TEXT");
 
                     b.Property<string>("TemplateCode")
                         .IsRequired()
@@ -665,7 +662,7 @@ namespace WeddingInvite.Data.Migrations
                     b.HasIndex("TemplateCode")
                         .IsUnique();
 
-                    b.ToTable("Templates", (string)null);
+                    b.ToTable("Templates");
 
                     b.HasData(
                         new
@@ -675,7 +672,6 @@ namespace WeddingInvite.Data.Migrations
                             CreatedDate = new DateTime(2026, 7, 23, 13, 53, 10, 964, DateTimeKind.Utc).AddTicks(2400),
                             Description = "Elegant rose and pink design with top navigation",
                             IsActive = true,
-                            IsAuthored = false,
                             IsPremium = false,
                             PrimaryColor = "#f43f5e",
                             SecondaryColor = "#ec4899",
@@ -692,7 +688,6 @@ namespace WeddingInvite.Data.Migrations
                             CreatedDate = new DateTime(2026, 7, 23, 13, 53, 10, 964, DateTimeKind.Utc).AddTicks(2490),
                             Description = "Luxurious yellow and gold single-page design with floating navigation",
                             IsActive = true,
-                            IsAuthored = false,
                             IsPremium = true,
                             PrimaryColor = "#eab308",
                             SecondaryColor = "#f59e0b",
@@ -709,7 +704,6 @@ namespace WeddingInvite.Data.Migrations
                             CreatedDate = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             Description = "Botanical green theme with couple portrait and extra image slots",
                             IsActive = true,
-                            IsAuthored = false,
                             IsPremium = true,
                             PrimaryColor = "#16a34a",
                             SecondaryColor = "#86efac",
@@ -726,7 +720,6 @@ namespace WeddingInvite.Data.Migrations
                             CreatedDate = new DateTime(2026, 3, 27, 0, 0, 0, 0, DateTimeKind.Utc),
                             Description = "Clean cream and black editorial design with torn-paper dividers, live countdown, and timeline schedule",
                             IsActive = true,
-                            IsAuthored = false,
                             IsPremium = true,
                             PrimaryColor = "#1C1C1A",
                             SecondaryColor = "#8A8A80",
@@ -743,7 +736,6 @@ namespace WeddingInvite.Data.Migrations
                             CreatedDate = new DateTime(2026, 5, 19, 0, 0, 0, 0, DateTimeKind.Utc),
                             Description = "Enchanted fairy garden with glowing 3D fireflies, falling petals, and immersive forest scenes",
                             IsActive = true,
-                            IsAuthored = false,
                             IsPremium = true,
                             PrimaryColor = "#f7c6d7",
                             SecondaryColor = "#a8d5a2",
@@ -760,7 +752,6 @@ namespace WeddingInvite.Data.Migrations
                             CreatedDate = new DateTime(2026, 7, 13, 0, 0, 0, 0, DateTimeKind.Utc),
                             Description = "Sepia line-engraved Roman garden with parallax scenes, a sideways-panning ceremony colonnade, and an expanding RSVP seating chart",
                             IsActive = true,
-                            IsAuthored = false,
                             IsPremium = true,
                             PrimaryColor = "#3D3833",
                             SecondaryColor = "#C9BFAE",
@@ -799,7 +790,7 @@ namespace WeddingInvite.Data.Migrations
                     b.HasIndex("TemplateId", "ConfigKey")
                         .IsUnique();
 
-                    b.ToTable("TemplateConfigDefaults", (string)null);
+                    b.ToTable("TemplateConfigDefaults");
                 });
 
             modelBuilder.Entity("WeddingInvite.Models.User", b =>
@@ -842,7 +833,7 @@ namespace WeddingInvite.Data.Migrations
 
                     b.HasIndex("WeddingId");
 
-                    b.ToTable("Users", (string)null);
+                    b.ToTable("Users");
 
                     b.HasData(
                         new
@@ -935,7 +926,7 @@ namespace WeddingInvite.Data.Migrations
 
                     b.HasIndex("TemplateId");
 
-                    b.ToTable("Weddings", (string)null);
+                    b.ToTable("Weddings");
                 });
 
             modelBuilder.Entity("WeddingInvite.Models.WeddingFeature", b =>
@@ -966,7 +957,7 @@ namespace WeddingInvite.Data.Migrations
                     b.HasIndex("WeddingId", "FeatureId")
                         .IsUnique();
 
-                    b.ToTable("WeddingFeatures", (string)null);
+                    b.ToTable("WeddingFeatures");
                 });
 
             modelBuilder.Entity("WeddingInvite.Models.WeddingTemplateConfig", b =>
@@ -996,7 +987,7 @@ namespace WeddingInvite.Data.Migrations
                     b.HasIndex("WeddingId", "ConfigKey")
                         .IsUnique();
 
-                    b.ToTable("TemplateConfigs", (string)null);
+                    b.ToTable("TemplateConfigs");
                 });
 
             modelBuilder.Entity("WeddingInvite.Models.Wish", b =>
@@ -1025,7 +1016,7 @@ namespace WeddingInvite.Data.Migrations
 
                     b.HasIndex("WeddingId");
 
-                    b.ToTable("Wishes", (string)null);
+                    b.ToTable("Wishes");
                 });
 
             modelBuilder.Entity("WeddingInvite.Models.Guest", b =>

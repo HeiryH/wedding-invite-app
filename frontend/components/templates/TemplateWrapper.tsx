@@ -1,5 +1,6 @@
 'use client';
 
+import { useMemo } from 'react';
 import { Wedding, Guest, Wish, Photo, ItineraryItem, SeatingTable } from '@/lib/api';
 import Template1 from './Template1';
 import Template2 from './Template2';
@@ -8,6 +9,9 @@ import Template4 from './Template4';
 import Template5 from './Template5';
 import Template6 from './Template6';
 import Template7 from './Template7';
+import DataTemplate from './_shared/DataTemplate';
+import { useBreakpoint } from './_shared/hooks/useBreakpoint';
+import type { StageDef, SlotProps, EditorHandle } from './_shared/types';
 
 interface TemplateWrapperProps {
   wedding: Wedding;
@@ -25,7 +29,7 @@ interface TemplateWrapperProps {
   // forwarded, which is why the preview iframe showed a seating-less RSVP.
   seatingEnabled?: boolean;
   tables?: SeatingTable[];
-  editor?: unknown;
+  editor?: EditorHandle;
 }
 
 export default function TemplateWrapper({
@@ -44,6 +48,54 @@ export default function TemplateWrapper({
   tables,
   editor,
 }: TemplateWrapperProps) {
+  // Pinned by the Adjust panel while editing (matches every hand-coded template's own convention).
+  const breakpoint = useBreakpoint(editor?.enabled ? editor.breakpoint : undefined);
+
+  // Authored templates (Template.StagesJson, set via the super-admin API — see
+  // _shared/DataTemplate.tsx) render through the shared engine directly, bypassing the
+  // per-templateId component switch below entirely. Slot layers are out of scope for this slice —
+  // slotRegistry stays empty in DataTemplate, so an authored template is art/text/shape only.
+  const authoredStages = useMemo(() => {
+    if (!wedding.templateStagesJson) return null;
+    try {
+      return JSON.parse(wedding.templateStagesJson) as Record<string, StageDef>;
+    } catch {
+      return null;
+    }
+  }, [wedding.templateStagesJson]);
+
+  if (authoredStages) {
+    const slotProps: SlotProps = {
+      wedding,
+      t: (key: string, fallback: string) => customConfig?.[key] || fallback,
+      wishes,
+      photos,
+      tables: tables ?? [],
+      itinerary: itinerary ?? [],
+      seatingEnabled: Boolean(seatingEnabled),
+      photoBoothEnabled,
+      onRSVP,
+      onSubmitWish,
+      onUploadPhoto,
+      editing: Boolean(editor?.enabled),
+      config: customConfig,
+      breakpoint,
+      editor,
+    };
+    return (
+      <DataTemplate
+        stages={authoredStages}
+        stageIds={Object.keys(authoredStages)}
+        keyPrefix={`ta${wedding.templateId}`}
+        assetRoot=""
+        breakpoint={breakpoint}
+        customConfig={customConfig}
+        slotProps={slotProps}
+        editor={editor}
+      />
+    );
+  }
+
   // Map templateId to component
   const getTemplate = () => {
     switch (wedding.templateId) {

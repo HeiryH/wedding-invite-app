@@ -14,11 +14,20 @@ namespace WeddingInvite.Core.DTOs
         public bool IsPremium { get; set; }
         public string Tier { get; set; } = "FREE";
         public int SortOrder { get; set; }
+        public bool IsAuthored { get; set; }
     }
 
     public class TemplateUsageDto : TemplateDto
     {
         public int WeddingCount { get; set; }
+    }
+
+    // Body for PUT /api/template/{id}/stages — a raw JSON blob (frontend
+    // Record<StageId, StageDef>), validated only as "is this well-formed JSON", not against the
+    // frontend's shape (that stays a frontend-only contract for this slice).
+    public class SetTemplateStagesDto
+    {
+        public string StagesJson { get; set; } = string.Empty;
     }
 
     public class UpdateTemplateMetaDto

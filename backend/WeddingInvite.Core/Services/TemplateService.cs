@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Microsoft.AspNetCore.Http;
 using WeddingInvite.Core.DTOs;
 using WeddingInvite.Core.Utilities;
@@ -11,6 +12,7 @@ namespace WeddingInvite.Core.Services
         private readonly ITemplateRepository _templateRepo;
         private const long MaxThumbnailBytes = 10 * 1024 * 1024; // 10MB, mirrors PhotoService
         private static readonly string[] AllowedExtensions = { ".jpg", ".jpeg", ".png", ".gif", ".webp" };
+        private const int MaxStagesJsonLength = 200_000; // a multi-stage composition, not a single config value
 
         public TemplateService(ITemplateRepository templateRepo)
         {
@@ -138,6 +140,43 @@ namespace WeddingInvite.Core.Services
             return MapToDto(updated);
         }
 
+        public async Task<TemplateDto> SetStagesAsync(int id, string stagesJson)
+        {
+            var template = await _templateRepo.GetByIdAsync(id);
+            if (template == null)
+                throw new KeyNotFoundException($"Template with ID {id} not found");
+
+            if (string.IsNullOrWhiteSpace(stagesJson))
+                throw new ArgumentException("stagesJson is required");
+            if (stagesJson.Length > MaxStagesJsonLength)
+                throw new ArgumentException($"stagesJson cannot exceed {MaxStagesJsonLength} characters");
+            try
+            {
+                JsonDocument.Parse(stagesJson);
+            }
+            catch (JsonException)
+            {
+                throw new ArgumentException("stagesJson is not valid JSON");
+            }
+
+            template.StagesJson = stagesJson;
+            template.IsAuthored = true;
+            var updated = await _templateRepo.UpdateAsync(template);
+            return MapToDto(updated);
+        }
+
+        public async Task<TemplateDto> ClearStagesAsync(int id)
+        {
+            var template = await _templateRepo.GetByIdAsync(id);
+            if (template == null)
+                throw new KeyNotFoundException($"Template with ID {id} not found");
+
+            template.StagesJson = null;
+            template.IsAuthored = false;
+            var updated = await _templateRepo.UpdateAsync(template);
+            return MapToDto(updated);
+        }
+
         private TemplateDto MapToDto(Template template)
         {
             return new TemplateDto
@@ -153,7 +192,8 @@ namespace WeddingInvite.Core.Services
                 IsActive = template.IsActive,
                 IsPremium = template.IsPremium,
                 Tier = template.Tier,
-                SortOrder = template.SortOrder
+                SortOrder = template.SortOrder,
+                IsAuthored = template.IsAuthored
             };
         }
     }

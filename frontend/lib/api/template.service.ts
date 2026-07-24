@@ -38,7 +38,7 @@ export const templateService = {
     return response.data;
   },
 
-  // Set a template's picker thumbnail (super admin) — e.g. from the screenshot tool
+  // Set a template's picker thumbnail (super admin)
   uploadThumbnail: async (id: number, file: File | Blob, filename = 'thumbnail.png'): Promise<Template> => {
     const form = new FormData();
     form.append('file', file, filename);
@@ -47,4 +47,43 @@ export const templateService = {
     });
     return response.data;
   },
+
+  // ── Per-template "starting design" defaults (super admin) ────────────────────
+  // How many keys the template's captured starting design holds (0 = none set).
+  getDefaultConfig: async (id: number): Promise<TemplateDefaultConfigStatus> => {
+    const response = await apiClient.get<TemplateDefaultConfigStatus>(`/template/${id}/default-config`);
+    return response.data;
+  },
+
+  // Capture an existing invite's finished design as this template's starting design.
+  setDefaultFromWedding: async (id: number, weddingId: number): Promise<TemplateDefaultConfigStatus> => {
+    const response = await apiClient.put<TemplateDefaultConfigStatus>(
+      `/template/${id}/default-config/from-wedding/${weddingId}`,
+    );
+    return response.data;
+  },
+
+  // Clear the starting design — new invites fall back to the built-in layout.
+  clearDefaultConfig: async (id: number): Promise<TemplateDefaultConfigStatus> => {
+    const response = await apiClient.delete<TemplateDefaultConfigStatus>(`/template/${id}/default-config`);
+    return response.data;
+  },
+
+  // ── Authored templates (data, not code — see _shared/DataTemplate.tsx) ───────
+  // Set the whole stage/layer composition; flips isAuthored=true.
+  setStages: async (id: number, stagesJson: string): Promise<Template> => {
+    const response = await apiClient.put<Template>(`/template/${id}/stages`, { stagesJson });
+    return response.data;
+  },
+
+  // Clear it — falls back to the hand-coded component (if any) for that templateId.
+  clearStages: async (id: number): Promise<Template> => {
+    const response = await apiClient.delete<Template>(`/template/${id}/stages`);
+    return response.data;
+  },
 };
+
+export interface TemplateDefaultConfigStatus {
+  templateId: number;
+  keyCount: number;
+}

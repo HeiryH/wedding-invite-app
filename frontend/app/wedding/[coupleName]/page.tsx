@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
 import {
   weddingService,
@@ -17,6 +17,9 @@ import {
   ItineraryItem,
   guestService,
 } from '@/lib/api';
+import DataTemplate from '@/components/templates/_shared/DataTemplate';
+import { useBreakpoint } from '@/components/templates/_shared/hooks/useBreakpoint';
+import type { StageDef, SlotProps } from '@/components/templates/_shared/types';
 
 export default function WeddingInvitationPage() {
   const params = useParams();
@@ -277,8 +280,21 @@ function TemplateRenderer({
   itinerary?: ItineraryItem[];
 }) {
   const [TemplateComponent, setTemplateComponent] = useState<any>(null);
+  const breakpoint = useBreakpoint();
+
+  // Authored templates (Template.StagesJson — see _shared/DataTemplate.tsx) render through the
+  // shared engine directly; there's no Template{N}.tsx module to dynamically import for them.
+  const authoredStages = useMemo(() => {
+    if (!wedding.templateStagesJson) return null;
+    try {
+      return JSON.parse(wedding.templateStagesJson) as Record<string, StageDef>;
+    } catch {
+      return null;
+    }
+  }, [wedding.templateStagesJson]);
 
   useEffect(() => {
+    if (authoredStages) return;
     // Load template dynamically
     const loadTemplate = async () => {
       try {
@@ -293,7 +309,37 @@ function TemplateRenderer({
     };
 
     loadTemplate();
-  }, [templateId]);
+  }, [templateId, authoredStages]);
+
+  if (authoredStages) {
+    const slotProps: SlotProps = {
+      wedding,
+      t: (key: string, fallback: string) => customConfig?.[key] || fallback,
+      wishes,
+      photos,
+      tables,
+      itinerary: itinerary ?? [],
+      seatingEnabled,
+      photoBoothEnabled,
+      onRSVP,
+      onSubmitWish,
+      onUploadPhoto,
+      editing: false,
+      config: customConfig,
+      breakpoint,
+    };
+    return (
+      <DataTemplate
+        stages={authoredStages}
+        stageIds={Object.keys(authoredStages)}
+        keyPrefix={`ta${templateId}`}
+        assetRoot=""
+        breakpoint={breakpoint}
+        customConfig={customConfig}
+        slotProps={slotProps}
+      />
+    );
+  }
 
   if (!TemplateComponent) {
     return (
