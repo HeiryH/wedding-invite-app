@@ -24,9 +24,12 @@ export const REVEAL_VPAD = 0.25;
  * `slot` layers render live React content (a form, the countdown) but position like art.
  * `anchor` layers have no visual of their own — they represent an existing DOM element in a
  * hybrid-overlay template (Template 5), and their geometry is applied as a transform nudge to
- * that element. See Template5's `useAnchors`.
+ * that element. See Template5's `useAnchors`. `scrollVideo` is a self-contained scroll-scrubbed
+ * chromakey video effect (Template 5's envelope) — it ignores the geometry fields entirely and
+ * uses the `videoSrc`/`trigger*`/`pivot`/`holdWidth`/`videoStartSec`/`openThreshold`/`resetSec`/
+ * `chroma*` fields instead. See `_shared/effects/ScrollVideoLayer.tsx`.
  */
-export type LayerKind = 'img' | 'text' | 'shape' | 'slot' | 'anchor';
+export type LayerKind = 'img' | 'text' | 'shape' | 'slot' | 'anchor' | 'scrollVideo';
 
 export type ObjectFit = 'cover' | 'contain' | 'fill';
 
@@ -110,6 +113,31 @@ export interface Layer {
   fontSize?: number;
   fontWeight?: number;
   radius?: number;
+
+  // kind 'scrollVideo' — a scroll-scrubbed chromakey video effect (see ScrollVideoLayer.tsx).
+  /** Path under the template's asset root, or an absolute /uploads/... */
+  videoSrc?: string;
+  /** GSAP ScrollTrigger start/end, as "% from top of viewport" when the trigger element's centre
+   *  crosses that line (mirrors 'center {n}%'). start > end — the effect scrubs as you scroll down
+   *  through that band. */
+  triggerStart?: number;
+  triggerEnd?: number;
+  /** ScrollTrigger scrub smoothing (seconds of lag), same units as GSAP's own `scrub`. */
+  scrub?: number;
+  /** Progress fraction (0-1) at which the effect is fully "open" — a plateau, not an instant. */
+  pivot?: number;
+  /** Half-width of the plateau around `pivot`, in the same 0-1 progress units. */
+  holdWidth?: number;
+  /** Video seconds `tri=0` maps to; `tri=1` maps to the video's own duration. */
+  videoStartSec?: number;
+  /** `tri` value above which the effect reports "open" (drives dependent UI via `onOpenChange`). */
+  openThreshold?: number;
+  /** Video seconds to snap to when scrolled fully past the trigger in either direction. */
+  resetSec?: number;
+  /** Luminance chromakey: below this is fully transparent. */
+  chromaThreshold?: number;
+  /** Luminance band above `chromaThreshold` over which alpha ramps 0→255. */
+  chromaFade?: number;
 
   /** Set by a persisted override to suppress a layer that ships in the defaults. */
   deleted?: boolean;

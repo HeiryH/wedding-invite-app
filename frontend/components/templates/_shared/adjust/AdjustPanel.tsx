@@ -247,6 +247,10 @@ export default function AdjustPanel({
   // Anchors are existing DOM elements, not overlay art: they can't be resized (only nudged), so
   // the panel shows a reduced, transform-only control set for them.
   const isAnchor = current?.kind === 'anchor';
+  // scrollVideo (Template 5's envelope) has no geometry at all — it's an effect, not a
+  // positioned rectangle — so it gets its own control set in place of X/Y/Width/etc, and no
+  // Animation tab (the enter/exit vocabulary doesn't apply to a scroll-scrubbed effect).
+  const isScrollVideo = current?.kind === 'scrollVideo';
   const bgSelected = selectedLayer === BG_ID;
 
   const nameOf = (l: Layer) =>
@@ -408,23 +412,26 @@ export default function AdjustPanel({
           <>
             <div className={styles.label}>{current.label ?? current.id}</div>
 
-            {/* Geometry and animation are split into two tabs so neither crowds the column. */}
-            <div className={styles.tabs} style={{ marginBottom: 8 }}>
-              <button
-                className={`${styles.tab} ${detailTab === 'layout' ? styles.tabActive : ''}`}
-                onClick={() => setDetailTab('layout')}
-              >
-                Layout
-              </button>
-              <button
-                className={`${styles.tab} ${detailTab === 'anim' ? styles.tabActive : ''}`}
-                onClick={() => setDetailTab('anim')}
-              >
-                Animation
-              </button>
-            </div>
+            {/* Geometry and animation are split into two tabs so neither crowds the column.
+                scrollVideo has no entrance/exit vocabulary, so it only ever shows Layout. */}
+            {!isScrollVideo && (
+              <div className={styles.tabs} style={{ marginBottom: 8 }}>
+                <button
+                  className={`${styles.tab} ${detailTab === 'layout' ? styles.tabActive : ''}`}
+                  onClick={() => setDetailTab('layout')}
+                >
+                  Layout
+                </button>
+                <button
+                  className={`${styles.tab} ${detailTab === 'anim' ? styles.tabActive : ''}`}
+                  onClick={() => setDetailTab('anim')}
+                >
+                  Animation
+                </button>
+              </div>
+            )}
 
-            {detailTab === 'layout' ? (
+            {isScrollVideo || detailTab === 'layout' ? (
               <>
                 <div className={styles.control} style={{ gridTemplateColumns: '54px 1fr' }}>
                   <span>Name</span>
@@ -446,33 +453,52 @@ export default function AdjustPanel({
                   />
                 )}
 
-                {/* Anchors nudge an existing element by an offset — X/Y here is a translate, not an
-                    absolute position. 50 = no offset. */}
-                <Slider label={isAnchor ? 'Nudge X' : 'X'} value={current.x} min={-20} max={120} step={0.5} onChange={set('x')} />
-                <Slider label={isAnchor ? 'Nudge Y' : 'Y'} value={current.y} min={-20} max={120} step={0.5} onChange={set('y')} />
-
-                {!isAnchor && (
+                {isScrollVideo ? (
                   <>
-                    <Slider label="Width" value={current.w} min={3} max={200} step={0.5} onChange={set('w')} />
-                    {!current.chain && (
-                      <Slider label="Height" value={current.h} min={3} max={200} step={0.5} onChange={set('h')} />
+                    {/* No video-replace upload yet — PhotoService (backend) only accepts image
+                        extensions/content-types today; wiring this up needs that widened first. */}
+                    <Slider label="Trigger Start %" value={current.triggerStart ?? 85} min={0} max={100} step={1} onChange={set('triggerStart')} />
+                    <Slider label="Trigger End %" value={current.triggerEnd ?? 15} min={0} max={100} step={1} onChange={set('triggerEnd')} />
+                    <Slider label="Scrub" value={current.scrub ?? 0.5} min={0} max={2} step={0.1} onChange={set('scrub')} />
+                    <Slider label="Pivot" value={current.pivot ?? 0.5} min={0.1} max={0.9} step={0.01} onChange={set('pivot')} />
+                    <Slider label="Hold Width" value={current.holdWidth ?? 0.04} min={0} max={0.3} step={0.01} onChange={set('holdWidth')} />
+                    <Slider label="Video Start (s)" value={current.videoStartSec ?? 0.5} min={0} max={3} step={0.1} onChange={set('videoStartSec')} />
+                    <Slider label="Open Threshold" value={current.openThreshold ?? 0.85} min={0.5} max={0.99} step={0.01} onChange={set('openThreshold')} />
+                    <Slider label="Reset Time (s)" value={current.resetSec ?? 0.2} min={0} max={2} step={0.1} onChange={set('resetSec')} />
+                    <Slider label="Chroma Threshold" value={current.chromaThreshold ?? 30} min={0} max={100} step={1} onChange={set('chromaThreshold')} />
+                    <Slider label="Chroma Fade" value={current.chromaFade ?? 20} min={0} max={100} step={1} onChange={set('chromaFade')} />
+                  </>
+                ) : (
+                  <>
+                    {/* Anchors nudge an existing element by an offset — X/Y here is a translate, not
+                        an absolute position. 50 = no offset. */}
+                    <Slider label={isAnchor ? 'Nudge X' : 'X'} value={current.x} min={-20} max={120} step={0.5} onChange={set('x')} />
+                    <Slider label={isAnchor ? 'Nudge Y' : 'Y'} value={current.y} min={-20} max={120} step={0.5} onChange={set('y')} />
+
+                    {!isAnchor && (
+                      <>
+                        <Slider label="Width" value={current.w} min={3} max={200} step={0.5} onChange={set('w')} />
+                        {!current.chain && (
+                          <Slider label="Height" value={current.h} min={3} max={200} step={0.5} onChange={set('h')} />
+                        )}
+                        {isImage && (
+                          <button
+                            className={`${styles.chain} ${current.chain ? '' : styles.chainOff}`}
+                            onClick={() => patchLayer(current.id, { chain: !current.chain })}
+                          >
+                            {current.chain ? '— Linked: height follows width —' : '— Free: height set separately —'}
+                          </button>
+                        )}
+                      </>
                     )}
-                    {isImage && (
-                      <button
-                        className={`${styles.chain} ${current.chain ? '' : styles.chainOff}`}
-                        onClick={() => patchLayer(current.id, { chain: !current.chain })}
-                      >
-                        {current.chain ? '— Linked: height follows width —' : '— Free: height set separately —'}
-                      </button>
+
+                    <Slider label="Scale" value={current.s} min={0.2} max={3} step={0.02} onChange={set('s')} />
+                    <Slider label="Opacity" value={current.opacity} min={0} max={1} step={0.05} onChange={set('opacity')} />
+
+                    {!isAnchor && (
+                      <Slider label="Depth" value={current.depth ?? current.z / 10} min={0} max={3} step={0.1} onChange={set('depth')} />
                     )}
                   </>
-                )}
-
-                <Slider label="Scale" value={current.s} min={0.2} max={3} step={0.02} onChange={set('s')} />
-                <Slider label="Opacity" value={current.opacity} min={0} max={1} step={0.05} onChange={set('opacity')} />
-
-                {!isAnchor && (
-                  <Slider label="Depth" value={current.depth ?? current.z / 10} min={0} max={3} step={0.1} onChange={set('depth')} />
                 )}
               </>
             ) : (

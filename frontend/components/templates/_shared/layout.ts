@@ -13,6 +13,9 @@ const OVERRIDABLE: (keyof Layer)[] = [
   'x', 'y', 'w', 'h', 's', 'z', 'order', 'chain', 'hidden', 'opacity', 'depth',
   'color', 'fill', 'fontSize', 'fontWeight', 'radius', 'text', 'src', 'shape', 'label',
   'anim', 'animDur', 'animOut',
+  // kind 'scrollVideo' effect params (types.ts) — same delta mechanism, no geometry involved.
+  'videoSrc', 'triggerStart', 'triggerEnd', 'scrub', 'pivot', 'holdWidth', 'videoStartSec',
+  'openThreshold', 'resetSec', 'chromaThreshold', 'chromaFade',
 ];
 
 /** Background placement the Adjust panel can override, over and above the shipped stage bg. */

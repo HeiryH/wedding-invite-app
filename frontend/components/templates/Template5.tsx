@@ -1,19 +1,18 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { gsap } from 'gsap';
-import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { Wedding, Wish, Photo, SeatingTable, ItineraryItem } from '@/lib/api';
 import { calendarLinks } from '@/lib/templateUtils';
 import SeatingStep from './SeatingStep';
 import type { Breakpoint, EditorHandle } from '@/components/templates/_shared/types';
 import { useBreakpoint } from '@/components/templates/_shared/hooks/useBreakpoint';
+import { resolveStage } from '@/components/templates/_shared/layout';
+import ScrollVideoLayer from '@/components/templates/_shared/effects/ScrollVideoLayer';
 import SectionOverlay from './Template5-dreamingfloral/SectionOverlay';
 import { useAnchors } from './Template5-dreamingfloral/useAnchors';
+import { T5_STAGES, T5_ASSETS } from './Template5-dreamingfloral/data/t5Stages';
 import styles from './Template5.module.css';
-
-gsap.registerPlugin(ScrollTrigger);
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL?.replace('/api', '') ?? '';
 
@@ -507,10 +506,6 @@ export default function Template5({
 
   const envelopeSectionRef = useRef<HTMLDivElement>(null);
   const envelopeWrapperRef = useRef<HTMLDivElement>(null);
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const ctxRef = useRef<CanvasRenderingContext2D | null>(null);
-  const rafRef = useRef<number | null>(null);
   const welcomeRef = useRef<HTMLElement>(null);
   const ceremonyRef = useRef<HTMLElement>(null);
   const wishesRef = useRef<HTMLElement>(null);
@@ -611,131 +606,16 @@ const NAV_EMOJIS: Record<string, string> = {
     return () => observer.disconnect();
   }, [photoBoothEnabled]);
 
-  // ── Canvas 2D + GSAP scroll scrub ────────────────────────────────────────
-  useEffect(() => {
-    const video = videoRef.current;
-    const canvas = canvasRef.current;
-    const section = envelopeSectionRef.current;
-    const wrapper = envelopeWrapperRef.current;
-    if (!video || !canvas || !section || !wrapper) return;
-
-    // iOS Safari blocks video decode until a user gesture — unlock on first touch/scroll
-    const unlockiOS = () => {
-      video.load();
-      video.play().then(() => {
-        video.pause();
-        video.currentTime = 0.5;
-      }).catch(() => {});
-    };
-    document.addEventListener('touchstart', unlockiOS, { once: true });
-    document.addEventListener('scroll', unlockiOS, { once: true, passive: true } as AddEventListenerOptions);
-
-    const draw = () => {
-      // readyState < 2 means no decoded frame yet — keep retrying until HAVE_CURRENT_DATA
-      if (!video.videoWidth || video.readyState < 2) {
-        rafRef.current = requestAnimationFrame(draw);
-        return;
-      }
-      if (canvas.width !== video.videoWidth) {
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
-      }
-      if (!ctxRef.current) {
-        ctxRef.current = canvas.getContext('2d', { willReadFrequently: true });
-      }
-      const ctx = ctxRef.current;
-      if (!ctx) return;
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-      try {
-        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-        const d = imageData.data;
-        const THRESHOLD = 30;
-        const FADE = 20;
-        for (let i = 0; i < d.length; i += 4) {
-          const lum = d[i] * 0.299 + d[i + 1] * 0.587 + d[i + 2] * 0.114;
-          if (lum < THRESHOLD) {
-            d[i + 3] = 0;
-          } else if (lum < THRESHOLD + FADE) {
-            d[i + 3] = Math.round(((lum - THRESHOLD) / FADE) * 255);
-          }
-        }
-        ctx.putImageData(imageData, 0, 0);
-      } catch {
-        // canvas tainted — video frame is still visible without chromakey
-      }
-    };
-
-    const scheduleDraw = () => {
-      if (rafRef.current) cancelAnimationFrame(rafRef.current);
-      rafRef.current = requestAnimationFrame(draw);
-    };
-
-    scheduleDraw();
-
-    const onSeeked = () => scheduleDraw();
-    video.addEventListener('seeked', onSeeked);
-
-    const setupScrollTrigger = () => {
-      if (canvas.width !== video.videoWidth) {
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
-      }
-
-      // Fixed viewport-percentage triggers so the open phase always lands at
-      // the viewport center regardless of section height or canvas size.
-      // start: envelope center at 85% from top (just entering from below)
-      // end:   envelope center at 15% from top (almost past the top)
-      // → PIVOT = 0.5 (exactly mid-range = viewport center)
-      const HOLD = 0.04;
-      const lo = 0.5 - HOLD;
-      const hi = 0.5 + HOLD;
-
-      const st = ScrollTrigger.create({
-        trigger: wrapper,
-        start: 'center 85%',
-        end: 'center 15%',
-        scrub: 0.5,
-        onUpdate: (self) => {
-          const p = self.progress;
-          const tri =
-            p < lo ? p / lo :
-              p < hi ? 1 :
-                (1 - p) / (1 - hi);
-          video.currentTime = 0.5 + tri * (video.duration - 0.5);
-          setEnvelopeOpen(tri > 0.85);
-          scheduleDraw();
-        },
-        onLeave: () => {
-          video.currentTime = 0.2;
-          setEnvelopeOpen(false);
-          scheduleDraw();
-        },
-        onLeaveBack: () => {
-          video.currentTime = 0.2;
-          setEnvelopeOpen(false);
-          scheduleDraw();
-        },
-      });
-      return () => st.kill();
-    };
-
-    let cleanup: (() => void) | undefined;
-    if (video.readyState >= 1) {
-      cleanup = setupScrollTrigger();
-    } else {
-      video.addEventListener('loadedmetadata', () => { cleanup = setupScrollTrigger(); }, { once: true });
-    }
-
-    return () => {
-      document.removeEventListener('touchstart', unlockiOS);
-      document.removeEventListener('scroll', unlockiOS);
-      cleanup?.();
-      video.removeEventListener('seeked', onSeeked);
-      if (rafRef.current) cancelAnimationFrame(rafRef.current);
-      ScrollTrigger.getAll().forEach((st) => st.kill());
-    };
-  }, []);
+  // The envelope's scroll-scrub + chromakey effect (GSAP ScrollTrigger + canvas) lives in the
+  // shared, template-neutral ScrollVideoLayer — see t5Stages.ts's `envelope` stage for why this
+  // one layer is listed/editable there but rendered directly here rather than through <Layer>.
+  const envelopeLayer = useMemo(
+    () => resolveStage('t5', T5_STAGES.envelope, overlayBreakpoint, customConfig).layers[0],
+    [overlayBreakpoint, customConfig],
+  );
+  const envelopeSrc = envelopeLayer?.videoSrc
+    ? (envelopeLayer.videoSrc.startsWith('/') ? envelopeLayer.videoSrc : `${T5_ASSETS}/${envelopeLayer.videoSrc}`)
+    : '';
 
   useEffect(() => {
     if (photoLayout !== 'stack' || photos.length <= 1) return;
@@ -1331,18 +1211,21 @@ const NAV_EMOJIS: Record<string, string> = {
             )}
           </AnimatePresence>
 
-          <video ref={videoRef} className={styles.hiddenVideo} muted playsInline preload="auto"
-            disablePictureInPicture>
-            <source src="/templates/t5/envelope_keyed.mp4" type="video/mp4" />
-          </video>
-
           <div
             className={envelopeOpen ? styles.canvasWrapperOpen : styles.canvasWrapper}
             onClick={() => { if (envelopeOpen) setRsvpOpen(true); }}
             role={envelopeOpen ? 'button' : undefined}
             aria-label={envelopeOpen ? 'Open RSVP' : undefined}
           >
-            <canvas ref={canvasRef} className={styles.envelopeCanvas} />
+            {envelopeLayer && (
+              <ScrollVideoLayer
+                src={envelopeSrc}
+                triggerRef={envelopeWrapperRef}
+                layer={envelopeLayer}
+                onOpenChange={setEnvelopeOpen}
+                className={styles.envelopeCanvas}
+              />
+            )}
           </div>
 
           <AnimatePresence>
