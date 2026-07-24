@@ -208,6 +208,7 @@ export default function HorizontalRail({
               slotProps={slotProps}
               eager={Boolean(firstEager) && i === 0}
               selected={editing && editor?.selectedStage === sharedStageId && editor?.selectedLayer === l.id}
+              editing={editing && editor?.selectedStage === sharedStageId}
             />
           ))}
         </div>

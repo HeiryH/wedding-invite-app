@@ -18,10 +18,7 @@ export default function FairyGardenScene({ config, reduced }: Props) {
     <Canvas
       frameloop="always"
       camera={{ position: [0, 1, 6], fov: 65 }}
-      // preserveDrawingBuffer keeps the last frame readable so the super-admin screenshot tool's
-      // client-side capture (html-to-image → canvas.toDataURL) can grab the real 3D scene instead
-      // of a blank buffer. Negligible cost on this low-power scene.
-      gl={{ antialias: false, powerPreference: 'low-power', alpha: true, preserveDrawingBuffer: true }}
+      gl={{ antialias: false, powerPreference: 'low-power', alpha: true }}
       style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}
       dpr={[1, 1.5]}
     >

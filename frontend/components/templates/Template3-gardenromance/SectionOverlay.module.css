@@ -1,0 +1,9 @@
+/* Absolutely-positioned decorative layer host over one Template 3 section. The section it sits in
+   must be `position: relative` (Template3 sets that where it injects these). */
+.overlay {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 6;
+}

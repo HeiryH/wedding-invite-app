@@ -26,7 +26,6 @@ interface Props {
   revealFrameW?: number;
   revealFrameH?: number;
   selectedLayer?: string;
-  onSelectLayer?: (id: string) => void;
   /** When true the `<section>` omits its `id` — a horizontal rail carries the scroll-target id on
    *  its own per-panel anchor instead, to avoid duplicate ids. `data-stage` is kept for observers. */
   suppressId?: boolean;
@@ -37,7 +36,7 @@ interface Props {
 
 export default function Stage({
   def, layers, bgFit, bgPosition, bgScale, bgSrc, seen, slotProps, eager, editing,
-  revealOverflow, revealFrameW, revealFrameH, selectedLayer, onSelectLayer, suppressId, transparent,
+  revealOverflow, revealFrameW, revealFrameH, selectedLayer, suppressId, transparent,
 }: Props) {
   const { assetRoot, assetSizes } = useEngine();
   const bgSize = def.bg ? assetSizes[def.bg] : undefined;
@@ -103,7 +102,7 @@ export default function Stage({
             slotProps={slotProps}
             eager={eager}
             selected={editing && selectedLayer === l.id}
-            onSelect={editing ? onSelectLayer : undefined}
+            editing={editing}
           />
         ))}
     </section>

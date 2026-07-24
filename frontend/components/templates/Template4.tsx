@@ -5,6 +5,10 @@ import { motion, useMotionValue, useTransform, animate, AnimatePresence } from '
 import { Wedding, Wish, Photo, SeatingTable, TemplateSlots, ItineraryItem } from '@/lib/api';
 import SeatingStep from './SeatingStep';
 import { toHijriString, alignClass, headingStyle, headingAnimationProps, sectionBgStyle, resolveSectionOrder, type SectionCode } from '@/lib/templateUtils';
+import type { Breakpoint, EditorHandle } from '@/components/templates/_shared/types';
+import { useBreakpoint } from '@/components/templates/_shared/hooks/useBreakpoint';
+import SectionOverlay from './Template4-minimalnoir/SectionOverlay';
+import { useAnchors } from './Template4-minimalnoir/useAnchors';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL?.replace('/api', '') ?? '';
 
@@ -21,6 +25,8 @@ interface Template4Props {
   coupleMedia?: Photo[];
   customConfig?: Record<string, string>;
   itinerary?: ItineraryItem[];
+  /** Set only by the customize preview iframe — drives the decorative-layer overlay editing. */
+  editor?: EditorHandle;
 }
 
 interface StackCard {
@@ -350,6 +356,7 @@ export default function Template4({
   coupleMedia,
   customConfig,
   itinerary = [],
+  editor,
 }: Template4Props) {
   const t = (key: string, fallback: string) => customConfig?.[key] || fallback;
   const showIslamicDate = customConfig?.['general.showIslamicDate'] === 'true';
@@ -357,6 +364,10 @@ export default function Template4({
   const hAnim = headingAnimationProps(customConfig);
   const weddingDate = new Date(wedding.weddingDate);
   const countdown = useCountdown(weddingDate);
+
+  const overlayBreakpoint: Breakpoint = useBreakpoint(editor?.enabled ? editor.breakpoint : undefined);
+  const overlayProps = { breakpoint: overlayBreakpoint, config: customConfig, editor };
+  const a = useAnchors(customConfig, overlayBreakpoint, editor);
 
   const paxLimit = (wedding?.maxPax ?? 0) > 0 ? Math.min(10, wedding.maxPax!) : 10;
 
@@ -552,6 +563,7 @@ export default function Template4({
           SECTION 1 — HERO
       ══════════════════════════════════════ */}
       <section id="hero" className="relative min-h-screen flex flex-col">
+        <SectionOverlay stageId="hero" {...overlayProps} />
         {/* Full-bleed hero photo */}
         {heroPhoto ? (
           <div className="absolute inset-0">
@@ -564,32 +576,38 @@ export default function Template4({
 
         {/* Hero text */}
         <div className="relative z-10 flex flex-col items-center justify-end flex-1 text-center pb-16 px-6">
-          <motion.p
-            className={`text-white/70 text-[10px] tracking-[0.4em] uppercase mb-4 ${alignClass(customConfig?.['invite.heading.align'])}`}
-            {...hAnim}
-            style={hStyle}
-          >
-            {t('invite.heading', 'We\'re getting married')}
-          </motion.p>
-          <motion.h1
-            className="text-white text-5xl md:text-6xl italic font-normal leading-tight mb-3"
-            initial={Object.keys(hAnim.initial).length ? hAnim.initial : { opacity: 0, y: 14 }}
-            animate={Object.keys(hAnim.animate).length ? hAnim.animate : { opacity: 1, y: 0 }}
-            transition={{ ...(Object.keys(hAnim.transition).length ? hAnim.transition : {}), delay: 0.6 }}
-            style={hStyle}
-          >
-            {wedding.brideName} &amp; {wedding.groomName}
-          </motion.h1>
-          <motion.p
-            className="text-white/60 text-sm tracking-[0.25em] mb-12"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.9 }}
-          >
-            {String(weddingDate.getDate()).padStart(2, '0')}.
-            {String(weddingDate.getMonth() + 1).padStart(2, '0')}.
-            {weddingDate.getFullYear()}
-          </motion.p>
+          <div style={a('hero', 'heading')}>
+            <motion.p
+              className={`text-white/70 text-[10px] tracking-[0.4em] uppercase mb-4 ${alignClass(customConfig?.['invite.heading.align'])}`}
+              {...hAnim}
+              style={hStyle}
+            >
+              {t('invite.heading', 'We\'re getting married')}
+            </motion.p>
+          </div>
+          <div style={a('hero', 'names')}>
+            <motion.h1
+              className="text-white text-5xl md:text-6xl italic font-normal leading-tight mb-3"
+              initial={Object.keys(hAnim.initial).length ? hAnim.initial : { opacity: 0, y: 14 }}
+              animate={Object.keys(hAnim.animate).length ? hAnim.animate : { opacity: 1, y: 0 }}
+              transition={{ ...(Object.keys(hAnim.transition).length ? hAnim.transition : {}), delay: 0.6 }}
+              style={hStyle}
+            >
+              {wedding.brideName} &amp; {wedding.groomName}
+            </motion.h1>
+          </div>
+          <div style={a('hero', 'date')}>
+            <motion.p
+              className="text-white/60 text-sm tracking-[0.25em] mb-12"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.9 }}
+            >
+              {String(weddingDate.getDate()).padStart(2, '0')}.
+              {String(weddingDate.getMonth() + 1).padStart(2, '0')}.
+              {weddingDate.getFullYear()}
+            </motion.p>
+          </div>
 
           {/* Scroll hint */}
           <motion.button
@@ -612,14 +630,15 @@ export default function Template4({
       </section>
 
       {/* ── Countdown + Details (cream) ── */}
-      <div id="t4-details" className="bg-[#F7F6F1] py-16 px-6">
+      <div id="t4-details" className="relative bg-[#F7F6F1] py-16 px-6">
+        <SectionOverlay stageId="t4-details" {...overlayProps} />
         <div className="max-w-lg mx-auto">
           {/* Countdown */}
           <div className="text-center mb-12">
             <p className="text-[10px] tracking-[0.35em] uppercase text-[#8A8A80] mb-8">
               {t('invite.countdown_prefix', 'Counting down to the big day')}
             </p>
-            <div className="flex justify-center gap-8">
+            <div className="flex justify-center gap-8" style={a('t4-details', 'countdown')}>
               {[
                 { val: countdown.days, label: 'Days' },
                 { val: countdown.hours, label: 'Hrs' },
@@ -635,7 +654,7 @@ export default function Template4({
               ))}
             </div>
             {/* Day boxes */}
-            <div className="flex items-center justify-center gap-2 mt-10">
+            <div className="flex items-center justify-center gap-2 mt-10" style={a('t4-details', 'daybox')}>
               <div className="border border-[#1C1C1A] px-4 py-2.5">
                 <p className="text-[9px] tracking-widest uppercase text-[#8A8A80]">{dayName}</p>
               </div>
@@ -654,6 +673,7 @@ export default function Template4({
           {/* Invite body */}
           <p
             className={`text-[#4A4A44] text-sm leading-relaxed mb-12 ${alignClass(customConfig?.['invite.body.align'])}`}
+            style={a('t4-details', 'body')}
             dangerouslySetInnerHTML={{
               __html: t('invite.body', 'We joyfully invite you to share in the celebration of our wedding day. Your presence will make this moment unforgettable.'),
             }}
@@ -690,7 +710,7 @@ export default function Template4({
           })()}
 
           {/* Ceremony */}
-          <div className="text-center border-t border-[#E0DFD9] pt-10 pb-10">
+          <div className="text-center border-t border-[#E0DFD9] pt-10 pb-10" style={a('t4-details', 'ceremony')}>
             <div className="flex justify-center text-[#1C1C1A] mb-3"><IcoChurch /></div>
             <h3 className="text-xl italic text-[#1C1C1A] mb-1">Ceremony</h3>
             <p className="text-sm text-[#8A8A80] mb-0.5">{wedding.venue}</p>
@@ -710,7 +730,7 @@ export default function Template4({
           </div>
 
           {/* Reception */}
-          <div className="text-center border-t border-[#E0DFD9] py-10">
+          <div className="text-center border-t border-[#E0DFD9] py-10" style={a('t4-details', 'reception')}>
             <div className="flex justify-center text-[#1C1C1A] mb-3"><IcoGlass /></div>
             <h3 className="text-xl italic text-[#1C1C1A] mb-1">Reception</h3>
             <p className="text-sm text-[#8A8A80]">{wedding.venue}</p>
@@ -719,10 +739,11 @@ export default function Template4({
       </div>
 
       {/* ── Schedule + Mid Photo (dark) ── */}
-      <div id="t4-schedule" className="bg-[#1C1C1A]">
+      <div id="t4-schedule" className="relative bg-[#1C1C1A]">
+        <SectionOverlay stageId="t4-schedule" {...overlayProps} />
         <TornEdge fromDark={false} />
         <div className="py-16 px-6">
-          <div className="max-w-sm mx-auto">
+          <div className="max-w-sm mx-auto" style={a('t4-schedule', 'schedule')}>
             <p className="text-center text-[9px] tracking-[0.35em] uppercase text-[#6A6A64] mb-10">Schedule</p>
             {[
               { time: '20:00 Hs', label: 'Arrival — Take your seat', icon: <IcoPin /> },
@@ -744,7 +765,7 @@ export default function Template4({
 
         {/* Mid couple photo */}
         {midPhoto && (
-          <div className="w-full overflow-hidden" style={{ maxHeight: 440 }}>
+          <div className="w-full overflow-hidden" style={a('t4-schedule', 'photo', { maxHeight: 440 })}>
             <img src={midPhoto} alt="Couple" loading="lazy" decoding="async" className="w-full object-cover" style={{ maxHeight: 440 }} />
           </div>
         )}
@@ -760,11 +781,12 @@ export default function Template4({
         const needsTornEdge = prevColor === 'dark' && thisColor === 'cream';
 
         if (code === 'rsvp') return (
-          <section key="rsvp" id="t4-rsvp" className="bg-[#F7F6F1] py-20 px-6" style={sectionBgStyle(customConfig?.['section.ceremony.bg'], API_BASE)}>
+          <section key="rsvp" id="t4-rsvp" className="relative bg-[#F7F6F1] py-20 px-6" style={sectionBgStyle(customConfig?.['section.ceremony.bg'], API_BASE)}>
+            <SectionOverlay stageId="t4-rsvp" {...overlayProps} />
             {needsTornEdge && <TornEdge fromDark />}
             <div className="max-w-lg mx-auto">
               <motion.div initial={{ opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.5 }}>
-                <div className="text-center mb-10">
+                <div className="text-center mb-10" style={a('t4-rsvp', 'heading')}>
                   <p className="text-[10px] tracking-[0.35em] uppercase text-[#8A8A80] mb-2">Kindly reply</p>
                   <h2 className="text-4xl italic font-normal text-[#1C1C1A]">RSVP</h2>
                   <p className="text-sm text-[#8A8A80] mt-2">{t('rsvp.subtitle', 'Will you be joining us?')}</p>
@@ -821,11 +843,12 @@ export default function Template4({
         );
 
         if (code === 'wishes') return (
-          <section key="wishes" id="t4-wishes" className="bg-[#1C1C1A] py-20 px-6" style={sectionBgStyle(customConfig?.['section.celebration.bg'], API_BASE)}>
+          <section key="wishes" id="t4-wishes" className="relative bg-[#1C1C1A] py-20 px-6" style={sectionBgStyle(customConfig?.['section.celebration.bg'], API_BASE)}>
+            <SectionOverlay stageId="t4-wishes" {...overlayProps} />
             {needsTornEdge && <TornEdge fromDark={false} />}
             <div className="max-w-4xl mx-auto">
               <motion.div initial={{ opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.5 }}>
-                <div className="text-center mb-12">
+                <div className="text-center mb-12" style={a('t4-wishes', 'heading')}>
                   <p className="text-[10px] tracking-[0.35em] uppercase text-[#6A6A64] mb-2">Leave a message</p>
                   <h2 className="text-4xl italic font-normal text-white">Wishes</h2>
                   <p className="text-sm text-[#6A6A64] mt-2">{t('wish.prompt', 'Share your love with the happy couple')}</p>
@@ -864,12 +887,13 @@ export default function Template4({
         );
 
         if (code === 'photobooth' && photoBoothEnabled) return (
-          <section key="photobooth" id="t4-photobooth" className="bg-[#F7F6F1]">
+          <section key="photobooth" id="t4-photobooth" className="relative bg-[#F7F6F1]">
+            <SectionOverlay stageId="t4-photobooth" {...overlayProps} />
             {needsTornEdge && <TornEdge fromDark />}
             <div className="py-20 px-6">
               <div className="max-w-lg mx-auto">
                 <motion.div initial={{ opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.5 }}>
-                  <div className="text-center mb-12">
+                  <div className="text-center mb-12" style={a('t4-photobooth', 'heading')}>
                     <p className="text-[10px] tracking-[0.35em] uppercase text-[#8A8A80] mb-2">Capture the moment</p>
                     <h2 className="text-4xl italic font-normal text-[#1C1C1A]">Photo Booth</h2>
                     <p className="text-[10px] text-[#B0AFA8] tracking-wider mt-2 uppercase">Swipe left or right to browse</p>

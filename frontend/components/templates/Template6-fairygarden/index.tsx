@@ -10,9 +10,12 @@ import {
   CreateWish,
 } from '@/lib/api';
 import { resolveSectionOrder } from '@/lib/templateUtils';
+import type { Breakpoint, EditorHandle } from '@/components/templates/_shared/types';
+import { useBreakpoint } from '@/components/templates/_shared/hooks/useBreakpoint';
 import { useWebGLSupport } from './hooks/useWebGLSupport';
 import { useReducedMotion } from './hooks/useReducedMotion';
 import { useFairyConfig } from './hooks/useFairyConfig';
+import { useAnchors } from './useAnchors';
 import WelcomeSection from './components/WelcomeSection';
 import CeremonySection from './components/CeremonySection';
 import RSVPSection from './components/RSVPSection';
@@ -36,6 +39,8 @@ interface Template6Props {
   coupleMedia?: Photo[];
   customConfig?: Record<string, string>;
   itinerary?: ItineraryItem[];
+  /** Set only by the customize preview iframe — drives the decorative-layer overlay editing. */
+  editor?: EditorHandle;
 }
 
 // ── Nav items per section ───────────────────────────────────────────────────
@@ -58,11 +63,16 @@ export default function Template6({
   photoBoothEnabled,
   customConfig,
   itinerary = [],
+  editor,
 }: Template6Props) {
   const t = (key: string, fallback: string) => customConfig?.[key] || fallback;
   const webgl = useWebGLSupport();
   const reduced = useReducedMotion();
   const fairyConfig = useFairyConfig(customConfig);
+
+  const overlayBreakpoint: Breakpoint = useBreakpoint(editor?.enabled ? editor.breakpoint : undefined);
+  const overlayProps = { breakpoint: overlayBreakpoint, config: customConfig, editor };
+  const a = useAnchors(customConfig, overlayBreakpoint, editor);
 
   const [activeSection, setActiveSection] = useState('welcome');
   const [musicPlaying, setMusicPlaying] = useState(false);
@@ -167,19 +177,21 @@ export default function Template6({
           customConfig={customConfig}
           showIslamicDate={showIslamicDate}
           onScrollDown={scrollDown}
+          overlayProps={overlayProps}
+          a={a}
         />
       )}
 
       {sections.includes('walimah') && (
-        <CeremonySection customConfig={customConfig} />
+        <CeremonySection customConfig={customConfig} overlayProps={overlayProps} a={a} />
       )}
 
       {sections.includes('rsvp') && (
-        <RSVPSection onRSVP={onRSVP} customConfig={customConfig} wedding={wedding} />
+        <RSVPSection onRSVP={onRSVP} customConfig={customConfig} wedding={wedding} overlayProps={overlayProps} a={a} />
       )}
 
       {sections.includes('itinerary') && (
-        <ItinerarySection items={itinerary} />
+        <ItinerarySection items={itinerary} overlayProps={overlayProps} a={a} />
       )}
 
       {sections.includes('wishes') && (
@@ -187,11 +199,13 @@ export default function Template6({
           wishes={wishes}
           onSubmitWish={onSubmitWish}
           customConfig={customConfig}
+          overlayProps={overlayProps}
+          a={a}
         />
       )}
 
       {sections.includes('photobooth') && (
-        <PhotoBoothSection photos={photos} onUploadPhoto={onUploadPhoto} />
+        <PhotoBoothSection photos={photos} onUploadPhoto={onUploadPhoto} overlayProps={overlayProps} a={a} />
       )}
 
       {/* Footer */}

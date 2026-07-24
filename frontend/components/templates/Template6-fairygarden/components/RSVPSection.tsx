@@ -1,16 +1,20 @@
 'use client';
-import { useState } from 'react';
+import { useState, type CSSProperties } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { CreateGuest, Wedding } from '@/lib/api';
+import type { Breakpoint, EditorHandle } from '@/components/templates/_shared/types';
+import SectionOverlay from '../SectionOverlay';
 import styles from '../Template6.module.css';
 
 interface Props {
   onRSVP: (data: any) => Promise<void>;
   customConfig?: Record<string, string>;
   wedding?: Wedding;
+  overlayProps: { breakpoint: Breakpoint; config?: Record<string, string>; editor?: EditorHandle };
+  a: (stageId: string, elementId: string, base?: CSSProperties) => CSSProperties;
 }
 
-export default function RSVPSection({ onRSVP, customConfig, wedding }: Props) {
+export default function RSVPSection({ onRSVP, customConfig, wedding, overlayProps, a }: Props) {
   const paxLimit = (wedding?.maxPax ?? 0) > 0 ? Math.min(10, wedding!.maxPax!) : 10;
   const t = (key: string, fallback: string) => customConfig?.[key] || fallback;
   const [open, setOpen] = useState(false);
@@ -40,6 +44,7 @@ export default function RSVPSection({ onRSVP, customConfig, wedding }: Props) {
 
   return (
     <section id="rsvp" className={styles.sectionRSVP}>
+      <SectionOverlay stageId="rsvp" {...overlayProps} />
       <motion.div
         className={styles.sectionInner}
         initial={{ opacity: 0, y: 32 }}
@@ -47,7 +52,7 @@ export default function RSVPSection({ onRSVP, customConfig, wedding }: Props) {
         viewport={{ once: true, margin: '-80px' }}
         transition={{ duration: 0.8 }}
       >
-        <h2 className={styles.sectionTitle}>
+        <h2 className={styles.sectionTitle} style={a('rsvp', 'title')}>
           <span className={styles.titleDecor}>✦</span>
           RSVP
           <span className={styles.titleDecor}>✦</span>

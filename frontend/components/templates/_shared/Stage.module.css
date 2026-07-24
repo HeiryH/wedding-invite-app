@@ -115,11 +115,34 @@
 }
 [data-editing='true'] .layerBox {
   pointer-events: auto;
-  cursor: pointer;
+  cursor: grab;
+  touch-action: none;
+}
+[data-editing='true'] .layerBox:active {
+  cursor: grabbing;
 }
 .layerBox[data-selected='true'] {
   outline: 2px dashed #C98A54;
   outline-offset: 3px;
+}
+
+/* Editor-only resize handle, rendered only on the selected layer. Positioned relative to
+   `.layerBox` (a valid containing block — it's already `position: absolute`), as a sibling of
+   `.layerInner` so it never enters the entrance/exit transform chain. */
+.handle {
+  position: absolute;
+  right: -6px;
+  bottom: -6px;
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+  background: #C98A54;
+  border: 2px solid #fff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  cursor: nwse-resize;
+  pointer-events: auto;
+  touch-action: none;
+  z-index: 10;
 }
 
 @media (prefers-reduced-motion: reduce) {

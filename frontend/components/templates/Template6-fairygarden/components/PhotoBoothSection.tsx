@@ -1,7 +1,9 @@
 'use client';
-import { useRef } from 'react';
+import { useRef, type CSSProperties } from 'react';
 import { motion } from 'framer-motion';
 import { Photo } from '@/lib/api';
+import type { Breakpoint, EditorHandle } from '@/components/templates/_shared/types';
+import SectionOverlay from '../SectionOverlay';
 import styles from '../Template6.module.css';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL?.replace('/api', '') ?? '';
@@ -9,9 +11,11 @@ const API_BASE = process.env.NEXT_PUBLIC_API_URL?.replace('/api', '') ?? '';
 interface Props {
   photos: Photo[];
   onUploadPhoto?: (data: any) => Promise<void>;
+  overlayProps: { breakpoint: Breakpoint; config?: Record<string, string>; editor?: EditorHandle };
+  a: (stageId: string, elementId: string, base?: CSSProperties) => CSSProperties;
 }
 
-export default function PhotoBoothSection({ photos, onUploadPhoto }: Props) {
+export default function PhotoBoothSection({ photos, onUploadPhoto, overlayProps, a }: Props) {
   const inputRef = useRef<HTMLInputElement>(null);
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -26,6 +30,7 @@ export default function PhotoBoothSection({ photos, onUploadPhoto }: Props) {
 
   return (
     <section id="photobooth" className={styles.sectionPhotobooth}>
+      <SectionOverlay stageId="photobooth" {...overlayProps} />
       <motion.div
         className={styles.sectionInner}
         initial={{ opacity: 0, y: 32 }}
@@ -33,7 +38,7 @@ export default function PhotoBoothSection({ photos, onUploadPhoto }: Props) {
         viewport={{ once: true, margin: '-80px' }}
         transition={{ duration: 0.8 }}
       >
-        <h2 className={styles.sectionTitle}>
+        <h2 className={styles.sectionTitle} style={a('photobooth', 'title')}>
           <span className={styles.titleDecor}>✦</span>
           Photo Garden
           <span className={styles.titleDecor}>✦</span>

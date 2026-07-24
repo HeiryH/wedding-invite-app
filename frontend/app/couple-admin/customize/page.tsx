@@ -27,6 +27,8 @@ import { PRESETS, isShadowField, chipOf, useSchemaIndex } from './_components/Sc
 // a registry entry there, not a branch here.
 import AdjustPanel from '@/components/templates/_shared/adjust/AdjustPanel';
 import { TEMPLATE_ENGINES } from '@/components/templates/_shared/registry';
+import { resolveStage, serializeStage, layoutKey } from '@/components/templates/_shared/layout';
+import type { Layer as LayerModel, Breakpoint } from '@/components/templates/_shared/types';
 import { Button } from '@/components/ui/Button';
 import { Switch } from '@/components/ui/Switch';
 import { Icon } from '@/components/ui/Icon';
@@ -845,6 +847,24 @@ export default function CustomizePage() {
     });
   }, []);
 
+  // Canvas drag/resize (see Layer.tsx's PREVIEW_LAYER_EDIT) lands here — the same patch-and-
+  // reserialize AdjustPanel's own sliders already do, just triggered from the preview iframe
+  // instead of the dock. The layer always belongs to `activeStage`: every template scopes
+  // `editing` to `editor.selectedStage`, so a layer can only be interactive on canvas while its
+  // stage is the one the dock has open.
+  const patchLayerFromCanvas = useCallback((layerId: string, patch: Partial<LayerModel>) => {
+    if (!layout) return;
+    const def = layout.stages[activeStage];
+    if (!def) return;
+    const breakpoint: Breakpoint = device === 'mobile' ? 'mobile' : 'desktop';
+    const { layers, bgFit, bgPosition, bgScale, bgSrc } = resolveStage(layout.keyPrefix, def, breakpoint, draftConfig);
+    const nextLayers = layers.map((l) => (l.id === layerId ? { ...l, ...patch } : l));
+    handleLayoutChange(
+      layoutKey(layout.keyPrefix, breakpoint, def.id),
+      serializeStage(def, breakpoint, nextLayers, { bgFit, bgPosition, bgScale, bgSrc }),
+    );
+  }, [layout, activeStage, device, draftConfig, handleLayoutChange]);
+
   // Opening the dock collapses the left inspector to its icon rail so the centred preview keeps room.
   const toggleAdjust = useCallback(() => {
     setAdjusting((a) => {
@@ -920,17 +940,25 @@ export default function CustomizePage() {
     });
   }, [draftConfig, weddingDraft, coupleMedia, photoBoothEnabled, itinerary, wedding, adjusting, device, activeStage, selectedLayer, revealOverflow, canReveal]);
 
-  // Replay the latest payload when the iframe (re)mounts.
+  // Replay the latest payload when the iframe (re)mounts, and handle canvas-originated selection
+  // + drag/resize. Layer.tsx posts these directly (it has no callback prop into this tree — it's
+  // the same component rendering on the public invitation, where none of this ever fires).
   useEffect(() => {
     const handler = (event: MessageEvent) => {
       if (event.origin !== window.location.origin) return;
       if (event.data?.type === 'PREVIEW_READY' && payloadRef.current) {
         iframeRef.current?.contentWindow?.postMessage({ type: 'PREVIEW_UPDATE', payload: payloadRef.current }, window.location.origin);
       }
+      if (event.data?.type === 'PREVIEW_LAYER_SELECT') {
+        setSelectedLayer(event.data.layerId as string);
+      }
+      if (event.data?.type === 'PREVIEW_LAYER_EDIT') {
+        patchLayerFromCanvas(event.data.layerId as string, event.data.patch as Partial<LayerModel>);
+      }
     };
     window.addEventListener('message', handler);
     return () => window.removeEventListener('message', handler);
-  }, []);
+  }, [patchLayerFromCanvas]);
 
   // Keyboard shortcut: Cmd+S to save
   useEffect(() => {

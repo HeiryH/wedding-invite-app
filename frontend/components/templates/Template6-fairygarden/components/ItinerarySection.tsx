@@ -1,17 +1,23 @@
 'use client';
 import { motion } from 'framer-motion';
+import type { CSSProperties } from 'react';
 import { ItineraryItem } from '@/lib/api';
+import type { Breakpoint, EditorHandle } from '@/components/templates/_shared/types';
+import SectionOverlay from '../SectionOverlay';
 import styles from '../Template6.module.css';
 
 interface Props {
   items: ItineraryItem[];
+  overlayProps: { breakpoint: Breakpoint; config?: Record<string, string>; editor?: EditorHandle };
+  a: (stageId: string, elementId: string, base?: CSSProperties) => CSSProperties;
 }
 
-export default function ItinerarySection({ items }: Props) {
+export default function ItinerarySection({ items, overlayProps, a }: Props) {
   if (!items.length) return null;
 
   return (
     <section id="itinerary" className={styles.sectionItinerary}>
+      <SectionOverlay stageId="itinerary" {...overlayProps} />
       <motion.div
         className={styles.sectionInner}
         initial={{ opacity: 0, y: 32 }}
@@ -19,7 +25,7 @@ export default function ItinerarySection({ items }: Props) {
         viewport={{ once: true, margin: '-80px' }}
         transition={{ duration: 0.8 }}
       >
-        <h2 className={styles.sectionTitle}>
+        <h2 className={styles.sectionTitle} style={a('itinerary', 'title')}>
           <span className={styles.titleDecor}>✦</span>
           Programme
           <span className={styles.titleDecor}>✦</span>

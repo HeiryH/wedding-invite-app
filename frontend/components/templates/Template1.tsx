@@ -1,11 +1,15 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
 import { Wedding, Wish, Photo, SeatingTable, ItineraryItem } from '@/lib/api';
 import SeatingStep from './SeatingStep';
 import { toHijriString, alignClass, headingStyle, headingAnimationProps, sectionBgStyle, resolveSectionOrder, type SectionCode } from '@/lib/templateUtils';
+import type { Breakpoint, EditorHandle } from '@/components/templates/_shared/types';
+import { useBreakpoint } from '@/components/templates/_shared/hooks/useBreakpoint';
+import SectionOverlay from './Template1-classicrose/SectionOverlay';
+import { useAnchors } from './Template1-classicrose/useAnchors';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL?.replace('/api', '') ?? '';
 
@@ -21,6 +25,8 @@ interface Template1Props {
   tables?: SeatingTable[];
   customConfig?: Record<string, string>;
   itinerary?: ItineraryItem[];
+  /** Set only by the customize preview iframe — drives the decorative-layer overlay editing. */
+  editor?: EditorHandle;
 }
 
 export default function Template1({
@@ -35,6 +41,7 @@ export default function Template1({
   tables = [],
   customConfig,
   itinerary = [],
+  editor,
 }: Template1Props) {
   const t = (key: string, fallback: string) => customConfig?.[key] || fallback;
   const showIslamicDate = customConfig?.['general.showIslamicDate'] === 'true';
@@ -46,6 +53,10 @@ export default function Template1({
     itinerary.length > 0,
     photoBoothEnabled,
   );
+
+  const overlayBreakpoint: Breakpoint = useBreakpoint(editor?.enabled ? editor.breakpoint : undefined);
+  const overlayProps = { breakpoint: overlayBreakpoint, config: customConfig, editor };
+  const a = useAnchors(customConfig, overlayBreakpoint, editor);
   const NAV_LABELS: Record<SectionCode, string> = {
     welcome: t('nav.invite', 'Invitation'),
     walimah: t('nav.walimah', 'Ceremony'),
@@ -55,6 +66,16 @@ export default function Template1({
     photobooth: t('nav.photos', 'Photos'),
   };
   const [activeSection, setActiveSection] = useState<SectionCode>('welcome');
+
+  // Only one section is mounted at a time (AnimatePresence mode="wait"), so the Adjust panel's
+  // "select a stage" affordance can't scroll to it like the continuous-scroll templates — it
+  // switches this tab instead, driven by the same editor.selectedStage the panel already sets.
+  useEffect(() => {
+    if (editor?.enabled && editor.selectedStage && editor.selectedStage !== activeSection) {
+      setActiveSection(editor.selectedStage as SectionCode);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editor?.selectedStage, editor?.enabled]);
 
   // RSVP Form State
   const [rsvpStep, setRsvpStep] = useState<1 | 2>(1);
@@ -265,8 +286,9 @@ export default function Template1({
               exit={{ opacity: 0, y: -20 }}
               transition={{ duration: 0.3 }}
               style={sectionBgStyle(customConfig?.['section.welcome.bg'], API_BASE)}
-              className="rounded-2xl"
+              className="relative rounded-2xl"
             >
+              <SectionOverlay stageId="welcome" {...overlayProps} />
               {/* Hero Section */}
               <div className={`mb-16 ${alignClass(customConfig?.['invite.heading.align'])}`}>
                 <motion.div
@@ -278,41 +300,48 @@ export default function Template1({
                   💍
                 </motion.div>
 
-                <motion.p
-                  {...hAnim}
-                  className="text-rose-600 text-sm uppercase tracking-widest mb-4 font-semibold"
-                  style={hStyle}
-                >
-                  {t('invite.heading', "You're Invited to the Wedding of")}
-                </motion.p>
+                <div style={a('welcome', 'heading')}>
+                  <motion.p
+                    {...hAnim}
+                    className="text-rose-600 text-sm uppercase tracking-widest mb-4 font-semibold"
+                    style={hStyle}
+                  >
+                    {t('invite.heading', "You're Invited to the Wedding of")}
+                  </motion.p>
+                </div>
 
-                <motion.h1
-                  {...hAnim}
-                  transition={{ ...hAnim.transition, delay: Number(hAnim.transition?.delay ?? 0) + 0.2 }}
-                  className="text-5xl md:text-7xl font-serif font-bold text-gray-800 mb-2"
-                  style={hStyle}
-                >
-                  {wedding.brideName}
-                </motion.h1>
+                <div style={a('welcome', 'brideName')}>
+                  <motion.h1
+                    {...hAnim}
+                    transition={{ ...hAnim.transition, delay: Number(hAnim.transition?.delay ?? 0) + 0.2 }}
+                    className="text-5xl md:text-7xl font-serif font-bold text-gray-800 mb-2"
+                    style={hStyle}
+                  >
+                    {wedding.brideName}
+                  </motion.h1>
+                </div>
 
                 <div className="text-4xl md:text-5xl text-rose-400 my-4">&</div>
 
-                <motion.h1
-                  {...hAnim}
-                  transition={{ ...hAnim.transition, delay: Number(hAnim.transition?.delay ?? 0) + 0.4 }}
-                  className="text-5xl md:text-7xl font-serif font-bold text-gray-800"
-                  style={hStyle}
-                >
-                  {wedding.groomName}
-                </motion.h1>
+                <div style={a('welcome', 'groomName')}>
+                  <motion.h1
+                    {...hAnim}
+                    transition={{ ...hAnim.transition, delay: Number(hAnim.transition?.delay ?? 0) + 0.4 }}
+                    className="text-5xl md:text-7xl font-serif font-bold text-gray-800"
+                    style={hStyle}
+                  >
+                    {wedding.groomName}
+                  </motion.h1>
+                </div>
                 <p
                   className={`text-gray-600 text-lg mt-6 max-w-md mx-auto ${alignClass(customConfig?.['invite.body.align'])}`}
+                  style={a('welcome', 'body')}
                   dangerouslySetInnerHTML={{ __html: t('invite.body', 'We joyfully invite you to share in the celebration of our wedding') }}
                 />
               </div>
 
               {/* Wedding Details */}
-              <div className="bg-white rounded-2xl shadow-xl p-8 md:p-12 mb-8">
+              <div className="bg-white rounded-2xl shadow-xl p-8 md:p-12 mb-8" style={a('welcome', 'details')}>
                 <div className="text-center mb-8">
                   <p className="text-sm text-gray-500 uppercase tracking-wider mb-2">
                     Save the Date
@@ -350,7 +379,7 @@ export default function Template1({
                   <p className="text-gray-600">{wedding.venueAddress}</p>
                 </div>
 
-                <div className="text-center bg-gradient-to-r from-rose-50 to-pink-50 rounded-xl p-6">
+                <div className="text-center bg-gradient-to-r from-rose-50 to-pink-50 rounded-xl p-6" style={a('welcome', 'countdown')}>
                   <p className="text-sm text-gray-600 mb-2">Countdown</p>
                   <p className="text-4xl font-bold text-rose-600">
                     {wedding.daysUntilWedding}
@@ -401,9 +430,10 @@ export default function Template1({
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
               transition={{ duration: 0.3 }}
-              className={`bg-white rounded-2xl shadow-md p-8 ${alignClass(customConfig?.['walimah.body.align'])}`}
+              className={`relative bg-white rounded-2xl shadow-md p-8 ${alignClass(customConfig?.['walimah.body.align'])}`}
             >
-              <h2 className="text-3xl font-bold text-rose-500 mb-6">Ceremony Details</h2>
+              <SectionOverlay stageId="walimah" {...overlayProps} />
+              <h2 className="text-3xl font-bold text-rose-500 mb-6" style={a('walimah', 'title')}>Ceremony Details</h2>
               <div
                 className="text-gray-600 prose prose-sm max-w-none"
                 dangerouslySetInnerHTML={{ __html: customConfig?.['walimah.body'] ?? '' }}
@@ -419,13 +449,14 @@ export default function Template1({
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
               transition={{ duration: 0.3 }}
-              className="bg-white rounded-2xl shadow-md p-8"
+              className="relative bg-white rounded-2xl shadow-md p-8"
             >
+              <SectionOverlay stageId="itinerary" {...overlayProps} />
               {(() => {
                 const iAlign = customConfig?.['walimah.body.align'] ?? 'left';
                 return (
                   <>
-                    <h2 className={`text-3xl font-bold text-rose-500 mb-6 ${alignClass(iAlign)}`}>Schedule</h2>
+                    <h2 className={`text-3xl font-bold text-rose-500 mb-6 ${alignClass(iAlign)}`} style={a('itinerary', 'title')}>Schedule</h2>
                     <ol className="space-y-3">
                       {itinerary.map((item) => (
                         <li
@@ -454,10 +485,11 @@ export default function Template1({
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
               transition={{ duration: 0.3 }}
-              className="max-w-2xl mx-auto rounded-2xl"
+              className="relative max-w-2xl mx-auto rounded-2xl"
               style={sectionBgStyle(customConfig?.['section.ceremony.bg'], API_BASE)}
             >
-              <div className="text-center mb-8">
+              <SectionOverlay stageId="rsvp" {...overlayProps} />
+              <div className="text-center mb-8" style={a('rsvp', 'heading')}>
                 <h2 className="text-4xl font-bold text-gray-800 mb-2">RSVP</h2>
                 <p className="text-gray-600">
                   {t('rsvp.subtitle', "We'd love to have you celebrate with us! 💕")}
@@ -676,9 +708,10 @@ export default function Template1({
               exit={{ opacity: 0, y: -20 }}
               transition={{ duration: 0.3 }}
               style={sectionBgStyle(customConfig?.['section.celebration.bg'], API_BASE)}
-              className="rounded-2xl"
+              className="relative rounded-2xl"
             >
-              <div className="text-center mb-12">
+              <SectionOverlay stageId="wishes" {...overlayProps} />
+              <div className="text-center mb-12" style={a('wishes', 'heading')}>
                 <h2 className="text-4xl font-bold text-gray-800 mb-2">
                   Wishes & Blessings
                 </h2>
@@ -781,8 +814,10 @@ export default function Template1({
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: -20 }}
           transition={{ duration: 0.3 }}
+          className="relative"
         >
-          <div className="text-center mb-12">
+          <SectionOverlay stageId="photobooth" {...overlayProps} />
+          <div className="text-center mb-12" style={a('photobooth', 'heading')}>
             <h2 className="text-4xl font-bold text-gray-800 mb-2">
               Photo Booth
             </h2>

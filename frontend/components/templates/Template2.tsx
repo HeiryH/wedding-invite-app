@@ -5,6 +5,10 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Wedding, Guest, Wish, Photo, SeatingTable, ItineraryItem } from '@/lib/api';
 import SeatingStep from './SeatingStep';
 import { toHijriString, alignClass, headingStyle, headingAnimationProps, sectionBgStyle, resolveSectionOrder, type SectionCode } from '@/lib/templateUtils';
+import type { Breakpoint, EditorHandle } from '@/components/templates/_shared/types';
+import { useBreakpoint } from '@/components/templates/_shared/hooks/useBreakpoint';
+import SectionOverlay from './Template2-goldenelegance/SectionOverlay';
+import { useAnchors } from './Template2-goldenelegance/useAnchors';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL?.replace('/api', '') ?? '';
 
@@ -21,6 +25,8 @@ interface Template2Props {
     tables?: SeatingTable[];
     customConfig?: Record<string, string>;
     itinerary?: ItineraryItem[];
+    /** Set only by the customize preview iframe — drives the decorative-layer overlay editing. */
+    editor?: EditorHandle;
 }
 
 export default function Template2({
@@ -35,6 +41,7 @@ export default function Template2({
     tables = [],
     customConfig,
     itinerary = [],
+    editor,
 }: Template2Props) {
     const t = (key: string, fallback: string) => customConfig?.[key] || fallback;
     const showIslamicDate = customConfig?.['general.showIslamicDate'] === 'true';
@@ -46,6 +53,10 @@ export default function Template2({
         itinerary.length > 0,
         photoBoothEnabled,
     );
+
+    const overlayBreakpoint: Breakpoint = useBreakpoint(editor?.enabled ? editor.breakpoint : undefined);
+    const overlayProps = { breakpoint: overlayBreakpoint, config: customConfig, editor };
+    const a = useAnchors(customConfig, overlayBreakpoint, editor);
     const NAV_ICONS: Record<SectionCode, string> = {
         welcome: '💍', walimah: '🕌', rsvp: '✉️',
         itinerary: '📋', wishes: '✨', photobooth: '📸',
@@ -240,9 +251,10 @@ export default function Template2({
             {/* Section: Welcome */}
             <section
                 id="welcome"
-                className="min-h-screen flex items-center justify-center px-4 py-20"
+                className="relative min-h-screen flex items-center justify-center px-4 py-20"
                 style={{ order: sectionOrder.indexOf('welcome'), ...sectionBgStyle(customConfig?.['section.welcome.bg'], API_BASE) }}
             >
+                <SectionOverlay stageId="welcome" {...overlayProps} />
                 <motion.div
                     initial={{ opacity: 0, y: 50 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -260,23 +272,27 @@ export default function Template2({
                     </motion.div>
 
                     {/* You're Invited */}
-                    <motion.p
-                        {...hAnim}
-                        className={`text-amber-700 text-sm uppercase tracking-widest mb-6 font-semibold ${alignClass(customConfig?.['invite.heading.align'])}`}
-                        style={hStyle}
-                    >
-                        {t('invite.heading', "You're Cordially Invited to Celebrate")}
-                    </motion.p>
+                    <div style={a('welcome', 'heading')}>
+                        <motion.p
+                            {...hAnim}
+                            className={`text-amber-700 text-sm uppercase tracking-widest mb-6 font-semibold ${alignClass(customConfig?.['invite.heading.align'])}`}
+                            style={hStyle}
+                        >
+                            {t('invite.heading', "You're Cordially Invited to Celebrate")}
+                        </motion.p>
+                    </div>
 
                     {/* Couple Names */}
-                    <motion.h1
-                        initial={Object.keys(hAnim.initial).length ? hAnim.initial : { opacity: 0, y: 20 }}
-                        animate={Object.keys(hAnim.animate).length ? hAnim.animate : { opacity: 1, y: 0 }}
-                        transition={{ ...(Object.keys(hAnim.transition).length ? hAnim.transition : {}), delay: 0.7 }}
-                        className="text-6xl md:text-8xl font-serif font-bold bg-gradient-to-r from-yellow-600 via-amber-600 to-orange-600 bg-clip-text text-transparent mb-4"
-                    >
-                        {wedding.brideName}
-                    </motion.h1>
+                    <div style={a('welcome', 'brideName')}>
+                        <motion.h1
+                            initial={Object.keys(hAnim.initial).length ? hAnim.initial : { opacity: 0, y: 20 }}
+                            animate={Object.keys(hAnim.animate).length ? hAnim.animate : { opacity: 1, y: 0 }}
+                            transition={{ ...(Object.keys(hAnim.transition).length ? hAnim.transition : {}), delay: 0.7 }}
+                            className="text-6xl md:text-8xl font-serif font-bold bg-gradient-to-r from-yellow-600 via-amber-600 to-orange-600 bg-clip-text text-transparent mb-4"
+                        >
+                            {wedding.brideName}
+                        </motion.h1>
+                    </div>
 
                     <motion.div
                         initial={{ scaleX: 0 }}
@@ -287,24 +303,29 @@ export default function Template2({
                         &
                     </motion.div>
 
-                    <motion.h1
-                        initial={Object.keys(hAnim.initial).length ? hAnim.initial : { opacity: 0, y: 20 }}
-                        animate={Object.keys(hAnim.animate).length ? hAnim.animate : { opacity: 1, y: 0 }}
-                        transition={{ ...(Object.keys(hAnim.transition).length ? hAnim.transition : {}), delay: 1.1 }}
-                        className="text-6xl md:text-8xl font-serif font-bold bg-gradient-to-r from-yellow-600 via-amber-600 to-orange-600 bg-clip-text text-transparent mb-8"
-                    >
-                        {wedding.groomName}
-                    </motion.h1>
+                    <div style={a('welcome', 'groomName')}>
+                        <motion.h1
+                            initial={Object.keys(hAnim.initial).length ? hAnim.initial : { opacity: 0, y: 20 }}
+                            animate={Object.keys(hAnim.animate).length ? hAnim.animate : { opacity: 1, y: 0 }}
+                            transition={{ ...(Object.keys(hAnim.transition).length ? hAnim.transition : {}), delay: 1.1 }}
+                            className="text-6xl md:text-8xl font-serif font-bold bg-gradient-to-r from-yellow-600 via-amber-600 to-orange-600 bg-clip-text text-transparent mb-8"
+                        >
+                            {wedding.groomName}
+                        </motion.h1>
+                    </div>
 
-                    <motion.p
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        transition={{ delay: 1.2 }}
-                        className={`text-gray-600 text-lg mb-12 max-w-md mx-auto ${alignClass(customConfig?.['invite.body.align'])}`}
-                        dangerouslySetInnerHTML={{ __html: t('invite.body', 'We joyfully invite you to share in the celebration of our wedding') }}
-                    />
+                    <div style={a('welcome', 'body')}>
+                        <motion.p
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            transition={{ delay: 1.2 }}
+                            className={`text-gray-600 text-lg mb-12 max-w-md mx-auto ${alignClass(customConfig?.['invite.body.align'])}`}
+                            dangerouslySetInnerHTML={{ __html: t('invite.body', 'We joyfully invite you to share in the celebration of our wedding') }}
+                        />
+                    </div>
 
                     {/* Wedding Details */}
+                    <div style={a('welcome', 'details')}>
                     <motion.div
                         initial={{ opacity: 0, y: 30 }}
                         animate={{ opacity: 1, y: 0 }}
@@ -349,7 +370,7 @@ export default function Template2({
                         </div>
 
                         {/* Countdown */}
-                        <div className="bg-gradient-to-r from-yellow-100 to-amber-100 rounded-2xl p-6">
+                        <div className="bg-gradient-to-r from-yellow-100 to-amber-100 rounded-2xl p-6" style={a('welcome', 'countdown')}>
                             <p className="text-sm text-amber-700 mb-2">Countdown</p>
                             <p className="text-5xl font-bold text-amber-600">
                                 {wedding.daysUntilWedding}
@@ -359,6 +380,7 @@ export default function Template2({
                             </p>
                         </div>
                     </motion.div>
+                    </div>
 
                     <motion.div
                         initial={{ opacity: 0 }}
@@ -382,9 +404,10 @@ export default function Template2({
             {sectionOrder.includes('walimah') && (
                 <section
                     id="walimah"
-                    className="flex items-center justify-center px-4 py-20"
+                    className="relative flex items-center justify-center px-4 py-20"
                     style={{ order: sectionOrder.indexOf('walimah') }}
                 >
+                    <SectionOverlay stageId="walimah" {...overlayProps} />
                     <motion.div
                         initial={{ opacity: 0, y: 50 }}
                         whileInView={{ opacity: 1, y: 0 }}
@@ -392,7 +415,7 @@ export default function Template2({
                         transition={{ duration: 0.6 }}
                         className={`w-full max-w-2xl bg-white/80 backdrop-blur-sm rounded-3xl border-2 border-amber-200 p-8 ${alignClass(customConfig?.['walimah.body.align'])}`}
                     >
-                        <h2 className="text-3xl font-bold bg-gradient-to-r from-yellow-600 to-amber-600 bg-clip-text text-transparent mb-4">
+                        <h2 className="text-3xl font-bold bg-gradient-to-r from-yellow-600 to-amber-600 bg-clip-text text-transparent mb-4" style={a('walimah', 'title')}>
                             Ceremony Details
                         </h2>
                         <div
@@ -407,9 +430,10 @@ export default function Template2({
             {sectionOrder.includes('itinerary') && (
                 <section
                     id="itinerary"
-                    className="flex items-center justify-center px-4 py-20"
+                    className="relative flex items-center justify-center px-4 py-20"
                     style={{ order: sectionOrder.indexOf('itinerary') }}
                 >
+                    <SectionOverlay stageId="itinerary" {...overlayProps} />
                     <motion.div
                         initial={{ opacity: 0, y: 50 }}
                         whileInView={{ opacity: 1, y: 0 }}
@@ -421,7 +445,7 @@ export default function Template2({
                             const iAlign = customConfig?.['walimah.body.align'] ?? 'left';
                             return (
                                 <>
-                                    <h2 className={`text-3xl font-bold bg-gradient-to-r from-yellow-600 to-amber-600 bg-clip-text text-transparent mb-6 ${alignClass(iAlign)}`}>
+                                    <h2 className={`text-3xl font-bold bg-gradient-to-r from-yellow-600 to-amber-600 bg-clip-text text-transparent mb-6 ${alignClass(iAlign)}`} style={a('itinerary', 'title')}>
                                         Schedule
                                     </h2>
                                     <ol className="space-y-3">
@@ -448,9 +472,10 @@ export default function Template2({
             {/* Section: RSVP */}
             <section
                 id="rsvp"
-                className="min-h-screen flex items-center justify-center px-4 py-20"
+                className="relative min-h-screen flex items-center justify-center px-4 py-20"
                 style={{ order: sectionOrder.indexOf('rsvp'), ...sectionBgStyle(customConfig?.['section.ceremony.bg'], API_BASE) }}
             >
+                <SectionOverlay stageId="rsvp" {...overlayProps} />
                 <motion.div
                     initial={{ opacity: 0, y: 50 }}
                     whileInView={{ opacity: 1, y: 0 }}
@@ -458,7 +483,7 @@ export default function Template2({
                     transition={{ duration: 0.6 }}
                     className="w-full max-w-2xl"
                 >
-                    <div className="text-center mb-8">
+                    <div className="text-center mb-8" style={a('rsvp', 'heading')}>
                         <h2 className="text-5xl font-bold bg-gradient-to-r from-yellow-600 to-amber-600 bg-clip-text text-transparent mb-2">
                             RSVP
                         </h2>
@@ -673,9 +698,10 @@ export default function Template2({
             {/* Section: Wishes */}
             <section
                 id="wishes"
-                className="min-h-screen flex items-center justify-center px-4 py-20"
+                className="relative min-h-screen flex items-center justify-center px-4 py-20"
                 style={{ order: sectionOrder.indexOf('wishes'), ...sectionBgStyle(customConfig?.['section.celebration.bg'], API_BASE) }}
             >
+                <SectionOverlay stageId="wishes" {...overlayProps} />
                 <motion.div
                     initial={{ opacity: 0, y: 50 }}
                     whileInView={{ opacity: 1, y: 0 }}
@@ -683,7 +709,7 @@ export default function Template2({
                     transition={{ duration: 0.6 }}
                     className="w-full max-w-6xl"
                 >
-                    <div className="text-center mb-12">
+                    <div className="text-center mb-12" style={a('wishes', 'heading')}>
                         <h2 className="text-5xl font-bold bg-gradient-to-r from-yellow-600 to-amber-600 bg-clip-text text-transparent mb-2">
                             Wishes & Blessings
                         </h2>
@@ -780,9 +806,10 @@ export default function Template2({
             {photoBoothEnabled && sectionOrder.includes('photobooth') && (
                 <section
                     id="photobooth"
-                    className="min-h-screen flex items-center justify-center px-4 py-20"
+                    className="relative min-h-screen flex items-center justify-center px-4 py-20"
                     style={{ order: sectionOrder.indexOf('photobooth') }}
                 >
+                    <SectionOverlay stageId="photobooth" {...overlayProps} />
                     <motion.div
                         initial={{ opacity: 0, y: 50 }}
                         whileInView={{ opacity: 1, y: 0 }}
@@ -790,7 +817,7 @@ export default function Template2({
                         transition={{ duration: 0.6 }}
                         className="w-full max-w-6xl"
                     >
-                        <div className="text-center mb-12">
+                        <div className="text-center mb-12" style={a('photobooth', 'heading')}>
                             <h2 className="text-5xl font-bold bg-gradient-to-r from-yellow-600 to-amber-600 bg-clip-text text-transparent mb-2">
                                 Photo Booth
                             </h2>

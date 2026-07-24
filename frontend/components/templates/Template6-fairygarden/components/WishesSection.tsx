@@ -1,16 +1,20 @@
 'use client';
-import { useState } from 'react';
+import { useState, type CSSProperties } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Wish, CreateWish } from '@/lib/api';
+import type { Breakpoint, EditorHandle } from '@/components/templates/_shared/types';
+import SectionOverlay from '../SectionOverlay';
 import styles from '../Template6.module.css';
 
 interface Props {
   wishes: Wish[];
   onSubmitWish: (data: CreateWish) => Promise<void>;
   customConfig?: Record<string, string>;
+  overlayProps: { breakpoint: Breakpoint; config?: Record<string, string>; editor?: EditorHandle };
+  a: (stageId: string, elementId: string, base?: CSSProperties) => CSSProperties;
 }
 
-export default function WishesSection({ wishes, onSubmitWish, customConfig }: Props) {
+export default function WishesSection({ wishes, onSubmitWish, customConfig, overlayProps, a }: Props) {
   const t = (key: string, fallback: string) => customConfig?.[key] || fallback;
   const [name, setName] = useState('');
   const [message, setMessage] = useState('');
@@ -34,6 +38,7 @@ export default function WishesSection({ wishes, onSubmitWish, customConfig }: Pr
 
   return (
     <section id="wishes" className={styles.sectionWishes}>
+      <SectionOverlay stageId="wishes" {...overlayProps} />
       <motion.div
         className={styles.sectionInner}
         initial={{ opacity: 0, y: 32 }}
@@ -41,7 +46,7 @@ export default function WishesSection({ wishes, onSubmitWish, customConfig }: Pr
         viewport={{ once: true, margin: '-80px' }}
         transition={{ duration: 0.8 }}
       >
-        <h2 className={styles.sectionTitle}>
+        <h2 className={styles.sectionTitle} style={a('wishes', 'title')}>
           <span className={styles.titleDecor}>✦</span>
           Wishes
           <span className={styles.titleDecor}>✦</span>
