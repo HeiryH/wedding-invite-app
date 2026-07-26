@@ -64,18 +64,18 @@ namespace WeddingInvite.Data.Migrations
             migrationBuilder.InsertData(
                 table: "Packages",
                 columns: new[] { "PackageId", "CreatedDate", "Description", "IsActive", "PackageCode", "PackageName", "Price", "SortOrder" },
-                values: new object[] { 3, new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc), "Everything in Premium, plus your own custom domain", true, "PRO", "Pro", 199m, 3 });
+                values: new object[] { 1000, new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc), "Everything in Premium, plus your own custom domain", true, "PRO", "Pro", 199m, 3 });
 
             migrationBuilder.InsertData(
                 table: "PackageFeatures",
                 columns: new[] { "PackageFeatureId", "FeatureId", "PackageId" },
                 values: new object[,]
                 {
-                    { 7, 1, 3 },
-                    { 8, 3, 3 },
-                    { 9, 4, 3 },
-                    { 10, 5, 3 },
-                    { 11, 6, 3 }
+                    { 1000, 1, 1000 },
+                    { 1001, 3, 1000 },
+                    { 1002, 4, 1000 },
+                    { 1003, 5, 1000 },
+                    { 1004, 6, 1000 }
                 });
 
             migrationBuilder.CreateIndex(
@@ -94,32 +94,32 @@ namespace WeddingInvite.Data.Migrations
             migrationBuilder.DeleteData(
                 table: "PackageFeatures",
                 keyColumn: "PackageFeatureId",
-                keyValue: 7);
+                keyValue: 1000);
 
             migrationBuilder.DeleteData(
                 table: "PackageFeatures",
                 keyColumn: "PackageFeatureId",
-                keyValue: 8);
+                keyValue: 1001);
 
             migrationBuilder.DeleteData(
                 table: "PackageFeatures",
                 keyColumn: "PackageFeatureId",
-                keyValue: 9);
+                keyValue: 1002);
 
             migrationBuilder.DeleteData(
                 table: "PackageFeatures",
                 keyColumn: "PackageFeatureId",
-                keyValue: 10);
+                keyValue: 1003);
 
             migrationBuilder.DeleteData(
                 table: "PackageFeatures",
                 keyColumn: "PackageFeatureId",
-                keyValue: 11);
+                keyValue: 1004);
 
             migrationBuilder.DeleteData(
                 table: "Packages",
                 keyColumn: "PackageId",
-                keyValue: 3);
+                keyValue: 1000);
 
             migrationBuilder.AddColumn<int>(
                 name: "PackageId",

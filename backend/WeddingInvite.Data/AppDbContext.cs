@@ -519,9 +519,15 @@ namespace WeddingInvite.Data
                     SortOrder = 2,
                     CreatedDate = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc)
                 },
+                // Deliberately NOT PackageId 3: real deployments (this one included) can already
+                // have super-admin-created packages occupying ids right after the original 2-row
+                // seed (e.g. an ad-hoc "TEST" package at id 3) — a HasData seed with a colliding
+                // explicit key throws a UNIQUE-constraint error and crashes the app on migrate.
+                // 1000+ is a deliberately wide gap past anything auto-increment could plausibly
+                // reach from manual package creation.
                 new Package
                 {
-                    PackageId = 3,
+                    PackageId = 1000,
                     PackageName = "Pro",
                     PackageCode = "PRO",
                     Description = "Everything in Premium, plus your own custom domain",
@@ -544,12 +550,13 @@ namespace WeddingInvite.Data
                 new PackageFeature { PackageFeatureId = 4, PackageId = 2, FeatureId = 4 }, // RSVP
                 new PackageFeature { PackageFeatureId = 5, PackageId = 2, FeatureId = 5 }, // WISHES
                 new PackageFeature { PackageFeatureId = 6, PackageId = 2, FeatureId = 6 }, // SEATING
-                // Pro package
-                new PackageFeature { PackageFeatureId = 7, PackageId = 3, FeatureId = 1 },  // PHOTO_BOOTH
-                new PackageFeature { PackageFeatureId = 8, PackageId = 3, FeatureId = 3 },  // CUSTOM_DOMAIN
-                new PackageFeature { PackageFeatureId = 9, PackageId = 3, FeatureId = 4 },  // RSVP
-                new PackageFeature { PackageFeatureId = 10, PackageId = 3, FeatureId = 5 }, // WISHES
-                new PackageFeature { PackageFeatureId = 11, PackageId = 3, FeatureId = 6 }  // SEATING
+                // Pro package — same wide-gap reasoning as PackageId 1000 above, since a wedding
+                // could equally already have manually-added PackageFeature rows past id 6.
+                new PackageFeature { PackageFeatureId = 1000, PackageId = 1000, FeatureId = 1 }, // PHOTO_BOOTH
+                new PackageFeature { PackageFeatureId = 1001, PackageId = 1000, FeatureId = 3 }, // CUSTOM_DOMAIN
+                new PackageFeature { PackageFeatureId = 1002, PackageId = 1000, FeatureId = 4 }, // RSVP
+                new PackageFeature { PackageFeatureId = 1003, PackageId = 1000, FeatureId = 5 }, // WISHES
+                new PackageFeature { PackageFeatureId = 1004, PackageId = 1000, FeatureId = 6 }  // SEATING
             );
 
             // Table (seating) configuration
