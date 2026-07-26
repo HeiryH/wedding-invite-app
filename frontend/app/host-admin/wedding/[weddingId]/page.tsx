@@ -4,9 +4,9 @@ import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import {
   weddingService, guestService, wishService, photoService,
-  weddingFeatureService, templateService, packageService,
+  weddingFeatureService, templateService,
   authService, tableService,
-  Wedding, Guest, Wish, Photo, WeddingFeature, Template, Package, CoupleAdminUser, SeatingTable,
+  Wedding, Guest, Wish, Photo, WeddingFeature, Template, CoupleAdminUser, SeatingTable,
 } from '@/lib/api';
 
 import OverviewTab from '@/app/super-admin/wedding/[weddingId]/components/OverviewTab';
@@ -15,13 +15,12 @@ import WishesTab from '@/app/super-admin/wedding/[weddingId]/components/WishesTa
 import PhotosTab from '@/app/super-admin/wedding/[weddingId]/components/PhotosTab';
 import FeaturesTab from '@/app/super-admin/wedding/[weddingId]/components/FeaturesTab';
 import TemplatesTab from '@/app/super-admin/wedding/[weddingId]/components/TemplatesTab';
-import PackagesTab from '@/app/super-admin/wedding/[weddingId]/components/PackagesTab';
 import AccessTab from '@/app/super-admin/wedding/[weddingId]/components/AccessTab';
 import SeatingTab from '@/app/super-admin/wedding/[weddingId]/components/SeatingTab';
 import { Icon } from '@/components/ui/Icon';
 import { Badge } from '@/components/ui/Badge';
 
-type Tab = 'overview' | 'guests' | 'wishes' | 'photos' | 'features' | 'templates' | 'packages' | 'access' | 'seating';
+type Tab = 'overview' | 'guests' | 'wishes' | 'photos' | 'features' | 'templates' | 'access' | 'seating';
 
 export default function HostWeddingDetailPage() {
   const params = useParams();
@@ -34,7 +33,6 @@ export default function HostWeddingDetailPage() {
   const [photos, setPhotos] = useState<Photo[]>([]);
   const [features, setFeatures] = useState<WeddingFeature[]>([]);
   const [templates, setTemplates] = useState<Template[]>([]);
-  const [packages, setPackages] = useState<Package[]>([]);
   const [coupleAdmin, setCoupleAdmin] = useState<CoupleAdminUser | null>(null);
   const [tables, setTables] = useState<SeatingTable[]>([]);
   const [loading, setLoading] = useState(true);
@@ -51,14 +49,13 @@ export default function HostWeddingDetailPage() {
   const fetchData = async () => {
     try {
       setLoading(true);
-      const [weddingData, guestsData, wishesData, photosData, featuresData, templatesData, packagesData, coupleAdminData, tablesData] = await Promise.all([
+      const [weddingData, guestsData, wishesData, photosData, featuresData, templatesData, coupleAdminData, tablesData] = await Promise.all([
         weddingService.getById(weddingId),
         guestService.getByWeddingId(weddingId),
         wishService.getByWeddingId(weddingId),
         photoService.getByWeddingId(weddingId),
         weddingFeatureService.getWeddingWithFeatures(weddingId).then(r => r.features),
         templateService.getActive(),
-        packageService.getActive(),
         authService.getCoupleAdmin(weddingId),
         tableService.getByWeddingId(weddingId),
       ]);
@@ -68,7 +65,6 @@ export default function HostWeddingDetailPage() {
       setPhotos(photosData);
       setFeatures(featuresData);
       setTemplates(templatesData);
-      setPackages(packagesData);
       setCoupleAdmin(coupleAdminData);
       setTables(tablesData);
     } catch (err: any) {
@@ -88,7 +84,6 @@ export default function HostWeddingDetailPage() {
     ...(isFeatureEnabled('SEATING') ? [{ key: 'seating' as Tab, label: 'Seating' }] : []),
     { key: 'features', label: 'Features' },
     { key: 'templates', label: 'Templates' },
-    { key: 'packages', label: 'Packages' },
     { key: 'access', label: 'Access' },
   ];
 
@@ -329,15 +324,9 @@ export default function HostWeddingDetailPage() {
         <TemplatesTab
           templates={templates}
           currentTemplateId={wedding.templateId}
+          weddingTier={coupleAdmin?.tier}
           onChangeTemplate={handleChangeTemplate}
           onPreviewTemplate={(id) => window.open(`/wedding/${wedding.coupleName}?preview=${id}`, '_blank')}
-        />
-      )}
-      {activeTab === 'packages' && (
-        <PackagesTab
-          wedding={wedding}
-          packages={packages}
-          onPackageUpdated={setWedding}
         />
       )}
       {activeTab === 'access' && (

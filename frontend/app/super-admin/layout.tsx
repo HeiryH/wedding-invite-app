@@ -13,7 +13,6 @@ const NAV_ITEMS = [
   { id: 'features',  label: 'Features',  icon: 'sliders',     href: '/super-admin/features' },
   { id: 'themes',    label: 'Themes',    icon: 'palette',     href: '/super-admin/themes' },
   { id: 'landing',   label: 'Landing',   icon: 'layout-grid', href: '/super-admin/landing' },
-  { id: 'screenshot',label: 'Screenshot',icon: 'camera',      href: '/super-admin/screenshot' },
 ];
 
 export default function SuperAdminLayout({ children }: { children: React.ReactNode }) {

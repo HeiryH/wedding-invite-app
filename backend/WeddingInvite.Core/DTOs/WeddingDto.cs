@@ -23,8 +23,6 @@ namespace WeddingInvite.Core.DTOs
         public int TemplateId { get; set; }
         public string? TemplateName { get; set; }
         public string? TemplateCode { get; set; }
-        public int? PackageId { get; set; }
-        public string? PackageName { get; set; }
         public int MaxPax { get; set; }
         public int MaxCapacity { get; set; }
         public bool ShowCapacityWarning { get; set; }
@@ -43,7 +41,6 @@ namespace WeddingInvite.Core.DTOs
         public string Venue { get; set; } = string.Empty;
         public string VenueAddress { get; set; } = string.Empty;
         public int TemplateId { get; set; }
-        public int? PackageId { get; set; }
     }
 
     // What clients send when updating a wedding

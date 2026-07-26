@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { weddingService, templateService, packageService, Template, Package } from '@/lib/api';
+import { weddingService, templateService, Template } from '@/lib/api';
 import Icon from '@/components/admin/Icon';
 import { TemplatePreview } from '@/components/templates/TemplatePreview';
 
@@ -17,7 +17,6 @@ const inputStyle: React.CSSProperties = {
 export default function HostCreateWeddingPage() {
   const router = useRouter();
   const [templates, setTemplates] = useState<Template[]>([]);
-  const [packages, setPackages] = useState<Package[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [formData, setFormData] = useState({
@@ -27,12 +26,10 @@ export default function HostCreateWeddingPage() {
     venue: '',
     venueAddress: '',
     templateId: 1,
-    packageId: null as number | null,
   });
 
   useEffect(() => {
     templateService.getActive().then(setTemplates).catch(() => {});
-    packageService.getActive().then(setPackages).catch(() => {});
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -48,7 +45,6 @@ export default function HostCreateWeddingPage() {
         venue: formData.venue.trim(),
         venueAddress: formData.venueAddress.trim(),
         templateId: formData.templateId,
-        packageId: formData.packageId ?? undefined,
       });
       router.push(`/host-admin/wedding/${wedding.weddingId}`);
     } catch (err: any) {
@@ -144,61 +140,6 @@ export default function HostCreateWeddingPage() {
             </div>
           </div>
         </div>
-
-        {/* Package Selection */}
-        {packages.length > 0 && (
-          <div style={{ background: 'var(--surface-card)', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-lg)', padding: 20, marginBottom: 14 }}>
-            {sectionLabel('Choose a package')}
-            <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-subtle)', margin: '-8px 0 14px', fontFamily: 'var(--font-ui)' }}>Select a package to automatically enable its features.</p>
-            <div className="grid md:grid-cols-2 gap-3">
-              <div
-                onClick={() => setFormData({ ...formData, packageId: null })}
-                style={{
-                  padding: 16, borderRadius: 'var(--radius-md)', cursor: 'pointer',
-                  border: `2px solid ${formData.packageId === null ? 'var(--brand)' : 'var(--border-default)'}`,
-                  background: formData.packageId === null ? 'var(--brand-subtle)' : 'var(--surface-card)',
-                  transition: 'all .15s ease',
-                }}
-              >
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 4 }}>
-                  <h3 style={{ margin: 0, fontSize: 14, fontWeight: 600, color: 'var(--text-strong)', fontFamily: 'var(--font-ui)' }}>No package</h3>
-                  {formData.packageId === null && <Icon name="check-circle" size={16} style={{ color: 'var(--brand)' }} />}
-                </div>
-                <p style={{ fontSize: 12.5, color: 'var(--text-muted)', margin: 0, fontFamily: 'var(--font-ui)' }}>Start with no features. Enable them manually later.</p>
-              </div>
-              {packages.map(pkg => (
-                <div
-                  key={pkg.packageId}
-                  onClick={() => setFormData({ ...formData, packageId: pkg.packageId })}
-                  style={{
-                    padding: 16, borderRadius: 'var(--radius-md)', cursor: 'pointer',
-                    border: `2px solid ${formData.packageId === pkg.packageId ? 'var(--brand)' : 'var(--border-default)'}`,
-                    background: formData.packageId === pkg.packageId ? 'var(--brand-subtle)' : 'var(--surface-card)',
-                    transition: 'all .15s ease',
-                  }}
-                >
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 4 }}>
-                    <div>
-                      <h3 style={{ margin: '0 0 2px', fontSize: 14, fontWeight: 600, color: 'var(--text-strong)', fontFamily: 'var(--font-ui)' }}>{pkg.packageName}</h3>
-                      {pkg.price > 0 && <span style={{ fontSize: 12, color: 'var(--brand)', fontWeight: 500, fontFamily: 'var(--font-ui)' }}>${pkg.price}</span>}
-                    </div>
-                    {formData.packageId === pkg.packageId && <Icon name="check-circle" size={16} style={{ color: 'var(--brand)' }} />}
-                  </div>
-                  {pkg.description && <p style={{ fontSize: 12.5, color: 'var(--text-muted)', margin: '0 0 8px', fontFamily: 'var(--font-ui)' }}>{pkg.description}</p>}
-                  {pkg.features.length > 0 && (
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
-                      {pkg.features.map(f => (
-                        <span key={f.featureId} style={{ fontSize: 11, background: 'var(--surface-card)', color: 'var(--brand)', padding: '2px 8px', borderRadius: 999, border: '1px solid var(--brand-border)', fontFamily: 'var(--font-ui)' }}>
-                          {f.featureName}
-                        </span>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
 
         {/* Template Selection */}
         {templates.length > 0 && (

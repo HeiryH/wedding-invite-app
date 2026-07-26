@@ -20,9 +20,6 @@
         public int TemplateId { get; set; } = 1; // Default to template 1
         public Template Template { get; set; } = null!;
 
-        public int? PackageId { get; set; }
-        public Package? Package { get; set; }
-
         // Status
         public bool IsActive { get; set; } = true;
         public bool IsRsvpOpen { get; set; } = true;

@@ -4,8 +4,11 @@ namespace WeddingInvite.Models
     {
         public int PackageId { get; set; }
 
-        public string PackageName { get; set; } = string.Empty; // "Starter", "Premium"
-        public string PackageCode { get; set; } = string.Empty; // "STARTER", "PREMIUM"
+        // Tier definition: PackageCode is one of FREE / PREMIUM / PRO — the same vocabulary as
+        // User.Tier / Template.Tier. PackageName/Description/Price are display-only; the
+        // PackageFeatures below are the actual source of truth for what the tier unlocks.
+        public string PackageName { get; set; } = string.Empty; // "Starter", "Premium", "Pro"
+        public string PackageCode { get; set; } = string.Empty; // "FREE", "PREMIUM", "PRO"
         public string Description { get; set; } = string.Empty;
 
         public decimal Price { get; set; } = 0; // Display price
@@ -17,8 +20,5 @@ namespace WeddingInvite.Models
 
         // Navigation property - which features are included
         public ICollection<PackageFeature> PackageFeatures { get; set; } = new List<PackageFeature>();
-
-        // Navigation property - which weddings use this package
-        public ICollection<Wedding> Weddings { get; set; } = new List<Wedding>();
     }
 }

@@ -7,8 +7,9 @@ using Xunit;
 namespace WeddingInvite.Tests;
 
 /// <summary>
-/// Custom domain is the PRO-tier perk: only a PRO wedding may set one, it is normalized,
-/// validated, and globally unique. These tests pin that contract.
+/// Custom domain is a PRO-tier perk (see TierEnforcementTests for the tier + per-wedding
+/// toggle gate itself): once enabled, a domain is normalized, validated, and globally unique.
+/// These tests pin that contract.
 /// </summary>
 public class CustomDomainTests
 {
@@ -19,6 +20,8 @@ public class CustomDomainTests
         new WeddingFeatureRepository(db.Context),
         new TemplateRepository(db.Context),
         new UserRepository(db.Context));
+
+    private const int CustomDomainFeatureId = 3; // seeded CUSTOM_DOMAIN
 
     private static void SeedCouple(TestDb db, int weddingId, string tier)
     {
@@ -31,6 +34,14 @@ public class CustomDomainTests
             WeddingId = weddingId,
             Tier = tier,
         });
+        db.Context.SaveChanges();
+    }
+
+    // Custom domain needs the tier AND an explicit per-wedding toggle (same as PHOTO_BOOTH/
+    // SEATING) — tests that aren't specifically about the toggle itself enable it directly here.
+    private static void EnableCustomDomain(TestDb db, int weddingId)
+    {
+        db.Context.WeddingFeatures.Add(new WeddingFeature { WeddingId = weddingId, FeatureId = CustomDomainFeatureId, IsEnabled = true });
         db.Context.SaveChanges();
     }
 
@@ -52,6 +63,7 @@ public class CustomDomainTests
     {
         using var db = new TestDb();
         SeedCouple(db, 201, TierEntitlements.Pro);
+        EnableCustomDomain(db, 201);
         var svc = BuildService(db);
 
         var result = await svc.SetDomainAsync(201, "https://WWW.John-And-Mary.COM/");
@@ -75,6 +87,8 @@ public class CustomDomainTests
         using var db = new TestDb();
         SeedCouple(db, 203, TierEntitlements.Pro);
         SeedCouple(db, 204, TierEntitlements.Pro);
+        EnableCustomDomain(db, 203);
+        EnableCustomDomain(db, 204);
         var svc = BuildService(db);
 
         await svc.SetDomainAsync(203, "shared.com");
@@ -98,6 +112,7 @@ public class CustomDomainTests
     {
         using var db = new TestDb();
         SeedCouple(db, 206, TierEntitlements.Pro);
+        EnableCustomDomain(db, 206);
         var svc = BuildService(db);
         await svc.SetDomainAsync(206, "resolve-me.com");
 

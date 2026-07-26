@@ -111,19 +111,12 @@ namespace WeddingInvite.Core.Services
                 Venue = createDto.Venue.Trim(),
                 VenueAddress = createDto.VenueAddress.Trim(),
                 TemplateId = createDto.TemplateId,
-                PackageId = createDto.PackageId,
                 IsActive = true,
                 CreatedDate = DateTime.UtcNow,
                 CreatedByUserId = createdByUserId,
             };
 
             var created = await _weddingRepo.CreateAsync(wedding);
-
-            // Auto-enable features from the selected package
-            if (createDto.PackageId.HasValue)
-            {
-                await EnablePackageFeaturesAsync(created.WeddingId, createDto.PackageId.Value);
-            }
 
             return await MapToDto(created);
         }
@@ -158,13 +151,36 @@ namespace WeddingInvite.Core.Services
 
         public async Task<bool> DeleteAsync(int id)
         {
-            var wedding = await _weddingRepo.GetByIdAsync(id);
-            if (wedding == null) return false;
+            // A real, permanent delete — matches the "cannot be undone" confirmation in the admin UI.
+            // Cascades (Guests, Wishes, Photos, WeddingFeatures, Tables, ItineraryItems,
+            // WeddingTemplateConfig) are configured OnDelete(Cascade) in AppDbContext, and the couple
+            // admin's User.WeddingId is SetNull, so this cleans up in one transaction. To deactivate a
+            // wedding without deleting it, use ToggleActiveAsync (IsActive) instead.
+            var deleted = await _weddingRepo.DeleteAsync(id);
+            if (!deleted) return false;
 
-            wedding.IsActive = false;
-            await _weddingRepo.UpdateAsync(wedding);
+            // Best-effort: the DB delete already committed, so a filesystem hiccup here must not
+            // surface as a failed request. wwwroot/uploads/{id}/ covers Couple+Guest photos (incl.
+            // Adjust-panel layer images/backgrounds) and uploaded audio — all per-wedding-subfoldered.
+            // wwwroot/uploads/photos/{id}/ is a legacy path from an older upload flow, cleaned up
+            // defensively. wwwroot/uploads/templates/ is shared across weddings — never touched.
+            TryDeleteDirectory(Path.Combine("wwwroot", "uploads", id.ToString()));
+            TryDeleteDirectory(Path.Combine("wwwroot", "uploads", "photos", id.ToString()));
 
             return true;
+        }
+
+        private static void TryDeleteDirectory(string path)
+        {
+            try
+            {
+                if (Directory.Exists(path))
+                    Directory.Delete(path, recursive: true);
+            }
+            catch
+            {
+                // Best-effort cleanup; the DB delete already succeeded.
+            }
         }
 
         public async Task<WeddingDto> UpdateTemplateAsync(int id, int templateId)
@@ -192,26 +208,10 @@ namespace WeddingInvite.Core.Services
 
             var updated = await _weddingRepo.UpdateAsync(wedding);
 
+            // No config seeding on switch: the template's captured "starting design" is applied live at
+            // read time (TemplateConfigService.GetConfigAsync), so simply changing TemplateId makes the
+            // invite inherit that template's default for every key the couple hasn't overridden.
             return await MapToDto(updated);
-        }
-
-        public async Task<WeddingDto> UpdatePackageAsync(int id, int packageId)
-        {
-            var wedding = await _weddingRepo.GetByIdAsync(id);
-            if (wedding == null)
-                throw new KeyNotFoundException($"Wedding with ID {id} not found");
-
-            var package = await _packageRepo.GetByIdAsync(packageId);
-            if (package == null)
-                throw new ArgumentException($"Package with ID {packageId} not found");
-
-            wedding.PackageId = packageId;
-            await _weddingRepo.UpdateAsync(wedding);
-
-            // Auto-enable the new package's features
-            await EnablePackageFeaturesAsync(id, packageId);
-
-            return await MapToDto(wedding);
         }
 
         public async Task<WeddingDto> ToggleActiveAsync(int id, bool isActive)
@@ -256,12 +256,16 @@ namespace WeddingInvite.Core.Services
             if (!IsValidDomain(normalized))
                 throw new ArgumentException("Enter a valid domain, e.g. 'john-and-mary.com'.");
 
-            // Custom domain is a PRO-tier entitlement.
+            // Custom domain is a PRO-tier entitlement AND must be explicitly enabled for this
+            // wedding (same two-step gate as PHOTO_BOOTH/SEATING) — see WeddingFeatureService.
             var owner = await _userRepo.GetByWeddingIdAsync(id);
             var tier = owner?.Tier ?? TierEntitlements.Free;
-            if (!TierEntitlements.AllowsFeature(tier, FeatureCodes.CustomDomain))
+            if (!await _packageRepo.TierIncludesFeatureAsync(tier, FeatureCodes.CustomDomain))
                 throw new InvalidOperationException(
                     $"Custom domains are a PRO feature. This wedding is on the {tier} tier.");
+            if (!await _weddingFeatureRepo.IsFeatureEnabledAsync(id, FeatureCodes.CustomDomain))
+                throw new InvalidOperationException(
+                    "Custom domain isn't enabled for this wedding yet. Ask your admin to turn it on in Features.");
 
             // Globally unique across weddings.
             var existing = await _weddingRepo.GetByDomainAsync(normalized);
@@ -300,17 +304,6 @@ namespace WeddingInvite.Core.Services
 
         // HELPER METHODS
 
-        private async Task EnablePackageFeaturesAsync(int weddingId, int packageId)
-        {
-            var package = await _packageRepo.GetByIdAsync(packageId);
-            if (package == null) return;
-
-            foreach (var pf in package.PackageFeatures)
-            {
-                await _weddingFeatureRepo.EnableFeatureAsync(weddingId, pf.FeatureId);
-            }
-        }
-
         private async Task<WeddingDto> MapToDto(Wedding wedding)
         {
             // Reload to get latest navigation props if needed
@@ -340,8 +333,6 @@ namespace WeddingInvite.Core.Services
                 TemplateId = wedding.TemplateId,
                 TemplateName = wedding.Template?.TemplateName,
                 TemplateCode = wedding.Template?.TemplateCode,
-                PackageId = wedding.PackageId,
-                PackageName = wedding.Package?.PackageName,
                 CreatedByUserId = wedding.CreatedByUserId,
                 CreatedByEmail = wedding.CreatedBy?.Email,
                 Domain = wedding.Domain

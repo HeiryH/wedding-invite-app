@@ -46,6 +46,15 @@ namespace WeddingInvite.Data.Repositories
                 .ToListAsync();
         }
 
+        public async Task<IEnumerable<Photo>> GetAllByWeddingIdAsync(int weddingId)
+        {
+            return await _context.Photos
+                .AsNoTracking() // read-only — the wedding export needs FilePath, not a DTO
+                .Where(p => p.WeddingId == weddingId)
+                .OrderBy(p => p.UploadedBy).ThenBy(p => p.CreatedDate)
+                .ToListAsync();
+        }
+
         public async Task<Photo?> GetByTemplateSlotAsync(int weddingId, int templateSlot)
         {
             return await _context.Photos

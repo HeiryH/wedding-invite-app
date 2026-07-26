@@ -34,7 +34,8 @@ public class TemplateConfigTests
     }
 
     private static TemplateConfigService ServiceFor(TestDb db) =>
-        new(new TemplateConfigRepository(db.Context));
+        new(new TemplateConfigRepository(db.Context), new TemplateConfigDefaultRepository(db.Context),
+            new WeddingRepository(db.Context));
 
     private static Dictionary<string, string> Bag(params (string Key, string Value)[] pairs) =>
         pairs.ToDictionary(p => p.Key, p => p.Value, StringComparer.Ordinal);

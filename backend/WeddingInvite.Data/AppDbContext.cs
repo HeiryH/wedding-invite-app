@@ -27,6 +27,7 @@ namespace WeddingInvite.Data
         public DbSet<Package> Packages { get; set; } = null!;
         public DbSet<PackageFeature> PackageFeatures { get; set; } = null!;
         public DbSet<WeddingTemplateConfig> TemplateConfigs { get; set; } = null!;
+        public DbSet<TemplateConfigDefault> TemplateConfigDefaults { get; set; } = null!;
         public DbSet<Table> Tables { get; set; } = null!;
         public DbSet<ItineraryItem> ItineraryItems { get; set; } = null!;
         public DbSet<PasswordResetToken> PasswordResetTokens { get; set; } = null!;
@@ -78,11 +79,6 @@ namespace WeddingInvite.Data
                .WithMany(t => t.Weddings)
                .HasForeignKey(e => e.TemplateId)
                .OnDelete(DeleteBehavior.Restrict);
-
-                entity.HasOne(e => e.Package)
-               .WithMany(p => p.Weddings)
-               .HasForeignKey(e => e.PackageId)
-               .OnDelete(DeleteBehavior.SetNull);
 
                 entity.HasOne(e => e.CreatedBy)
                .WithMany()
@@ -207,7 +203,7 @@ namespace WeddingInvite.Data
                     FeatureName = "Custom Domain",
                     Description = "Use your own domain name (e.g., johnandmary.wedding)",
                     IsPremium = true,
-                    IsActive = false, // Not implemented yet
+                    IsActive = true,
                     SortOrder = 3,
                     CreatedDate = DateTime.UtcNow
                 },
@@ -497,13 +493,15 @@ namespace WeddingInvite.Data
                     .OnDelete(DeleteBehavior.Cascade);
             });
 
-            // Seed default packages
+            // Packages ARE the tier definitions (FREE / PREMIUM / PRO) — see TierEntitlements and
+            // IPackageRepository.TierIncludesFeatureAsync. Exactly these 3 rows; PackageService
+            // rejects creating/deleting any others. Edited at /super-admin/packages.
             modelBuilder.Entity<Package>().HasData(
                 new Package
                 {
                     PackageId = 1,
-                    PackageName = "Starter",
-                    PackageCode = "STARTER",
+                    PackageName = "Free",
+                    PackageCode = "FREE",
                     Description = "Basic wedding invitation with RSVP and guestbook",
                     Price = 0,
                     IsActive = true,
@@ -520,19 +518,38 @@ namespace WeddingInvite.Data
                     IsActive = true,
                     SortOrder = 2,
                     CreatedDate = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc)
+                },
+                new Package
+                {
+                    PackageId = 3,
+                    PackageName = "Pro",
+                    PackageCode = "PRO",
+                    Description = "Everything in Premium, plus your own custom domain",
+                    Price = 199,
+                    IsActive = true,
+                    SortOrder = 3,
+                    CreatedDate = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc)
                 }
             );
 
-            // Seed package features: Starter = RSVP (4) + WISHES (5), Premium = all active features
+            // Seed package features: FREE = RSVP+WISHES, PREMIUM = + PHOTO_BOOTH+SEATING,
+            // PRO = + CUSTOM_DOMAIN. Explicit membership per tier (no rank cascading), matching
+            // how this table already worked before PRO existed.
             modelBuilder.Entity<PackageFeature>().HasData(
-                // Starter package
+                // Free package
                 new PackageFeature { PackageFeatureId = 1, PackageId = 1, FeatureId = 4 }, // RSVP
                 new PackageFeature { PackageFeatureId = 2, PackageId = 1, FeatureId = 5 }, // WISHES
                 // Premium package
                 new PackageFeature { PackageFeatureId = 3, PackageId = 2, FeatureId = 1 }, // PHOTO_BOOTH
                 new PackageFeature { PackageFeatureId = 4, PackageId = 2, FeatureId = 4 }, // RSVP
                 new PackageFeature { PackageFeatureId = 5, PackageId = 2, FeatureId = 5 }, // WISHES
-                new PackageFeature { PackageFeatureId = 6, PackageId = 2, FeatureId = 6 }  // SEATING
+                new PackageFeature { PackageFeatureId = 6, PackageId = 2, FeatureId = 6 }, // SEATING
+                // Pro package
+                new PackageFeature { PackageFeatureId = 7, PackageId = 3, FeatureId = 1 },  // PHOTO_BOOTH
+                new PackageFeature { PackageFeatureId = 8, PackageId = 3, FeatureId = 3 },  // CUSTOM_DOMAIN
+                new PackageFeature { PackageFeatureId = 9, PackageId = 3, FeatureId = 4 },  // RSVP
+                new PackageFeature { PackageFeatureId = 10, PackageId = 3, FeatureId = 5 }, // WISHES
+                new PackageFeature { PackageFeatureId = 11, PackageId = 3, FeatureId = 6 }  // SEATING
             );
 
             // Table (seating) configuration
@@ -600,6 +617,29 @@ namespace WeddingInvite.Data
                 entity.HasOne(e => e.Wedding)
                     .WithMany()
                     .HasForeignKey(e => e.WeddingId)
+                    .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            // TemplateConfigDefault configuration — the per-template "starting design" bag.
+            // Same shape/constraints as WeddingTemplateConfig, keyed by TemplateId instead.
+            modelBuilder.Entity<TemplateConfigDefault>(entity =>
+            {
+                entity.HasKey(e => e.TemplateConfigDefaultId);
+
+                entity.Property(e => e.ConfigKey)
+                    .IsRequired()
+                    .HasMaxLength(100);
+
+                entity.Property(e => e.ConfigValue)
+                    .IsRequired()
+                    .HasMaxLength(4000);
+
+                entity.HasIndex(e => new { e.TemplateId, e.ConfigKey })
+                    .IsUnique();
+
+                entity.HasOne(e => e.Template)
+                    .WithMany()
+                    .HasForeignKey(e => e.TemplateId)
                     .OnDelete(DeleteBehavior.Cascade);
             });
 

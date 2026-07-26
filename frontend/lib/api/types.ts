@@ -17,8 +17,6 @@ export interface Wedding {
   enabledFeaturesCount: number;  // NEW
   templateId: number;
   templateName: string;
-  packageId?: number;
-  packageName?: string;
   maxPax?: number;
   maxCapacity?: number;
   showCapacityWarning?: boolean;
@@ -36,7 +34,6 @@ export interface CreateWedding {
   venue: string;
   venueAddress: string;
   templateId?: number;
-  packageId?: number;
 }
 
 export interface UpdateWeddingDto {

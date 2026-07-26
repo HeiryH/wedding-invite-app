@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { weddingService, Wedding } from '@/lib/api';
+import { downloadBlob } from '@/lib/utils';
 import WeddingCard from '@/components/admin/WeddingCard';
 import { Icon } from '@/components/ui/Icon';
 import { StatCard } from '@/components/ui/Card';
@@ -86,6 +87,13 @@ export default function HostAdminDashboard() {
     if (!confirm(`Delete ${coupleName}? This cannot be undone.`)) return;
     try { await weddingService.delete(id); await fetchWeddings(); }
     catch { alert('Failed to delete wedding'); }
+  };
+
+  const handleExport = async (id: number, coupleName: string) => {
+    try {
+      const blob = await weddingService.export(id);
+      downloadBlob(`${coupleName}-export-${new Date().toISOString().split('T')[0]}.zip`, blob);
+    } catch { alert('Failed to export wedding data'); }
   };
 
   if (loading) return (
@@ -195,6 +203,7 @@ export default function HostAdminDashboard() {
               onPreview={name => window.open(`/wedding/${name}`, '_blank')}
               onToggleActive={handleToggleActive}
               onDelete={handleDelete}
+              onExport={handleExport}
             />
           ))}
         </div>

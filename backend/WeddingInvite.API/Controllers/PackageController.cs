@@ -90,12 +90,19 @@ namespace WeddingInvite.API.Controllers
         [Authorize(Roles = "SUPER_ADMIN")]
         public async Task<ActionResult> Delete(int id)
         {
-            var deleted = await _packageService.DeleteAsync(id);
+            try
+            {
+                var deleted = await _packageService.DeleteAsync(id);
 
-            if (!deleted)
-                return NotFound(new { message = $"Package with ID {id} not found" });
+                if (!deleted)
+                    return NotFound(new { message = $"Package with ID {id} not found" });
 
-            return NoContent();
+                return NoContent();
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
         }
     }
 }

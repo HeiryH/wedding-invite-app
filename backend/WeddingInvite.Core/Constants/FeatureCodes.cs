@@ -8,7 +8,6 @@ namespace WeddingInvite.Core.Constants
         public const string PhotoBooth  = "PHOTO_BOOTH";
         public const string Seating     = "SEATING";
 
-        // Reserved for the PRO tier — activated in the Custom Domain work (roadmap Step 4).
         public const string CustomDomain = "CUSTOM_DOMAIN";
 
         // NOTE: GALLERY and COUNTDOWN were removed — neither was ever a real toggle.

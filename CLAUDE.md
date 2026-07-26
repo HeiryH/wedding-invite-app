@@ -47,6 +47,29 @@ All repos/services are registered as **scoped** in `Program.cs`. When adding new
 - Token is read from cookies in `Program.cs` via `OnMessageReceived` event
 - `IWeddingAuthorizationService` / `CanAccessWeddingAsync` enforces couple/host admin can only access their own wedding(s)
 - Tiers: `User.Tier` and `Template.Tier` are `FREE | PREMIUM | PRO` — templates are tier-gated. **No billing/payment integration exists yet** (tier changes are manual)
+- **Package rows ARE the tier definitions** (`Package`/`PackageFeature`, exactly `FREE`/`PREMIUM`/`PRO` — `PackageService` rejects creating or deleting any other code). `IPackageRepository.TierIncludesFeatureAsync` is the single source of truth for "does this tier include this feature," replacing the old hardcoded `TierEntitlements.AllowsFeature` map. Edited at `/super-admin/packages`. `Wedding.PackageId` no longer exists — a wedding's feature set comes from its owner's `User.Tier` alone, resolved through this lookup (see `WeddingFeatureService`/`WeddingService.SetDomainAsync`). Custom Domain needs both the PRO tier ceiling *and* an explicit per-wedding `WeddingFeature` toggle (same two-step gate as `PHOTO_BOOTH`/`SEATING`).
+
+### Wedding lifecycle: delete vs. deactivate
+`DELETE /api/wedding/{id}` (`WeddingService.DeleteAsync`) is a **real, permanent delete** — it removes
+the row and cascades all child data (Guests, Wishes, Photos, WeddingFeatures, Tables, ItineraryItems,
+WeddingTemplateConfig are `OnDelete(Cascade)`; the couple admin's `User.WeddingId` is `SetNull`), and
+frees the couple name for reuse. It also **best-effort deletes the on-disk upload directories**
+(`wwwroot/uploads/{id}/` — covers Couple/Guest photos and audio; `wwwroot/uploads/photos/{id}/` for a
+legacy pre-existing layout) via `TryDeleteDirectory`, swallowing filesystem errors since the DB delete
+has already committed by that point. To deactivate a wedding *without* deleting it, use
+`PUT /api/wedding/{id}/toggle-active` (`ToggleActiveAsync`, `IsActive`) — that's the "Drafts" bucket
+in the super-admin dashboard.
+
+**Export a wedding**: `GET /api/wedding/{id}/export` (`WeddingExportService.BuildExportZipAsync`,
+same `SUPER_ADMIN,HOST_ADMIN` + `CanAccessWeddingAsync` gate as Delete) streams back a zip of
+everything belonging to the wedding — `wedding.json`, the full effective `config.json`, `guests.csv`,
+`wishes.csv`, `itinerary.csv`, `seating.csv`, every photo under `photos/{couple,guest}/` (named by
+their on-disk `{guid}.ext`, with a `photos-manifest.csv` recording metadata + a `FileIncluded` flag
+for any DB row whose file is missing on disk), and `audio/` if `music.url` is configured and its file
+exists. Built fully in-memory (`MemoryStream`/`ZipArchive`, BCL only) — pairs naturally as "back this
+up before you delete it," but stands alone as a general data-portability export. Surfaced in the
+super-admin/host-admin wedding-list card (`WeddingCard`'s download icon) and the wedding detail page
+header ("Export data").
 
 ### Frontend API Layer
 All API calls go through `frontend/lib/api/` and are exported from `index.ts`. Each service file wraps an `apiClient` (Axios instance). **Always add new service methods to the relevant service file and re-export from `index.ts`.**
@@ -94,9 +117,28 @@ inspector renders itself from `getConfigFields(templateId, role)` — there are 
   but didn't submit is **deleted**. That's what makes deleting a T7 layer work. It also means a
   bug in `handleSwitchTemplate`'s merge would destroy a couple's content — the two must stay in
   step.
+- **Per-template "starting design" defaults** (`TemplateConfigDefault` table, keyed by `TemplateId`,
+  same shape as `WeddingTemplateConfig`). A super-admin captures a *finished* invite's design on the
+  themes page (`/super-admin/themes` → "Starting design" → pick an invite → *Set as default*);
+  `SetDefaultFromWeddingAsync` stores that wedding's **effective** config minus couple-content keys
+  (`TemplateConfigPolicy.IsCoupleContent`: `invite.body`, `walimah.body`, `music.url`).
+  **The default is applied live at read time, not seeded.** `GetConfigAsync(weddingId)` returns the
+  template default **underlaid** by the wedding's own rows (a stored key always wins). So every invite
+  of a template — existing or new, however it got there — renders that template's default for any key
+  the couple hasn't overridden, and improving the default propagates live to those keys (no re-seed,
+  no timing gaps). There are no seeded rows: `WeddingService.CreateAsync`/`UpdateTemplateAsync` write
+  nothing config-wise; switching an invite's template just changes `TemplateId` and it inherits the
+  new template's default. **`SaveConfigAsync` stores only true overrides**: a submitted value equal to
+  the default is not persisted (and an existing row equal to the default is pruned), which is what
+  keeps un-touched keys live and makes "reset a stage" revert to the *theme's* starting design.
+  Because the customize page echoes the merged bag on load, a couple's untouched keys round-trip as
+  no-ops. Admin endpoints: `GET/PUT/DELETE /api/template/{id}/default-config[...]`. Also surfaces on
+  `/template-preview/[code]` (the no-real-wedding sample/thumbnail render), via
+  `GET /api/template-config/template/{id}/default`, so a template's picker thumbnail reflects its
+  captured design instead of raw code defaults.
 
-### EF Migrations (24 total, in order)
-`InitialCreate` → `AddFeaturesAndPhotos` → `AddTemplates` → `RenameTemplateToTemplates` → `AddUsers` → `AddPhotoModeration` → `AddPackages` → `AddWeddingMedia` → `MergeWeddingMediaIntoPhoto` → `AddTemplateConfig` → `AddUserIsActive` → `AddSeatingTables` → `AddTemplate4MinimalNoir` → `AddTemplate5DreamingFloralSky` → `AddItinerary` → `AddTemplate6FairyGarden` → `AddWeddingMaxPax` → `AddWeddingCapacity` → `AddWeddingIsRsvpOpen` → `AddWeddingCreatedBy` → `AddTemplateTier` → `AddUserTier` → `AddWeddingIsPublic` → `AddTemplate7RomanGarden`
+### EF Migrations (28 total, in order)
+`InitialCreate` → `AddFeaturesAndPhotos` → `AddTemplates` → `RenameTemplateToTemplates` → `AddUsers` → `AddPhotoModeration` → `AddPackages` → `AddWeddingMedia` → `MergeWeddingMediaIntoPhoto` → `AddTemplateConfig` → `AddUserIsActive` → `AddSeatingTables` → `AddTemplate4MinimalNoir` → `AddTemplate5DreamingFloralSky` → `AddItinerary` → `AddTemplate6FairyGarden` → `AddWeddingMaxPax` → `AddWeddingCapacity` → `AddWeddingIsRsvpOpen` → `AddWeddingCreatedBy` → `AddTemplateTier` → `AddUserTier` → `AddWeddingIsPublic` → `AddPasswordResetToken` → `AddWeddingCustomDomain` → `AddTemplate7RomanGarden` → `AddLandingContent` → `AddTemplateConfigDefaultAndPackageTierUnification`
 
 ## Stage + layer engine (`components/templates/_shared/`)
 

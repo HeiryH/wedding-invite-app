@@ -84,5 +84,15 @@ namespace WeddingInvite.Data.Repositories
             return await _context.Packages
                 .AnyAsync(p => p.PackageCode == code && (excludeId == null || p.PackageId != excludeId));
         }
+
+        public async Task<bool> TierIncludesFeatureAsync(string? tier, string featureCode)
+        {
+            if (string.IsNullOrWhiteSpace(tier)) return false;
+
+            return await _context.Packages
+                .Where(p => p.PackageCode == tier.ToUpper())
+                .SelectMany(p => p.PackageFeatures)
+                .AnyAsync(pf => pf.Feature.FeatureCode == featureCode);
+        }
     }
 }

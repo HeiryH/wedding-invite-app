@@ -45,13 +45,6 @@ export const weddingService = {
     return response.data;
   },
 
-  updatePackage: async (weddingId: number, packageId: number): Promise<Wedding> => {
-    const response = await apiClient.put<Wedding>(`/wedding/${weddingId}/package`, {
-      packageId: packageId,
-    });
-    return response.data;
-  },
-
   toggleActive: async (id: number, isActive: boolean): Promise<Wedding> => {
     const response = await apiClient.put<Wedding>(`/wedding/${id}/toggle-active`, { isActive });
     return response.data;
@@ -71,5 +64,12 @@ export const weddingService = {
   // Delete wedding
   delete: async (id: number): Promise<void> => {
     await apiClient.delete(`/wedding/${id}`);
+  },
+
+  // Download a zip of everything belonging to this wedding (RSVPs, wishes, seating, itinerary,
+  // full customization config, photos, audio).
+  export: async (id: number): Promise<Blob> => {
+    const response = await apiClient.get(`/wedding/${id}/export`, { responseType: 'blob' });
+    return response.data;
   },
 };

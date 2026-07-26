@@ -3,6 +3,7 @@
 import { motion } from 'framer-motion';
 import { Template } from '@/lib/api';
 import { TemplatePreview } from '@/components/templates/TemplatePreview';
+import { tierRank, tierLabel } from '@/lib/tierRank';
 
 type Tier = 'FREE' | 'PREMIUM' | 'PRO';
 const tierBadge: Record<Tier, { bg: string; text: string; label: string }> = {
@@ -14,6 +15,8 @@ const tierBadge: Record<Tier, { bg: string; text: string; label: string }> = {
 interface TemplatesTabProps {
   templates: Template[];
   currentTemplateId: number;
+  /** The wedding owner's account tier — gates which templates can actually be applied. */
+  weddingTier?: string;
   onChangeTemplate: (templateId: number) => void;
   onPreviewTemplate: (templateId: number) => void;
 }
@@ -21,10 +24,12 @@ interface TemplatesTabProps {
 export default function TemplatesTab({
   templates,
   currentTemplateId,
+  weddingTier,
   onChangeTemplate,
   onPreviewTemplate,
 }: TemplatesTabProps) {
   const currentTemplate = templates.find(t => t.templateId === currentTemplateId);
+  const weddingRank = tierRank(weddingTier);
 
   return (
     <motion.div
@@ -54,27 +59,27 @@ export default function TemplatesTab({
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {templates
               .sort((a, b) => a.sortOrder - b.sortOrder)
-              .map((template) => (
+              .map((template) => {
+                const t = (template.tier ?? (template.isPremium ? 'PREMIUM' : 'FREE')) as Tier;
+                const tb = tierBadge[t] ?? tierBadge.FREE;
+                const locked = tierRank(t) > weddingRank;
+                return (
                 <div
                   key={template.templateId}
                   className={`relative rounded-xl border-2 overflow-hidden transition-all ${
                     currentTemplateId === template.templateId
                       ? 'border-rose-500 shadow-lg ring-2 ring-rose-200'
+                      : locked
+                      ? 'border-gray-200 opacity-70'
                       : 'border-gray-200 hover:border-gray-300 hover:shadow-md'
                   }`}
                 >
                   {/* Tier Badge */}
-                  {(() => {
-                    const t = template.tier ?? (template.isPremium ? 'PREMIUM' : 'FREE');
-                    const tb = tierBadge[t as Tier] ?? tierBadge.FREE;
-                    return (
-                      <div className="absolute top-3 left-3 z-10">
-                        <span className={`${tb.bg} ${tb.text} text-xs px-3 py-1 rounded-full font-semibold shadow-sm`}>
-                          {tb.label}
-                        </span>
-                      </div>
-                    );
-                  })()}
+                  <div className="absolute top-3 left-3 z-10">
+                    <span className={`${tb.bg} ${tb.text} text-xs px-3 py-1 rounded-full font-semibold shadow-sm`}>
+                      {tb.label}
+                    </span>
+                  </div>
 
                   {/* Active Badge */}
                   {currentTemplateId === template.templateId && (
@@ -105,8 +110,17 @@ export default function TemplatesTab({
                       >
                         👁️ Preview
                       </button>
-                      
-                      {currentTemplateId !== template.templateId && (
+
+                      {currentTemplateId !== template.templateId && locked && (
+                        <div
+                          title={`This wedding is on the ${tierLabel[weddingTier?.toUpperCase() ?? 'FREE'] ?? weddingTier} tier — upgrade to ${tb.label} to use this template.`}
+                          className="w-full px-4 py-2 bg-gray-100 text-gray-400 rounded-lg text-center font-medium text-sm cursor-not-allowed"
+                        >
+                          🔒 Requires {tb.label} tier
+                        </div>
+                      )}
+
+                      {currentTemplateId !== template.templateId && !locked && (
                         <button
                           onClick={() => onChangeTemplate(template.templateId)}
                           className="w-full px-4 py-2 bg-rose-500 text-white rounded-lg hover:bg-rose-600 transition-colors font-medium text-sm"
@@ -123,7 +137,8 @@ export default function TemplatesTab({
                     </div>
                   </div>
                 </div>
-              ))}
+                );
+              })}
           </div>
         )}
 

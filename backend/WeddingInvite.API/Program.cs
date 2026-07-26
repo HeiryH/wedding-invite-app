@@ -48,6 +48,7 @@ builder.Services.AddScoped<ITemplateRepository, TemplateRepository>();
 builder.Services.AddScoped<IUserRepository, UserRepository>(); // ADD THIS
 builder.Services.AddScoped<IPackageRepository, PackageRepository>();
 builder.Services.AddScoped<ITemplateConfigRepository, TemplateConfigRepository>();
+builder.Services.AddScoped<ITemplateConfigDefaultRepository, TemplateConfigDefaultRepository>();
 builder.Services.AddScoped<ITableRepository, TableRepository>();
 builder.Services.AddScoped<IItineraryRepository, ItineraryRepository>();
 builder.Services.AddScoped<IPasswordResetTokenRepository, PasswordResetTokenRepository>();
@@ -65,6 +66,7 @@ builder.Services.AddScoped<IPackageService, PackageService>();
 builder.Services.AddScoped<IAuthService, AuthService>(); // ADD THIS
 builder.Services.AddScoped<IWeddingAuthorizationService, WeddingAuthorizationService>(); // ✅ RENAMED
 builder.Services.AddScoped<ITemplateConfigService, TemplateConfigService>();
+builder.Services.AddScoped<IWeddingExportService, WeddingExportService>();
 builder.Services.AddScoped<ITableService, TableService>();
 builder.Services.AddScoped<IItineraryService, ItineraryService>();
 builder.Services.AddScoped<IEmailService, EmailService>();

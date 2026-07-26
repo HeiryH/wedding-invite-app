@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { templateService, TemplateWithUsage, UpdateTemplate } from '@/lib/api';
+import { templateService, weddingService, TemplateWithUsage, UpdateTemplate, Wedding } from '@/lib/api';
 import { TemplatePreview } from '@/components/templates/TemplatePreview';
 import { Icon } from '@/components/ui/Icon';
 import { Button } from '@/components/ui/Button';
@@ -41,16 +41,79 @@ export default function ThemesPage() {
   const [form, setForm] = useState<EditForm>({ templateName: '', description: '', tier: 'FREE' });
   const [saving, setSaving] = useState(false);
 
+  // Per-template "starting design" state.
+  const [weddings, setWeddings] = useState<Wedding[]>([]);
+  const [defaultCounts, setDefaultCounts] = useState<Record<number, number>>({});
+  const [pickWeddingId, setPickWeddingId] = useState<Record<number, number>>({});
+  const [designBusyId, setDesignBusyId] = useState<number | null>(null);
+
+  // Manual thumbnail upload.
+  const [thumbBusyId, setThumbBusyId] = useState<number | null>(null);
+
   useEffect(() => { fetchData(); }, []);
 
   const fetchData = async () => {
     try {
       setLoading(true);
-      setThemes(await templateService.getUsage());
+      const [themeData, weddingData] = await Promise.all([
+        templateService.getUsage(),
+        weddingService.getAll(),
+      ]);
+      setThemes(themeData);
+      setWeddings(weddingData);
+      // Load each template's starting-design status (small N — one call per template).
+      const statuses = await Promise.all(
+        themeData.map(t => templateService.getDefaultConfig(t.templateId).catch(() => ({ templateId: t.templateId, keyCount: 0 }))),
+      );
+      setDefaultCounts(Object.fromEntries(statuses.map(s => [s.templateId, s.keyCount])));
     } catch {
       setError('Failed to load themes');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleSetDefault = async (theme: TemplateWithUsage) => {
+    const weddingId = pickWeddingId[theme.templateId];
+    if (!weddingId) return;
+    if (defaultCounts[theme.templateId] > 0 &&
+        !window.confirm(`Replace the current starting design for "${theme.templateName}"?`)) return;
+    setDesignBusyId(theme.templateId);
+    setError(null);
+    try {
+      const status = await templateService.setDefaultFromWedding(theme.templateId, weddingId);
+      setDefaultCounts(prev => ({ ...prev, [theme.templateId]: status.keyCount }));
+    } catch {
+      setError('Failed to save starting design');
+    } finally {
+      setDesignBusyId(null);
+    }
+  };
+
+  const handleClearDefault = async (theme: TemplateWithUsage) => {
+    if (!window.confirm(`Clear the starting design for "${theme.templateName}"? New invites will use the built-in layout.`)) return;
+    setDesignBusyId(theme.templateId);
+    setError(null);
+    try {
+      await templateService.clearDefaultConfig(theme.templateId);
+      setDefaultCounts(prev => ({ ...prev, [theme.templateId]: 0 }));
+    } catch {
+      setError('Failed to clear starting design');
+    } finally {
+      setDesignBusyId(null);
+    }
+  };
+
+  const handleUploadThumbnail = async (theme: TemplateWithUsage, file: File) => {
+    setThumbBusyId(theme.templateId);
+    setError(null);
+    try {
+      const updated = await templateService.uploadThumbnail(theme.templateId, file, file.name);
+      setThemes(prev => prev.map(t => t.templateId === theme.templateId ? { ...t, ...updated } : t));
+    } catch {
+      setError('Failed to upload thumbnail');
+    } finally {
+      setThumbBusyId(null);
     }
   };
 
@@ -148,7 +211,7 @@ export default function ThemesPage() {
               <Card padding="0" style={{ opacity: theme.isActive ? 1 : 0.55, overflow: 'hidden' }}>
                 {/* Thumbnail */}
                 <div style={{ position: 'relative', borderBottom: '1px solid var(--border-subtle)' }}>
-                  <div style={{ maxHeight: 220, overflow: 'hidden' }}>
+                  <div>
                     <TemplatePreview templateCode={theme.templateCode} thumbnailUrl={theme.thumbnailUrl} />
                   </div>
                   {/* Color swatches */}
@@ -198,6 +261,63 @@ export default function ThemesPage() {
                     </Button>
                   </div>
 
+                  {/* Starting design — the config a NEW invite of this theme is seeded with. */}
+                  {(() => {
+                    const count = defaultCounts[theme.templateId] ?? 0;
+                    const themeWeddings = weddings.filter(w => w.templateId === theme.templateId);
+                    const busy = designBusyId === theme.templateId;
+                    return (
+                      <div style={{ marginTop: 14, paddingTop: 12, borderTop: '1px solid var(--border-subtle)' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
+                          <Icon name="layout-grid" size={13} style={{ color: 'var(--text-subtle)' }} />
+                          <span style={{ fontFamily: 'var(--font-ui)', fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--text-strong)' }}>
+                            Starting design
+                          </span>
+                          {count > 0
+                            ? <Badge tone="brand">Set · {count} keys</Badge>
+                            : <Badge tone="neutral">Built-in</Badge>}
+                        </div>
+                        <p style={{ margin: '0 0 8px', fontSize: 'var(--text-xs)', fontFamily: 'var(--font-ui)', color: 'var(--text-subtle)', lineHeight: 1.5 }}>
+                          Capture a finished invite&rsquo;s design (layout, colours, scene) so new invites of this theme
+                          start there instead of the raw default. Couple content (wording, music) is excluded.
+                        </p>
+                        <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+                          <select
+                            value={pickWeddingId[theme.templateId] ?? ''}
+                            onChange={e => setPickWeddingId(prev => ({ ...prev, [theme.templateId]: Number(e.target.value) }))}
+                            disabled={busy || themeWeddings.length === 0}
+                            style={{
+                              flex: 1, minWidth: 140, padding: '7px 10px', fontFamily: 'var(--font-ui)',
+                              fontSize: 'var(--text-sm)', color: 'var(--text-body)', background: 'var(--surface)',
+                              border: '1px solid var(--border)', borderRadius: 'var(--radius-md)',
+                            }}
+                          >
+                            <option value="">
+                              {themeWeddings.length === 0 ? 'No invites on this theme' : 'Choose an invite…'}
+                            </option>
+                            {themeWeddings.map(w => (
+                              <option key={w.weddingId} value={w.weddingId}>
+                                {w.coupleName} ({w.brideName} &amp; {w.groomName})
+                              </option>
+                            ))}
+                          </select>
+                          <Button
+                            variant="primary" tone="brand" size="sm"
+                            disabled={busy || !pickWeddingId[theme.templateId]}
+                            onClick={() => handleSetDefault(theme)}
+                          >
+                            {busy ? 'Saving…' : 'Set as default'}
+                          </Button>
+                          {count > 0 && (
+                            <Button variant="secondary" tone="neutral" size="sm" disabled={busy} onClick={() => handleClearDefault(theme)}>
+                              Clear
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })()}
+
                   {/* Inline edit form */}
                   <AnimatePresence>
                     {isEditing && (
@@ -223,6 +343,30 @@ export default function ThemesPage() {
                               onChange={e => setForm({ ...form, description: e.target.value })}
                               rows={2}
                             />
+                          </div>
+                          {/* Thumbnail upload */}
+                          <div style={{ marginBottom: 14 }}>
+                            <p style={{ fontFamily: 'var(--font-ui)', fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--text-strong)', margin: '0 0 8px' }}>
+                              Thumbnail
+                            </p>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                              <input
+                                type="file"
+                                accept="image/*"
+                                disabled={thumbBusyId === theme.templateId}
+                                onChange={e => {
+                                  const f = e.target.files?.[0];
+                                  e.target.value = '';
+                                  if (f) handleUploadThumbnail(theme, f);
+                                }}
+                                style={{ fontFamily: 'var(--font-ui)', fontSize: 'var(--text-sm)', color: 'var(--text-body)' }}
+                              />
+                              {thumbBusyId === theme.templateId && (
+                                <span style={{ fontFamily: 'var(--font-ui)', fontSize: 'var(--text-xs)', color: 'var(--text-subtle)' }}>
+                                  Uploading…
+                                </span>
+                              )}
+                            </div>
                           </div>
                           {/* Tier selector */}
                           <div style={{ marginBottom: 16 }}>
