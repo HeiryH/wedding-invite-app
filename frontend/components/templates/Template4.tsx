@@ -367,7 +367,7 @@ export default function Template4({
 
   const overlayBreakpoint: Breakpoint = useBreakpoint(editor?.enabled ? editor.breakpoint : undefined);
   const overlayProps = { breakpoint: overlayBreakpoint, config: customConfig, editor };
-  const a = useAnchors(customConfig, overlayBreakpoint, editor);
+  const { a, tx, sx, ax } = useAnchors(customConfig, overlayBreakpoint, editor);
 
   const paxLimit = (wedding?.maxPax ?? 0) > 0 ? Math.min(10, wedding.maxPax!) : 10;
 
@@ -580,20 +580,24 @@ export default function Template4({
             <motion.p
               className={`text-white/70 text-[10px] tracking-[0.4em] uppercase mb-4 ${alignClass(customConfig?.['invite.heading.align'])}`}
               {...hAnim}
-              style={hStyle}
+              style={{ ...hStyle, ...sx('hero', 'heading') }}
             >
               {t('invite.heading', 'We\'re getting married')}
             </motion.p>
           </div>
-          <div style={a('hero', 'names')}>
+          <div style={a('hero', 'names')} data-seen="true">
             <motion.h1
               className="text-white text-5xl md:text-6xl italic font-normal leading-tight mb-3"
               initial={Object.keys(hAnim.initial).length ? hAnim.initial : { opacity: 0, y: 14 }}
               animate={Object.keys(hAnim.animate).length ? hAnim.animate : { opacity: 1, y: 0 }}
               transition={{ ...(Object.keys(hAnim.transition).length ? hAnim.transition : {}), delay: 0.6 }}
-              style={hStyle}
+              style={{ ...hStyle, ...sx('hero', 'names') }}
             >
-              {wedding.brideName} &amp; {wedding.groomName}
+              <span {...ax('hero', 'names')}>{wedding.brideName}</span>{' '}
+              <span style={sx('hero', 'connector')}>
+                <span {...ax('hero', 'connector')}>{tx('hero', 'connector', '&')}</span>
+              </span>{' '}
+              <span {...ax('hero', 'names')}>{wedding.groomName}</span>
             </motion.h1>
           </div>
           <div style={a('hero', 'date')}>
@@ -638,7 +642,7 @@ export default function Template4({
             <p className="text-[10px] tracking-[0.35em] uppercase text-[#8A8A80] mb-8">
               {t('invite.countdown_prefix', 'Counting down to the big day')}
             </p>
-            <div className="flex justify-center gap-8" style={a('t4-details', 'countdown')}>
+            <div className="flex justify-center gap-8" style={a('t4-details', 'countdown')} data-seen="true">
               {[
                 { val: countdown.days, label: 'Days' },
                 { val: countdown.hours, label: 'Hrs' },
@@ -646,8 +650,8 @@ export default function Template4({
                 { val: countdown.seconds, label: 'Sec' },
               ].map(({ val, label }) => (
                 <div key={label} className="text-center">
-                  <p className="text-4xl font-light text-[#1C1C1A] tabular-nums leading-none">
-                    {String(val).padStart(2, '0')}
+                  <p className="text-4xl font-light text-[#1C1C1A] tabular-nums leading-none" style={sx('t4-details', 'countdown')}>
+                    <span {...ax('t4-details', 'countdown')}>{String(val).padStart(2, '0')}</span>
                   </p>
                   <p className="text-[9px] tracking-widest text-[#8A8A80] uppercase mt-2">{label}</p>
                 </div>
@@ -925,7 +929,7 @@ export default function Template4({
       {/* Footer */}
       <div className="bg-[#F7F6F1] border-t border-[#E0DFD9] py-10 text-center">
         <p className="text-xs tracking-widest text-[#B0AFA8] uppercase">
-          {wedding.brideName} &amp; {wedding.groomName}
+          {wedding.brideName} {tx('hero', 'connector', '&')} {wedding.groomName}
         </p>
         <p className="text-[10px] text-[#C8C7C0] mt-1">
           {weddingDate.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}

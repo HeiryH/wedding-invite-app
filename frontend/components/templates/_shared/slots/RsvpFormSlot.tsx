@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import type { SlotProps } from '../types';
 import SeatingChart from './SeatingChart';
-import styles from '../Template7.module.css';
+import styles from './slots.module.css';
 
 /**
  * The RSVP form, sized to sit inside the engraved frame art (which is a separate layer, so the

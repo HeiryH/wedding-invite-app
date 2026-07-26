@@ -455,7 +455,7 @@ export default function Template5({
   const overlayBreakpoint: Breakpoint = useBreakpoint(editor?.enabled ? editor.breakpoint : undefined);
   const overlayProps = { breakpoint: overlayBreakpoint, config: customConfig, editor };
   // `a(stageId, elementId, baseStyle?)` merges an anchor nudge onto an existing DOM element.
-  const a = useAnchors(customConfig, overlayBreakpoint, editor);
+  const { a, tx, sx, ax } = useAnchors(customConfig, overlayBreakpoint, editor);
 
   const brideFirst = t('general.brideFirst', 'true') !== 'false';
   const firstName  = brideFirst ? wedding.brideName  : wedding.groomName;
@@ -782,27 +782,37 @@ const NAV_EMOJIS: Record<string, string> = {
             className={styles.invitationContentMinimal}
           >
             <p className={styles.minimalHeading}>{heading}</p>
-            <motion.h1
-              initial={{ opacity: 0, y: 16 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2, duration: 0.9 }}
-              className={styles.minimalName}
-              style={{ color: firstColor || undefined, textShadow: firstShadow || undefined }}
-            >
-              {firstName}
-            </motion.h1>
+            <div style={a('welcome', 'firstName')} data-seen="true">
+              <motion.h1
+                initial={{ opacity: 0, y: 16 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.2, duration: 0.9 }}
+                className={styles.minimalName}
+                style={{ color: firstColor || undefined, textShadow: firstShadow || undefined, ...sx('welcome', 'firstName') }}
+              >
+                <span {...ax('welcome', 'firstName')}>{firstName}</span>
+              </motion.h1>
+            </div>
             <div className={styles.minimalRule} />
-            <p className={styles.minimalAmpersand} style={{ color: ampersandColor || undefined }}>and</p>
-            <div className={styles.minimalRule} />
-            <motion.h1
-              initial={{ opacity: 0, y: 16 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.4, duration: 0.9 }}
-              className={styles.minimalName}
-              style={{ color: secondColor || undefined, textShadow: secondShadow || undefined }}
+            <p
+              className={styles.minimalAmpersand}
+              style={{ color: ampersandColor || undefined, ...sx('welcome', 'connector') }}
+              data-seen="true"
             >
-              {secondName}
-            </motion.h1>
+              <span {...ax('welcome', 'connector')}>{tx('welcome', 'connector', 'and')}</span>
+            </p>
+            <div className={styles.minimalRule} />
+            <div style={a('welcome', 'secondName')} data-seen="true">
+              <motion.h1
+                initial={{ opacity: 0, y: 16 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.4, duration: 0.9 }}
+                className={styles.minimalName}
+                style={{ color: secondColor || undefined, textShadow: secondShadow || undefined, ...sx('welcome', 'secondName') }}
+              >
+                <span {...ax('welcome', 'secondName')}>{secondName}</span>
+              </motion.h1>
+            </div>
             <motion.p
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -855,21 +865,26 @@ const NAV_EMOJIS: Record<string, string> = {
               <div className={styles.ornateLine} />
             </div>
 
-            <motion.h1 initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2, duration: 0.9 }} className={styles.ornateName}
-              style={{ color: firstColor || undefined, textShadow: firstShadow || undefined }}>
-              {firstName}
-            </motion.h1>
+            <div style={a('welcome', 'firstName')} data-seen="true">
+              <motion.h1 initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.2, duration: 0.9 }} className={styles.ornateName}
+                style={{ color: firstColor || undefined, textShadow: firstShadow || undefined, ...sx('welcome', 'firstName') }}>
+                <span {...ax('welcome', 'firstName')}>{firstName}</span>
+              </motion.h1>
+            </div>
             <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }}
               transition={{ delay: 0.5, duration: 0.8 }} className={styles.ornateAmpersand}
-              style={{ color: ampersandColor || undefined }}>
-              &amp;
+              style={{ color: ampersandColor || undefined, ...sx('welcome', 'connector') }}
+              data-seen="true">
+              <span {...ax('welcome', 'connector')}>{tx('welcome', 'connector', '&')}</span>
             </motion.p>
-            <motion.h1 initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.4, duration: 0.9 }} className={styles.ornateName}
-              style={{ color: secondColor || undefined, textShadow: secondShadow || undefined }}>
-              {secondName}
-            </motion.h1>
+            <div style={a('welcome', 'secondName')} data-seen="true">
+              <motion.h1 initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.4, duration: 0.9 }} className={styles.ornateName}
+                style={{ color: secondColor || undefined, textShadow: secondShadow || undefined, ...sx('welcome', 'secondName') }}>
+                <span {...ax('welcome', 'secondName')}>{secondName}</span>
+              </motion.h1>
+            </div>
 
             <div className={styles.ornateFlourish}>
               <div className={styles.ornateLine} />
@@ -954,35 +969,40 @@ const NAV_EMOJIS: Record<string, string> = {
               </text>
             </motion.svg>
 
-            <motion.h1
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2, duration: 0.9 }}
-              className={styles.coupleName}
-              style={{ color: firstColor || undefined, textShadow: firstShadow || undefined }}
-            >
-              {firstName}
-            </motion.h1>
+            <div style={a('welcome', 'firstName')} data-seen="true">
+              <motion.h1
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.2, duration: 0.9 }}
+                className={styles.coupleName}
+                style={{ color: firstColor || undefined, textShadow: firstShadow || undefined, ...sx('welcome', 'firstName') }}
+              >
+                <span {...ax('welcome', 'firstName')}>{firstName}</span>
+              </motion.h1>
+            </div>
 
             <motion.p
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.5, duration: 0.8 }}
               className={styles.ampersand}
-              style={{ color: ampersandColor || undefined }}
+              style={{ color: ampersandColor || undefined, ...sx('welcome', 'connector') }}
+              data-seen="true"
             >
-              &amp;
+              <span {...ax('welcome', 'connector')}>{tx('welcome', 'connector', '&')}</span>
             </motion.p>
 
-            <motion.h1
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.4, duration: 0.9 }}
-              className={styles.coupleNameGroom}
-              style={{ color: secondColor || undefined, textShadow: secondShadow || undefined }}
-            >
-              {secondName}
-            </motion.h1>
+            <div style={a('welcome', 'secondName')} data-seen="true">
+              <motion.h1
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.4, duration: 0.9 }}
+                className={styles.coupleNameGroom}
+                style={{ color: secondColor || undefined, textShadow: secondShadow || undefined, ...sx('welcome', 'secondName') }}
+              >
+                <span {...ax('welcome', 'secondName')}>{secondName}</span>
+              </motion.h1>
+            </div>
 
             <motion.svg
               viewBox="0 0 500 72"
@@ -1087,11 +1107,15 @@ const NAV_EMOJIS: Record<string, string> = {
             onClick={() => showAddToCalendar && setCalendarOpen(true)}
             role={showAddToCalendar ? 'button' : undefined}
             tabIndex={showAddToCalendar ? 0 : undefined}
+            style={a('ceremony', 'date')}
+            data-seen="true"
           >
-            <p className={styles.dateText} style={{ color: dateColor || undefined }}>{formatOrdinalDate(weddingDate)}</p>
-            <p className={styles.dayText} style={{ color: dateColor || undefined }}>{weddingDate.toLocaleDateString('en-GB', { weekday: 'long' })}</p>
+            <p className={styles.dateText} style={{ color: dateColor || undefined, ...sx('ceremony', 'date') }}>
+              <span {...ax('ceremony', 'date')}>{formatOrdinalDate(weddingDate)}</span>
+            </p>
+            <p className={styles.dayText} style={{ color: dateColor || undefined, ...sx('ceremony', 'date') }}>{weddingDate.toLocaleDateString('en-GB', { weekday: 'long' })}</p>
             {t('general.showIslamicDate', 'false') === 'true' && (
-              <p className={styles.hijriText} style={{ color: dateColor || undefined }}>{toHijriMalay(weddingDate)}</p>
+              <p className={styles.hijriText} style={{ color: dateColor || undefined, ...sx('ceremony', 'date') }}>{toHijriMalay(weddingDate)}</p>
             )}
             {showAddToCalendar && (
               <p className={styles.calendarHint}>Tap to add to calendar</p>
@@ -1102,10 +1126,14 @@ const NAV_EMOJIS: Record<string, string> = {
             onClick={() => showVenueMap && setMapExpanded((v) => !v)}
             role={showVenueMap ? 'button' : undefined}
             tabIndex={showVenueMap ? 0 : undefined}
+            style={a('ceremony', 'location')}
+            data-seen="true"
           >
-            <p className={styles.locationLabel} style={{ color: venueColor || undefined }}>Location</p>
+            <p className={styles.locationLabel} style={{ color: venueColor || undefined, ...sx('ceremony', 'location') }}>
+              <span {...ax('ceremony', 'location')}>Location</span>
+            </p>
             {wedding.venueAddress && (
-              <p className={styles.locationAddress} style={{ color: venueColor || undefined }}>{wedding.venueAddress}</p>
+              <p className={styles.locationAddress} style={{ color: venueColor || undefined, ...sx('ceremony', 'location') }}>{wedding.venueAddress}</p>
             )}
             {showVenueMap && (
               <p className={styles.mapHint}>{mapExpanded ? 'Tap to close map' : 'Tap to view on map'}</p>

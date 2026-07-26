@@ -93,6 +93,62 @@ namespace WeddingInvite.Core.Services
             return MapToDto(updated);
         }
 
+        // Templates 1-7 are seeded, never created here. This is exclusively how a super-admin
+        // starts a brand-new authored (data, not code) template — see _shared/DataTemplate.tsx.
+        public async Task<TemplateDto> CreateAsync(CreateTemplateDto createDto)
+        {
+            var name = createDto.TemplateName.Trim();
+            if (string.IsNullOrWhiteSpace(name))
+                throw new ArgumentException("Template name is required");
+
+            var code = Slugify(string.IsNullOrWhiteSpace(createDto.TemplateCode) ? name : createDto.TemplateCode);
+            if (string.IsNullOrWhiteSpace(code))
+                throw new ArgumentException("Template code is required");
+
+            var existing = await _templateRepo.GetByCodeAsync(code);
+            if (existing != null)
+                throw new ArgumentException($"Template code '{code}' is already in use");
+
+            var tier = createDto.Tier.ToUpper().Trim();
+            if (tier != "FREE" && tier != "PREMIUM" && tier != "PRO")
+                throw new ArgumentException("Tier must be FREE, PREMIUM, or PRO");
+
+            var template = new Template
+            {
+                TemplateName = name,
+                TemplateCode = code,
+                Description = createDto.Description.Trim(),
+                Tier = tier,
+                IsPremium = tier != "FREE",
+                IsActive = false, // draft until the author publishes it via the existing Update endpoint
+                IsAuthored = true,
+                StagesJson = DefaultStagesJson,
+                SortOrder = 999,
+            };
+
+            var created = await _templateRepo.CreateAsync(template);
+            return MapToDto(created);
+        }
+
+        // A single starter stage so the authoring UI has something to render/add layers into
+        // immediately. Stage id is deliberately non-numeric — see the frontend authoring flatten
+        // helper's note on object-key ordering.
+        private const string DefaultStagesJson =
+            "{\"stage-1\":{\"id\":\"stage-1\",\"label\":\"Stage 1\",\"bg\":\"\",\"bgFit\":\"cover\",\"layers\":[]}}";
+
+        private static string Slugify(string input)
+        {
+            var lowered = input.Trim().ToLowerInvariant();
+            var sb = new System.Text.StringBuilder();
+            var lastDash = false;
+            foreach (var c in lowered)
+            {
+                if (char.IsLetterOrDigit(c)) { sb.Append(c); lastDash = false; }
+                else if (!lastDash) { sb.Append('-'); lastDash = true; }
+            }
+            return sb.ToString().Trim('-');
+        }
+
         public async Task<TemplateDto> SetThumbnailAsync(int id, IFormFile file)
         {
             var template = await _templateRepo.GetByIdAsync(id);
@@ -138,6 +194,42 @@ namespace WeddingInvite.Core.Services
             template.ThumbnailUrl = $"/uploads/templates/{uniqueFileName}";
             var updated = await _templateRepo.UpdateAsync(template);
             return MapToDto(updated);
+        }
+
+        // A wedding-less image upload for the authoring UI (stage backgrounds / layer images while
+        // building a template that has no real wedding attached yet). PhotoService requires a real
+        // Wedding row, so this reuses the thumbnail's validation + wwwroot/uploads/templates
+        // storage instead, without mutating ThumbnailUrl.
+        public async Task<string> UploadAssetAsync(int id, IFormFile file)
+        {
+            var template = await _templateRepo.GetByIdAsync(id);
+            if (template == null)
+                throw new KeyNotFoundException($"Template with ID {id} not found");
+
+            if (file == null || file.Length == 0)
+                throw new ArgumentException("File is required");
+            if (file.Length > MaxThumbnailBytes)
+                throw new ArgumentException($"File size cannot exceed {MaxThumbnailBytes / 1024 / 1024}MB");
+
+            var extension = Path.GetExtension(file.FileName).ToLowerInvariant();
+            if (!AllowedExtensions.Contains(extension))
+                throw new ArgumentException($"Only {string.Join(", ", AllowedExtensions)} files are allowed");
+            if (!file.ContentType.StartsWith("image/"))
+                throw new ArgumentException("Only image files are allowed");
+            if (!FileSignatureValidator.IsValidImage(file, extension))
+                throw new ArgumentException("File content does not match a valid image format");
+
+            var uploadsFolder = Path.Combine("wwwroot", "uploads", "templates");
+            Directory.CreateDirectory(uploadsFolder);
+
+            var uniqueFileName = $"{template.TemplateCode}-asset-{Guid.NewGuid()}{extension}";
+            var filePath = Path.Combine(uploadsFolder, uniqueFileName);
+            using (var stream = new FileStream(filePath, FileMode.Create))
+            {
+                await file.CopyToAsync(stream);
+            }
+
+            return $"/uploads/templates/{uniqueFileName}";
         }
 
         public async Task<TemplateDto> SetStagesAsync(int id, string stagesJson)
@@ -193,7 +285,8 @@ namespace WeddingInvite.Core.Services
                 IsPremium = template.IsPremium,
                 Tier = template.Tier,
                 SortOrder = template.SortOrder,
-                IsAuthored = template.IsAuthored
+                IsAuthored = template.IsAuthored,
+                StagesJson = template.StagesJson
             };
         }
     }

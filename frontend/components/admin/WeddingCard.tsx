@@ -21,6 +21,7 @@ interface WeddingCardProps {
   onPreview: (coupleName: string) => void;
   onToggleActive: (id: number, current: boolean) => void;
   onDelete: (id: number, coupleName: string) => void;
+  onExport: (id: number, coupleName: string) => void;
 }
 
 function getStatus(w: WeddingCardData): 'upcoming' | 'live' | 'draft' {
@@ -47,7 +48,7 @@ const STATUS_COLOR: Record<string, { bg: string; color: string }> = {
 
 const STATUS_LABEL: Record<string, string> = { upcoming: 'Upcoming', live: 'Live', draft: 'Draft' };
 
-export default function WeddingCard({ wedding, onManage, onPreview, onToggleActive, onDelete }: WeddingCardProps) {
+export default function WeddingCard({ wedding, onManage, onPreview, onToggleActive, onDelete, onExport }: WeddingCardProps) {
   const status = getStatus(wedding);
   const days = daysTo(wedding.weddingDate);
   const date = new Date(wedding.weddingDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
@@ -149,6 +150,16 @@ export default function WeddingCard({ wedding, onManage, onPreview, onToggleActi
             >
               <Icon name={wedding.isActive ? 'pause' : 'play'} size={12} />
               {wedding.isActive ? 'Deactivate' : 'Activate'}
+            </button>
+            <button
+              onClick={() => onExport(wedding.weddingId, wedding.coupleName)}
+              style={{ display: 'inline-flex', alignItems: 'center', padding: '6px 8px', borderRadius: 'var(--radius-md)', background: 'var(--surface-card)', border: '1px solid var(--border-default)', color: 'var(--text-subtle)', cursor: 'pointer', transition: 'background var(--dur-fast) var(--ease-standard)' }}
+              onMouseEnter={e => (e.currentTarget.style.background = 'var(--surface-sunken)')}
+              onMouseLeave={e => (e.currentTarget.style.background = 'var(--surface-card)')}
+              aria-label="Export data"
+              title="Export data"
+            >
+              <Icon name="download" size={12} />
             </button>
             <button
               onClick={() => onDelete(wedding.weddingId, wedding.coupleName)}

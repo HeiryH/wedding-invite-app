@@ -1,7 +1,9 @@
 'use client';
 import { SeatingTable } from '@/lib/api';
-import { T7_ASSETS } from '../data/stages';
-import styles from '../Template7.module.css';
+// The table icon is a deliberate, accepted T7 art borrow (see slots.module.css's .tableIcon
+// comment) — not generalized to a neutral asset in this pass.
+import { T7_ASSETS } from '../../Template7-romangarden/data/stages';
+import styles from './slots.module.css';
 
 interface Props {
   tables: SeatingTable[];

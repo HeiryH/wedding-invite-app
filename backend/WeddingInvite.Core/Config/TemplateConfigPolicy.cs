@@ -43,10 +43,13 @@ namespace WeddingInvite.Core.Config
 
         private static readonly Regex KeyPattern = new(@"^[a-zA-Z0-9._-]+$", RegexOptions.Compiled);
 
-        // Stage-layer layout keys: t5.layout.mobile.welcome, t7.layout.desktop.rsvp, … The Adjust
-        // panel is a PRO-tier feature, so writing these requires PRO. Matches every template's
-        // layout namespace at once, so onboarding T5/T6/… needs no change here.
-        private static readonly Regex LayoutKeyPattern = new(@"^t\d+\.layout\.", RegexOptions.Compiled);
+        // Stage-layer layout keys: t5.layout.mobile.welcome, t7.layout.desktop.rsvp, … and authored
+        // (data, not code) templates' ta12.layout.mobile.stage-1 — TemplateWrapper.tsx/customize
+        // page use the `ta<id>` prefix for those so they can never collide with a hand-coded
+        // template's own `t<id>` namespace. The Adjust panel is a PRO-tier feature, so writing any
+        // of these requires PRO. Matches every template's layout namespace at once, so onboarding
+        // T5/T6/… or a new authored template needs no change here.
+        private static readonly Regex LayoutKeyPattern = new(@"^ta?\d+\.layout\.", RegexOptions.Compiled);
 
         public static bool IsAdminOnly(string key) =>
             AdminOnlyKeys.Contains(key) ||

@@ -12,8 +12,13 @@ import type { Layer, StageDef } from '@/components/templates/_shared/types';
  *    weddings are unchanged until a PRO couple moves one.
  *  - **decorative** layers (text/shape/uploaded img) — added by the couple in the Adjust dock.
  *
- * There's no background image (`bg: ''`). The welcome section has no anchors because its default
- * layout renders names as SVG arc-text, which a transform nudge can't safely target.
+ * There's no background image (`bg: ''`). The welcome section's `firstName`/`secondName`
+ * (position-based — T5's own `brideFirst` config toggle decides who occupies which slot, so the
+ * anchor follows the DOM slot, not bride/groom identity, consistent with how anchors work
+ * everywhere else) and `connector` are real plain elements in every layout variant
+ * (minimal/ornate/classic) and are anchored the same as any other template. The heading theme
+ * label is arc-text (`<textPath>`) in the ornate/classic variants — left un-anchored for now (SVG
+ * fill/positioning needs different handling than a CSS `color`/transform, unlike a plain element).
  *
  * The rsvp/envelope section carries exactly one layer, `kind: 'scrollVideo'` — the GSAP
  * ScrollTrigger + canvas chromakey effect (see `_shared/effects/ScrollVideoLayer.tsx`). It's
@@ -32,10 +37,11 @@ export const T5_ASSETS = '/templates/t5';
  * `parent` nests it under another anchor in the Adjust panel's layer tree (a sub-layer) — the
  * nudge transform still composes with the parent's, since it's applied to the child's own element.
  */
-const anchor = (id: string, label: string, parent?: string): Layer => ({
+const anchor = (id: string, label: string, parent?: string, extra?: Partial<Layer>): Layer => ({
   id, kind: 'anchor', label, parent,
   x: 50, y: 50, w: 100, h: 20, s: 1, z: 1, order: 0,
   chain: true, hidden: false, opacity: 1,
+  ...extra,
 });
 
 const stage = (id: string, label: string, layers: Layer[] = []): StageDef => ({
@@ -52,7 +58,15 @@ const scrollVideo = (id: string, label: string, effect: Partial<Layer>): Layer =
 });
 
 export const T5_STAGES: Record<string, StageDef> = {
-  welcome: stage('welcome', 'Welcome'),
+  welcome: stage('welcome', 'Welcome', [
+    anchor('firstName', 'First Name (position 1)', undefined, { styleable: true, animatable: true }),
+    anchor('secondName', 'Second Name (position 2)', undefined, { styleable: true, animatable: true }),
+    // Static chrome text (not read from wedding data). Each layout variant's own historical default
+    // ('&' for ornate/classic, 'and' for minimal) is passed as `tx()`'s own fallback per call site,
+    // so an untouched invitation keeps that variant's byte-identical look; a saved override shows
+    // the same text across all three variants.
+    anchor('connector', 'Names Connector', undefined, { hasText: true, styleable: true, animatable: true }),
+  ]),
   countdown: stage('countdown', 'Countdown', [
     anchor('label', 'Countdown Label'),
     anchor('grid', 'Countdown Timer'),
@@ -68,6 +82,10 @@ export const T5_STAGES: Record<string, StageDef> = {
     // Sub-layers inside the glass card.
     anchor('body', 'Ceremony Text', 'card'),
     anchor('names', 'Couple Names', 'card'),
+    // Date & location sit outside the glass card as their own rectangles (see Template5.tsx) —
+    // previously un-anchored entirely.
+    anchor('date', 'Date Card', undefined, { styleable: true, animatable: true }),
+    anchor('location', 'Location Card', undefined, { styleable: true, animatable: true }),
   ]),
   wishes: stage('wishes', 'Wishes', [
     anchor('header', 'Wishes Heading'),

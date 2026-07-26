@@ -56,7 +56,7 @@ export default function Template1({
 
   const overlayBreakpoint: Breakpoint = useBreakpoint(editor?.enabled ? editor.breakpoint : undefined);
   const overlayProps = { breakpoint: overlayBreakpoint, config: customConfig, editor };
-  const a = useAnchors(customConfig, overlayBreakpoint, editor);
+  const { a, tx, sx, ax } = useAnchors(customConfig, overlayBreakpoint, editor);
   const NAV_LABELS: Record<SectionCode, string> = {
     welcome: t('nav.invite', 'Invitation'),
     walimah: t('nav.walimah', 'Ceremony'),
@@ -300,37 +300,43 @@ export default function Template1({
                   💍
                 </motion.div>
 
-                <div style={a('welcome', 'heading')}>
+                <div style={a('welcome', 'heading')} data-seen="true">
                   <motion.p
                     {...hAnim}
                     className="text-rose-600 text-sm uppercase tracking-widest mb-4 font-semibold"
-                    style={hStyle}
+                    style={{ ...hStyle, ...sx('welcome', 'heading') }}
                   >
-                    {t('invite.heading', "You're Invited to the Wedding of")}
+                    <span {...ax('welcome', 'heading')}>{t('invite.heading', "You're Invited to the Wedding of")}</span>
                   </motion.p>
                 </div>
 
-                <div style={a('welcome', 'brideName')}>
+                <div style={a('welcome', 'brideName')} data-seen="true">
                   <motion.h1
                     {...hAnim}
                     transition={{ ...hAnim.transition, delay: Number(hAnim.transition?.delay ?? 0) + 0.2 }}
                     className="text-5xl md:text-7xl font-serif font-bold text-gray-800 mb-2"
-                    style={hStyle}
+                    style={{ ...hStyle, ...sx('welcome', 'brideName') }}
                   >
-                    {wedding.brideName}
+                    <span {...ax('welcome', 'brideName')}>{wedding.brideName}</span>
                   </motion.h1>
                 </div>
 
-                <div className="text-4xl md:text-5xl text-rose-400 my-4">&</div>
+                <div
+                  className="text-4xl md:text-5xl text-rose-400 my-4"
+                  style={sx('welcome', 'connector')}
+                  data-seen="true"
+                >
+                  <span {...ax('welcome', 'connector')}>{tx('welcome', 'connector', '&')}</span>
+                </div>
 
-                <div style={a('welcome', 'groomName')}>
+                <div style={a('welcome', 'groomName')} data-seen="true">
                   <motion.h1
                     {...hAnim}
                     transition={{ ...hAnim.transition, delay: Number(hAnim.transition?.delay ?? 0) + 0.4 }}
                     className="text-5xl md:text-7xl font-serif font-bold text-gray-800"
-                    style={hStyle}
+                    style={{ ...hStyle, ...sx('welcome', 'groomName') }}
                   >
-                    {wedding.groomName}
+                    <span {...ax('welcome', 'groomName')}>{wedding.groomName}</span>
                   </motion.h1>
                 </div>
                 <p
@@ -379,10 +385,14 @@ export default function Template1({
                   <p className="text-gray-600">{wedding.venueAddress}</p>
                 </div>
 
-                <div className="text-center bg-gradient-to-r from-rose-50 to-pink-50 rounded-xl p-6" style={a('welcome', 'countdown')}>
+                <div
+                  className="text-center bg-gradient-to-r from-rose-50 to-pink-50 rounded-xl p-6"
+                  style={a('welcome', 'countdown')}
+                  data-seen="true"
+                >
                   <p className="text-sm text-gray-600 mb-2">Countdown</p>
-                  <p className="text-4xl font-bold text-rose-600">
-                    {wedding.daysUntilWedding}
+                  <p className="text-4xl font-bold text-rose-600" style={sx('welcome', 'countdown')}>
+                    <span {...ax('welcome', 'countdown')}>{wedding.daysUntilWedding}</span>
                   </p>
                   <p className="text-gray-600 mt-1">
                     {wedding.daysUntilWedding === 1 ? 'day' : 'days'} to go! 🎉

@@ -56,7 +56,7 @@ export default function Template2({
 
     const overlayBreakpoint: Breakpoint = useBreakpoint(editor?.enabled ? editor.breakpoint : undefined);
     const overlayProps = { breakpoint: overlayBreakpoint, config: customConfig, editor };
-    const a = useAnchors(customConfig, overlayBreakpoint, editor);
+    const { a, tx, sx, ax } = useAnchors(customConfig, overlayBreakpoint, editor);
     const NAV_ICONS: Record<SectionCode, string> = {
         welcome: '💍', walimah: '🕌', rsvp: '✉️',
         itinerary: '📋', wishes: '✨', photobooth: '📸',
@@ -276,21 +276,22 @@ export default function Template2({
                         <motion.p
                             {...hAnim}
                             className={`text-amber-700 text-sm uppercase tracking-widest mb-6 font-semibold ${alignClass(customConfig?.['invite.heading.align'])}`}
-                            style={hStyle}
+                            style={{ ...hStyle, ...sx('welcome', 'heading') }}
                         >
                             {t('invite.heading', "You're Cordially Invited to Celebrate")}
                         </motion.p>
                     </div>
 
                     {/* Couple Names */}
-                    <div style={a('welcome', 'brideName')}>
+                    <div style={a('welcome', 'brideName')} data-seen="true">
                         <motion.h1
                             initial={Object.keys(hAnim.initial).length ? hAnim.initial : { opacity: 0, y: 20 }}
                             animate={Object.keys(hAnim.animate).length ? hAnim.animate : { opacity: 1, y: 0 }}
                             transition={{ ...(Object.keys(hAnim.transition).length ? hAnim.transition : {}), delay: 0.7 }}
                             className="text-6xl md:text-8xl font-serif font-bold bg-gradient-to-r from-yellow-600 via-amber-600 to-orange-600 bg-clip-text text-transparent mb-4"
+                            style={sx('welcome', 'brideName')}
                         >
-                            {wedding.brideName}
+                            <span {...ax('welcome', 'brideName')}>{wedding.brideName}</span>
                         </motion.h1>
                     </div>
 
@@ -299,18 +300,21 @@ export default function Template2({
                         animate={{ scaleX: 1 }}
                         transition={{ delay: 0.9, duration: 0.6 }}
                         className="text-5xl md:text-6xl text-amber-400 my-6"
+                        style={sx('welcome', 'connector')}
+                        data-seen="true"
                     >
-                        &
+                        <span {...ax('welcome', 'connector')}>{tx('welcome', 'connector', '&')}</span>
                     </motion.div>
 
-                    <div style={a('welcome', 'groomName')}>
+                    <div style={a('welcome', 'groomName')} data-seen="true">
                         <motion.h1
                             initial={Object.keys(hAnim.initial).length ? hAnim.initial : { opacity: 0, y: 20 }}
                             animate={Object.keys(hAnim.animate).length ? hAnim.animate : { opacity: 1, y: 0 }}
                             transition={{ ...(Object.keys(hAnim.transition).length ? hAnim.transition : {}), delay: 1.1 }}
                             className="text-6xl md:text-8xl font-serif font-bold bg-gradient-to-r from-yellow-600 via-amber-600 to-orange-600 bg-clip-text text-transparent mb-8"
+                            style={sx('welcome', 'groomName')}
                         >
-                            {wedding.groomName}
+                            <span {...ax('welcome', 'groomName')}>{wedding.groomName}</span>
                         </motion.h1>
                     </div>
 
@@ -370,10 +374,14 @@ export default function Template2({
                         </div>
 
                         {/* Countdown */}
-                        <div className="bg-gradient-to-r from-yellow-100 to-amber-100 rounded-2xl p-6" style={a('welcome', 'countdown')}>
+                        <div
+                            className="bg-gradient-to-r from-yellow-100 to-amber-100 rounded-2xl p-6"
+                            style={a('welcome', 'countdown')}
+                            data-seen="true"
+                        >
                             <p className="text-sm text-amber-700 mb-2">Countdown</p>
-                            <p className="text-5xl font-bold text-amber-600">
-                                {wedding.daysUntilWedding}
+                            <p className="text-5xl font-bold text-amber-600" style={sx('welcome', 'countdown')}>
+                                <span {...ax('welcome', 'countdown')}>{wedding.daysUntilWedding}</span>
                             </p>
                             <p className="text-gray-600 mt-1">
                                 {wedding.daysUntilWedding === 1 ? 'day' : 'days'} to go! 🎉

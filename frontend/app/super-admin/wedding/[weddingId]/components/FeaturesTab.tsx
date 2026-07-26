@@ -6,9 +6,10 @@ import { FeatureToggle } from '@/components/ui/FeatureToggle';
 import { Icon } from '@/components/ui/Icon';
 
 const FEATURE_ICONS: Record<string, string> = {
-  PHOTO_BOOTH: 'camera',
-  RSVP:        'check-circle',
-  WISHES:      'message-circle',
+  PHOTO_BOOTH:   'camera',
+  RSVP:          'check-circle',
+  WISHES:        'message-circle',
+  CUSTOM_DOMAIN: 'link',
 };
 
 interface FeaturesTabProps {

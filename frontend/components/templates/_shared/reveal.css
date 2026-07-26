@@ -23,6 +23,10 @@
 [data-sl-anim='zoom-out']    { transform: scale(1.16); }
 [data-sl-anim='fade']        { transform: none; }
 [data-sl-anim='none']        { opacity: 1; transform: none; }
+/* Letter-spacing "expand" — ported from Template5.tsx's own "You're invited" label tween
+   (0.1em → 0.25em). A fixed recipe, independent of the layer's own configured letterSpacing
+   field, same as zoom-in/out are fixed recipes rather than reading other layer fields. */
+[data-sl-anim='tracking-in'] { letter-spacing: 0.1em; transform: none; }
 
 /* Revealed (rest) state — one-shot entrance. */
 [data-seen='true'] [data-sl-anim] {
@@ -31,6 +35,15 @@
   transition:
     opacity var(--sl-dur, 1s) ease var(--sl-delay, 0s),
     transform var(--sl-dur, 1.05s) cubic-bezier(0.22, 0.61, 0.36, 1) var(--sl-delay, 0s);
+}
+
+/* Revealed state for tracking-in — placed after the general rule above so its extra
+   letter-spacing transition wins at equal specificity. */
+[data-seen='true'] [data-sl-anim='tracking-in'] {
+  letter-spacing: 0.25em;
+  transition:
+    opacity var(--sl-dur, 1s) ease var(--sl-delay, 0s),
+    letter-spacing var(--sl-dur, 1s) ease var(--sl-delay, 0s);
 }
 
 /* Continuous scroll-linked fade — opacity tracks scroll position (`--sl-fade`), no entrance.
@@ -62,11 +75,59 @@
   opacity: calc(1 - var(--sl-out, 0));
 }
 
+/* ── Idle / looping — continuous while the stage has been seen, independent of scroll ──────────
+   Gated the same way as the one-shot entrance (data-seen), so idle starts once the layer has
+   scrolled into view and then loops indefinitely — a deliberate, cheap tradeoff (pure CSS, no
+   new hook/JS runtime cost): unlike the scroll-scrubbed exit, idle does NOT pause again if the
+   layer later scrolls back off-screen (data-seen never resets — see useStageReveal). Acceptable
+   because these are compositor-only transform/opacity animations, same cost class as the existing
+   continuous scroll-fade. --sl-idle-intensity / --sl-idle-dur are set inline per layer. */
+
+@keyframes sl-idle-wave {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  25%      { transform: translateY(calc(var(--sl-idle-intensity, 1) * -6px)) rotate(calc(var(--sl-idle-intensity, 1) * -1.5deg)); }
+  75%      { transform: translateY(calc(var(--sl-idle-intensity, 1) * 6px))  rotate(calc(var(--sl-idle-intensity, 1) * 1.5deg)); }
+}
+@keyframes sl-idle-sway {
+  0%, 100% { transform: rotate(calc(var(--sl-idle-intensity, 1) * -3deg)); }
+  50%      { transform: rotate(calc(var(--sl-idle-intensity, 1) * 3deg)); }
+}
+@keyframes sl-idle-pulse {
+  0%, 100% { transform: scale(1); }
+  50%      { transform: scale(calc(1 + var(--sl-idle-intensity, 1) * 0.06)); }
+}
+@keyframes sl-idle-jitter {
+  0%, 100% { transform: translate(0, 0); }
+  10%  { transform: translate(calc(var(--sl-idle-intensity, 1) * -1px), calc(var(--sl-idle-intensity, 1) * 1px)); }
+  20%  { transform: translate(calc(var(--sl-idle-intensity, 1) * 1px),  calc(var(--sl-idle-intensity, 1) * -1px)); }
+  30%  { transform: translate(calc(var(--sl-idle-intensity, 1) * -1px), calc(var(--sl-idle-intensity, 1) * -1px)); }
+  40%  { transform: translate(calc(var(--sl-idle-intensity, 1) * 1px),  calc(var(--sl-idle-intensity, 1) * 1px)); }
+  60%  { transform: translate(calc(var(--sl-idle-intensity, 1) * 1px),  0); }
+  70%  { transform: translate(0, calc(var(--sl-idle-intensity, 1) * 1px)); }
+  80%  { transform: translate(0, calc(var(--sl-idle-intensity, 1) * -1px)); }
+}
+@keyframes sl-idle-glitch {
+  0%, 92%, 100% { transform: translate(0, 0); opacity: 1; clip-path: inset(0 0 0 0); }
+  93% { transform: translate(calc(var(--sl-idle-intensity, 1) * -3px), 1px); opacity: 0.85; clip-path: inset(10% 0 60% 0); }
+  94% { transform: translate(calc(var(--sl-idle-intensity, 1) * 3px), -1px);  opacity: 0.9;  clip-path: inset(50% 0 10% 0); }
+  95% { transform: translate(calc(var(--sl-idle-intensity, 1) * -2px), 0);   opacity: 1;    clip-path: inset(0 0 0 0); }
+}
+
+[data-seen='true'] [data-sl-idle='wave']   { animation: sl-idle-wave   var(--sl-idle-dur, 2.6s) ease-in-out infinite; }
+[data-seen='true'] [data-sl-idle='sway']   { animation: sl-idle-sway   var(--sl-idle-dur, 3.2s) ease-in-out infinite; }
+[data-seen='true'] [data-sl-idle='pulse']  { animation: sl-idle-pulse  var(--sl-idle-dur, 1.8s) ease-in-out infinite; }
+[data-seen='true'] [data-sl-idle='jitter'] { animation: sl-idle-jitter var(--sl-idle-dur, 2.4s) linear infinite; }
+[data-seen='true'] [data-sl-idle='glitch'] { animation: sl-idle-glitch var(--sl-idle-dur, 3.6s) steps(1, end) infinite; }
+
 @media (prefers-reduced-motion: reduce) {
   [data-sl-anim],
   [data-seen='true'] [data-sl-anim] {
     opacity: var(--sl-opacity, 1);
     transform: none;
+    transition: none;
+  }
+  [data-seen='true'] [data-sl-anim='tracking-in'] {
+    letter-spacing: 0.25em;
     transition: none;
   }
   [data-sl-anim='scroll-fade'],
@@ -78,5 +139,9 @@
     opacity: 1;
     transform: none;
     transition: none;
+  }
+  /* No idle motion under reduced-motion. */
+  [data-sl-idle] {
+    animation: none !important;
   }
 }

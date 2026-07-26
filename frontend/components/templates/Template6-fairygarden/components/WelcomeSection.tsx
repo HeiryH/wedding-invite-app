@@ -2,7 +2,7 @@
 import { Suspense, lazy, type CSSProperties } from 'react';
 import { motion } from 'framer-motion';
 import { Wedding } from '@/lib/api';
-import type { Breakpoint, EditorHandle } from '@/components/templates/_shared/types';
+import type { AnimIdleType, Breakpoint, EditorHandle } from '@/components/templates/_shared/types';
 import { WebGLCapability } from '../hooks/useWebGLSupport';
 import { FairyConfig } from '../hooks/useFairyConfig';
 import FallbackBackground from './FallbackBackground';
@@ -22,6 +22,9 @@ interface Props {
   onScrollDown: () => void;
   overlayProps: { breakpoint: Breakpoint; config?: Record<string, string>; editor?: EditorHandle };
   a: (stageId: string, elementId: string, base?: CSSProperties) => CSSProperties;
+  tx: (stageId: string, elementId: string, fallback: string) => string;
+  sx: (stageId: string, elementId: string) => CSSProperties;
+  ax: (stageId: string, elementId: string) => { 'data-sl-idle'?: AnimIdleType; style?: CSSProperties };
 }
 
 export default function WelcomeSection({
@@ -34,6 +37,9 @@ export default function WelcomeSection({
   onScrollDown,
   overlayProps,
   a,
+  tx,
+  sx,
+  ax,
 }: Props) {
   const t = (key: string, fallback: string) => customConfig?.[key] || fallback;
   const sceneOff = config.quality === 'off' || webgl === 'none';
@@ -88,15 +94,17 @@ export default function WelcomeSection({
           </motion.p>
         </div>
 
-        <div style={a('welcome', 'names')}>
+        <div style={a('welcome', 'names')} data-seen="true">
           <motion.h1
             className={`${styles.coupleNames} ${alignClass(t('invite.heading.align', 'center'))}`}
-            style={headingStyle(customConfig ?? {})}
+            style={{ ...headingStyle(customConfig ?? {}), ...sx('welcome', 'names') }}
             {...headingAnimationProps(customConfig ?? {})}
           >
-            {wedding.brideName}
-            <span className={styles.ampersand}>&</span>
-            {wedding.groomName}
+            <span {...ax('welcome', 'names')}>{wedding.brideName}</span>
+            <span className={styles.ampersand} style={sx('welcome', 'connector')}>
+              <span {...ax('welcome', 'connector')}>{tx('welcome', 'connector', '&')}</span>
+            </span>
+            <span {...ax('welcome', 'names')}>{wedding.groomName}</span>
           </motion.h1>
         </div>
 

@@ -15,6 +15,9 @@ namespace WeddingInvite.Core.DTOs
         public string Tier { get; set; } = "FREE";
         public int SortOrder { get; set; }
         public bool IsAuthored { get; set; }
+        // Only meaningful when IsAuthored — the Record<StageId,StageDef> JSON the authoring UI
+        // reads back into its editor. Null for every hand-coded template.
+        public string? StagesJson { get; set; }
     }
 
     public class TemplateUsageDto : TemplateDto
@@ -37,5 +40,15 @@ namespace WeddingInvite.Core.DTOs
         public string Tier { get; set; } = "FREE";
         public bool IsActive { get; set; }
         public int SortOrder { get; set; }
+    }
+
+    // Body for POST /api/template — creates a brand-new authored (data, not code) template on a
+    // blank canvas. TemplateCode is optional; a blank value is slugified from TemplateName.
+    public class CreateTemplateDto
+    {
+        public string TemplateName { get; set; } = string.Empty;
+        public string TemplateCode { get; set; } = string.Empty;
+        public string Description { get; set; } = string.Empty;
+        public string Tier { get; set; } = "FREE";
     }
 }

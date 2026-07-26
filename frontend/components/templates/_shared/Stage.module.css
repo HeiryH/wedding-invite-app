@@ -21,6 +21,52 @@
   }
 }
 
+/* A "flowing" stage (StageDef.flow) grows to fit its content instead of clipping to one screen —
+   for sections whose real content (a wish list, a photo grid, a tall ceremony card stack) is
+   taller than 100svh. Decorative (non-slot) layers still position as a % of the section via
+   .flowOverlay (an absolutely-positioned, inset:0 sibling — see below); slot content flows
+   normally in .flowStack and is what actually determines the section's height. */
+.stage[data-flow='true'] {
+  height: auto;
+  min-height: 100svh;
+}
+
+/* Stretches to match whatever height .flowStack's in-flow content establishes (inset:0 sizes
+   against the *already-resolved* height of the .stage containing block, which is how a
+   percentage-positioned child can work inside an auto-height parent — same trick as Template 5's
+   own SectionOverlay.module.css). pointer-events:none since its own contents (img/text/shape) are
+   already pointer-events:none via the .layerBox[data-kind] rule below; the real slot content
+   lives in .flowStack, not here, so nothing needed inside this layer is ever blocked. */
+.flowOverlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+/* Real content, in normal flow — this is what gives the stage its height. */
+.flowStack {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 4svh;
+  padding: 8svh 0;
+}
+
+/* A flow-mode slot item (see Layer.tsx's `flow` prop): width-constrained and centred like an
+   ordinary block, but `position: relative` + explicit z-index so it interleaves correctly with
+   .flowOverlay's absolutely-positioned decorative layers in the same stacking context (.stage's
+   `isolation: isolate` already scopes that comparison) — without position:relative here, a
+   flow item would be non-positioned and always paint behind any positioned decorative layer
+   regardless of z value. */
+.flowItem {
+  position: relative;
+  transform: scale(var(--sl-scale, 1));
+}
+
+.flowSlotContent {
+  width: 100%;
+}
+
 /* Editor-only: "Reveal off-screen". The preview widens the iframe and this pins the stage to the
    real device width (set inline), centred, with overflow unclipped — so art that bleeds past the
    phone's edges spills into the space around it at full size (no zoom-out). The dashed frame marks
@@ -64,6 +110,13 @@
   width: 100%;
   height: 100%;
 }
+/* Structure only. The idle/looping animation (driven by `data-sl-idle`, continuous once seen)
+   lives in reveal.css. Separate element, between the entrance and the exit, so its transform
+   can't fight either of theirs. */
+.layerIdle {
+  width: 100%;
+  height: 100%;
+}
 /* Structure only. The scroll-out exit (driven by `--sl-out`) lives in reveal.css, keyed on
    `data-sl-out`. Separate element so its transform can't fight the entrance's. */
 .layerExit {
@@ -104,6 +157,13 @@
 .shape {
   width: 100%;
   height: 100%;
+}
+
+.scrollVideo {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
 }
 
 /* Art is inert; slots stay interactive. Inside the Adjust panel every layer becomes clickable

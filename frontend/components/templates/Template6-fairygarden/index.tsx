@@ -72,7 +72,7 @@ export default function Template6({
 
   const overlayBreakpoint: Breakpoint = useBreakpoint(editor?.enabled ? editor.breakpoint : undefined);
   const overlayProps = { breakpoint: overlayBreakpoint, config: customConfig, editor };
-  const a = useAnchors(customConfig, overlayBreakpoint, editor);
+  const { a, tx, sx, ax } = useAnchors(customConfig, overlayBreakpoint, editor);
 
   const [activeSection, setActiveSection] = useState('welcome');
   const [musicPlaying, setMusicPlaying] = useState(false);
@@ -179,6 +179,9 @@ export default function Template6({
           onScrollDown={scrollDown}
           overlayProps={overlayProps}
           a={a}
+          tx={tx}
+          sx={sx}
+          ax={ax}
         />
       )}
 

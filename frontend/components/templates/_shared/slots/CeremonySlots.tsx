@@ -1,8 +1,9 @@
 'use client';
 
+import { useState } from 'react';
 import { calendarLinks } from '@/lib/templateUtils';
 import type { SlotProps } from '../types';
-import styles from '../Template7.module.css';
+import styles from './slots.module.css';
 
 /** The Walimah beat — the couple's own rich text, under an engraved title. */
 export function WalimahBodySlot({ t }: SlotProps) {
@@ -35,12 +36,22 @@ export function CoupleNamesSlot({ wedding, t }: SlotProps) {
   );
 }
 
+/**
+ * Add-to-Calendar was a bare `target="_blank"` link straight to Google Calendar (fine, but T5's
+ * own version is a modal offering Google/Apple/Outlook side by side); View Map was the same
+ * straight-to-Google-Maps link (T5 expands an inline embedded map instead, so a guest checking the
+ * venue doesn't leave the invitation at all). Both config-gated exactly as T5 already gates them
+ * (`general.showAddToCalendar`/`general.showVenueMap`) — untouched invitations (both flags off,
+ * the default) render identically to before.
+ */
 export function CeremonyDetailsSlot({ wedding, t }: SlotProps) {
   const date = new Date(wedding.weddingDate);
   const links = calendarLinks(wedding);
   const mapQuery = encodeURIComponent(wedding.venueAddress || wedding.venue || '');
   const showCalendar = t('general.showAddToCalendar', 'false') === 'true';
   const showMap = t('general.showVenueMap', 'false') === 'true';
+  const [calendarOpen, setCalendarOpen] = useState(false);
+  const [mapOpen, setMapOpen] = useState(false);
 
   return (
     <div className={styles.panel}>
@@ -67,20 +78,40 @@ export function CeremonyDetailsSlot({ wedding, t }: SlotProps) {
       {(showCalendar || (showMap && mapQuery)) && (
         <div className={styles.detailActions}>
           {showCalendar && (
-            <a className={`${styles.plaque} ${styles.plaqueBtn}`} href={links.google} target="_blank" rel="noopener noreferrer">
+            <button type="button" className={`${styles.plaque} ${styles.plaqueBtn}`} onClick={() => setCalendarOpen(true)}>
               Add to Calendar
-            </a>
+            </button>
           )}
           {showMap && mapQuery && (
-            <a
-              className={`${styles.plaque} ${styles.plaqueBtn}`}
-              href={`https://maps.google.com/maps?q=${mapQuery}`}
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              View Map
-            </a>
+            <button type="button" className={`${styles.plaque} ${styles.plaqueBtn}`} onClick={() => setMapOpen((v) => !v)}>
+              {mapOpen ? 'Hide Map' : 'View Map'}
+            </button>
           )}
+        </div>
+      )}
+
+      {showMap && mapOpen && mapQuery && (
+        <div className={styles.mapEmbed}>
+          <iframe
+            className={styles.mapIframe}
+            src={`https://maps.google.com/maps?q=${mapQuery}&output=embed`}
+            loading="lazy"
+            allowFullScreen
+          />
+        </div>
+      )}
+
+      {calendarOpen && (
+        <div className={styles.calendarOverlay} onClick={() => setCalendarOpen(false)}>
+          <div className={styles.calendarCard} onClick={(e) => e.stopPropagation()}>
+            <p className={styles.panelTitle} style={{ fontSize: '1.1rem' }}>Add to Calendar</p>
+            <div className={styles.calendarOptions}>
+              <a href={links.google} target="_blank" rel="noopener noreferrer" className={styles.calendarOption}>Google Calendar</a>
+              <a href={links.ical} download="wedding.ics" className={styles.calendarOption}>Apple Calendar</a>
+              <a href={links.outlook} target="_blank" rel="noopener noreferrer" className={styles.calendarOption}>Outlook</a>
+            </div>
+            <button type="button" className={styles.linkBtn} onClick={() => setCalendarOpen(false)}>Close</button>
+          </div>
         </div>
       )}
     </div>

@@ -21,10 +21,11 @@ import type { Layer, StageDef } from '@/components/templates/_shared/types';
 
 export const T4_ASSETS = '/templates/t4';
 
-const anchor = (id: string, label: string, parent?: string): Layer => ({
+const anchor = (id: string, label: string, parent?: string, extra?: Partial<Layer>): Layer => ({
   id, kind: 'anchor', label, parent,
   x: 50, y: 50, w: 100, h: 20, s: 1, z: 1, order: 0,
   chain: true, hidden: false, opacity: 1,
+  ...extra,
 });
 
 const stage = (id: string, label: string, layers: Layer[] = []): StageDef => ({
@@ -33,12 +34,17 @@ const stage = (id: string, label: string, layers: Layer[] = []): StageDef => ({
 
 export const T4_STAGES: Record<string, StageDef> = {
   hero: stage('hero', 'Hero', [
-    anchor('heading', 'Invite Label'),
-    anchor('names', 'Couple Names'),
+    anchor('heading', 'Invite Label', undefined, { styleable: true }),
+    anchor('names', 'Couple Names', undefined, { styleable: true, animatable: true }),
+    // A second, independent anchor purely for the "&" connector's text+style — the existing
+    // `names` anchor keeps wrapping the whole "Bride & Groom" block for position (never split, so
+    // a couple who already nudged it isn't orphaned); this one's own x/y/s/opacity go unused,
+    // harmless. Static chrome text (not read from wedding data).
+    anchor('connector', 'Names Connector (&)', undefined, { text: '&', hasText: true, styleable: true, animatable: true }),
     anchor('date', 'Date'),
   ]),
   't4-details': stage('t4-details', 'Details', [
-    anchor('countdown', 'Countdown Timer'),
+    anchor('countdown', 'Countdown Timer', undefined, { styleable: true, animatable: true }),
     anchor('daybox', 'Day / Month'),
     anchor('body', 'Invite Body'),
     anchor('ceremony', 'Ceremony Card'),

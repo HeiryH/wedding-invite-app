@@ -30,6 +30,11 @@ export interface TemplateEngine {
   /** T7 is the full-screen Stage compositor, where "Reveal off-screen" applies. Every DOM/flow
    *  hybrid-overlay template (T1-T6) is `false` — widening the canvas would just reflow it larger. */
   reveal: boolean;
+  /** True only for templates whose RSVP/wishes/etc. content is built from the shared
+   *  `_shared/slots/*` components (T7 today) — gates the Adjust panel's stage-independent "Theme"
+   *  section (accent color + heading font, via `--slot-*` CSS custom properties). T1-T6 have their
+   *  own bespoke, non-slot RSVP/wishes markup this doesn't reach. */
+  slotTheme?: boolean;
   resolveStages(ctx: StageIdsCtx): Record<string, StageDef>;
   stageIds(ctx: StageIdsCtx): string[];
 }
@@ -46,6 +51,7 @@ export const TEMPLATE_ENGINES: Record<number, TemplateEngine> = {
   7: {
     keyPrefix: 't7',
     reveal: true,
+    slotTheme: true,
     resolveStages(ctx) {
       // In the compiled ceremony row the frame art is deduped into the shared "Ceremony Backdrop"
       // stage, and each beat renders only its own content — so strip the now-unused per-beat art

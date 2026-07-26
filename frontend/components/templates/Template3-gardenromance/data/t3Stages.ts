@@ -21,10 +21,11 @@ import type { Layer, StageDef } from '@/components/templates/_shared/types';
 
 export const T3_ASSETS = '/templates/t3';
 
-const anchor = (id: string, label: string, parent?: string): Layer => ({
+const anchor = (id: string, label: string, parent?: string, extra?: Partial<Layer>): Layer => ({
   id, kind: 'anchor', label, parent,
   x: 50, y: 50, w: 100, h: 20, s: 1, z: 1, order: 0,
   chain: true, hidden: false, opacity: 1,
+  ...extra,
 });
 
 const stage = (id: string, label: string, layers: Layer[] = []): StageDef => ({
@@ -33,13 +34,16 @@ const stage = (id: string, label: string, layers: Layer[] = []): StageDef => ({
 
 export const T3_STAGES: Record<string, StageDef> = {
   welcome: stage('welcome', 'Welcome', [
-    anchor('heading', 'Theme Label'),
-    anchor('brideName', 'Bride Name'),
-    anchor('groomName', 'Groom Name'),
+    anchor('heading', 'Theme Label', undefined, { styleable: true }),
+    anchor('brideName', 'Bride Name', undefined, { styleable: true, animatable: true }),
+    anchor('groomName', 'Groom Name', undefined, { styleable: true, animatable: true }),
+    // Static chrome text (not read from wedding data) — the couple can retype and restyle it, but
+    // its default renders exactly as the literal `&` this replaces in Template3.tsx.
+    anchor('connector', 'Names Connector (&)', undefined, { text: '&', hasText: true, styleable: true, animatable: true }),
     anchor('body', 'Invite Body'),
     anchor('dateCard', 'Date / Venue Card'),
     anchor('portraits', 'Portraits Grid'),
-    anchor('countdown', 'Countdown'),
+    anchor('countdown', 'Countdown', undefined, { styleable: true, animatable: true }),
   ]),
   walimah: stage('walimah', 'Ceremony', [
     anchor('title', 'Ceremony Title'),

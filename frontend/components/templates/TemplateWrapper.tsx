@@ -53,8 +53,9 @@ export default function TemplateWrapper({
 
   // Authored templates (Template.StagesJson, set via the super-admin API — see
   // _shared/DataTemplate.tsx) render through the shared engine directly, bypassing the
-  // per-templateId component switch below entirely. Slot layers are out of scope for this slice —
-  // slotRegistry stays empty in DataTemplate, so an authored template is art/text/shape only.
+  // per-templateId component switch below entirely. `kind:'slot'` layers render real functional
+  // blocks (RSVP, countdown, itinerary, wishes, photo booth) via the shared catalog in
+  // _shared/slots/ — the same one Template 7 uses.
   const authoredStages = useMemo(() => {
     if (!wedding.templateStagesJson) return null;
     try {

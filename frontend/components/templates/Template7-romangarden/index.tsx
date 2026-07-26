@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
+import type { CSSProperties } from 'react';
 import {
   Wedding, Wish, Photo, ItineraryItem, SeatingTable, CreateWish,
 } from '@/lib/api';
@@ -16,7 +17,8 @@ import { useBreakpoint } from '@/components/templates/_shared/hooks/useBreakpoin
 import { EngineProvider } from '@/components/templates/_shared/engine';
 import Stage from '@/components/templates/_shared/Stage';
 import HorizontalRail, { type RailPanel } from '@/components/templates/_shared/HorizontalRail';
-import { SLOT_AVAILABLE, SLOT_REGISTRY } from './slots';
+import { SLOT_REGISTRY, stageHasContent, visibleSlotLayers } from '@/components/templates/_shared/slots';
+import { fontVar } from '@/lib/fonts/curated';
 import NavBar from './components/NavBar';
 import styles from './Template7.module.css';
 
@@ -201,19 +203,43 @@ export default function Template7({
 
   return (
     <EngineProvider value={{ assetRoot: T7_ASSETS, assetSizes: T7_ASSET_SIZES, slotRegistry: SLOT_REGISTRY }}>
-    <div ref={rootRef} className={styles.wrapper}>
+    {/* The shared _shared/slots/slots.module.css used by every kind:'slot' layer below is
+        neutral by default (for authored templates) — this block overrides those --slot-* custom
+        properties to T7's own original values (mirroring the --t7-* tokens still defined in
+        Template7.module.css) so extracting the slot components out of this file changed nothing
+        visually. Every value here must stay in sync with slots.module.css's neutral fallbacks —
+        it's the *values* that differ, never which tokens exist.
+
+        `--slot-ink`/`--slot-font-display` are the two the Adjust panel's "Theme" section can
+        override (t7.layout.slotTheme.accentColor/.headingFont) — read via `t()` so an untouched
+        wedding renders T7's original values unchanged. */}
+    <div
+      ref={rootRef}
+      className={styles.wrapper}
+      style={{
+        '--slot-ink': t('t7.layout.slotTheme.accentColor', '#3d3833'),
+        '--slot-ink-soft': '#6f675c',
+        '--slot-ink-faint': '#9b9284',
+        '--slot-rule': 'rgba(61, 56, 51, 0.28)',
+        '--slot-font-display': fontVar(customConfig?.['t7.layout.slotTheme.headingFont']) ?? "'Cinzel', serif",
+        '--slot-font-serif': "'Cormorant Garamond', serif",
+        '--slot-font-body': "'EB Garamond', serif",
+        '--slot-hero-scrim-1': 'rgba(244, 241, 234, 0.88)',
+        '--slot-hero-scrim-2': 'rgba(244, 241, 234, 0.62)',
+        '--slot-panel-scrim-1': 'rgba(244, 241, 234, 0.82)',
+        '--slot-panel-scrim-2': 'rgba(244, 241, 234, 0.66)',
+        '--slot-panel-scrim-3': 'rgba(244, 241, 234, 0.28)',
+        '--slot-accent-ink': '#efebe1',
+        '--slot-radius': '0',
+        '--slot-submit-bg': "url('/templates/t7/wishes/submit-btn.webp')",
+      } as CSSProperties}
+    >
       {stageGroups.map(({ code, items }) => {
         // A stage whose only slot has no content to show is dropped, rather than costing the guest
-        // a full screen of empty scrolling.
-        const hasContent = (r: (typeof items)[number]) => {
-          const slots = r.layers.filter((l) => l.kind === 'slot' && l.slot);
-          return slots.length === 0 || slots.some((l) => SLOT_AVAILABLE[l.slot!](slotProps));
-        };
-        const visibleLayers = (r: (typeof items)[number]) =>
-          r.layers.filter(
-            // Anchor layers have no visual — they're sub-layer metadata a slot applies internally.
-            (l) => l.kind !== 'anchor' && (l.kind !== 'slot' || !l.slot || SLOT_AVAILABLE[l.slot](slotProps)),
-          );
+        // a full screen of empty scrolling. Shared with _shared/DataTemplate.tsx — see
+        // _shared/slots/index.ts.
+        const hasContent = (r: (typeof items)[number]) => stageHasContent(r.layers, slotProps);
+        const visibleLayers = (r: (typeof items)[number]) => visibleSlotLayers(r.layers, slotProps);
 
         const content = items.filter(hasContent);
         if (!content.length) return null;

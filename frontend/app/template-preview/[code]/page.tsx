@@ -3,6 +3,7 @@
 import { useParams } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 import { Wedding } from '@/lib/api/types';
+import { templateService, templateConfigService } from '@/lib/api';
 import Template1 from '@/components/templates/Template1';
 import Template2 from '@/components/templates/Template2';
 import Template3 from '@/components/templates/Template3';
@@ -34,7 +35,7 @@ const DUMMY: Wedding = {
 const noOp = () => Promise.resolve();
 
 // Minimal props required by all templates
-const PROPS = {
+const BASE_PROPS = {
   wedding: DUMMY,
   onRSVP: noOp,
   onSubmitWish: noOp,
@@ -46,53 +47,38 @@ const PROPS = {
 export default function TemplatePreviewPage() {
   const { code } = useParams<{ code: string }>();
   const [ready, setReady] = useState(false);
+  const [configLoaded, setConfigLoaded] = useState(false);
+  // The template's captured "starting design" (empty if none set) — without this, every preview/
+  // thumbnail renders the raw shipped code defaults, never a saved design (e.g. T7's stage layout).
+  const [customConfig, setCustomConfig] = useState<Record<string, string>>({});
   const rootRef = useRef<HTMLDivElement>(null);
 
-  // Signal readiness (used by the offline generate-previews Playwright script)
+  // Resolve the template's default config before anything else — readiness below waits on
+  // configLoaded so the page can't signal ready before the real design is applied.
   useEffect(() => {
-    const t = setTimeout(() => setReady(true), 1000);
-    return () => clearTimeout(t);
-  }, []);
-
-  // Client-side capture: when embedded with ?capture=1 (by the super-admin screenshot tool),
-  // rasterize this dummy-data render to a PNG in-browser and post it back to the opener. No
-  // server-side headless browser involved.
-  useEffect(() => {
-    if (!ready) return;
-    if (new URLSearchParams(window.location.search).get('capture') !== '1') return;
-    if (!window.parent || window.parent === window) return;
-
     let cancelled = false;
     (async () => {
       try {
-        // Fonts must be loaded before rasterizing, then a settle for webp/image decode and for
-        // IntersectionObserver-driven reveals (e.g. T7's staggered stage layers) to finish —
-        // matches the ~2.5s the offline generate-previews script waits.
-        if (document.fonts?.ready) await document.fonts.ready;
-        await new Promise((r) => setTimeout(r, 2500));
-        if (cancelled || !rootRef.current) return;
-
-        const { toPng } = await import('html-to-image');
-        const dataUrl = await toPng(rootRef.current, {
-          width: 390,
-          height: 700,
-          pixelRatio: 2,
-          cacheBust: true,
-        });
-        if (cancelled) return;
-        window.parent.postMessage({ type: 'THUMB_CAPTURE', code, dataUrl }, window.location.origin);
-      } catch (err) {
-        if (!cancelled) {
-          window.parent.postMessage(
-            { type: 'THUMB_CAPTURE_ERROR', code, message: err instanceof Error ? err.message : String(err) },
-            window.location.origin,
-          );
-        }
+        const template = await templateService.getByCode(code);
+        const config = await templateConfigService.getTemplateDefault(template.templateId);
+        if (!cancelled) setCustomConfig(config);
+      } catch {
+        if (!cancelled) setCustomConfig({}); // no default set (or lookup failed) — fall back to code defaults
+      } finally {
+        if (!cancelled) setConfigLoaded(true);
       }
     })();
-
     return () => { cancelled = true; };
-  }, [ready, code]);
+  }, [code]);
+
+  // Signal readiness (used by the offline generate-previews Playwright script)
+  useEffect(() => {
+    if (!configLoaded) return;
+    const t = setTimeout(() => setReady(true), 1000);
+    return () => clearTimeout(t);
+  }, [configLoaded]);
+
+  const props = { ...BASE_PROPS, customConfig };
 
   return (
     <div
@@ -100,13 +86,13 @@ export default function TemplatePreviewPage() {
       style={{ width: 390, height: 700, overflow: 'hidden', position: 'relative', margin: 0, padding: 0 }}
       {...(ready ? { 'data-preview-ready': 'true' } : {})}
     >
-      {code === 'classic-rose'        && <Template1 {...PROPS} />}
-      {code === 'golden-elegance'     && <Template2 {...PROPS} />}
-      {code === 'garden-romance'      && <Template3 {...PROPS} />}
-      {code === 'minimal-noir'        && <Template4 {...PROPS} />}
-      {code === 'dreaming-floral-sky' && <Template5 {...PROPS} />}
-      {code === 'fairy-garden'        && <Template6 {...PROPS} />}
-      {code === 'roman-garden'        && <Template7 {...PROPS} />}
+      {code === 'classic-rose'        && <Template1 {...props} />}
+      {code === 'golden-elegance'     && <Template2 {...props} />}
+      {code === 'garden-romance'      && <Template3 {...props} />}
+      {code === 'minimal-noir'        && <Template4 {...props} />}
+      {code === 'dreaming-floral-sky' && <Template5 {...props} />}
+      {code === 'fairy-garden'        && <Template6 {...props} />}
+      {code === 'roman-garden'        && <Template7 {...props} />}
     </div>
   );
 }

@@ -37,12 +37,12 @@ export type ObjectFit = 'cover' | 'contain' | 'fill';
  *  is a continuous scroll-linked opacity (fades in entering the viewport, out leaving it). */
 export type AnimType =
   | 'rise' | 'fade' | 'slide-up' | 'slide-down' | 'slide-left' | 'slide-right'
-  | 'zoom-in' | 'zoom-out' | 'none' | 'scroll-fade';
+  | 'zoom-in' | 'zoom-out' | 'none' | 'scroll-fade' | 'tracking-in';
 
 /** Selectable entrance animations, in the order the Adjust panel lists them. */
 export const ANIM_OPTIONS: AnimType[] = [
   'rise', 'fade', 'slide-up', 'slide-down', 'slide-left', 'slide-right',
-  'zoom-in', 'zoom-out', 'scroll-fade', 'none',
+  'zoom-in', 'zoom-out', 'tracking-in', 'scroll-fade', 'none',
 ];
 
 /** Exit animation vocabulary — played (scroll-scrubbed, reversible) as the layer leaves the top of
@@ -57,6 +57,14 @@ export const ANIM_OUT_OPTIONS: AnimOutType[] = [
   'none', 'fade-out', 'slide-out-up', 'slide-out-down', 'slide-out-left', 'slide-out-right',
   'zoom-out', 'zoom-in',
 ];
+
+/** Continuous loop played while a layer's stage has been seen, independent of scroll position —
+ *  layered on top of the one-shot entrance and the scroll-scrubbed exit. Scoped to real
+ *  `Layer.tsx`-rendered kinds (img/text/shape/slot); not applied to `anchor`/`scrollVideo`. */
+export type AnimIdleType = 'none' | 'wave' | 'sway' | 'pulse' | 'jitter' | 'glitch';
+
+/** Selectable idle animations, in the order the Adjust panel lists them. */
+export const ANIM_IDLE_OPTIONS: AnimIdleType[] = ['none', 'wave', 'sway', 'pulse', 'jitter', 'glitch'];
 
 export type StageId = string;
 export type SlotId = string;
@@ -73,6 +81,16 @@ export interface Layer {
   src?: string;
   /** kind 'slot' — key into the template's slot registry */
   slot?: SlotId;
+  /**
+   * kind 'slot' only. 'inline' (default, undefined) renders in place like any other layer.
+   * 'sheet' renders nothing in place — instead `DataTemplate` mounts it as a drag-to-dismiss
+   * bottom sheet, opened when a `scrollVideo` layer elsewhere on the page reports itself fully
+   * open and the guest taps it (mirrors Template5.tsx's own envelope→RSVP coupling, generalized:
+   * any authored template can pair a `scrollVideo` envelope with any sheet-presented slot, not
+   * just RSVP). See `_shared/slots/index.ts`'s `visibleSlotLayers` (excludes it from inline
+   * render, same treatment as an `anchor`) and `DataTemplate.tsx`.
+   */
+  presentation?: 'inline' | 'sheet';
   /** kind 'text' */
   text?: string;
   /** kind 'shape' */
@@ -106,13 +124,47 @@ export interface Layer {
   animDur?: number;
   /** Exit animation, scroll-scrubbed as the layer leaves the viewport. `undefined` ⇒ `'none'`. */
   animOut?: AnimOutType;
+  /** Idle/looping animation, played continuously once seen. `undefined` ⇒ `'none'`. Not applied to
+   *  `anchor`/`scrollVideo` kinds (see Layer.tsx). */
+  animIdle?: AnimIdleType;
+  /** Idle duration multiplier — 1 = each type's base duration. */
+  animIdleSpeed?: number;
+  /** Idle amplitude multiplier — 1 = each type's base intensity. */
+  animIdleIntensity?: number;
 
   // text / shape styling
   color?: string;
   fill?: string;
   fontSize?: number;
   fontWeight?: number;
+  /** Corner rounding. Shape kind: the box radius. Text kind: only applied when `borderWidth` is
+   *  set (a bare text layer has no visible box to round), reusing this field rather than adding a
+   *  redundant one. */
   radius?: number;
+  /** kind 'text' — a `CuratedFontKey` (see `lib/fonts/curated.ts`). `undefined` inherits the
+   *  template's own font. */
+  fontFamily?: string;
+  /** kind 'text' — em. */
+  letterSpacing?: number;
+  /** kind 'text' — em. */
+  wordSpacing?: number;
+  /** kind 'text' — px. 0/undefined = no border. */
+  borderWidth?: number;
+  borderColor?: string;
+  shadowColor?: string;
+  /** px */
+  shadowBlur?: number;
+  /** px */
+  shadowX?: number;
+  /** px */
+  shadowY?: number;
+  /** kind 'text' — 'flat' (default, a plain box) | 'arc' | 'circle' (rendered via SVG textPath,
+   *  see CurvedText.tsx). `undefined` ⇒ 'flat'. */
+  textShape?: 'flat' | 'arc' | 'circle';
+  /** kind 'text', when `textShape !== 'flat'` — -100..100. Sign = bend direction (arc: + arches
+   *  up/- arches down; circle: + clockwise/- counter-clockwise reading). Magnitude: arc → subtended
+   *  angle 0-180°; circle → ring radius as % of the layer's own half-width. */
+  curvature?: number;
 
   // kind 'scrollVideo' — a scroll-scrubbed chromakey video effect (see ScrollVideoLayer.tsx).
   /** Path under the template's asset root, or an absolute /uploads/... */
@@ -147,6 +199,30 @@ export interface Layer {
    * panel's layer tree. Shipped in the stage definition, not part of a couple's saved delta.
    */
   parent?: string;
+
+  /**
+   * Structural (never persisted), kind 'anchor' only: this anchor's wrapped DOM content is a plain
+   * string — gates whether the Adjust panel shows a text-content input for it (most anchors wrap a
+   * live component/name and have no text of their own to override). Read via `useAnchors`' `tx()`.
+   */
+  hasText?: boolean;
+  /**
+   * Structural (never persisted), kind 'anchor' only: this anchor's wrapped content accepts the
+   * text-styling fields above (color/fontFamily/fontSize/fontWeight/letterSpacing/wordSpacing/
+   * border/shadow) as an override on the real element, taking precedence over any pre-existing
+   * per-element config styling. Read via `useAnchors`' `sx()`.
+   */
+  styleable?: boolean;
+  /**
+   * Structural (never persisted), kind 'anchor' only: this anchor's call site wraps its content
+   * with the idle-animation-aware nested element (`data-seen` + `data-sl-idle`), so the Adjust
+   * panel's "While on screen" idle section actually does something for it. Anchors are otherwise
+   * excluded from animation entirely (they don't render through Layer.tsx's enter/idle/exit
+   * wrapper chain) — this opts a specific anchor into idle only, not enter/exit, since most anchor
+   * targets already have their own bespoke framer-motion entrance that a generic enter system
+   * would double up on or fight. Read via `useAnchors`' `ax()`.
+   */
+  animatable?: boolean;
 }
 
 export interface StageDef {
@@ -162,6 +238,14 @@ export interface StageDef {
   layers: Layer[];
   /** Sparse per-layer overrides applied on top of `layers` at the desktop breakpoint. */
   desktop?: Record<string, Partial<Layer>>;
+  /**
+   * Structural (author-set, not a per-wedding delta field): when true, this stage grows to fit
+   * its `kind:'slot'` content instead of clipping to a fixed `100svh` — for sections whose real
+   * content (a wish list, a photo grid) is taller than one screen. Decorative (non-slot) layers
+   * still position as a % of the section's own (now content-driven) box; slot layers render in
+   * normal document flow instead of absolutely positioned. See Stage.tsx/Layer.tsx's `flow` prop.
+   */
+  flow?: boolean;
 }
 
 /** The persisted unit: one stage's delta at one breakpoint, under `<prefix>.layout.<bp>.<stageId>`. */

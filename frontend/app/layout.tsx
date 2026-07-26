@@ -4,6 +4,7 @@ import { Cormorant_Garamond, Hanken_Grotesk, JetBrains_Mono, Playfair_Display, G
 import "./globals.css";
 import { CookieConsent } from "@/components/CookieConsent";
 import { MotionProvider } from "@/components/MotionProvider";
+import { CURATED_FONT_VARIABLES } from "@/lib/fonts/curated";
 
 const cormorant = Cormorant_Garamond({
   variable: "--font-cormorant",
@@ -89,7 +90,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${cormorant.variable} ${hanken.variable} ${jetbrains.variable} ${playfair.variable} ${greatVibes.variable} ${fredoka.variable} antialiased`}
+        className={`${cormorant.variable} ${hanken.variable} ${jetbrains.variable} ${playfair.variable} ${greatVibes.variable} ${fredoka.variable} ${CURATED_FONT_VARIABLES} antialiased`}
       >
         <MotionProvider>{children}</MotionProvider>
         <CookieConsent />

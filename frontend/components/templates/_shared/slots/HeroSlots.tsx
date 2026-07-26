@@ -5,8 +5,13 @@ import type { CSSProperties, ReactElement } from 'react';
 import { toHijriString } from '@/lib/templateUtils';
 import { resolveStage } from '@/components/templates/_shared/layout';
 import type { EditorHandle, Layer, SlotProps } from '../types';
-import { T7_STAGES } from '../data/stages';
-import styles from '../Template7.module.css';
+// CountdownSlot's hero sub-layer nudges (theme/bride/groom/date/timer) are still T7's own —
+// generalizing per-slot sub-layer authoring to arbitrary templates is out of scope for the slot
+// catalog extraction. Safe as a shared default: T7's own shipped hero-* anchors resolve to
+// identity (x:50,y:50,s:1, i.e. "no nudge") when there's no t7.layout.* override, so an authored
+// template harmlessly inherits a no-op here rather than a visible T7-specific position.
+import { T7_STAGES } from '../../Template7-romangarden/data/stages';
+import styles from './slots.module.css';
 
 /** Returns null once the date has passed, so the hero never shows a dead 00:00:00. */
 function useCountdown(target: string) {
@@ -145,6 +150,34 @@ export function CountdownSlot({ wedding, t, config, breakpoint, editor }: SlotPr
           </div>
         </HeroPiece>
       )}
+    </div>
+  );
+}
+
+/**
+ * Just the countdown timer grid — no theme label, no couple names, no date. `CountdownSlot`
+ * bundles all of those (T7's original hero composition, complete with a hardcoded "Roman Garden"
+ * theme-label default and T7-specific hero-* sub-layer anchors), which is wrong for any other
+ * authored template: dropping it in showed literal "ROMAN GARDEN" branding on an unrelated
+ * template. This slot lets a welcome stage be composed instead from primitive, data-bound text
+ * layers (see bindings.ts) for the heading/names/date, plus just the live timer here.
+ */
+export function TimerSlot({ wedding }: SlotProps) {
+  const left = useCountdown(wedding.weddingDate);
+  if (!left) return null;
+  return (
+    <div className={styles.countdown} style={{ justifyContent: 'center', height: '100%', alignItems: 'center' }}>
+      {([
+        ['Days', left.days],
+        ['Hrs', left.hours],
+        ['Min', left.minutes],
+        ['Sec', left.seconds],
+      ] as const).map(([label, val]) => (
+        <div key={label} className={styles.countUnit}>
+          <span className={styles.countNum}>{String(val).padStart(2, '0')}</span>
+          <span className={styles.countLabel}>{label}</span>
+        </div>
+      ))}
     </div>
   );
 }

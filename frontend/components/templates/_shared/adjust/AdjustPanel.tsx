@@ -1,15 +1,18 @@
 'use client';
 
 import { useCallback, useMemo, useRef, useState } from 'react';
-import type { AnimOutType, AnimType, Breakpoint, Layer, ObjectFit, StageDef, StageId } from '../types';
-import { ANIM_OPTIONS, ANIM_OUT_OPTIONS } from '../types';
+import type { AnimIdleType, AnimOutType, AnimType, Breakpoint, Layer, ObjectFit, StageDef, StageId } from '../types';
+import { ANIM_OPTIONS, ANIM_OUT_OPTIONS, ANIM_IDLE_OPTIONS } from '../types';
 import { resolveStage, serializeStage, baseStage, layoutKey, type StageBg } from '../layout';
+import { SLOT_CATALOG_GROUPS, type SlotCatalogEntry } from '../slots/catalog';
+import { BINDING_TOKENS } from '../bindings';
+import { CURATED_FONTS } from '@/lib/fonts/curated';
 import styles from './AdjustPanel.module.css';
 
 const ANIM_LABELS: Record<AnimType, string> = {
   rise: 'Rise (default)', fade: 'Fade', 'slide-up': 'Slide up', 'slide-down': 'Slide down',
   'slide-left': 'Slide left', 'slide-right': 'Slide right', 'zoom-in': 'Zoom in',
-  'zoom-out': 'Zoom out', 'scroll-fade': 'Fade on scroll', none: 'None',
+  'zoom-out': 'Zoom out', 'tracking-in': 'Letter-spacing expand', 'scroll-fade': 'Fade on scroll', none: 'None',
 };
 
 const ANIM_OUT_LABELS: Record<AnimOutType, string> = {
@@ -17,6 +20,10 @@ const ANIM_OUT_LABELS: Record<AnimOutType, string> = {
   'slide-out-up': 'Slide out up', 'slide-out-down': 'Slide out down',
   'slide-out-left': 'Slide out left', 'slide-out-right': 'Slide out right',
   'zoom-out': 'Shrink out', 'zoom-in': 'Grow out',
+};
+
+const ANIM_IDLE_LABELS: Record<AnimIdleType, string> = {
+  none: 'None', wave: 'Wave', sway: 'Sway', pulse: 'Pulse', jitter: 'Jitter', glitch: 'Glitch',
 };
 
 interface Props {
@@ -43,6 +50,22 @@ interface Props {
   onToggleReveal: () => void;
   /** Uploads a file and resolves to its /uploads/… URL. Absent ⇒ image controls are hidden. */
   onUploadImage?: (file: File) => Promise<string>;
+  /** Present only in the super-admin authoring editor — shows "+ Block" for dropping in a
+   *  functional slot (RSVP, countdown, itinerary, wishes, photo booth...). Absent on the
+   *  couple-facing Adjust dock, so couples can't add or rebind functional blocks — authoring is
+   *  an admin surface. */
+  slotCatalog?: SlotCatalogEntry[];
+  /** True only for templates whose RSVP/wishes/etc. render through the shared `_shared/slots/*`
+   *  components (T7, and any wedding on an authored template) — shows a stage-independent "Theme"
+   *  section (accent color + heading font) that writes plain `${keyPrefix}.layout.slotTheme.*`
+   *  config keys (not part of the per-layer delta mechanism — a slot theme isn't a positioned
+   *  layer). Persisted under the `.layout.` namespace purely so it inherits the existing PRO gate
+   *  (`TemplateConfigPolicy.LayoutKeyPattern`) for free. Absent on templates whose RSVP/wishes are
+   *  bespoke, non-slot markup (T1-T6) — this control would do nothing there. */
+  slotTheme?: boolean;
+  /** The accent color actually rendered when no override is saved — differs by host template (T7
+   *  vs. the neutral authored default) — so the swatch reflects reality, not an arbitrary guess. */
+  slotThemeAccentDefault?: string;
 }
 
 const FIT_OPTIONS: ObjectFit[] = ['cover', 'contain', 'fill'];
@@ -71,15 +94,22 @@ function Slider({ label, value, min, max, step, onChange }: {
 export default function AdjustPanel({
   stages, keyPrefix, stageIds, breakpoint, config, onLayoutChange,
   selectedStage, selectedLayer, onSelectStage, onSelectLayer, onClose,
-  canReveal, revealOverflow, onToggleReveal, onUploadImage,
+  canReveal, revealOverflow, onToggleReveal, onUploadImage, slotCatalog,
+  slotTheme, slotThemeAccentDefault,
 }: Props) {
+  // Namespaced under `.layout.` purely to inherit the existing PRO-gate regex — not a stage layer.
+  const themeKey = (field: 'accentColor' | 'headingFont' | 'cardBlur' | 'cardTint' | 'cardTintOpacity' | 'cardRadius') =>
+    `${keyPrefix}.layout.slotTheme.${field}`;
+  const themeDefaults = { accentColor: slotThemeAccentDefault ?? '#2b2a28' };
   const [note, setNote] = useState('');
   const [dragId, setDragId] = useState<string | null>(null);
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
-  // Layer-detail tab: geometry vs animation. Sticky across layer selection.
-  const [detailTab, setDetailTab] = useState<'layout' | 'anim'>('layout');
+  const [blockMenuOpen, setBlockMenuOpen] = useState(false);
+  // Layer-detail tab: geometry vs style vs animation. Sticky across layer selection.
+  const [detailTab, setDetailTab] = useState<'layout' | 'style' | 'anim'>('layout');
   const fileRef = useRef<HTMLInputElement>(null);
   const uploadTarget = useRef<'layer' | 'bg'>('layer');
+  const slotIdCounter = useRef(0);
 
   const def = stages[selectedStage];
   const { layers, bgFit, bgPosition, bgScale, bgSrc } = useMemo(
@@ -173,6 +203,18 @@ export default function AdjustPanel({
     onSelectLayer(id);
   };
 
+  // Authoring-only: drop a functional block (RSVP, countdown, itinerary, wishes, photo booth...)
+  // from the shared slot catalog (_shared/slots/catalog.ts). Same commit path as addLayer — no
+  // OVERRIDABLE change needed, since a brand-new layer (any kind) is stored/reconstructed whole,
+  // unfiltered by OVERRIDABLE (see layout.ts's "a layer the couple added" branch).
+  const addSlotLayer = (entry: SlotCatalogEntry) => {
+    const id = `slot-${entry.id}-${slotIdCounter.current++}`;
+    const layer: Layer = { id, kind: 'slot', slot: entry.id, ...entry.defaultLayer };
+    commit([...layers, layer]);
+    onSelectLayer(id);
+    setBlockMenuOpen(false);
+  };
+
   // Deleting an anchor can't tombstone it — resolveStage would then drop the anchor and the real
   // element would spring back to its default spot. A sticky `hidden` removes it from the page and
   // Reset stage still restores it. Art layers tombstone as before.
@@ -252,6 +294,9 @@ export default function AdjustPanel({
   // Animation tab (the enter/exit vocabulary doesn't apply to a scroll-scrubbed effect).
   const isScrollVideo = current?.kind === 'scrollVideo';
   const bgSelected = selectedLayer === BG_ID;
+  // Only text layers and anchors explicitly flagged `styleable` (Phase 3) expose the Style tab —
+  // most anchors wrap a live component/name with no free-form text styling to override.
+  const canStyle = current?.kind === 'text' || Boolean(current?.styleable);
 
   const nameOf = (l: Layer) =>
     l.label ?? (l.kind === 'slot' ? `▤ ${l.slot}` : l.id);
@@ -320,6 +365,68 @@ export default function AdjustPanel({
       </div>
 
       <div className={styles.body}>
+        {slotTheme && (
+          <>
+            <div className={styles.label} style={{ marginTop: 0 }}>Theme · RSVP &amp; wishes</div>
+            <div className={styles.control} style={{ gridTemplateColumns: '54px 1fr' }}>
+              <span>Accent</span>
+              <input
+                type="color"
+                value={config[themeKey('accentColor')] || themeDefaults.accentColor}
+                onChange={(e) => onLayoutChange(themeKey('accentColor'), e.target.value)}
+              />
+            </div>
+            <div className={styles.control} style={{ gridTemplateColumns: '54px 1fr' }}>
+              <span>Heading</span>
+              <select
+                className={styles.select}
+                value={config[themeKey('headingFont')] ?? ''}
+                onChange={(e) => onLayoutChange(themeKey('headingFont'), e.target.value)}
+              >
+                <option value="">Default</option>
+                {CURATED_FONTS.map((f) => (
+                  <option key={f.key} value={f.key}>{f.label}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Glassmorphism — off (Blur 0) leaves every slot's own neutral scrim untouched.
+                On, it reproduces Template 5's frosted-glass card for every `.panel`-based slot
+                (walimah/couple names/ceremony details/RSVP) at once. */}
+            <div className={styles.label}>Card</div>
+            <Slider
+              label="Blur"
+              value={Number(config[themeKey('cardBlur')] ?? 0)}
+              min={0} max={30} step={1}
+              onChange={(v) => onLayoutChange(themeKey('cardBlur'), v ? String(v) : '')}
+            />
+            {Number(config[themeKey('cardBlur')] ?? 0) > 0 && (
+              <>
+                <div className={styles.control} style={{ gridTemplateColumns: '54px 1fr' }}>
+                  <span>Tint</span>
+                  <input
+                    type="color"
+                    value={config[themeKey('cardTint')] || '#fffbf4'}
+                    onChange={(e) => onLayoutChange(themeKey('cardTint'), e.target.value)}
+                  />
+                </div>
+                <Slider
+                  label="Opacity"
+                  value={Number(config[themeKey('cardTintOpacity')] ?? 0.45)}
+                  min={0.1} max={0.9} step={0.05}
+                  onChange={(v) => onLayoutChange(themeKey('cardTintOpacity'), String(v))}
+                />
+                <Slider
+                  label="Radius"
+                  value={Number(config[themeKey('cardRadius')] ?? 24)}
+                  min={0} max={60} step={1}
+                  onChange={(v) => onLayoutChange(themeKey('cardRadius'), String(v))}
+                />
+              </>
+            )}
+          </>
+        )}
+
         <div className={styles.label}>Stage</div>
         <div className={styles.tabs}>
           {stageIds.map((id) => (
@@ -360,6 +467,42 @@ export default function AdjustPanel({
             <button className={styles.btn} onClick={() => pickImage('layer')}>+ Image</button>
           )}
         </div>
+
+        {slotCatalog && slotCatalog.length > 0 && (
+          <>
+            <button
+              className={`${styles.btn} ${styles.btnGhost}`}
+              onClick={() => setBlockMenuOpen((o) => !o)}
+              style={{ width: '100%', marginTop: 6 }}
+            >
+              {blockMenuOpen ? '✕ Close block menu' : '+ Block (RSVP, wishes, itinerary…)'}
+            </button>
+            {blockMenuOpen && (
+              <div style={{ marginTop: 6 }}>
+                {SLOT_CATALOG_GROUPS.map((group) => {
+                  const entries = slotCatalog.filter((e) => e.group === group);
+                  if (!entries.length) return null;
+                  return (
+                    <div key={group}>
+                      <div className={styles.label}>{group}</div>
+                      <div className={styles.tabs}>
+                        {entries.map((entry) => (
+                          <button
+                            key={entry.id}
+                            className={styles.tab}
+                            onClick={() => addSlotLayer(entry)}
+                          >
+                            {entry.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </>
+        )}
 
         {canReveal && (
           <button
@@ -412,8 +555,8 @@ export default function AdjustPanel({
           <>
             <div className={styles.label}>{current.label ?? current.id}</div>
 
-            {/* Geometry and animation are split into two tabs so neither crowds the column.
-                scrollVideo has no entrance/exit vocabulary, so it only ever shows Layout. */}
+            {/* Geometry, style, and animation are split into tabs so neither crowds the column.
+                scrollVideo has no entrance/exit/style vocabulary, so it only ever shows Layout. */}
             {!isScrollVideo && (
               <div className={styles.tabs} style={{ marginBottom: 8 }}>
                 <button
@@ -422,6 +565,14 @@ export default function AdjustPanel({
                 >
                   Layout
                 </button>
+                {canStyle && (
+                  <button
+                    className={`${styles.tab} ${detailTab === 'style' ? styles.tabActive : ''}`}
+                    onClick={() => setDetailTab('style')}
+                  >
+                    Style
+                  </button>
+                )}
                 <button
                   className={`${styles.tab} ${detailTab === 'anim' ? styles.tabActive : ''}`}
                   onClick={() => setDetailTab('anim')}
@@ -443,14 +594,34 @@ export default function AdjustPanel({
                   />
                 </div>
 
-                {current.kind === 'text' && (
-                  <input
-                    className={styles.select}
-                    style={{ marginBottom: 8 }}
-                    value={current.text ?? ''}
-                    onChange={(e) => patchLayer(current.id, { text: e.target.value })}
-                    placeholder="Type text…"
-                  />
+                {(current.kind === 'text' || current.hasText) && (
+                  <>
+                    <input
+                      className={styles.select}
+                      style={{ marginBottom: 8 }}
+                      value={current.text ?? ''}
+                      onChange={(e) => patchLayer(current.id, { text: e.target.value })}
+                      placeholder="Type text…"
+                    />
+                    {/* Authored templates are shared across every wedding assigned to them — a
+                        literal name/date typed here would show for all of them. A token resolves
+                        per-visitor instead (see bindings.ts); inserted at the end of the current
+                        text, same as a couple typing it by hand. */}
+                    <select
+                      className={styles.select}
+                      style={{ marginBottom: 8 }}
+                      value=""
+                      onChange={(e) => {
+                        if (!e.target.value) return;
+                        patchLayer(current.id, { text: `${current.text ?? ''}{{${e.target.value}}}` });
+                      }}
+                    >
+                      <option value="">Insert token…</option>
+                      {BINDING_TOKENS.map((b) => (
+                        <option key={b.token} value={b.token}>{b.label}</option>
+                      ))}
+                    </select>
+                  </>
                 )}
 
                 {isScrollVideo ? (
@@ -501,7 +672,105 @@ export default function AdjustPanel({
                   </>
                 )}
               </>
-            ) : (
+            ) : detailTab === 'style' && canStyle ? (
+              <>
+                <div className={styles.control} style={{ gridTemplateColumns: '54px 1fr' }}>
+                  <span>Font</span>
+                  <select
+                    className={styles.select}
+                    value={current.fontFamily ?? ''}
+                    onChange={(e) => patchLayer(current.id, { fontFamily: e.target.value || undefined })}
+                  >
+                    <option value="">Default</option>
+                    {CURATED_FONTS.map((f) => (
+                      <option key={f.key} value={f.key}>{f.label}</option>
+                    ))}
+                  </select>
+                </div>
+                <Slider label="Size" value={current.fontSize ?? 4} min={1.5} max={12} step={0.25} onChange={set('fontSize')} />
+                <div className={styles.control} style={{ gridTemplateColumns: '54px 1fr' }}>
+                  <span>Weight</span>
+                  <select
+                    className={styles.select}
+                    value={current.fontWeight ?? 600}
+                    onChange={(e) => patchLayer(current.id, { fontWeight: Number(e.target.value) })}
+                  >
+                    {[300, 400, 500, 600, 700, 800].map((w) => (
+                      <option key={w} value={w}>{w}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className={styles.control} style={{ gridTemplateColumns: '54px 1fr' }}>
+                  <span>Color</span>
+                  <input
+                    type="color"
+                    value={current.color ?? '#3F3524'}
+                    onChange={(e) => patchLayer(current.id, { color: e.target.value })}
+                  />
+                </div>
+                <Slider label="Letter sp." value={current.letterSpacing ?? 0} min={-0.05} max={0.5} step={0.005} onChange={set('letterSpacing')} />
+                <Slider label="Word sp." value={current.wordSpacing ?? 0} min={-0.5} max={2} step={0.05} onChange={set('wordSpacing')} />
+
+                <div className={styles.label}>Border</div>
+                <Slider
+                  label="Width"
+                  value={current.borderWidth ?? 0}
+                  min={0}
+                  max={current.kind === 'text' && current.textShape && current.textShape !== 'flat' ? 4 : 12}
+                  step={0.5}
+                  onChange={set('borderWidth')}
+                />
+                {(current.borderWidth ?? 0) > 0 && (
+                  <>
+                    <div className={styles.control} style={{ gridTemplateColumns: '54px 1fr' }}>
+                      <span>Color</span>
+                      <input
+                        type="color"
+                        value={current.borderColor ?? '#000000'}
+                        onChange={(e) => patchLayer(current.id, { borderColor: e.target.value })}
+                      />
+                    </div>
+                    {!(current.textShape && current.textShape !== 'flat') && (
+                      <Slider label="Radius" value={current.radius ?? 0} min={0} max={40} step={1} onChange={set('radius')} />
+                    )}
+                  </>
+                )}
+
+                <div className={styles.label}>Shadow</div>
+                <div className={styles.control} style={{ gridTemplateColumns: '54px 1fr' }}>
+                  <span>Color</span>
+                  <input
+                    type="color"
+                    value={current.shadowColor ?? '#000000'}
+                    onChange={(e) => patchLayer(current.id, { shadowColor: e.target.value })}
+                  />
+                </div>
+                <Slider label="Blur" value={current.shadowBlur ?? 0} min={0} max={20} step={1} onChange={set('shadowBlur')} />
+                <Slider label="Offset X" value={current.shadowX ?? 0} min={-20} max={20} step={1} onChange={set('shadowX')} />
+                <Slider label="Offset Y" value={current.shadowY ?? 0} min={-20} max={20} step={1} onChange={set('shadowY')} />
+
+                {current.kind === 'text' && (
+                  <>
+                    <div className={styles.label}>Shape</div>
+                    <div className={styles.control} style={{ gridTemplateColumns: '54px 1fr' }}>
+                      <span>Shape</span>
+                      <select
+                        className={styles.select}
+                        value={current.textShape ?? 'flat'}
+                        onChange={(e) => patchLayer(current.id, { textShape: e.target.value as Layer['textShape'] })}
+                      >
+                        <option value="flat">Flat</option>
+                        <option value="arc">Arc</option>
+                        <option value="circle">Circle</option>
+                      </select>
+                    </div>
+                    {(current.textShape ?? 'flat') !== 'flat' && (
+                      <Slider label="Curvature" value={current.curvature ?? 40} min={-100} max={100} step={1} onChange={set('curvature')} />
+                    )}
+                  </>
+                )}
+              </>
+            ) : !isAnchor ? (
               <>
                 {/* Enter — one-shot when the section scrolls into view, staggered by Phase. */}
                 <div className={styles.label}>On enter</div>
@@ -524,6 +793,27 @@ export default function AdjustPanel({
                   <Slider label="Phase" value={current.order} min={0} max={12} step={1} onChange={set('order')} />
                 )}
 
+                {/* Idle — a continuous loop once the layer has been seen, independent of scroll. */}
+                <div className={styles.label} style={{ marginTop: 4 }}>While on screen</div>
+                <div className={styles.control} style={{ gridTemplateColumns: '54px 1fr' }}>
+                  <span>Type</span>
+                  <select
+                    className={styles.select}
+                    value={current.animIdle ?? 'none'}
+                    onChange={(e) => patchLayer(current.id, { animIdle: e.target.value as AnimIdleType })}
+                  >
+                    {ANIM_IDLE_OPTIONS.map((a) => (
+                      <option key={a} value={a}>{ANIM_IDLE_LABELS[a]}</option>
+                    ))}
+                  </select>
+                </div>
+                {(current.animIdle ?? 'none') !== 'none' && (
+                  <>
+                    <Slider label="Speed" value={current.animIdleSpeed ?? 1} min={0.25} max={3} step={0.05} onChange={set('animIdleSpeed')} />
+                    <Slider label="Intensity" value={current.animIdleIntensity ?? 1} min={0.25} max={2.5} step={0.05} onChange={set('animIdleIntensity')} />
+                  </>
+                )}
+
                 {/* Exit — scroll-scrubbed as the layer leaves the top of the viewport (reversible). */}
                 <div className={styles.label} style={{ marginTop: 4 }}>On scroll out</div>
                 <div className={styles.control} style={{ gridTemplateColumns: '54px 1fr' }}>
@@ -539,6 +829,35 @@ export default function AdjustPanel({
                   </select>
                 </div>
               </>
+            ) : current.animatable ? (
+              <>
+                {/* Anchors only ever get idle — most anchor targets already carry their own
+                    bespoke framer-motion entrance, which a generic enter/exit system would fight
+                    or double up on. */}
+                <div className={styles.label}>While on screen</div>
+                <div className={styles.control} style={{ gridTemplateColumns: '54px 1fr' }}>
+                  <span>Type</span>
+                  <select
+                    className={styles.select}
+                    value={current.animIdle ?? 'none'}
+                    onChange={(e) => patchLayer(current.id, { animIdle: e.target.value as AnimIdleType })}
+                  >
+                    {ANIM_IDLE_OPTIONS.map((a) => (
+                      <option key={a} value={a}>{ANIM_IDLE_LABELS[a]}</option>
+                    ))}
+                  </select>
+                </div>
+                {(current.animIdle ?? 'none') !== 'none' && (
+                  <>
+                    <Slider label="Speed" value={current.animIdleSpeed ?? 1} min={0.25} max={3} step={0.05} onChange={set('animIdleSpeed')} />
+                    <Slider label="Intensity" value={current.animIdleIntensity ?? 1} min={0.25} max={2.5} step={0.05} onChange={set('animIdleIntensity')} />
+                  </>
+                )}
+              </>
+            ) : (
+              <p style={{ fontSize: 12, color: '#8A7A63', marginTop: 8 }}>
+                Animation isn&rsquo;t available for this element.
+              </p>
             )}
 
             <button className={`${styles.btn} ${styles.btnGhost}`} onClick={resetLayer} style={{ width: '100%', marginTop: 8 }}>

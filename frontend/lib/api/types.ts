@@ -215,6 +215,9 @@ export interface Template {
   tier: 'FREE' | 'PREMIUM' | 'PRO';
   sortOrder: number;
   isAuthored: boolean;
+  /** Only meaningful when isAuthored — the Record<StageId,StageDef> JSON the authoring editor
+   *  reads back in. Null for every hand-coded template. */
+  stagesJson?: string | null;
 }
 
 export interface TemplateWithUsage extends Template {
@@ -227,6 +230,15 @@ export interface UpdateTemplate {
   tier: 'FREE' | 'PREMIUM' | 'PRO';
   isActive: boolean;
   sortOrder: number;
+}
+
+// Creates a brand-new authored template (data, not code) on a blank canvas.
+// templateCode is optional — a blank value is slugified from templateName server-side.
+export interface CreateTemplate {
+  templateName: string;
+  templateCode: string;
+  description: string;
+  tier: 'FREE' | 'PREMIUM' | 'PRO';
 }
 
 // ========== Package Types ==========

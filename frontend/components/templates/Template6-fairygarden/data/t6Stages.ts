@@ -27,10 +27,11 @@ import type { Layer, StageDef } from '@/components/templates/_shared/types';
 
 export const T6_ASSETS = '/templates/t6';
 
-const anchor = (id: string, label: string, parent?: string): Layer => ({
+const anchor = (id: string, label: string, parent?: string, extra?: Partial<Layer>): Layer => ({
   id, kind: 'anchor', label, parent,
   x: 50, y: 50, w: 100, h: 20, s: 1, z: 1, order: 0,
   chain: true, hidden: false, opacity: 1,
+  ...extra,
 });
 
 const stage = (id: string, label: string, layers: Layer[] = []): StageDef => ({
@@ -41,7 +42,12 @@ export const T6_STAGES: Record<string, StageDef> = {
   welcome: stage('welcome', 'Welcome', [
     anchor('badge', 'Enchantment Badge'),
     anchor('greeting', 'Firefly Greeting'),
-    anchor('names', 'Couple Names'),
+    anchor('names', 'Couple Names', undefined, { styleable: true, animatable: true }),
+    // A second, independent anchor purely for the "&" connector's text+style — the existing
+    // `names` anchor keeps wrapping the whole "Bride & Groom" block for position (never split, so
+    // a couple who already nudged it isn't orphaned); this one's own x/y/s/opacity go unused,
+    // harmless. Static chrome text (not read from wedding data).
+    anchor('connector', 'Names Connector (&)', undefined, { text: '&', hasText: true, styleable: true, animatable: true }),
     anchor('message', 'Heading Message'),
     anchor('dateVenue', 'Date / Venue Card'),
     anchor('date', 'Date', 'dateVenue'),

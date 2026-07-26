@@ -11,7 +11,9 @@ namespace WeddingInvite.Core.Services
         Task<IEnumerable<TemplateDto>> GetActiveAsync();
         Task<IEnumerable<TemplateUsageDto>> GetAllWithUsageAsync();
         Task<TemplateDto> UpdateAsync(int id, UpdateTemplateMetaDto updateDto);
+        Task<TemplateDto> CreateAsync(CreateTemplateDto createDto);
         Task<TemplateDto> SetThumbnailAsync(int id, IFormFile file);
+        Task<string> UploadAssetAsync(int id, IFormFile file);
         Task<TemplateDto> SetStagesAsync(int id, string stagesJson);
         Task<TemplateDto> ClearStagesAsync(int id);
     }

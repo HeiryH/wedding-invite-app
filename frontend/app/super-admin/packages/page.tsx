@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { packageService, featureService, Package, Feature, CreatePackage, UpdatePackage } from '@/lib/api';
+import { packageService, featureService, Package, Feature, UpdatePackage } from '@/lib/api';
 import { Icon } from '@/components/ui/Icon';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -10,13 +10,9 @@ import { Textarea } from '@/components/ui/Textarea';
 import { Switch } from '@/components/ui/Switch';
 import { Badge } from '@/components/ui/Badge';
 import { Card } from '@/components/ui/Card';
-import { EmptyState } from '@/components/ui/EmptyState';
-
-type FormMode = 'create' | 'edit' | null;
 
 interface PackageForm {
   packageName: string;
-  packageCode: string;
   description: string;
   price: number;
   sortOrder: number;
@@ -24,25 +20,16 @@ interface PackageForm {
   featureIds: number[];
 }
 
-const emptyForm: PackageForm = {
-  packageName: '',
-  packageCode: '',
-  description: '',
-  price: 0,
-  sortOrder: 0,
-  isActive: true,
-  featureIds: [],
-};
-
 export default function PackagesPage() {
   const [packages, setPackages] = useState<Package[]>([]);
   const [allFeatures, setAllFeatures] = useState<Feature[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [formMode, setFormMode] = useState<FormMode>(null);
   const [editingId, setEditingId] = useState<number | null>(null);
-  const [form, setForm] = useState<PackageForm>(emptyForm);
+  const [form, setForm] = useState<PackageForm>({
+    packageName: '', description: '', price: 0, sortOrder: 0, isActive: true, featureIds: [],
+  });
 
   useEffect(() => { fetchData(); }, []);
 
@@ -59,45 +46,32 @@ export default function PackagesPage() {
     }
   };
 
-  const openCreateForm = () => { setForm(emptyForm); setEditingId(null); setFormMode('create'); setError(null); };
-
   const openEditForm = (pkg: Package) => {
     setForm({
-      packageName: pkg.packageName, packageCode: pkg.packageCode,
+      packageName: pkg.packageName,
       description: pkg.description, price: pkg.price,
       sortOrder: pkg.sortOrder, isActive: pkg.isActive,
       featureIds: pkg.features.map(f => f.featureId),
     });
     setEditingId(pkg.packageId);
-    setFormMode('edit');
     setError(null);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (editingId === null) return;
     setSaving(true);
     setError(null);
     try {
-      if (formMode === 'create') {
-        const payload: CreatePackage = { packageName: form.packageName, packageCode: form.packageCode, description: form.description, price: form.price, sortOrder: form.sortOrder, featureIds: form.featureIds };
-        await packageService.create(payload);
-      } else if (formMode === 'edit' && editingId !== null) {
-        const payload: UpdatePackage = { packageName: form.packageName, description: form.description, price: form.price, isActive: form.isActive, sortOrder: form.sortOrder, featureIds: form.featureIds };
-        await packageService.update(editingId, payload);
-      }
-      setFormMode(null);
+      const payload: UpdatePackage = { packageName: form.packageName, description: form.description, price: form.price, isActive: form.isActive, sortOrder: form.sortOrder, featureIds: form.featureIds };
+      await packageService.update(editingId, payload);
+      setEditingId(null);
       await fetchData();
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to save package');
     } finally {
       setSaving(false);
     }
-  };
-
-  const handleDelete = async (pkg: Package) => {
-    if (!confirm(`Delete package "${pkg.packageName}"? Weddings using this package will have their package unset.`)) return;
-    try { await packageService.delete(pkg.packageId); await fetchData(); }
-    catch (err: any) { alert(err.response?.data?.message || 'Failed to delete package'); }
   };
 
   const toggleFeature = (featureId: number) => {
@@ -125,25 +99,18 @@ export default function PackagesPage() {
       <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 16, marginBottom: 24 }}>
         <div>
           <h1 style={{ margin: 0, fontFamily: 'var(--font-display)', fontSize: 'clamp(28px, 5vw, 40px)', fontWeight: 400, letterSpacing: 'var(--tracking-tight)', lineHeight: 1, color: 'var(--text-strong)' }}>
-            Manage <em style={{ fontStyle: 'italic', color: 'var(--text-muted)' }}>packages</em>
+            Manage <em style={{ fontStyle: 'italic', color: 'var(--text-muted)' }}>tiers</em>
           </h1>
           <p style={{ margin: '6px 0 0', color: 'var(--text-subtle)', fontSize: 'var(--text-sm)', fontFamily: 'var(--font-ui)' }}>
-            Create and manage feature bundles for weddings.
+            Define what FREE, PREMIUM, and PRO include — this is the platform&rsquo;s single source
+            of truth for feature access per tier.
           </p>
         </div>
-        <Button
-          variant="primary"
-          tone="brand"
-          iconLeft={<Icon name="plus" size={15} />}
-          onClick={openCreateForm}
-        >
-          New package
-        </Button>
       </div>
 
-      {/* Create / Edit Form */}
+      {/* Edit Form */}
       <AnimatePresence>
-        {formMode && (
+        {editingId !== null && (
           <motion.div
             initial={{ opacity: 0, y: -12 }}
             animate={{ opacity: 1, y: 0 }}
@@ -152,7 +119,7 @@ export default function PackagesPage() {
           >
             <Card padding="24px">
               <h2 style={{ margin: '0 0 20px', fontFamily: 'var(--font-display)', fontSize: 22, fontWeight: 400, color: 'var(--text-strong)', letterSpacing: 'var(--tracking-tight)' }}>
-                {formMode === 'create' ? 'Create new package' : 'Edit package'}
+                Edit tier
               </h2>
 
               {error && (
@@ -163,21 +130,13 @@ export default function PackagesPage() {
               )}
 
               <form onSubmit={handleSubmit}>
-                <div className="grid md:grid-cols-2 gap-5" style={{ marginBottom: 16 }}>
+                <div style={{ marginBottom: 16 }}>
                   <Input
-                    label="Package Name"
+                    label="Display Name"
                     required
                     value={form.packageName}
                     onChange={e => setForm({ ...form, packageName: e.target.value })}
-                    placeholder="e.g., Starter, Premium"
-                  />
-                  <Input
-                    label={formMode === 'edit' ? 'Package Code (read-only)' : 'Package Code'}
-                    required
-                    value={form.packageCode}
-                    onChange={e => setForm({ ...form, packageCode: e.target.value.toUpperCase() })}
-                    placeholder="e.g., STARTER"
-                    disabled={formMode === 'edit'}
+                    placeholder="e.g., Free, Premium, Pro"
                   />
                 </div>
 
@@ -187,7 +146,7 @@ export default function PackagesPage() {
                     value={form.description}
                     onChange={e => setForm({ ...form, description: e.target.value })}
                     rows={2}
-                    placeholder="Brief description of this package"
+                    placeholder="Brief description of this tier"
                   />
                 </div>
 
@@ -207,19 +166,17 @@ export default function PackagesPage() {
                     value={String(form.sortOrder)}
                     onChange={e => setForm({ ...form, sortOrder: parseInt(e.target.value) || 0 })}
                   />
-                  {formMode === 'edit' && (
-                    <div style={{ display: 'flex', alignItems: 'flex-end', paddingBottom: 2 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 10, height: 'var(--control-md)' }}>
-                        <Switch
-                          checked={form.isActive}
-                          onChange={e => setForm({ ...form, isActive: e.target.checked })}
-                        />
-                        <span style={{ fontFamily: 'var(--font-ui)', fontSize: 'var(--text-sm)', fontWeight: 500, color: 'var(--text-body)' }}>
-                          Active
-                        </span>
-                      </div>
+                  <div style={{ display: 'flex', alignItems: 'flex-end', paddingBottom: 2 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, height: 'var(--control-md)' }}>
+                      <Switch
+                        checked={form.isActive}
+                        onChange={e => setForm({ ...form, isActive: e.target.checked })}
+                      />
+                      <span style={{ fontFamily: 'var(--font-ui)', fontSize: 'var(--text-sm)', fontWeight: 500, color: 'var(--text-body)' }}>
+                        Active
+                      </span>
                     </div>
-                  )}
+                  </div>
                 </div>
 
                 {/* Feature checkboxes */}
@@ -269,7 +226,7 @@ export default function PackagesPage() {
                     variant="secondary"
                     tone="neutral"
                     type="button"
-                    onClick={() => { setFormMode(null); setError(null); }}
+                    onClick={() => { setEditingId(null); setError(null); }}
                   >
                     Cancel
                   </Button>
@@ -279,7 +236,7 @@ export default function PackagesPage() {
                     type="submit"
                     disabled={saving}
                   >
-                    {saving ? 'Saving…' : formMode === 'create' ? 'Create package' : 'Save changes'}
+                    {saving ? 'Saving…' : 'Save changes'}
                   </Button>
                 </div>
               </form>
@@ -288,16 +245,8 @@ export default function PackagesPage() {
         )}
       </AnimatePresence>
 
-      {/* Packages list */}
-      {packages.length === 0 ? (
-        <EmptyState
-          icon="package"
-          title="No packages yet"
-          description="Create your first package to bundle features for weddings."
-          action={<Button variant="primary" tone="brand" iconLeft={<Icon name="plus" size={15} />} onClick={openCreateForm}>New package</Button>}
-        />
-      ) : (
-        <div className="grid md:grid-cols-2 gap-5">
+      {/* Tiers list */}
+      <div className="grid md:grid-cols-2 gap-5">
           {packages.map((pkg, index) => (
             <motion.div
               key={pkg.packageId}
@@ -352,15 +301,11 @@ export default function PackagesPage() {
                   <Button variant="soft" tone="brand" size="sm" onClick={() => openEditForm(pkg)}>
                     Edit
                   </Button>
-                  <Button variant="soft" tone="danger" size="sm" onClick={() => handleDelete(pkg)}>
-                    Delete
-                  </Button>
                 </div>
               </Card>
             </motion.div>
           ))}
-        </div>
-      )}
+      </div>
     </div>
   );
 }

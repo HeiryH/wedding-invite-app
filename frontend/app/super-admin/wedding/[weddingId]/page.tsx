@@ -10,7 +10,6 @@ import {
   photoService,
   weddingFeatureService,
   templateService,
-  packageService,
   authService,
   tableService,
   Wedding,
@@ -19,10 +18,10 @@ import {
   Photo,
   WeddingFeature,
   Template,
-  Package,
   CoupleAdminUser,
   SeatingTable,
 } from '@/lib/api';
+import { downloadBlob } from '@/lib/utils';
 
 import OverviewTab from './components/OverviewTab';
 import GuestsTab from './components/GuestsTab';
@@ -30,12 +29,11 @@ import WishesTab from './components/WishesTab';
 import PhotosTab from './components/PhotosTab';
 import FeaturesTab from './components/FeaturesTab';
 import TemplatesTab from './components/TemplatesTab';
-import PackagesTab from './components/PackagesTab';
 import AccessTab from './components/AccessTab';
 import SeatingTab from './components/SeatingTab';
 import Icon from '@/components/admin/Icon';
 
-type Tab = 'overview' | 'guests' | 'wishes' | 'photos' | 'features' | 'templates' | 'packages' | 'access' | 'seating';
+type Tab = 'overview' | 'guests' | 'wishes' | 'photos' | 'features' | 'templates' | 'access' | 'seating';
 
 export default function WeddingDetailPage() {
   const params = useParams();
@@ -52,7 +50,6 @@ export default function WeddingDetailPage() {
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<Tab>('overview');
   const [templates, setTemplates] = useState<Template[]>([]);
-  const [packages, setPackages] = useState<Package[]>([]);
   const [coupleAdmin, setCoupleAdmin] = useState<CoupleAdminUser | null>(null);
   const [tables, setTables] = useState<SeatingTable[]>([]);
   const [selectedTemplatePreview, setSelectedTemplatePreview] = useState<number | null>(null);
@@ -93,14 +90,13 @@ export default function WeddingDetailPage() {
   const fetchData = async () => {
     try {
       setLoading(true);
-      const [weddingData, guestsData, wishesData, photosData, featuresData, templatesData, packagesData, coupleAdminData, tablesData] = await Promise.all([
+      const [weddingData, guestsData, wishesData, photosData, featuresData, templatesData, coupleAdminData, tablesData] = await Promise.all([
         weddingService.getById(weddingId),
         guestService.getByWeddingId(weddingId),
         wishService.getByWeddingId(weddingId),
         photoService.getByWeddingId(weddingId),
         weddingFeatureService.getWeddingWithFeatures(weddingId).then(r => r.features),
         templateService.getActive(),
-        packageService.getActive(),
         authService.getCoupleAdmin(weddingId),
         tableService.getByWeddingId(weddingId),
       ]);
@@ -109,7 +105,6 @@ export default function WeddingDetailPage() {
       setGuests(guestsData);
       setWishes(wishesData);
       setTemplates(templatesData);
-      setPackages(packagesData);
       setPhotos(photosData);
       setFeatures(featuresData);
       setCoupleAdmin(coupleAdminData);
@@ -144,7 +139,6 @@ export default function WeddingDetailPage() {
     ...(isFeatureEnabled('SEATING') ? [{ key: 'seating' as Tab, label: 'Seating', feature: 'SEATING' }] : []),
     { key: 'features', label: 'Features' },
     { key: 'templates', label: 'Templates' },
-    { key: 'packages', label: 'Packages' },
     { key: 'access', label: 'Access' },
   ];
 
@@ -224,6 +218,16 @@ export default function WeddingDetailPage() {
       setWedding(updated);
     } catch (err: any) {
       alert(err.response?.data?.message || 'Failed to update RSVP status');
+    }
+  };
+
+  const handleExport = async () => {
+    if (!wedding) return;
+    try {
+      const blob = await weddingService.export(wedding.weddingId);
+      downloadBlob(`${wedding.coupleName}-export-${new Date().toISOString().split('T')[0]}.zip`, blob);
+    } catch {
+      alert('Failed to export wedding data');
     }
   };
 
@@ -438,6 +442,9 @@ export default function WeddingDetailPage() {
               <button onClick={() => setIsEditingWedding(true)} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '9px 14px', background: 'rgba(255,255,255,.7)', border: '1px solid rgba(255,255,255,.9)', borderRadius: 12, fontSize: 13.5, fontWeight: 500, color: 'var(--lavender-grey-ink)', cursor: 'pointer' }}>
                 <Icon name="settings" size={15} /> Edit details
               </button>
+              <button onClick={handleExport} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '9px 14px', background: 'rgba(255,255,255,.7)', border: '1px solid rgba(255,255,255,.9)', borderRadius: 12, fontSize: 13.5, fontWeight: 500, color: 'var(--lavender-grey-ink)', cursor: 'pointer' }}>
+                <Icon name="download" size={15} /> Export data
+              </button>
             </div>
           </div>
         )}
@@ -516,16 +523,9 @@ export default function WeddingDetailPage() {
           <TemplatesTab
             templates={templates}
             currentTemplateId={wedding?.templateId || 1}
+            weddingTier={coupleAdmin?.tier}
             onChangeTemplate={handleChangeTemplate}
             onPreviewTemplate={handlePreviewTemplate}
-          />
-        )}
-
-        {activeTab === 'packages' && (
-          <PackagesTab
-            wedding={wedding}
-            packages={packages}
-            onPackageUpdated={(updated) => setWedding(updated)}
           />
         )}
 

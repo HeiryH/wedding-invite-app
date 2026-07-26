@@ -1,10 +1,16 @@
 import { apiClient } from './client';
-import { Template, TemplateWithUsage, UpdateTemplate } from './types';
+import { CreateTemplate, Template, TemplateWithUsage, UpdateTemplate } from './types';
 
 export const templateService = {
   // Get all templates
   getAll: async (): Promise<Template[]> => {
     const response = await apiClient.get<Template[]>('/template');
+    return response.data;
+  },
+
+  // Create a brand-new authored template on a blank canvas (super admin)
+  create: async (data: CreateTemplate): Promise<Template> => {
+    const response = await apiClient.post<Template>('/template', data);
     return response.data;
   },
 
@@ -70,6 +76,17 @@ export const templateService = {
   },
 
   // ── Authored templates (data, not code — see _shared/DataTemplate.tsx) ───────
+  // Upload an image for a stage background or layer while authoring — not tied to a wedding
+  // (PhotoService requires a real one; a template being authored may have none yet).
+  uploadAsset: async (id: number, file: File): Promise<string> => {
+    const form = new FormData();
+    form.append('file', file);
+    const response = await apiClient.post<{ url: string }>(`/template/${id}/assets`, form, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return response.data.url;
+  },
+
   // Set the whole stage/layer composition; flips isAuthored=true.
   setStages: async (id: number, stagesJson: string): Promise<Template> => {
     const response = await apiClient.put<Template>(`/template/${id}/stages`, { stagesJson });

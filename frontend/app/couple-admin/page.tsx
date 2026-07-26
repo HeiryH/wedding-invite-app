@@ -512,9 +512,11 @@ export default function CoupleAdminDashboard() {
         </div>
       )}
 
-      {/* ── Custom domain (PREMIUM sees the PRO upsell, PRO can set it) ────── */}
+      {/* ── Custom domain (PREMIUM sees the PRO upsell, PRO can set it once the admin has
+          enabled the Custom Domain feature for this wedding — same two-step gate as
+          Photo Booth/Seating) ────────────────────────────────────────────────────── */}
       {!isFree && wedding && weddingId && (
-        <CustomDomainCard weddingId={weddingId} domain={wedding.domain} isPro={tierRank(userTier) >= 2} />
+        <CustomDomainCard weddingId={weddingId} domain={wedding.domain} isPro={tierRank(userTier) >= 2 && isEnabled('CUSTOM_DOMAIN')} />
       )}
 
       {/* ── Stat cards ────────────────────────────────────────────────────── */}

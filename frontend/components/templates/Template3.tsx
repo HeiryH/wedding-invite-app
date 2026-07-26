@@ -92,7 +92,7 @@ export default function Template3({
 
   const overlayBreakpoint: Breakpoint = useBreakpoint(editor?.enabled ? editor.breakpoint : undefined);
   const overlayProps = { breakpoint: overlayBreakpoint, config: customConfig, editor };
-  const a = useAnchors(customConfig, overlayBreakpoint, editor);
+  const { a, tx, sx, ax } = useAnchors(customConfig, overlayBreakpoint, editor);
   const NAV_LABELS: Record<SectionCode, string> = {
     welcome: t('nav.invite', 'Invitation'),
     walimah: t('nav.walimah', 'Ceremony'),
@@ -253,34 +253,36 @@ export default function Template3({
                   <motion.p
                     {...hAnim}
                     className={`text-green-600 text-sm uppercase tracking-[0.25em] mb-3 ${alignClass(customConfig?.['invite.heading.align'])}`}
-                    style={hStyle}
+                    style={{ ...hStyle, ...sx('welcome', 'heading') }}
                   >
                     — {t('invite.theme_label', 'Garden Romance')} —
                   </motion.p>
                 </div>
-                <div style={a('welcome', 'brideName')}>
+                <div style={a('welcome', 'brideName')} data-seen="true">
                   <motion.h1
                     {...hAnim}
                     transition={{ ...hAnim.transition, delay: Number(hAnim.transition?.delay ?? 0) + 0.2 }}
                     className="text-5xl md:text-6xl font-bold text-green-900 mb-3"
-                    style={hStyle}
+                    style={{ ...hStyle, ...sx('welcome', 'brideName') }}
                   >
-                    {wedding.brideName}
+                    <span {...ax('welcome', 'brideName')}>{wedding.brideName}</span>
                   </motion.h1>
                 </div>
                 <div className="flex items-center justify-center gap-4 my-4">
                   <div className="h-px w-24 bg-green-300" />
-                  <span className="text-3xl text-green-500">&amp;</span>
+                  <span className="text-3xl text-green-500" style={sx('welcome', 'connector')} data-seen="true">
+                    <span {...ax('welcome', 'connector')}>{tx('welcome', 'connector', '&')}</span>
+                  </span>
                   <div className="h-px w-24 bg-green-300" />
                 </div>
-                <div style={a('welcome', 'groomName')}>
+                <div style={a('welcome', 'groomName')} data-seen="true">
                   <motion.h1
                     {...hAnim}
                     transition={{ ...hAnim.transition, delay: Number(hAnim.transition?.delay ?? 0) + 0.4 }}
                     className="text-5xl md:text-6xl font-bold text-green-900 mb-4"
-                    style={hStyle}
+                    style={{ ...hStyle, ...sx('welcome', 'groomName') }}
                   >
-                    {wedding.groomName}
+                    <span {...ax('welcome', 'groomName')}>{wedding.groomName}</span>
                   </motion.h1>
                 </div>
                 <p
@@ -325,9 +327,15 @@ export default function Template3({
 
               {/* Countdown & message */}
               {wedding.daysUntilWedding > 0 && (
-                <div className="text-center bg-white rounded-2xl shadow-sm border border-green-100 py-8 px-6" style={a('welcome', 'countdown')}>
+                <div
+                  className="text-center bg-white rounded-2xl shadow-sm border border-green-100 py-8 px-6"
+                  style={a('welcome', 'countdown')}
+                  data-seen="true"
+                >
                   <p className="text-green-500 text-sm mb-2">{t('invite.countdown_prefix', 'Celebrating in')}</p>
-                  <p className="text-5xl font-bold text-green-800">{wedding.daysUntilWedding}</p>
+                  <p className="text-5xl font-bold text-green-800" style={sx('welcome', 'countdown')}>
+                    <span {...ax('welcome', 'countdown')}>{wedding.daysUntilWedding}</span>
+                  </p>
                   <p className="text-green-600 text-lg">days</p>
                 </div>
               )}

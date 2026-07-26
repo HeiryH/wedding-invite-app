@@ -8,14 +8,25 @@ import type { Breakpoint, Layer, ObjectFit, StageDef, StageId, StageLayout } fro
 export const layoutKey = (prefix: string, bp: Breakpoint, stage: StageId) =>
   `${prefix}.layout.${bp}.${stage}`;
 
-/** Geometry fields the Adjust panel can override. */
-const OVERRIDABLE: (keyof Layer)[] = [
+/** Geometry fields the Adjust panel can override. Exported for the authoring flatten helper
+ *  (_shared/authoring/flatten.ts), which needs the same field list to diff a breakpoint's
+ *  resolved layers against each other. */
+export const OVERRIDABLE: (keyof Layer)[] = [
   'x', 'y', 'w', 'h', 's', 'z', 'order', 'chain', 'hidden', 'opacity', 'depth',
   'color', 'fill', 'fontSize', 'fontWeight', 'radius', 'text', 'src', 'shape', 'label',
   'anim', 'animDur', 'animOut',
+  // text styling (types.ts) — usable by kind 'text', and by kind 'anchor' when `styleable`.
+  'fontFamily', 'letterSpacing', 'wordSpacing', 'borderWidth', 'borderColor',
+  'shadowColor', 'shadowBlur', 'shadowX', 'shadowY',
+  // text shaping (kind 'text' only) — see CurvedText.tsx.
+  'textShape', 'curvature',
+  // idle/looping animation (kinds 'img'/'text'/'shape'/'slot') — see reveal.css.
+  'animIdle', 'animIdleSpeed', 'animIdleIntensity',
   // kind 'scrollVideo' effect params (types.ts) — same delta mechanism, no geometry involved.
   'videoSrc', 'triggerStart', 'triggerEnd', 'scrub', 'pivot', 'holdWidth', 'videoStartSec',
   'openThreshold', 'resetSec', 'chromaThreshold', 'chromaFade',
+  // kind 'slot' presentation mode ('inline' | 'sheet') — see DataTemplate.tsx.
+  'presentation',
 ];
 
 /** Background placement the Adjust panel can override, over and above the shipped stage bg. */

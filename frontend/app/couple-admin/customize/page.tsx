@@ -28,7 +28,7 @@ import { PRESETS, isShadowField, chipOf, useSchemaIndex } from './_components/Sc
 import AdjustPanel from '@/components/templates/_shared/adjust/AdjustPanel';
 import { TEMPLATE_ENGINES } from '@/components/templates/_shared/registry';
 import { resolveStage, serializeStage, layoutKey } from '@/components/templates/_shared/layout';
-import type { Layer as LayerModel, Breakpoint } from '@/components/templates/_shared/types';
+import type { Layer as LayerModel, Breakpoint, StageDef } from '@/components/templates/_shared/types';
 import { Button } from '@/components/ui/Button';
 import { Switch } from '@/components/ui/Switch';
 import { Icon } from '@/components/ui/Icon';
@@ -814,21 +814,36 @@ export default function CustomizePage() {
   const layout = useMemo(() => {
     const id = wedding?.templateId;
     const engine = id ? TEMPLATE_ENGINES[id] : undefined;
-    if (!engine) return null;
-    const codes = resolveSectionOrder(
-      sectionOrder.join(','),
-      Boolean(draftConfig['walimah.body']),
-      itinerary.length > 0,
-      photoBoothEnabled,
-    );
-    const ctx = { codes, photoBoothEnabled, draftConfig };
-    return {
-      stages: engine.resolveStages(ctx),
-      keyPrefix: engine.keyPrefix,
-      stageIds: engine.stageIds(ctx),
-      reveal: engine.reveal,
-    };
-  }, [wedding?.templateId, sectionOrder, draftConfig, itinerary.length, photoBoothEnabled]);
+    if (engine) {
+      const codes = resolveSectionOrder(
+        sectionOrder.join(','),
+        Boolean(draftConfig['walimah.body']),
+        itinerary.length > 0,
+        photoBoothEnabled,
+      );
+      const ctx = { codes, photoBoothEnabled, draftConfig };
+      return {
+        stages: engine.resolveStages(ctx),
+        keyPrefix: engine.keyPrefix,
+        stageIds: engine.stageIds(ctx),
+        reveal: engine.reveal,
+        slotTheme: Boolean(engine.slotTheme),
+      };
+    }
+    // Authored templates (data, not code — see _shared/DataTemplate.tsx) have no registry entry;
+    // their stage map ships on the wedding itself. `ta<id>` mirrors TemplateWrapper.tsx's identical
+    // keyPrefix so a couple's saved deltas land under the same config namespace it already reads.
+    // Always slot-theme-able: DataTemplate always renders through the shared slot registry.
+    if (id && wedding?.templateStagesJson) {
+      try {
+        const stages = JSON.parse(wedding.templateStagesJson) as Record<string, StageDef>;
+        return { stages, keyPrefix: `ta${id}`, stageIds: Object.keys(stages), reveal: true, slotTheme: true };
+      } catch {
+        return null;
+      }
+    }
+    return null;
+  }, [wedding?.templateId, wedding?.templateStagesJson, sectionOrder, draftConfig, itinerary.length, photoBoothEnabled]);
 
   const canAdjust = isPro && !!layout;
   const canReveal = Boolean(layout?.reveal);
@@ -1051,20 +1066,23 @@ export default function CustomizePage() {
       await weddingService.updateTemplate(weddingId, t.templateId);
       const updatedWedding = { ...wedding, templateId: t.templateId, templateName: t.templateName };
       setWedding(updatedWedding);
-      // Keep only what the new template understands: its own defaults, overlaid with the
-      // couple's existing values for keys it shares, plus any layout blobs scoped to it.
-      // Anything else is dropped here so the next save prunes it server-side, rather than
-      // accumulating dead keys across every template switch.
+      // The new template's captured "starting design" is applied live at read time, so re-read the
+      // (merged) config to pick those inherited keys up — carrying them into draftConfig at their
+      // default values so the next save treats them as no-op deltas rather than materializing this
+      // template's schema defaults over them. Then keep only what the new template understands: its
+      // own defaults, overlaid with existing values for keys it shares, plus its layout blobs.
+      const serverConfig = await templateConfigService.getByWeddingId(weddingId);
       const newDefaults = buildDefaultConfig(t.templateId);
       const layoutPrefix = `t${t.templateId}.layout.`;
       const carried = Object.fromEntries(
-        Object.entries(draftConfig).filter(
+        Object.entries({ ...draftConfig, ...serverConfig }).filter(
           ([k]) => k in newDefaults || k.startsWith(layoutPrefix),
         ),
       );
       const merged = { ...newDefaults, ...carried };
       setDraftConfig(merged);
       setSavedConfig(merged);
+      setSectionOrder(parseSectionOrder(merged['section.order']));
     } catch {
       alert('Failed to switch template.');
     } finally {
@@ -1638,6 +1656,8 @@ export default function CustomizePage() {
               revealOverflow={revealOverflow}
               onToggleReveal={() => setRevealOverflow((r) => !r)}
               onUploadImage={handleAdjustUpload}
+              slotTheme={Boolean(layout?.slotTheme)}
+              slotThemeAccentDefault={wedding.templateId === 7 ? '#3d3833' : '#2b2a28'}
             />
           </aside>
         )}

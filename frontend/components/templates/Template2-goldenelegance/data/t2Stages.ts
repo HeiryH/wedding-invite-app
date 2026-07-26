@@ -16,18 +16,22 @@ import type { Layer, StageDef } from '@/components/templates/_shared/types';
  * There's no background image (`bg: ''`). Most welcome-section anchor targets here are themselves
  * `motion.*` elements (unlike Template1/3, which have plain equivalents) — those are wrapped in a
  * plain outer element in Template2.tsx that carries the nudge style, leaving the inner motion
- * node's own entrance animation untouched (same technique as Template 6). The decorative ring
- * emoji, the "&" divider, and the "Scroll to RSVP" hint are intentionally excluded: the first two
- * are one-off flourishes not worth an anchor, and the scroll hint's arrow bounces continuously
- * (`repeat: Infinity`), which never settles for a nudge to safely apply to.
+ * node's own entrance animation untouched (same technique as Template 6). The "&" divider is a
+ * `connector` anchor for text+style override ONLY (no position) — it's a `motion.div` with its own
+ * `scaleX` entrance, so nudging it via `a()`'s transform would fight that animation the same way a
+ * plain position anchor would on any other motion node here. The decorative ring emoji and the
+ * "Scroll to RSVP" hint remain excluded: the former is a one-off flourish not worth an anchor, and
+ * the scroll hint's arrow bounces continuously (`repeat: Infinity`), which never settles for a
+ * nudge to safely apply to.
  */
 
 export const T2_ASSETS = '/templates/t2';
 
-const anchor = (id: string, label: string, parent?: string): Layer => ({
+const anchor = (id: string, label: string, parent?: string, extra?: Partial<Layer>): Layer => ({
   id, kind: 'anchor', label, parent,
   x: 50, y: 50, w: 100, h: 20, s: 1, z: 1, order: 0,
   chain: true, hidden: false, opacity: 1,
+  ...extra,
 });
 
 const stage = (id: string, label: string, layers: Layer[] = []): StageDef => ({
@@ -36,12 +40,15 @@ const stage = (id: string, label: string, layers: Layer[] = []): StageDef => ({
 
 export const T2_STAGES: Record<string, StageDef> = {
   welcome: stage('welcome', 'Welcome', [
-    anchor('heading', 'Invite Label'),
-    anchor('brideName', 'Bride Name'),
-    anchor('groomName', 'Groom Name'),
+    anchor('heading', 'Invite Label', undefined, { styleable: true }),
+    anchor('brideName', 'Bride Name', undefined, { styleable: true, animatable: true }),
+    anchor('groomName', 'Groom Name', undefined, { styleable: true, animatable: true }),
+    // Static chrome text (not read from wedding data) — the couple can retype and restyle it, but
+    // its default renders exactly as the literal `&` this replaces in Template2.tsx.
+    anchor('connector', 'Names Connector (&)', undefined, { text: '&', hasText: true, styleable: true, animatable: true }),
     anchor('body', 'Invite Body'),
     anchor('details', 'Wedding Details Card'),
-    anchor('countdown', 'Countdown', 'details'),
+    anchor('countdown', 'Countdown', 'details', { styleable: true, animatable: true }),
   ]),
   walimah: stage('walimah', 'Ceremony', [
     anchor('title', 'Ceremony Title'),
