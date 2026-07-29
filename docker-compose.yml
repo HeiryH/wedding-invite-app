@@ -27,6 +27,7 @@ services:
       dockerfile: Dockerfile
       args:
         - BACKEND_URL=http://backend:5000
+        - NEXT_PUBLIC_SITE_URL=${SITE_URL:-https://oddstudio.app}
     restart: unless-stopped
     ports:
       # Localhost-only — nginx reverse-proxies to this from the host, and Docker's own
