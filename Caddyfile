@@ -24,7 +24,8 @@
 }
 
 # ── 1. Platform domain: standard automatic TLS ─────────────────────────────────
-{$PLATFORM_DOMAIN}, www.{$PLATFORM_DOMAIN} {
+# PLATFORM_DOMAIN is a subdomain (e.g. thee-invite.oddstudio.app) — no `www.` variant.
+{$PLATFORM_DOMAIN} {
 	encode zstd gzip
 	reverse_proxy frontend:3000
 }
