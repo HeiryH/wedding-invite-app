@@ -410,3 +410,26 @@ The script handles: `git add frontend/` → commit → push to GitHub → SSH to
 - Branch: `frontend-design-fix`
 - VPS: `root@139.180.154.175`, app at `/opt/wedding-app`
 - Password: in `.env.deploy` at repo root (never committed — load with `source .env.deploy`)
+- Public domain is **`thee-invite.oddstudio.app`** (moved off the bare `oddstudio.app` apex on
+  2026-07-29 — see below). `.env`'s `SITE_URL`/`CORS_ORIGIN`/`PLATFORM_DOMAIN` and
+  `next.config`-adjacent metadata all key off `NEXT_PUBLIC_SITE_URL`, which is baked in at
+  **Docker build time** (a build arg, not just container runtime env — `robots.ts`/`sitemap.ts`/
+  `layout.tsx` have no dynamic APIs so Next statically prerenders them during `next build`).
+  Changing the domain again means updating both the `.env` value *and* rebuilding, not just
+  restarting.
+- ⚠️ **The actual reverse proxy in production is Nginx Proxy Manager** (`npm-npm-1` container,
+  GUI admin on `127.0.0.1:81`, SSH-tunnel only), **not** the `Caddyfile`/`CUSTOM_DOMAINS.md` in
+  this repo — that describes an on-demand-TLS migration that was drafted but never deployed.
+  Adding/editing a domain means logging into the NPM UI and adding/editing a **Proxy Host**, not
+  touching the Caddyfile. `CUSTOM_DOMAINS.md`'s Caddy plan (and the PRO custom-domain auto-TLS
+  `ask` flow it describes) is not actually wired up live.
+- **This VPS now also hosts an unrelated second app**: ODDSTUDIO's own marketing site (Next.js +
+  headless WordPress), at `/opt/oddstudio/` — see that project's own `CLAUDE.md` /
+  `DEPLOYMENT.md`. It owns the bare `oddstudio.app`/`www.oddstudio.app` apex (which is why this
+  app moved to the `thee-invite` subdomain). The two apps are separate Compose projects sharing
+  one NPM instance (multi-homed across `wedding-app_default` and `oddstudio_default` networks)
+  and the same 955MB/1-CPU box — **RAM is genuinely tight** (steady state ~130–275MB available
+  depending on recent build/journal buildup). Before adding services or doing anything
+  memory-heavy here, check `free -h` and consider `docker builder prune -af` +
+  `journalctl --vacuum-time=3d` on the VPS first — both accumulate fast from routine deploys and
+  are the biggest reclaimable chunks, well before container tuning matters.
