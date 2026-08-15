@@ -16,6 +16,9 @@ interface GuestsTabProps {
   onDelete: (guestId: number) => void;
   onEdit?: (guest: Guest) => void;
   onExport: () => void;
+  /** "Bride/Groom side" only makes sense for WEDDING events — hidden for PARTY/CEREMONY, whose
+   *  guests never carry a guestSide. Defaults true so existing (WEDDING) call sites are unchanged. */
+  showSide?: boolean;
 }
 
 const sel: React.CSSProperties = {
@@ -27,7 +30,7 @@ const sel: React.CSSProperties = {
 export default function GuestsTab({
   guests, allGuests, searchTerm, setSearchTerm,
   filterSide, setFilterSide, filterAttending, setFilterAttending,
-  onDelete, onEdit, onExport,
+  onDelete, onEdit, onExport, showSide = true,
 }: GuestsTabProps) {
   return (
     <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
@@ -48,12 +51,14 @@ export default function GuestsTab({
           />
         </div>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-          <select value={filterSide} onChange={e => setFilterSide(e.target.value as any)}
-            style={{ ...sel, width: 'auto', paddingRight: 28 }}>
-            <option value="All">All sides</option>
-            <option value="Bride">Bride's side</option>
-            <option value="Groom">Groom's side</option>
-          </select>
+          {showSide && (
+            <select value={filterSide} onChange={e => setFilterSide(e.target.value as any)}
+              style={{ ...sel, width: 'auto', paddingRight: 28 }}>
+              <option value="All">All sides</option>
+              <option value="Bride">Bride's side</option>
+              <option value="Groom">Groom's side</option>
+            </select>
+          )}
           <select value={filterAttending} onChange={e => setFilterAttending(e.target.value as any)}
             style={{ ...sel, width: 'auto', paddingRight: 28 }}>
             <option value="All">All status</option>
@@ -76,7 +81,7 @@ export default function GuestsTab({
         <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 580 }}>
           <thead>
             <tr style={{ background: 'var(--floral)', borderBottom: '1px solid var(--line)' }}>
-              {['Name', 'Contact', 'Side', 'Status', 'No.', 'Song', ''].map(h => (
+              {(showSide ? ['Name', 'Contact', 'Side', 'Status', 'No.', 'Song', ''] : ['Name', 'Contact', 'Status', 'No.', 'Song', '']).map(h => (
                 <th key={h} style={{ padding: '9px 14px', textAlign: 'left', fontSize: 11, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--muted)', fontWeight: 500, whiteSpace: 'nowrap' }}>{h}</th>
               ))}
             </tr>
@@ -84,7 +89,7 @@ export default function GuestsTab({
           <tbody>
             {guests.length === 0 ? (
               <tr>
-                <td colSpan={7} style={{ padding: '40px 20px', textAlign: 'center', color: 'var(--muted)', fontSize: 13 }}>
+                <td colSpan={showSide ? 7 : 6} style={{ padding: '40px 20px', textAlign: 'center', color: 'var(--muted)', fontSize: 13 }}>
                   No guests found
                 </td>
               </tr>
@@ -102,16 +107,18 @@ export default function GuestsTab({
                     <p style={{ fontSize: 13, color: 'var(--ink-2)', margin: 0 }}>{guest.email || '—'}</p>
                     <p style={{ fontSize: 12, color: 'var(--muted)', margin: '2px 0 0' }}>{guest.phoneNumber || ''}</p>
                   </td>
-                  <td style={{ padding: '10px 14px', whiteSpace: 'nowrap' }}>
-                    <span style={{
-                      display: 'inline-block', fontSize: 12, fontWeight: 500, padding: '3px 10px', borderRadius: 999,
-                      background: guest.brideOrGroomSide === 'Bride' ? 'var(--lavender)' : 'var(--veil)',
-                      color: 'var(--lavender-grey-ink)',
-                      border: `1px solid ${guest.brideOrGroomSide === 'Bride' ? 'var(--lavender-deep)' : 'var(--veil-deep)'}`,
-                    }}>
-                      {guest.brideOrGroomSide}
-                    </span>
-                  </td>
+                  {showSide && (
+                    <td style={{ padding: '10px 14px', whiteSpace: 'nowrap' }}>
+                      <span style={{
+                        display: 'inline-block', fontSize: 12, fontWeight: 500, padding: '3px 10px', borderRadius: 999,
+                        background: guest.guestSide === 'PRIMARY' ? 'var(--lavender)' : 'var(--veil)',
+                        color: 'var(--lavender-grey-ink)',
+                        border: `1px solid ${guest.guestSide === 'PRIMARY' ? 'var(--lavender-deep)' : 'var(--veil-deep)'}`,
+                      }}>
+                        {guest.guestSide === 'PRIMARY' ? 'Bride' : guest.guestSide === 'SECONDARY' ? 'Groom' : '—'}
+                      </span>
+                    </td>
+                  )}
                   <td style={{ padding: '10px 14px', whiteSpace: 'nowrap' }}>
                     <span style={{
                       display: 'inline-block', fontSize: 12, fontWeight: 500, padding: '3px 10px', borderRadius: 999,

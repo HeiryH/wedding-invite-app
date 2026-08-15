@@ -13,6 +13,23 @@ export interface LoginResponse {
   tier: string;
 }
 
+// The backend's actual LoginResponseDto wire shape (camelCased) — `eventId`, not `weddingId`.
+interface LoginResponseWire {
+  token: string;
+  email: string;
+  role: string;
+  eventId?: number;
+  tier: string;
+}
+
+const toLoginResponse = (wire: LoginResponseWire): LoginResponse => ({
+  token: wire.token,
+  email: wire.email,
+  role: wire.role,
+  weddingId: wire.eventId,
+  tier: wire.tier,
+});
+
 export interface RegisterCoupleRequest {
   email: string;
   password: string;
@@ -22,9 +39,14 @@ export interface RegisterCoupleRequest {
 export interface SelfRegisterRequest {
   email: string;
   password: string;
-  brideName: string;
-  groomName: string;
-  weddingDate: string;
+  /** WEDDING: both required. PARTY: name1 only. CEREMONY: neither (use eventTitle). */
+  name1?: string;
+  name2?: string;
+  /** Required for CEREMONY; the event's title (e.g. "Ali's Aqiqah"). */
+  eventTitle?: string;
+  /** 'WEDDING' | 'PARTY' | 'CEREMONY' — defaults to 'WEDDING' server-side if omitted. */
+  eventType?: string;
+  eventDate: string;
   venue: string;
   venueAddress: string;
   templateId: number;
@@ -34,7 +56,7 @@ export interface SelfRegisterRequest {
   itinerary?: { label: string; detail: string; sortOrder: number }[];
 }
 
-export interface CoupleAdminUser {
+export interface OrganizerAdminUser {
   userId: number;
   email: string;
   role: string;
@@ -43,6 +65,27 @@ export interface CoupleAdminUser {
   tier: string;
   createdDate: string;
 }
+
+// The backend's actual UserDto wire shape (camelCased) — `eventId`, not `weddingId`.
+interface UserDtoWire {
+  userId: number;
+  email: string;
+  role: string;
+  eventId?: number;
+  isActive: boolean;
+  tier: string;
+  createdDate: string;
+}
+
+const toOrganizerAdminUser = (wire: UserDtoWire): OrganizerAdminUser => ({
+  userId: wire.userId,
+  email: wire.email,
+  role: wire.role,
+  weddingId: wire.eventId,
+  isActive: wire.isActive,
+  tier: wire.tier,
+  createdDate: wire.createdDate,
+});
 
 export interface HostAdminUser {
   userId: number;
@@ -55,54 +98,54 @@ export interface HostAdminUser {
 
 export const authService = {
   selfRegister: async (data: SelfRegisterRequest): Promise<LoginResponse> => {
-    const response = await apiClient.post<LoginResponse>('/auth/self-register', data);
-    return response.data;
+    const response = await apiClient.post<LoginResponseWire>('/auth/self-register', data);
+    return toLoginResponse(response.data);
   },
 
   login: async (data: LoginRequest): Promise<LoginResponse> => {
-    const response = await apiClient.post<LoginResponse>('/auth/login', data);
-    return response.data;
+    const response = await apiClient.post<LoginResponseWire>('/auth/login', data);
+    return toLoginResponse(response.data);
   },
 
   logout: async (): Promise<void> => {
     await apiClient.post('/auth/logout');
   },
 
-  getCoupleAdmin: async (weddingId: number): Promise<CoupleAdminUser | null> => {
+  getOrganizerAdmin: async (weddingId: number): Promise<OrganizerAdminUser | null> => {
     try {
-      const response = await apiClient.get<CoupleAdminUser>(`/auth/couple-admin/${weddingId}`);
-      return response.data;
+      const response = await apiClient.get<UserDtoWire>(`/auth/organizer-admin/${weddingId}`);
+      return toOrganizerAdminUser(response.data);
     } catch (err: any) {
       if (err.response?.status === 404) return null;
       throw err;
     }
   },
 
-  createCoupleAdmin: async (weddingId: number, email: string, password: string): Promise<CoupleAdminUser> => {
-    const response = await apiClient.post<CoupleAdminUser>('/auth/create-couple-admin', {
-      weddingId,
+  createOrganizerAdmin: async (weddingId: number, email: string, password: string): Promise<OrganizerAdminUser> => {
+    const response = await apiClient.post<UserDtoWire>('/auth/create-organizer-admin', {
+      eventId: weddingId,
       email,
       password,
     });
-    return response.data;
+    return toOrganizerAdminUser(response.data);
   },
 
-  setActive: async (userId: number, isActive: boolean): Promise<CoupleAdminUser> => {
-    const response = await apiClient.patch<CoupleAdminUser>(`/auth/couple-admin/${userId}/active`, { isActive });
-    return response.data;
+  setActive: async (userId: number, isActive: boolean): Promise<OrganizerAdminUser> => {
+    const response = await apiClient.patch<UserDtoWire>(`/auth/organizer-admin/${userId}/active`, { isActive });
+    return toOrganizerAdminUser(response.data);
   },
 
-  setTier: async (userId: number, tier: string): Promise<CoupleAdminUser> => {
-    const response = await apiClient.patch<CoupleAdminUser>(`/auth/couple-admin/${userId}/tier`, { tier });
-    return response.data;
+  setTier: async (userId: number, tier: string): Promise<OrganizerAdminUser> => {
+    const response = await apiClient.patch<UserDtoWire>(`/auth/organizer-admin/${userId}/tier`, { tier });
+    return toOrganizerAdminUser(response.data);
   },
 
   resetPassword: async (userId: number, newPassword: string): Promise<void> => {
-    await apiClient.put(`/auth/couple-admin/${userId}/reset-password`, { newPassword });
+    await apiClient.put(`/auth/organizer-admin/${userId}/reset-password`, { newPassword });
   },
 
   deleteUser: async (userId: number): Promise<void> => {
-    await apiClient.delete(`/auth/couple-admin/${userId}`);
+    await apiClient.delete(`/auth/organizer-admin/${userId}`);
   },
 
   createHostAdmin: async (email: string, password: string): Promise<HostAdminUser> => {

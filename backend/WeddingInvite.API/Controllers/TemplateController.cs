@@ -116,13 +116,13 @@ namespace WeddingInvite.API.Controllers
             return Ok(new { templateId = id, keyCount });
         }
 
-        // PUT: api/template/5/default-config/from-wedding/12 — capture wedding 12's finished design
+        // PUT: api/template/5/default-config/from-event/12 — capture event 12's finished design
         // as template 5's starting design (couple-content keys excluded).
-        [HttpPut("{id}/default-config/from-wedding/{weddingId}")]
+        [HttpPut("{id}/default-config/from-event/{eventId}")]
         [Authorize(Roles = "SUPER_ADMIN")]
-        public async Task<ActionResult<object>> SetDefaultFromWedding(int id, int weddingId)
+        public async Task<ActionResult<object>> SetDefaultFromWedding(int id, int eventId)
         {
-            await _templateConfigService.SetDefaultFromWeddingAsync(id, weddingId);
+            await _templateConfigService.SetDefaultFromWeddingAsync(id, eventId);
             var keyCount = await _templateConfigService.GetDefaultKeyCountAsync(id);
             return Ok(new { templateId = id, keyCount });
         }

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { weddingService } from '@/lib/api';
+import { eventService } from '@/lib/api';
 import { Icon } from '@/components/ui/Icon';
 
 interface CustomDomainCardProps {
@@ -36,7 +36,7 @@ export function CustomDomainCard({ weddingId, domain, isPro }: CustomDomainCardP
     setSaving(true);
     setMsg(null);
     try {
-      const w = await weddingService.setDomain(weddingId, next.trim());
+      const w = await eventService.setDomain(weddingId, next.trim());
       setCurrent(w.domain ?? null);
       setValue(w.domain ?? '');
       setMsg({ ok: true, text: w.domain ? 'Domain saved.' : 'Domain removed.' });

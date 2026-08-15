@@ -19,7 +19,7 @@ const sampleGuest = {
   guestName: 'Ada',
   email: 'ada@example.com',
   phoneNumber: '123',
-  brideOrGroomSide: 'Bride' as const,
+  guestSide: 'PRIMARY' as const,
   numberOfAttendees: 2,
   songRequest: '',
   isAttending: true,
@@ -33,7 +33,7 @@ describe('guestService endpoint routing', () => {
     expect(post).toHaveBeenCalledTimes(1);
     const [url, body] = post.mock.calls[0];
     expect(url).toBe('/guest');
-    expect(body).toMatchObject({ ...sampleGuest, weddingId: 42 });
+    expect(body).toMatchObject({ ...sampleGuest, eventId: 42 });
   });
 
   it('rsvp() posts to the public endpoint /guest/rsvp', async () => {
@@ -41,7 +41,7 @@ describe('guestService endpoint routing', () => {
     expect(post).toHaveBeenCalledTimes(1);
     const [url, body] = post.mock.calls[0];
     expect(url).toBe('/guest/rsvp');
-    expect(body).toMatchObject({ ...sampleGuest, weddingId: 42 });
+    expect(body).toMatchObject({ ...sampleGuest, eventId: 42 });
   });
 
   it('create() and rsvp() hit different endpoints (regression guard)', async () => {

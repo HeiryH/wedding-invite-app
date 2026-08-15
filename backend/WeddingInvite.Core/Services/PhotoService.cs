@@ -10,71 +10,71 @@ namespace WeddingInvite.Core.Services
     public class PhotoService : IPhotoService
     {
         private readonly IPhotoRepository _photoRepo;
-        private readonly IWeddingRepository _weddingRepo;
-        private readonly IWeddingFeatureRepository _weddingFeatureRepo;
+        private readonly IEventRepository _eventRepo;
+        private readonly IEventFeatureRepository _eventFeatureRepo;
         private readonly ITemplateConfigService _templateConfigService;
         private const long MaxFileSizeBytes = 10 * 1024 * 1024; // 10MB
         private static readonly string[] AllowedExtensions = { ".jpg", ".jpeg", ".png", ".gif", ".webp" };
 
         public PhotoService(
             IPhotoRepository photoRepo,
-            IWeddingRepository weddingRepo,
-            IWeddingFeatureRepository weddingFeatureRepo,
+            IEventRepository eventRepo,
+            IEventFeatureRepository eventFeatureRepo,
             ITemplateConfigService templateConfigService)
         {
             _photoRepo = photoRepo;
-            _weddingRepo = weddingRepo;
-            _weddingFeatureRepo = weddingFeatureRepo;
+            _eventRepo = eventRepo;
+            _eventFeatureRepo = eventFeatureRepo;
             _templateConfigService = templateConfigService;
         }
-        
+
         public async Task<PhotoDto?> GetByIdAsync(int id)
         {
             var photo = await _photoRepo.GetByIdAsync(id);
             return photo == null ? null : MapToDto(photo);
         }
-        
-        public async Task<IEnumerable<PhotoDto>> GetByWeddingIdAsync(int weddingId)
+
+        public async Task<IEnumerable<PhotoDto>> GetByEventIdAsync(int eventId)
         {
-            var photos = await _photoRepo.GetByWeddingIdAsync(weddingId);
+            var photos = await _photoRepo.GetByEventIdAsync(eventId);
             return photos.Select(MapToDto);
         }
-        
-        public async Task<IEnumerable<PhotoDto>> GetVisibleByWeddingIdAsync(int weddingId)
+
+        public async Task<IEnumerable<PhotoDto>> GetVisibleByEventIdAsync(int eventId)
         {
-            var photos = await _photoRepo.GetVisibleByWeddingIdAsync(weddingId);
+            var photos = await _photoRepo.GetVisibleByEventIdAsync(eventId);
             return photos.Select(MapToDto);
         }
-        
+
         // NEW: Get approved photos
-        public async Task<IEnumerable<PhotoDto>> GetApprovedByWeddingIdAsync(int weddingId)
+        public async Task<IEnumerable<PhotoDto>> GetApprovedByEventIdAsync(int eventId)
         {
-            var photos = await _photoRepo.GetByWeddingIdAsync(weddingId);
+            var photos = await _photoRepo.GetByEventIdAsync(eventId);
             return photos.Where(p => p.IsApproved && p.IsVisible).Select(MapToDto);
         }
-        
+
         // NEW: Get pending photos
-        public async Task<IEnumerable<PhotoDto>> GetPendingByWeddingIdAsync(int weddingId)
+        public async Task<IEnumerable<PhotoDto>> GetPendingByEventIdAsync(int eventId)
         {
-            var photos = await _photoRepo.GetByWeddingIdAsync(weddingId);
+            var photos = await _photoRepo.GetByEventIdAsync(eventId);
             return photos.Where(p => !p.IsApproved).Select(MapToDto);
         }
-        
-        public async Task<PhotoDto> UploadAsync(int weddingId, PhotoUploadDto uploadDto)
+
+        public async Task<PhotoDto> UploadAsync(int eventId, PhotoUploadDto uploadDto)
         {
             var isCouple = uploadDto.UploadedBy == PhotoUploaderRole.Couple;
 
-            // 1. Check wedding exists
-            var wedding = await _weddingRepo.GetByIdAsync(weddingId);
-            if (wedding == null)
-                throw new KeyNotFoundException($"Wedding with ID {weddingId} not found");
+            // 1. Check event exists
+            var evt = await _eventRepo.GetByIdAsync(eventId);
+            if (evt == null)
+                throw new KeyNotFoundException($"Event with ID {eventId} not found");
 
             // 2. Guest uploads require PHOTO_BOOTH feature
             if (!isCouple)
             {
-                var isPhotoBoothEnabled = await _weddingFeatureRepo.IsFeatureEnabledAsync(weddingId, FeatureCodes.PhotoBooth);
+                var isPhotoBoothEnabled = await _eventFeatureRepo.IsFeatureEnabledAsync(eventId, FeatureCodes.PhotoBooth);
                 if (!isPhotoBoothEnabled)
-                    throw new InvalidOperationException("Photo Booth feature is not enabled for this wedding");
+                    throw new InvalidOperationException("Photo Booth feature is not enabled for this event");
 
                 if (string.IsNullOrWhiteSpace(uploadDto.GuestName))
                     throw new ArgumentException("Guest name is required");
@@ -107,7 +107,7 @@ namespace WeddingInvite.Core.Services
             //    stage can hold many, so those uploads always insert a fresh row.
             if (isCouple && uploadDto.TemplateSlot.HasValue && uploadDto.TemplateSlot.Value != TemplateSlots.LayerImage)
             {
-                var existing = await _photoRepo.GetByTemplateSlotAsync(weddingId, uploadDto.TemplateSlot.Value);
+                var existing = await _photoRepo.GetByTemplateSlotAsync(eventId, uploadDto.TemplateSlot.Value);
                 if (existing != null)
                 {
                     if (File.Exists(existing.FilePath))
@@ -118,7 +118,7 @@ namespace WeddingInvite.Core.Services
 
             // 6. Save file
             var subFolder = isCouple ? "Couple" : "Guest";
-            var uploadsFolder = Path.Combine("wwwroot", "uploads", weddingId.ToString(), subFolder);
+            var uploadsFolder = Path.Combine("wwwroot", "uploads", eventId.ToString(), subFolder);
             Directory.CreateDirectory(uploadsFolder);
 
             var uniqueFileName = $"{Guid.NewGuid()}{extension}";
@@ -133,14 +133,14 @@ namespace WeddingInvite.Core.Services
             var autoApprove = true;
             if (!isCouple)
             {
-                var config = await _templateConfigService.GetConfigAsync(weddingId);
+                var config = await _templateConfigService.GetConfigAsync(eventId);
                 autoApprove = !config.TryGetValue("photobooth.autoApprove", out var val) || val != "false";
             }
 
             // 8. Create photo record
             var photo = new Photo
             {
-                WeddingId = weddingId,
+                EventId = eventId,
                 GuestName = isCouple ? null : uploadDto.GuestName!.Trim(),
                 FileName = uniqueFileName,
                 FilePath = filePath,
@@ -159,7 +159,7 @@ namespace WeddingInvite.Core.Services
             return MapToDto(created);
         }
 
-        public async Task<PhotoDto> UploadPhotoAsync(int weddingId, CreatePhotoDto createDto, IFormFile file)
+        public async Task<PhotoDto> UploadPhotoAsync(int eventId, CreatePhotoDto createDto, IFormFile file)
         {
             var uploadDto = new PhotoUploadDto
             {
@@ -168,15 +168,15 @@ namespace WeddingInvite.Core.Services
                 File = file,
                 UploadedBy = PhotoUploaderRole.Guest
             };
-            return await UploadAsync(weddingId, uploadDto);
+            return await UploadAsync(eventId, uploadDto);
         }
 
-        public async Task<IEnumerable<PhotoDto>> GetCoupleMediaByWeddingIdAsync(int weddingId)
+        public async Task<IEnumerable<PhotoDto>> GetCoupleMediaByEventIdAsync(int eventId)
         {
-            var photos = await _photoRepo.GetCoupleMediaByWeddingIdAsync(weddingId);
+            var photos = await _photoRepo.GetCoupleMediaByEventIdAsync(eventId);
             return photos.Select(MapToDto);
         }
-        
+
         // NEW: Approve/Reject photo
         public async Task<PhotoDto> ApproveAsync(int id, ApprovePhotoDto approveDto, int approvedByUserId)
         {
@@ -192,7 +192,7 @@ namespace WeddingInvite.Core.Services
             var updated = await _photoRepo.UpdateAsync(photo);
             return MapToDto(updated);
         }
-        
+
         // NEW: Set featured
         public async Task<PhotoDto> SetFeaturedAsync(int id, bool isFeatured)
         {
@@ -204,43 +204,43 @@ namespace WeddingInvite.Core.Services
             var updated = await _photoRepo.UpdateAsync(photo);
             return MapToDto(updated);
         }
-        
+
         // ORIGINAL UPDATE METHOD
         public async Task<PhotoDto> UpdateAsync(int id, UpdatePhotoDto updateDto)
         {
             var photo = await _photoRepo.GetByIdAsync(id);
             if (photo == null)
                 throw new KeyNotFoundException($"Photo with ID {id} not found");
-            
+
             // Update fields
             photo.Caption = updateDto.Caption?.Trim() ?? string.Empty;
             photo.IsApproved = updateDto.IsApproved;
             photo.IsVisible = updateDto.IsVisible;
-            
+
             var updated = await _photoRepo.UpdateAsync(photo);
             return MapToDto(updated);
         }
-        
+
         public async Task<bool> DeleteAsync(int id)
         {
             var photo = await _photoRepo.GetByIdAsync(id);
             if (photo == null) return false;
-            
+
             // Delete file from disk
             if (File.Exists(photo.FilePath))
             {
                 File.Delete(photo.FilePath);
             }
-            
+
             // Delete from database
             return await _photoRepo.DeleteAsync(id);
         }
-        
-        public async Task<int> GetPhotoCountAsync(int weddingId)
+
+        public async Task<int> GetPhotoCountAsync(int eventId)
         {
-            return await _photoRepo.GetPhotoCountAsync(weddingId);
+            return await _photoRepo.GetPhotoCountAsync(eventId);
         }
-        
+
         // HELPER METHOD - Dynamically generates PhotoUrl from FilePath
         private PhotoDto MapToDto(Photo photo)
         {
@@ -248,11 +248,11 @@ namespace WeddingInvite.Core.Services
             var photoUrl = photo.FilePath
                 .Replace("wwwroot", "")
                 .Replace("\\", "/");
-            
+
             return new PhotoDto
             {
                 PhotoId = photo.PhotoId,
-                WeddingId = photo.WeddingId,
+                EventId = photo.EventId,
                 GuestName = photo.GuestName,
                 PhotoUrl = photoUrl,
                 Caption = photo.Caption,

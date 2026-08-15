@@ -15,18 +15,18 @@ namespace WeddingInvite.Data
         }
 
         // DbSet = A table in your database
-        // You can query these like: _context.Weddings.Where(...)
-        public DbSet<Wedding> Weddings { get; set; } = null!;
+        // You can query these like: _context.Events.Where(...)
+        public DbSet<Event> Events { get; set; } = null!;
         public DbSet<Guest> Guests { get; set; } = null!;
         public DbSet<Wish> Wishes { get; set; } = null!;
         public DbSet<Feature> Features { get; set; } = null!;
-        public DbSet<WeddingFeature> WeddingFeatures { get; set; } = null!;
+        public DbSet<EventFeature> EventFeatures { get; set; } = null!;
         public DbSet<Photo> Photos { get; set; } = null!;
         public DbSet<Template> Templates { get; set; } = null!; // Table name: Templates
         public DbSet<User> Users { get; set; } = null!;
         public DbSet<Package> Packages { get; set; } = null!;
         public DbSet<PackageFeature> PackageFeatures { get; set; } = null!;
-        public DbSet<WeddingTemplateConfig> TemplateConfigs { get; set; } = null!;
+        public DbSet<EventTemplateConfig> TemplateConfigs { get; set; } = null!;
         public DbSet<TemplateConfigDefault> TemplateConfigDefaults { get; set; } = null!;
         public DbSet<Table> Tables { get; set; } = null!;
         public DbSet<ItineraryItem> ItineraryItems { get; set; } = null!;
@@ -41,33 +41,39 @@ namespace WeddingInvite.Data
         {
             base.OnModelCreating(modelBuilder);
 
-            // Wedding configuration
-            modelBuilder.Entity<Wedding>(entity =>
+            // Event configuration
+            modelBuilder.Entity<Event>(entity =>
             {
-                entity.HasKey(e => e.WeddingId); // Primary key
+                entity.HasKey(e => e.EventId); // Primary key
 
-                entity.Property(e => e.CoupleName)
+                entity.Property(e => e.Slug)
                     .IsRequired() // Cannot be null
                     .HasMaxLength(100); // Max 100 characters
 
-                entity.HasIndex(e => e.CoupleName)
-                    .IsUnique(); // No two weddings can have same couple name
+                entity.HasIndex(e => e.Slug)
+                    .IsUnique(); // No two events can have same slug
 
                 entity.Property(e => e.Domain)
                     .HasMaxLength(253); // max DNS hostname length
 
-                // Custom domains must be globally unique, but many weddings have none (null).
+                // Custom domains must be globally unique, but many events have none (null).
                 entity.HasIndex(e => e.Domain)
                     .IsUnique()
                     .HasFilter("[Domain] IS NOT NULL");
 
-                entity.Property(e => e.BrideName)
+                entity.Property(e => e.EventType)
                     .IsRequired()
+                    .HasMaxLength(20)
+                    .HasDefaultValue("WEDDING");
+
+                entity.Property(e => e.Name1)
                     .HasMaxLength(100);
 
-                entity.Property(e => e.GroomName)
-                    .IsRequired()
+                entity.Property(e => e.Name2)
                     .HasMaxLength(100);
+
+                entity.Property(e => e.EventTitle)
+                    .HasMaxLength(200);
 
                 entity.Property(e => e.Venue)
                     .HasMaxLength(200);
@@ -76,7 +82,7 @@ namespace WeddingInvite.Data
                     .HasMaxLength(500);
 
                 entity.HasOne(e => e.Template)
-               .WithMany(t => t.Weddings)
+               .WithMany(t => t.Events)
                .HasForeignKey(e => e.TemplateId)
                .OnDelete(DeleteBehavior.Restrict);
 
@@ -98,17 +104,17 @@ namespace WeddingInvite.Data
                 entity.Property(e => e.Email)
                     .HasMaxLength(200);
 
-                entity.Property(e => e.BrideOrGroomSide)
+                entity.Property(e => e.GuestSide)
                     .HasMaxLength(20);
 
                 entity.Property(e => e.SongRequest)
                     .HasMaxLength(200);
 
-                // Define relationship: Guest belongs to Wedding
-                entity.HasOne(e => e.Wedding)
-                    .WithMany(w => w.Guests)
-                    .HasForeignKey(e => e.WeddingId)
-                    .OnDelete(DeleteBehavior.Cascade); // Delete guests if wedding deleted
+                // Define relationship: Guest belongs to Event
+                entity.HasOne(e => e.Event)
+                    .WithMany(ev => ev.Guests)
+                    .HasForeignKey(e => e.EventId)
+                    .OnDelete(DeleteBehavior.Cascade); // Delete guests if event deleted
             });
 
             // Wish configuration
@@ -125,9 +131,9 @@ namespace WeddingInvite.Data
                     .HasMaxLength(1000);
 
                 // Define relationship
-                entity.HasOne(e => e.Wedding)
-                    .WithMany(w => w.Wishes)
-                    .HasForeignKey(e => e.WeddingId)
+                entity.HasOne(e => e.Event)
+                    .WithMany(ev => ev.Wishes)
+                    .HasForeignKey(e => e.EventId)
                     .OnDelete(DeleteBehavior.Cascade);
             });
 
@@ -151,23 +157,23 @@ namespace WeddingInvite.Data
                     .HasMaxLength(500);
             });
 
-            // WeddingFeature configuration
-            modelBuilder.Entity<WeddingFeature>(entity =>
+            // EventFeature configuration
+            modelBuilder.Entity<EventFeature>(entity =>
             {
-                entity.HasKey(e => e.WeddingFeatureId);
+                entity.HasKey(e => e.EventFeatureId);
 
-                // Composite unique index (one feature per wedding)
-                entity.HasIndex(e => new { e.WeddingId, e.FeatureId })
+                // Composite unique index (one feature per event)
+                entity.HasIndex(e => new { e.EventId, e.FeatureId })
                     .IsUnique();
 
                 // Relationships
-                entity.HasOne(e => e.Wedding)
-                    .WithMany(w => w.WeddingFeatures)
-                    .HasForeignKey(e => e.WeddingId)
+                entity.HasOne(e => e.Event)
+                    .WithMany(ev => ev.EventFeatures)
+                    .HasForeignKey(e => e.EventId)
                     .OnDelete(DeleteBehavior.Cascade);
 
                 entity.HasOne(e => e.Feature)
-                    .WithMany(f => f.WeddingFeatures)
+                    .WithMany(f => f.EventFeatures)
                     .HasForeignKey(e => e.FeatureId)
                     .OnDelete(DeleteBehavior.Cascade);
             });
@@ -276,9 +282,9 @@ namespace WeddingInvite.Data
                     .IsRequired(false);
 
                 // Relationships
-                entity.HasOne(e => e.Wedding)
-                    .WithMany(w => w.Photos)
-                    .HasForeignKey(e => e.WeddingId)
+                entity.HasOne(e => e.Event)
+                    .WithMany(ev => ev.Photos)
+                    .HasForeignKey(e => e.EventId)
                     .OnDelete(DeleteBehavior.Cascade);
 
                 entity.HasOne(e => e.ApprovedBy)
@@ -315,6 +321,11 @@ namespace WeddingInvite.Data
                 entity.Property(e => e.ComponentPath)
                     .IsRequired()
                     .HasMaxLength(100);
+
+                entity.Property(e => e.EventTypes)
+                    .IsRequired()
+                    .HasMaxLength(100)
+                    .HasDefaultValue("WEDDING");
             });
 
             // Seed templates
@@ -429,9 +440,9 @@ namespace WeddingInvite.Data
                         .IsRequired()
                         .HasMaxLength(50);
 
-                    entity.HasOne(e => e.Wedding)
+                    entity.HasOne(e => e.Event)
                         .WithMany()
-                        .HasForeignKey(e => e.WeddingId)
+                        .HasForeignKey(e => e.EventId)
                         .OnDelete(DeleteBehavior.SetNull);
                 }
             );
@@ -568,9 +579,9 @@ namespace WeddingInvite.Data
                     .IsRequired()
                     .HasMaxLength(100);
 
-                entity.HasOne(e => e.Wedding)
+                entity.HasOne(e => e.Event)
                     .WithMany()
-                    .HasForeignKey(e => e.WeddingId)
+                    .HasForeignKey(e => e.EventId)
                     .OnDelete(DeleteBehavior.Cascade);
             });
 
@@ -595,16 +606,16 @@ namespace WeddingInvite.Data
                 entity.Property(e => e.Detail)
                     .HasMaxLength(500);
 
-                entity.HasOne(e => e.Wedding)
-                    .WithMany(w => w.ItineraryItems)
-                    .HasForeignKey(e => e.WeddingId)
+                entity.HasOne(e => e.Event)
+                    .WithMany(ev => ev.ItineraryItems)
+                    .HasForeignKey(e => e.EventId)
                     .OnDelete(DeleteBehavior.Cascade);
             });
 
-            // WeddingTemplateConfig configuration
-            modelBuilder.Entity<WeddingTemplateConfig>(entity =>
+            // EventTemplateConfig configuration
+            modelBuilder.Entity<EventTemplateConfig>(entity =>
             {
-                entity.HasKey(e => e.WeddingTemplateConfigId);
+                entity.HasKey(e => e.EventTemplateConfigId);
 
                 entity.Property(e => e.ConfigKey)
                     .IsRequired()
@@ -618,17 +629,17 @@ namespace WeddingInvite.Data
                     .IsRequired()
                     .HasMaxLength(4000);
 
-                entity.HasIndex(e => new { e.WeddingId, e.ConfigKey })
+                entity.HasIndex(e => new { e.EventId, e.ConfigKey })
                     .IsUnique();
 
-                entity.HasOne(e => e.Wedding)
+                entity.HasOne(e => e.Event)
                     .WithMany()
-                    .HasForeignKey(e => e.WeddingId)
+                    .HasForeignKey(e => e.EventId)
                     .OnDelete(DeleteBehavior.Cascade);
             });
 
             // TemplateConfigDefault configuration — the per-template "starting design" bag.
-            // Same shape/constraints as WeddingTemplateConfig, keyed by TemplateId instead.
+            // Same shape/constraints as EventTemplateConfig, keyed by TemplateId instead.
             modelBuilder.Entity<TemplateConfigDefault>(entity =>
             {
                 entity.HasKey(e => e.TemplateConfigDefaultId);
@@ -659,7 +670,7 @@ namespace WeddingInvite.Data
                     // Password: "Admin123!" (you can change this)
                     PasswordHash = BCrypt.Net.BCrypt.HashPassword("Admin123!"),
                     Role = UserRoles.SuperAdmin,
-                    WeddingId = null,
+                    EventId = null,
                     Tier = "FREE",
                     CreatedDate = DateTime.UtcNow
                 }

@@ -8,6 +8,17 @@ import { Input } from '@/components/ui/Input';
 import { Textarea } from '@/components/ui/Textarea';
 import { Switch } from '@/components/ui/Switch';
 import { Card } from '@/components/ui/Card';
+import { LANDING_CONTENT_DEFAULTS, DEFAULT_FEATURE_ITEMS, DEFAULT_STORY_ITEMS } from '@/lib/landing/defaults';
+
+const DEFAULT_ITEMS_BY_SECTION: Record<string, { title?: string; body: string; meta: string }[]> = {
+  features: DEFAULT_FEATURE_ITEMS,
+  stories: DEFAULT_STORY_ITEMS,
+};
+
+// Unsaved rows seeded from the live defaults get negative placeholder ids so the
+// UI can tell them apart from real rows (id === 0 elsewhere in this app usually
+// means "not yet created," but that clashes with LandingItemDto's shape here).
+let nextDraftId = -1;
 
 // Scalar content fields, grouped for the editor. Keys match app/home/page.tsx.
 const CONTENT_GROUPS: { title: string; fields: [string, string, boolean?][] }[] = [
@@ -45,8 +56,19 @@ export default function LandingAdminPage() {
     setLoading(true);
     try {
       const data: LandingDto = await landingService.get();
-      setContent(data.content ?? {});
-      setItems(data.items ?? []);
+      // A stored override wins; otherwise prefill with the copy that's actually
+      // live on the public page today (instead of leaving the field empty).
+      setContent({ ...LANDING_CONTENT_DEFAULTS, ...(data.content ?? {}) });
+      // Seed each item list from the live defaults if the CMS has no rows for it yet.
+      const items = data.items ?? [];
+      const seededItems = [...items];
+      for (const key of Object.keys(DEFAULT_ITEMS_BY_SECTION)) {
+        if (items.some((it) => it.sectionKey === key)) continue;
+        DEFAULT_ITEMS_BY_SECTION[key].forEach((d, i) => {
+          seededItems.push({ id: nextDraftId--, sectionKey: key, sortOrder: i, isActive: true, title: d.title ?? '', body: d.body, imageUrl: '', meta: d.meta });
+        });
+      }
+      setItems(seededItems);
       // seed the 4 middle sections if the CMS has none yet
       const existing = data.sections ?? [];
       const seeded = MIDDLE_SECTIONS.map((m, i) => existing.find((s) => s.sectionKey === m.key) ?? { id: 0, sectionKey: m.key, title: m.label, sortOrder: i, isVisible: true });
@@ -59,6 +81,11 @@ export default function LandingAdminPage() {
   // ── Content ──
   const setKey = (k: string, v: string) => setContent((c) => ({ ...c, [k]: v }));
   const saveContent = async () => { await landingService.saveContent(content); flash('Content saved'); };
+  const resetGroup = (keys: string[]) => setContent((c) => {
+    const next = { ...c };
+    for (const k of keys) next[k] = LANDING_CONTENT_DEFAULTS[k] ?? '';
+    return next;
+  });
 
   // ── Sections (order + visibility) ──
   const move = (i: number, dir: -1 | 1) => {
@@ -92,12 +119,29 @@ export default function LandingAdminPage() {
     const created = await landingService.createItem({ sectionKey, sortOrder: (itemsBy[sectionKey]?.length ?? 0), isActive: true, title: '', body: '', imageUrl: '', meta: '' });
     setItems((arr) => [...arr, created]);
   };
+  // Rows seeded from the live defaults carry a negative placeholder id (never
+  // persisted) — the first save creates them for real instead of PUTing to a
+  // row that doesn't exist yet.
   const saveItem = async (it: LandingItemDto) => {
-    const saved = await landingService.updateItem(it.id, { sectionKey: it.sectionKey, sortOrder: it.sortOrder, isActive: it.isActive, title: it.title, body: it.body, imageUrl: it.imageUrl, meta: it.meta });
-    patchItem(it.id, saved);
+    const payload = { sectionKey: it.sectionKey, sortOrder: it.sortOrder, isActive: it.isActive, title: it.title, body: it.body, imageUrl: it.imageUrl, meta: it.meta };
+    if (it.id < 0) {
+      const created = await landingService.createItem(payload);
+      setItems((arr) => arr.map((row) => (row.id === it.id ? created : row)));
+    } else {
+      const saved = await landingService.updateItem(it.id, payload);
+      patchItem(it.id, saved);
+    }
     flash('Item saved');
   };
-  const removeItem = async (id: number) => { await landingService.deleteItem(id); setItems((arr) => arr.filter((it) => it.id !== id)); };
+  const saveAllItems = async (sectionKey: string) => {
+    for (const it of itemsBy[sectionKey] ?? []) await saveItem(it);
+    flash(`${MIDDLE_SECTIONS.find((m) => m.key === sectionKey)?.label ?? sectionKey} saved`);
+  };
+  const removeItem = async (id: number) => {
+    if (id < 0) { setItems((arr) => arr.filter((it) => it.id !== id)); return; } // unsaved draft row
+    await landingService.deleteItem(id);
+    setItems((arr) => arr.filter((it) => it.id !== id));
+  };
   const uploadImage = async (it: LandingItemDto, file: File) => { const url = await landingService.uploadImage(file); patchItem(it.id, { imageUrl: url }); };
 
   if (loading) return <div style={{ padding: 32, color: 'var(--muted)' }}>Loading…</div>;
@@ -117,7 +161,10 @@ export default function LandingAdminPage() {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
           {CONTENT_GROUPS.map((g) => (
             <div key={g.title}>
-              <p style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--text-subtle)', margin: '0 0 10px' }}>{g.title}</p>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', margin: '0 0 10px' }}>
+                <p style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--text-subtle)', margin: 0 }}>{g.title}</p>
+                <Button variant="ghost" size="sm" onClick={() => resetGroup(g.fields.map(([key]) => key))}>Reset to default</Button>
+              </div>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 12 }}>
                 {g.fields.map(([key, label, area]) => area
                   ? <Textarea key={key} label={label} value={content[key] ?? ''} onChange={(e) => setKey(key, e.target.value)} rows={2} />
@@ -172,7 +219,10 @@ export default function LandingAdminPage() {
               </div>
             ))}
           </div>
-          <div style={{ marginTop: 14 }}><Button variant="soft" onClick={() => addItem(g.key)}>+ Add {g.label.toLowerCase()}</Button></div>
+          <div style={{ marginTop: 14, display: 'flex', gap: 10 }}>
+            <Button variant="soft" onClick={() => addItem(g.key)}>+ Add {g.label.toLowerCase()}</Button>
+            <Button variant="secondary" onClick={() => saveAllItems(g.key)}>Save all</Button>
+          </div>
         </Card>
       ))}
 

@@ -16,23 +16,14 @@ dotnet ef migrations add <MigrationName> --project backend/WeddingInvite.Data --
 dotnet ef database update --project backend/WeddingInvite.Data --startup-project backend/WeddingInvite.API
 ```
 
-### Frontend
-```bash
-# From frontend/
-npm run dev     # Dev server on :3000
-npm run build   # Production build
-npm run lint    # ESLint
-```
+**Before applying any migration to the production SQLite file** (`wedding.db` on the VPS,
+`/opt/wedding-app` — see Quick Deploy below): take a manual file-level backup first
+(`cp wedding.db wedding.db.bak-$(date +%Y%m%d%H%M%S)`), and review the generated SQL with
+`dotnet ef migrations script` before running `database update` against it. EF's `RenameTable`/
+`RenameColumn` operations are safe for renames (no data loss), but there is no automatic
+pre-migration backup — this is a required manual step, not something the tooling does for you.
 
 ## Architecture
-
-### Monorepo Layout
-- `backend/` — ASP.NET Core 10 solution (`WeddingInvite.slnx`)
-  - `WeddingInvite.Models` — EF entity classes only
-  - `WeddingInvite.Data` — `AppDbContext`, repositories, migrations
-  - `WeddingInvite.Core` — DTOs, service interfaces + implementations
-  - `WeddingInvite.API` — controllers, DI wiring (`Program.cs`), static file serving
-- `frontend/` — Next.js 16 (App Router, TypeScript)
 
 ### Backend Pattern: Repository → Service → Controller
 All repos/services are registered as **scoped** in `Program.cs`. When adding new functionality:
@@ -47,6 +38,7 @@ All repos/services are registered as **scoped** in `Program.cs`. When adding new
 - Token is read from cookies in `Program.cs` via `OnMessageReceived` event
 - `IWeddingAuthorizationService` / `CanAccessWeddingAsync` enforces couple/host admin can only access their own wedding(s)
 - Tiers: `User.Tier` and `Template.Tier` are `FREE | PREMIUM | PRO` — templates are tier-gated. **No billing/payment integration exists yet** (tier changes are manual)
+- `Template.EventTypes` is a separate CSV field (`WEDDING`/`CEREMONY`/`PARTY`, e.g. `"WEDDING,CEREMONY"`) — which event the public `/personalise/picker` funnel shows a template under. Not tier-related; edited via a checkbox group on `/super-admin/themes`. `TemplateService.NormalizeEventTypes` upper-cases/validates on save and falls back to `WEDDING` if nothing recognised survives. `frontend/lib/eventTypes.ts` (`EVENT_TYPES`, `parseEventTypes`, `matchesEvent`) is the shared frontend vocabulary.
 - **Package rows ARE the tier definitions** (`Package`/`PackageFeature`, exactly `FREE`/`PREMIUM`/`PRO` — `PackageService` rejects creating or deleting any other code). `IPackageRepository.TierIncludesFeatureAsync` is the single source of truth for "does this tier include this feature," replacing the old hardcoded `TierEntitlements.AllowsFeature` map. Edited at `/super-admin/packages`. `Wedding.PackageId` no longer exists — a wedding's feature set comes from its owner's `User.Tier` alone, resolved through this lookup (see `WeddingFeatureService`/`WeddingService.SetDomainAsync`). Custom Domain needs both the PRO tier ceiling *and* an explicit per-wedding `WeddingFeature` toggle (same two-step gate as `PHOTO_BOOTH`/`SEATING`).
 
 ### Wedding lifecycle: delete vs. deactivate
@@ -74,24 +66,8 @@ header ("Export data").
 ### Frontend API Layer
 All API calls go through `frontend/lib/api/` and are exported from `index.ts`. Each service file wraps an `apiClient` (Axios instance). **Always add new service methods to the relevant service file and re-export from `index.ts`.**
 
-### Routing (Next.js App Router)
-- `/` — public landing
-- `/login` — shared login; redirects by role
-- `/super-admin/*` — SUPER_ADMIN dashboard (weddings, packages, features, themes, hosts, per-wedding tabs)
-- `/host-admin/*` — HOST_ADMIN (reseller) dashboard; create/manage owned weddings
-- `/couple-admin/*` — COUPLE_ADMIN dashboard + customize page
-- `/wedding/[coupleName]/*` — public invitation pages (feature-gated)
-- `/home`, `/templates`, `/try` — public self-serve funnel
-
-### Frontend → Backend Proxy
-`next.config.ts` rewrites:
-- `/api/*` → `http://localhost:5000/api/*`
-- `/uploads/*` → `http://localhost:5000/uploads/*`
-
-So all frontend fetches use relative paths (`/api/...`). `NEXT_PUBLIC_API_URL=/api` means `API_BASE = ''` for photo/static URLs.
-
 ### Feature Gating
-Features are toggled per-wedding via `WeddingFeature` junction table. Codes in `FeatureCodes.cs`: `RSVP`, `WISHES`, `PHOTO_BOOTH`, `SEATING`, `GALLERY`, `COUNTDOWN`, `CUSTOM_DOMAIN`. Public pages check feature state before rendering tabs/sections.
+Features are toggled per-wedding via `WeddingFeature` junction table. Public pages check feature state before rendering tabs/sections.
 
 ### Template Customization
 `WeddingTemplateConfig` stores key-value config per wedding. Templates read it with a
@@ -136,9 +112,6 @@ inspector renders itself from `getConfigFields(templateId, role)` — there are 
   `/template-preview/[code]` (the no-real-wedding sample/thumbnail render), via
   `GET /api/template-config/template/{id}/default`, so a template's picker thumbnail reflects its
   captured design instead of raw code defaults.
-
-### EF Migrations (28 total, in order)
-`InitialCreate` → `AddFeaturesAndPhotos` → `AddTemplates` → `RenameTemplateToTemplates` → `AddUsers` → `AddPhotoModeration` → `AddPackages` → `AddWeddingMedia` → `MergeWeddingMediaIntoPhoto` → `AddTemplateConfig` → `AddUserIsActive` → `AddSeatingTables` → `AddTemplate4MinimalNoir` → `AddTemplate5DreamingFloralSky` → `AddItinerary` → `AddTemplate6FairyGarden` → `AddWeddingMaxPax` → `AddWeddingCapacity` → `AddWeddingIsRsvpOpen` → `AddWeddingCreatedBy` → `AddTemplateTier` → `AddUserTier` → `AddWeddingIsPublic` → `AddPasswordResetToken` → `AddWeddingCustomDomain` → `AddTemplate7RomanGarden` → `AddLandingContent` → `AddTemplateConfigDefaultAndPackageTierUnification`
 
 ## Stage + layer engine (`components/templates/_shared/`)
 

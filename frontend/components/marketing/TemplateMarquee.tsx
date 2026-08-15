@@ -55,15 +55,15 @@ export function TemplateMarquee({ templates }: { templates: Template[] }) {
       onPointerCancel={up}
       style={{ position: 'relative', overflow: 'hidden', touchAction: 'pan-y', cursor: 'grab', width: '100%', maskImage: 'linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent)', WebkitMaskImage: 'linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent)' }}
     >
-      <div ref={trackRef} style={{ display: 'flex', gap: 22, alignItems: 'center', padding: '4px 22px', willChange: 'transform' }}>
+      <div ref={trackRef} style={{ display: 'flex', gap: 22, alignItems: 'flex-start', padding: '4px 22px', willChange: 'transform' }}>
         {cards.map((t, i) => (
           <div key={`${t.templateId}-${i}`} style={{ flex: 'none', width: 200 }}>
             <div style={{ borderRadius: 22, overflow: 'hidden', border: '3px solid var(--mkt-ink)', boxShadow: '0 16px 30px rgba(23,19,13,.24)' }}>
-              <TemplatePreview templateCode={t.templateCode} thumbnailUrl={t.thumbnailUrl} />
+              <TemplatePreview templateCode={t.templateCode} thumbnailUrl={t.thumbnailUrl} aspect="390 / 700" />
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 12 }}>
-              <span style={{ fontFamily: 'var(--mkt-serif)', fontWeight: 600, fontSize: 16, color: 'var(--mkt-ink)' }}>{t.templateName}</span>
-              <span style={{ fontFamily: 'var(--mkt-sans)', fontWeight: 600, fontSize: 11, letterSpacing: '.04em', textTransform: 'uppercase', color: 'var(--mkt-gold-ink)', border: '1.5px solid var(--mkt-gold)', borderRadius: 999, padding: '2px 8px' }}>
+            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'center', gap: 8, marginTop: 12, minHeight: 46 }}>
+              <span style={{ fontFamily: 'var(--mkt-serif)', fontWeight: 600, fontSize: 16, color: 'var(--mkt-ink)', textAlign: 'center' }}>{t.templateName}</span>
+              <span style={{ flexShrink: 0, fontFamily: 'var(--mkt-sans)', fontWeight: 600, fontSize: 11, letterSpacing: '.04em', textTransform: 'uppercase', color: 'var(--mkt-gold-ink)', border: '1.5px solid var(--mkt-gold)', borderRadius: 999, padding: '2px 8px' }}>
                 {TIER_LABEL[t.tier?.toUpperCase() ?? 'FREE'] ?? t.tier}
               </span>
             </div>

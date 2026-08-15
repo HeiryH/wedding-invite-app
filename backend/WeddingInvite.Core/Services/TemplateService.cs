@@ -48,7 +48,7 @@ namespace WeddingInvite.Core.Services
         public async Task<IEnumerable<TemplateUsageDto>> GetAllWithUsageAsync()
         {
             var templates = await _templateRepo.GetAllAsync();
-            var counts = await _templateRepo.GetWeddingCountsByTemplateAsync();
+            var counts = await _templateRepo.GetEventCountsByTemplateAsync();
 
             return templates
                 .Select(t => new TemplateUsageDto
@@ -65,6 +65,7 @@ namespace WeddingInvite.Core.Services
                     IsPremium = t.IsPremium,
                     Tier = t.Tier,
                     SortOrder = t.SortOrder,
+                    EventTypes = t.EventTypes,
                     WeddingCount = counts.TryGetValue(t.TemplateId, out var c) ? c : 0
                 })
                 // Active first, then most-used, then sort order
@@ -86,6 +87,7 @@ namespace WeddingInvite.Core.Services
             template.IsPremium = template.Tier != "FREE"; // keep boolean in sync with tier
             template.IsActive = updateDto.IsActive;
             template.SortOrder = updateDto.SortOrder;
+            template.EventTypes = NormalizeEventTypes(updateDto.EventTypes);
 
             var updated = await _templateRepo.UpdateAsync(template);
             return MapToDto(updated);
@@ -153,8 +155,23 @@ namespace WeddingInvite.Core.Services
                 IsActive = template.IsActive,
                 IsPremium = template.IsPremium,
                 Tier = template.Tier,
-                SortOrder = template.SortOrder
+                SortOrder = template.SortOrder,
+                EventTypes = template.EventTypes
             };
+        }
+
+        // Upper-cases, splits, trims, and keeps only recognised event-type codes — never
+        // trusts the client string directly. Falls back to WEDDING if nothing survives.
+        private static string NormalizeEventTypes(string? raw)
+        {
+            var kept = (raw ?? string.Empty)
+                .Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries)
+                .Select(s => s.ToUpperInvariant())
+                .Where(s => Models.EventTypes.All.Contains(s))
+                .Distinct()
+                .ToArray();
+
+            return kept.Length > 0 ? string.Join(",", kept) : Models.EventTypes.Wedding;
         }
     }
 }

@@ -7,12 +7,12 @@ namespace WeddingInvite.Core.Services
     public class ItineraryService : IItineraryService
     {
         private readonly IItineraryRepository _itineraryRepo;
-        private readonly IWeddingRepository _weddingRepo;
+        private readonly IEventRepository _eventRepo;
 
-        public ItineraryService(IItineraryRepository itineraryRepo, IWeddingRepository weddingRepo)
+        public ItineraryService(IItineraryRepository itineraryRepo, IEventRepository eventRepo)
         {
             _itineraryRepo = itineraryRepo;
-            _weddingRepo = weddingRepo;
+            _eventRepo = eventRepo;
         }
 
         public async Task<ItineraryItemDto?> GetByIdAsync(int id)
@@ -21,24 +21,24 @@ namespace WeddingInvite.Core.Services
             return item == null ? null : MapToDto(item);
         }
 
-        public async Task<IEnumerable<ItineraryItemDto>> GetByWeddingIdAsync(int weddingId)
+        public async Task<IEnumerable<ItineraryItemDto>> GetByEventIdAsync(int eventId)
         {
-            var items = await _itineraryRepo.GetByWeddingIdAsync(weddingId);
+            var items = await _itineraryRepo.GetByEventIdAsync(eventId);
             return items.Select(MapToDto);
         }
 
-        public async Task<ItineraryItemDto> CreateAsync(int weddingId, CreateItineraryItemDto dto)
+        public async Task<ItineraryItemDto> CreateAsync(int eventId, CreateItineraryItemDto dto)
         {
-            var wedding = await _weddingRepo.GetByIdAsync(weddingId);
-            if (wedding == null)
-                throw new KeyNotFoundException($"Wedding with ID {weddingId} not found");
+            var evt = await _eventRepo.GetByIdAsync(eventId);
+            if (evt == null)
+                throw new KeyNotFoundException($"Event with ID {eventId} not found");
 
             if (string.IsNullOrWhiteSpace(dto.Label))
                 throw new ArgumentException("Label is required");
 
             var item = new ItineraryItem
             {
-                WeddingId = weddingId,
+                EventId = eventId,
                 Label = dto.Label.Trim(),
                 Detail = dto.Detail.Trim(),
                 SortOrder = dto.SortOrder,
@@ -70,16 +70,16 @@ namespace WeddingInvite.Core.Services
             return await _itineraryRepo.DeleteAsync(id);
         }
 
-        public async Task ReorderAsync(int weddingId, ReorderItineraryDto dto)
+        public async Task ReorderAsync(int eventId, ReorderItineraryDto dto)
         {
             var updates = dto.Items.Select(i => (i.ItineraryItemId, i.SortOrder)).ToList();
-            await _itineraryRepo.ReorderAsync(weddingId, updates);
+            await _itineraryRepo.ReorderAsync(eventId, updates);
         }
 
         private static ItineraryItemDto MapToDto(ItineraryItem item) => new()
         {
             ItineraryItemId = item.ItineraryItemId,
-            WeddingId = item.WeddingId,
+            EventId = item.EventId,
             Label = item.Label,
             Detail = item.Detail,
             SortOrder = item.SortOrder,

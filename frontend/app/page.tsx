@@ -12,7 +12,7 @@ export default function RootPage() {
     if (user) {
       if (user.role === 'SUPER_ADMIN')  { router.replace('/super-admin'); return; }
       if (user.role === 'HOST_ADMIN')   { router.replace('/host-admin'); return; }
-      if (user.role === 'COUPLE_ADMIN') { router.replace('/couple-admin'); return; }
+      if (user.role === 'ORGANIZER_ADMIN') { router.replace('/organizer-admin'); return; }
     }
     router.replace('/home');
   }, [router]);

@@ -19,13 +19,13 @@ public class TemplateConfigTests
     private static TestDb SeedWedding()
     {
         var db = new TestDb();
-        db.Context.Weddings.Add(new Wedding
+        db.Context.Events.Add(new Event
         {
-            WeddingId = WeddingId,
-            CoupleName = "ali-and-siti",
-            BrideName = "Siti",
-            GroomName = "Ali",
-            WeddingDate = new DateTime(2026, 12, 1),
+            EventId = WeddingId,
+            Slug = "ali-and-siti",
+            Name1 = "Siti",
+            Name2 = "Ali",
+            EventDate = new DateTime(2026, 12, 1),
             Venue = "Empire",
             TemplateId = 7,
         });
@@ -35,7 +35,7 @@ public class TemplateConfigTests
 
     private static TemplateConfigService ServiceFor(TestDb db) =>
         new(new TemplateConfigRepository(db.Context), new TemplateConfigDefaultRepository(db.Context),
-            new WeddingRepository(db.Context));
+            new EventRepository(db.Context));
 
     private static Dictionary<string, string> Bag(params (string Key, string Value)[] pairs) =>
         pairs.ToDictionary(p => p.Key, p => p.Value, StringComparer.Ordinal);
@@ -80,23 +80,23 @@ public class TemplateConfigTests
     public void CanWrite_LayoutKeysRequireProTier()
     {
         // The Adjust panel is a PRO feature.
-        Assert.True(TemplateConfigPolicy.CanWrite("t7.layout.mobile.welcome", UserRoles.CoupleAdmin, "PRO"));
-        Assert.False(TemplateConfigPolicy.CanWrite("t7.layout.mobile.welcome", UserRoles.CoupleAdmin, "PREMIUM"));
-        Assert.False(TemplateConfigPolicy.CanWrite("t7.layout.mobile.welcome", UserRoles.CoupleAdmin, "FREE"));
-        Assert.False(TemplateConfigPolicy.CanWrite("t7.layout.mobile.welcome", UserRoles.CoupleAdmin, null));
+        Assert.True(TemplateConfigPolicy.CanWrite("t7.layout.mobile.welcome", UserRoles.OrganizerAdmin, "PRO"));
+        Assert.False(TemplateConfigPolicy.CanWrite("t7.layout.mobile.welcome", UserRoles.OrganizerAdmin, "PREMIUM"));
+        Assert.False(TemplateConfigPolicy.CanWrite("t7.layout.mobile.welcome", UserRoles.OrganizerAdmin, "FREE"));
+        Assert.False(TemplateConfigPolicy.CanWrite("t7.layout.mobile.welcome", UserRoles.OrganizerAdmin, null));
     }
 
     [Fact]
     public void CanWrite_NonLayoutKeysIgnoreTier()
     {
         // A couple on any tier can still edit ordinary content.
-        Assert.True(TemplateConfigPolicy.CanWrite("invite.body", UserRoles.CoupleAdmin, "FREE"));
+        Assert.True(TemplateConfigPolicy.CanWrite("invite.body", UserRoles.OrganizerAdmin, "FREE"));
         // handleSave writes section.order every save; a tier gate here would silently drop reorders.
-        Assert.True(TemplateConfigPolicy.CanWrite("section.order", UserRoles.CoupleAdmin, "FREE"));
+        Assert.True(TemplateConfigPolicy.CanWrite("section.order", UserRoles.OrganizerAdmin, "FREE"));
     }
 
     [Theory]
-    [InlineData(UserRoles.CoupleAdmin)]
+    [InlineData(UserRoles.OrganizerAdmin)]
     [InlineData(UserRoles.HostAdmin)]
     public void CanWrite_NonAdminBlockedFromAdminKeys(string role)
     {
@@ -148,10 +148,10 @@ public class TemplateConfigTests
 
         await svc.SaveConfigAsync(WeddingId, Bag(
             ("invite.body", "hello"),
-            ("wish.prompt", "leave a note")), UserRoles.CoupleAdmin, "PRO");
+            ("wish.prompt", "leave a note")), UserRoles.OrganizerAdmin, "PRO");
 
         // Second save drops wish.prompt — e.g. the couple switched to a template without it.
-        await svc.SaveConfigAsync(WeddingId, Bag(("invite.body", "hello")), UserRoles.CoupleAdmin, "PRO");
+        await svc.SaveConfigAsync(WeddingId, Bag(("invite.body", "hello")), UserRoles.OrganizerAdmin, "PRO");
 
         var stored = await svc.GetConfigAsync(WeddingId);
         Assert.Equal("hello", stored["invite.body"]);
@@ -169,7 +169,7 @@ public class TemplateConfigTests
             ("nav.rsvp", "Reply")), UserRoles.SuperAdmin, "PRO");
 
         // A couple saves a bag that mentions neither admin key. Both must survive.
-        await svc.SaveConfigAsync(WeddingId, Bag(("invite.body", "hi")), UserRoles.CoupleAdmin, "PRO");
+        await svc.SaveConfigAsync(WeddingId, Bag(("invite.body", "hi")), UserRoles.OrganizerAdmin, "PRO");
 
         var stored = await svc.GetConfigAsync(WeddingId);
         Assert.Equal("night", stored["scene.environment"]);
@@ -187,7 +187,7 @@ public class TemplateConfigTests
             WeddingId, Bag(("nav.rsvp", "ADMIN")), UserRoles.SuperAdmin, "PRO");
 
         await svc.SaveConfigAsync(
-            WeddingId, Bag(("nav.rsvp", "HIJACKED")), UserRoles.CoupleAdmin, "PRO");
+            WeddingId, Bag(("nav.rsvp", "HIJACKED")), UserRoles.OrganizerAdmin, "PRO");
 
         var stored = await svc.GetConfigAsync(WeddingId);
         Assert.Equal("ADMIN", stored["nav.rsvp"]);
@@ -201,13 +201,13 @@ public class TemplateConfigTests
 
         await svc.SaveConfigAsync(
             WeddingId, Bag(("t7.layout.mobile.welcome", "{\"layers\":[{\"id\":\"arch\",\"y\":40}]}")),
-            UserRoles.CoupleAdmin, "PRO");
+            UserRoles.OrganizerAdmin, "PRO");
 
         var afterEdit = await svc.GetConfigAsync(WeddingId);
         Assert.Equal("{\"layers\":[{\"id\":\"arch\",\"y\":40}]}", afterEdit["t7.layout.mobile.welcome"]);
 
         // Resetting the stage back to its defaults is expressed by omitting the key — which prunes it.
-        await svc.SaveConfigAsync(WeddingId, Bag(("invite.body", "hi")), UserRoles.CoupleAdmin, "PRO");
+        await svc.SaveConfigAsync(WeddingId, Bag(("invite.body", "hi")), UserRoles.OrganizerAdmin, "PRO");
 
         var afterReset = await svc.GetConfigAsync(WeddingId);
         Assert.DoesNotContain("t7.layout.mobile.welcome", afterReset.Keys);
@@ -225,7 +225,7 @@ public class TemplateConfigTests
         await svc.SaveConfigAsync(WeddingId, Bag(
             ("invite.body", "hello"),
             ("t7.layout.mobile.welcome", "{\"layers\":[{\"id\":\"arch\",\"y\":40}]}")),
-            UserRoles.CoupleAdmin, tier);
+            UserRoles.OrganizerAdmin, tier);
 
         var stored = await svc.GetConfigAsync(WeddingId);
         Assert.Equal("hello", stored["invite.body"]);          // ordinary content still saves
@@ -239,11 +239,11 @@ public class TemplateConfigTests
         var svc = ServiceFor(db);
 
         // Authored while PRO…
-        await svc.SaveConfigAsync(WeddingId, Bag(("t7.layout.mobile.welcome", "{}")), UserRoles.CoupleAdmin, "PRO");
+        await svc.SaveConfigAsync(WeddingId, Bag(("t7.layout.mobile.welcome", "{}")), UserRoles.OrganizerAdmin, "PRO");
 
         // …then the couple is downgraded and saves a bag that omits the layout key. It must NOT be
         // pruned — the layout still renders on the public page, they just can't edit it.
-        await svc.SaveConfigAsync(WeddingId, Bag(("invite.body", "hi")), UserRoles.CoupleAdmin, "FREE");
+        await svc.SaveConfigAsync(WeddingId, Bag(("invite.body", "hi")), UserRoles.OrganizerAdmin, "FREE");
 
         var stored = await svc.GetConfigAsync(WeddingId);
         Assert.Equal("{}", stored["t7.layout.mobile.welcome"]);
@@ -257,10 +257,10 @@ public class TemplateConfigTests
         var svc = ServiceFor(db);
         var bag = Bag(("invite.body", "hello"), ("music.url", "/uploads/song.mp3"));
 
-        await svc.SaveConfigAsync(WeddingId, bag, UserRoles.CoupleAdmin, "PRO");
-        await svc.SaveConfigAsync(WeddingId, bag, UserRoles.CoupleAdmin, "PRO");
+        await svc.SaveConfigAsync(WeddingId, bag, UserRoles.OrganizerAdmin, "PRO");
+        await svc.SaveConfigAsync(WeddingId, bag, UserRoles.OrganizerAdmin, "PRO");
 
-        var rows = db.Fresh().TemplateConfigs.Where(c => c.WeddingId == WeddingId).ToList();
+        var rows = db.Fresh().TemplateConfigs.Where(c => c.EventId == WeddingId).ToList();
         Assert.Equal(2, rows.Count); // no duplicate rows from the unique (WeddingId, ConfigKey) index
     }
 }

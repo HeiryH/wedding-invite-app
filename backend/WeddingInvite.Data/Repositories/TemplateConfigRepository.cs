@@ -12,20 +12,20 @@ namespace WeddingInvite.Data.Repositories
             _context = context;
         }
 
-        public async Task<IEnumerable<WeddingTemplateConfig>> GetByWeddingIdAsync(int weddingId)
+        public async Task<IEnumerable<EventTemplateConfig>> GetByEventIdAsync(int eventId)
         {
             return await _context.TemplateConfigs
-                .Where(c => c.WeddingId == weddingId)
+                .Where(c => c.EventId == eventId)
                 .ToListAsync();
         }
 
         public async Task UpsertAsync(
-            int weddingId,
+            int eventId,
             Dictionary<string, string> configs,
             Func<string, bool> canPrune)
         {
             var existing = await _context.TemplateConfigs
-                .Where(c => c.WeddingId == weddingId)
+                .Where(c => c.EventId == eventId)
                 .ToDictionaryAsync(c => c.ConfigKey, StringComparer.Ordinal);
 
             foreach (var (key, value) in configs)
@@ -38,9 +38,9 @@ namespace WeddingInvite.Data.Repositories
                 }
                 else
                 {
-                    _context.TemplateConfigs.Add(new WeddingTemplateConfig
+                    _context.TemplateConfigs.Add(new EventTemplateConfig
                     {
-                        WeddingId = weddingId,
+                        EventId = eventId,
                         ConfigKey = key,
                         ConfigValue = value,
                         UpdatedDate = DateTime.UtcNow

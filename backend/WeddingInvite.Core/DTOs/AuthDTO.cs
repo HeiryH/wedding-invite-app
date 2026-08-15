@@ -11,7 +11,7 @@ namespace WeddingInvite.Core.DTOs
         public string Token { get; set; } = string.Empty;
         public string Email { get; set; } = string.Empty;
         public string Role { get; set; } = string.Empty;
-        public int? WeddingId { get; set; }
+        public int? EventId { get; set; }
         public string Tier { get; set; } = "FREE";
     }
 
@@ -24,9 +24,16 @@ namespace WeddingInvite.Core.DTOs
     {
         public string Email { get; set; } = string.Empty;
         public string Password { get; set; } = string.Empty;
-        public string BrideName { get; set; } = string.Empty;
-        public string GroomName { get; set; } = string.Empty;
-        public string WeddingDate { get; set; } = string.Empty;
+        // WEDDING: both required. PARTY: Name1 only. CEREMONY: EventTitle only. See
+        // EventNaming.HasRequiredNaming, the single source of truth for this validation
+        // (mirrored here rather than reused directly since self-register builds its own Event).
+        public string? Name1 { get; set; }
+        public string? Name2 { get; set; }
+        public string? EventTitle { get; set; }
+        // Defaults to WEDDING server-side (AuthController.SelfRegister) if not sent, so any
+        // caller that predates event-type selection keeps working unchanged.
+        public string? EventType { get; set; }
+        public string EventDate { get; set; } = string.Empty;
         public string Venue { get; set; } = string.Empty;
         public string VenueAddress { get; set; } = string.Empty;
         public int TemplateId { get; set; } = 1;
@@ -48,12 +55,12 @@ namespace WeddingInvite.Core.DTOs
     {
         public string Email { get; set; } = string.Empty;
         public string Password { get; set; } = string.Empty;
-        public int WeddingId { get; set; }
+        public int EventId { get; set; }
     }
 
-    public class CreateCoupleAdminDto
+    public class CreateOrganizerAdminDto
     {
-        public int WeddingId { get; set; }
+        public int EventId { get; set; }
         public string Email { get; set; } = string.Empty;
         public string Password { get; set; } = string.Empty;
     }

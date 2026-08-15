@@ -25,7 +25,7 @@ public class PasswordResetTests : IDisposable
 
         _tokenRepo = new PasswordResetTokenRepository(_db.Context);
         _sut = new AuthService(new UserRepository(_db.Context), config, _tokenRepo, _email,
-            new WeddingRepository(_db.Context));
+            new EventRepository(_db.Context));
     }
 
     private User SeedUser(string email = "user@x.com", string password = "OldPass1", bool active = true)
@@ -33,7 +33,7 @@ public class PasswordResetTests : IDisposable
         var u = new User
         {
             Email = email, PasswordHash = BCrypt.Net.BCrypt.HashPassword(password),
-            Role = UserRoles.CoupleAdmin, IsActive = active,
+            Role = UserRoles.OrganizerAdmin, IsActive = active,
         };
         _db.Context.Users.Add(u);
         _db.Context.SaveChanges();

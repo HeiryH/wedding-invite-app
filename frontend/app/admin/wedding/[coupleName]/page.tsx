@@ -3,13 +3,14 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { weddingService, guestService, wishService, Wedding, Guest, Wish } from '@/lib/api';
+import { eventService, guestService, wishService, Event, Guest, Wish } from '@/lib/api';
+import { urlSegmentForEventType } from '@/lib/eventTypes';
 
 export default function AdminDashboard() {
     const params = useParams();
     const coupleName = params.coupleName as string;
 
-    const [wedding, setWedding] = useState<Wedding | null>(null);
+    const [wedding, setWedding] = useState<Event | null>(null);
     const [guests, setGuests] = useState<Guest[]>([]);
     const [wishes, setWishes] = useState<Wish[]>([]);
     const [loading, setLoading] = useState(true);
@@ -37,13 +38,13 @@ export default function AdminDashboard() {
                 setLoading(true);
 
                 // 1. Get the wedding first (since we need the ID for others)
-                const weddingData = await weddingService.getByCoupleName(coupleName);
+                const weddingData = await eventService.getBySlug(coupleName);
                 setWedding(weddingData);
 
                 // 2. Fire the next two AT THE SAME TIME
                 const [guestsData, wishesData] = await Promise.all([
-                    guestService.getByWeddingId(weddingData.weddingId),
-                    wishService.getByWeddingId(weddingData.weddingId)
+                    guestService.getByWeddingId(weddingData.eventId),
+                    wishService.getByWeddingId(weddingData.eventId)
                 ]);
 
                 setGuests(guestsData);
@@ -61,20 +62,24 @@ export default function AdminDashboard() {
     useEffect(() => {
         if (wedding) {
             setEditWeddingData({
-                brideName: wedding.brideName,
-                groomName: wedding.groomName,
-                weddingDate: new Date(wedding.weddingDate).toISOString().split('T')[0],
+                brideName: wedding.name1 ?? '',
+                groomName: wedding.name2 ?? '',
+                weddingDate: new Date(wedding.eventDate).toISOString().split('T')[0],
                 venue: wedding.venue,
                 venueAddress: wedding.venueAddress,
             });
         }
     }, [wedding]);
 
+    // Map a guest's wire-format `guestSide` back to the UI's Bride/Groom label.
+    const guestSideLabel = (guest: Guest): 'Bride' | 'Groom' | null =>
+        guest.guestSide === 'PRIMARY' ? 'Bride' : guest.guestSide === 'SECONDARY' ? 'Groom' : null;
+
     // Filter guests by search name, side (bride/groom), and attendance status
     // Returns refined guest list based on active filter selections
     const filteredGuests = guests.filter((guest) => {
         const matchesSearch = guest.guestName.toLowerCase().includes(searchTerm.toLowerCase());
-        const matchesSide = filterSide === 'All' || guest.brideOrGroomSide === filterSide;
+        const matchesSide = filterSide === 'All' || guestSideLabel(guest) === filterSide;
         const matchesAttending =
             filterAttending === 'All' ||
             (filterAttending === 'Yes' && guest.isAttending) ||
@@ -89,8 +94,8 @@ export default function AdminDashboard() {
         totalGuests: guests.length,
         totalAttending: guests.filter((g) => g.isAttending).reduce((sum, g) => sum + g.numberOfAttendees, 0),
         totalNotAttending: guests.filter((g) => !g.isAttending).length,
-        brideSide: guests.filter((g) => g.brideOrGroomSide === 'Bride').length,
-        groomSide: guests.filter((g) => g.brideOrGroomSide === 'Groom').length,
+        brideSide: guests.filter((g) => g.guestSide === 'PRIMARY').length,
+        groomSide: guests.filter((g) => g.guestSide === 'SECONDARY').length,
         totalWishes: wishes.length,
     };
 
@@ -98,7 +103,13 @@ export default function AdminDashboard() {
     if (!wedding) return;
     try {
       setLoading(true);
-      const updated = await weddingService.update(wedding.weddingId, editWeddingData);
+      const updated = await eventService.update(wedding.eventId, {
+        name1: editWeddingData.brideName,
+        name2: editWeddingData.groomName,
+        eventDate: editWeddingData.weddingDate,
+        venue: editWeddingData.venue,
+        venueAddress: editWeddingData.venueAddress,
+      });
       setWedding(updated);
       setIsEditingWedding(false);
     
@@ -142,7 +153,7 @@ export default function AdminDashboard() {
             guest.guestName,
             guest.email,
             guest.phoneNumber,
-            guest.brideOrGroomSide,
+            guestSideLabel(guest) ?? '',
             guest.isAttending ? 'Yes' : 'No',
             guest.numberOfAttendees,
             guest.songRequest,
@@ -232,7 +243,7 @@ export default function AdminDashboard() {
                             <div>
                                 <div className="flex items-center gap-3">
                                     <h1 className="text-3xl font-bold text-gray-800">
-                                        {wedding.brideName} & {wedding.groomName}
+                                        {wedding.displayName}
                                     </h1>
                                     <button
                                         onClick={() => setIsEditingWedding(true)}
@@ -242,14 +253,14 @@ export default function AdminDashboard() {
                                     </button>
                                 </div>
                                 <p className="text-gray-600 mt-1">
-                                    {new Date(wedding.weddingDate).toLocaleDateString('en-US', {
+                                    {new Date(wedding.eventDate).toLocaleDateString('en-US', {
                                         weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
                                     })}
                                 </p>
                             </div>
                         )}
 
-                        <a href={`/wedding/${coupleName}`} target="_blank" rel="noopener noreferrer" className="...">
+                        <a href={`/${urlSegmentForEventType(wedding?.eventType)}/${coupleName}`} target="_blank" rel="noopener noreferrer" className="...">
                             View Invitation →
                         </a>
                     </div>
@@ -405,7 +416,7 @@ export default function AdminDashboard() {
                                             <div>
                                                 <p className="font-medium text-gray-800">{guest.guestName}</p>
                                                 <p className="text-sm text-gray-500">
-                                                    {guest.brideOrGroomSide} side • {guest.numberOfAttendees} guest(s)
+                                                    {guestSideLabel(guest)} side • {guest.numberOfAttendees} guest(s)
                                                 </p>
                                             </div>
                                             <div className="text-right">
@@ -538,12 +549,12 @@ export default function AdminDashboard() {
                                                     </td>
                                                     <td className="px-6 py-4 whitespace-nowrap">
                                                         <span
-                                                            className={`px-3 py-1 rounded-full text-xs font-medium ${guest.brideOrGroomSide === 'Bride'
+                                                            className={`px-3 py-1 rounded-full text-xs font-medium ${guestSideLabel(guest) === 'Bride'
                                                                 ? 'bg-pink-100 text-pink-700'
                                                                 : 'bg-blue-100 text-blue-700'
                                                                 }`}
                                                         >
-                                                            {guest.brideOrGroomSide === 'Bride' ? '👰 Bride' : '🤵 Groom'}
+                                                            {guestSideLabel(guest) === 'Bride' ? '👰 Bride' : '🤵 Groom'}
                                                         </span>
                                                     </td>
                                                     <td className="px-6 py-4 whitespace-nowrap">

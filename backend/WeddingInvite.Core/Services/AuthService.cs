@@ -17,20 +17,20 @@ namespace WeddingInvite.Core.Services
         private readonly IConfiguration _configuration;
         private readonly IPasswordResetTokenRepository _resetTokenRepo;
         private readonly IEmailService _emailService;
-        private readonly IWeddingRepository _weddingRepo;
+        private readonly IEventRepository _eventRepo;
 
         public AuthService(
             IUserRepository userRepo,
             IConfiguration configuration,
             IPasswordResetTokenRepository resetTokenRepo,
             IEmailService emailService,
-            IWeddingRepository weddingRepo)
+            IEventRepository eventRepo)
         {
             _userRepo = userRepo;
             _configuration = configuration;
             _resetTokenRepo = resetTokenRepo;
             _emailService = emailService;
-            _weddingRepo = weddingRepo;
+            _eventRepo = eventRepo;
         }
 
         public async Task<LoginResponseDto> LoginAsync(LoginDto loginDto)
@@ -50,14 +50,14 @@ namespace WeddingInvite.Core.Services
                 throw new UnauthorizedAccessException("Account is disabled. Please contact your administrator.");
 
             // Generate JWT token
-            var token = GenerateJwtToken(user.Email, user.Role, user.WeddingId, user.Tier);
+            var token = GenerateJwtToken(user.Email, user.Role, user.EventId, user.Tier);
 
             return new LoginResponseDto
             {
                 Token = token,
                 Email = user.Email,
                 Role = user.Role,
-                WeddingId = user.WeddingId,
+                EventId = user.EventId,
                 Tier = user.Tier
             };
         }
@@ -77,27 +77,27 @@ namespace WeddingInvite.Core.Services
             {
                 Email = registerDto.Email,
                 PasswordHash = passwordHash,
-                Role = UserRoles.CoupleAdmin,
-                WeddingId = registerDto.WeddingId,
+                Role = UserRoles.OrganizerAdmin,
+                EventId = registerDto.EventId,
                 CreatedDate = DateTime.UtcNow
             };
 
             var createdUser = await _userRepo.CreateAsync(user);
 
             // Generate JWT token
-            var token = GenerateJwtToken(createdUser.Email, createdUser.Role, createdUser.WeddingId, createdUser.Tier);
+            var token = GenerateJwtToken(createdUser.Email, createdUser.Role, createdUser.EventId, createdUser.Tier);
 
             return new LoginResponseDto
             {
                 Token = token,
                 Email = createdUser.Email,
                 Role = createdUser.Role,
-                WeddingId = createdUser.WeddingId,
+                EventId = createdUser.EventId,
                 Tier = createdUser.Tier
             };
         }
 
-        public async Task<UserDto> CreateCoupleAdminForWeddingAsync(int weddingId, string email, string password)
+        public async Task<UserDto> CreateOrganizerAdminForEventAsync(int eventId, string email, string password)
         {
             // Check if email already exists
             var existingUser = await _userRepo.GetByEmailAsync(email);
@@ -112,8 +112,8 @@ namespace WeddingInvite.Core.Services
             {
                 Email = email,
                 PasswordHash = passwordHash,
-                Role = UserRoles.CoupleAdmin,
-                WeddingId = weddingId,
+                Role = UserRoles.OrganizerAdmin,
+                EventId = eventId,
                 CreatedDate = DateTime.UtcNow
             };
 
@@ -121,9 +121,9 @@ namespace WeddingInvite.Core.Services
             return MapToDto(created);
         }
 
-        public async Task<UserDto?> GetCoupleAdminAsync(int weddingId)
+        public async Task<UserDto?> GetOrganizerAdminAsync(int eventId)
         {
-            var user = await _userRepo.GetByWeddingIdAsync(weddingId);
+            var user = await _userRepo.GetByEventIdAsync(eventId);
             return user == null ? null : MapToDto(user);
         }
 
@@ -138,7 +138,7 @@ namespace WeddingInvite.Core.Services
                 Email = email,
                 PasswordHash = BCrypt.Net.BCrypt.HashPassword(password),
                 Role = UserRoles.HostAdmin,
-                WeddingId = null,
+                EventId = null,
                 CreatedDate = DateTime.UtcNow
             };
 
@@ -176,16 +176,16 @@ namespace WeddingInvite.Core.Services
             user.Tier = tier.ToUpper();
             var updated = await _userRepo.UpdateAsync(user);
 
-            // Upgrading to a paid tier publishes the (previously private) free-tier wedding
+            // Upgrading to a paid tier publishes the (previously private) free-tier event
             // so the couple can share it and collect real RSVPs.
             if (TierEntitlements.Rank(updated.Tier) >= TierEntitlements.Rank(TierEntitlements.Premium)
-                && updated.WeddingId.HasValue)
+                && updated.EventId.HasValue)
             {
-                var wedding = await _weddingRepo.GetByIdAsync(updated.WeddingId.Value);
-                if (wedding != null && !wedding.IsPublic)
+                var evt = await _eventRepo.GetByIdAsync(updated.EventId.Value);
+                if (evt != null && !evt.IsPublic)
                 {
-                    wedding.IsPublic = true;
-                    await _weddingRepo.UpdateAsync(wedding);
+                    evt.IsPublic = true;
+                    await _eventRepo.UpdateAsync(evt);
                 }
             }
 
@@ -260,13 +260,13 @@ namespace WeddingInvite.Core.Services
             UserId = user.UserId,
             Email = user.Email,
             Role = user.Role,
-            WeddingId = user.WeddingId,
+            EventId = user.EventId,
             IsActive = user.IsActive,
             Tier = user.Tier,
             CreatedDate = user.CreatedDate
         };
 
-        public string GenerateJwtToken(string email, string role, int? weddingId, string tier = "FREE")
+        public string GenerateJwtToken(string email, string role, int? eventId, string tier = "FREE")
         {
             var jwtSettings = _configuration.GetSection("JwtSettings");
             var secretKey = jwtSettings["SecretKey"];
@@ -283,10 +283,10 @@ namespace WeddingInvite.Core.Services
                 new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
             };
 
-            // Add weddingId claim if exists
-            if (weddingId.HasValue)
+            // Add eventId claim if exists
+            if (eventId.HasValue)
             {
-                claims.Add(new Claim("WeddingId", weddingId.Value.ToString()));
+                claims.Add(new Claim("WeddingId", eventId.Value.ToString()));
             }
 
             var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey!));

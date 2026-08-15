@@ -6,7 +6,7 @@ namespace WeddingInvite.Data.Repositories
     {
         Task<User?> GetByIdAsync(int id);
         Task<User?> GetByEmailAsync(string email);
-        Task<User?> GetByWeddingIdAsync(int weddingId);
+        Task<User?> GetByEventIdAsync(int eventId);
         Task<User> CreateAsync(User user);
         Task<User> UpdateAsync(User user);
         Task<bool> DeleteAsync(int id);

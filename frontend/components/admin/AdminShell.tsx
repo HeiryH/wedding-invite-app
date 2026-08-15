@@ -18,7 +18,7 @@ interface AdminShellProps {
   navItems: NavItem[];
   onLogout: () => void;
   userInitials?: string;
-  role?: 'Super Admin' | 'Host Admin' | 'Couple Admin';
+  role?: 'Super Admin' | 'Host Admin' | 'Event Organizer';
   fabHref?: string;
   sidePillLinks?: { label: string; href: string }[];
   homeHref?: string;
@@ -209,7 +209,7 @@ export default function AdminShell({
         );
       })}
 
-      {/* Quick access pill (couple-admin only) */}
+      {/* Quick access pill (organizer-admin only) */}
       {!dark && sidePillLinks && sidePillLinks.length > 0 && (
         <div style={{
           marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: 8,

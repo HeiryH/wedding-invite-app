@@ -7,18 +7,49 @@ import type { TemplateConfigField } from '@/lib/api/types';
 import { getGuestFields, buildDefaultConfig, blockOf } from '@/lib/templateConfigSchema';
 import { resolveSectionOrder, SectionCode } from '@/lib/templateUtils';
 import { getUser } from '@/lib/auth';
+import { EVENT_TYPES, EventTypeKey } from '@/lib/eventTypes';
 
 const DRAFT_KEY = 'personalise_draft_v1';
 
 type ItineraryRow = { label: string; detail: string; sortOrder: number };
 
+// WEDDING: brideName + groomName. PARTY: brideName holds the honoree's single name (minimal
+// plumbing disruption — see eventType-driven branching below). CEREMONY: eventTitle only.
+interface WeddingDraft {
+  brideName: string;
+  groomName: string;
+  eventTitle: string;
+  weddingDate: string;
+  venue: string;
+  venueAddress: string;
+}
+
 interface Draft {
   templateId: number;
   event?: string;
-  wedding: { brideName: string; groomName: string; weddingDate: string; venue: string; venueAddress: string };
+  wedding: WeddingDraft;
   config: Record<string, string>;
   itinerary: ItineraryRow[];
 }
+
+/** Validates the picker's ?event= query param against the known vocabulary, defaulting to WEDDING
+ *  — mirrors parseEventTypes' fallback behaviour elsewhere in the codebase. */
+function parseEventType(raw: string | null): EventTypeKey {
+  const upper = (raw ?? '').toUpperCase();
+  return (EVENT_TYPES.some((e) => e.key === upper) ? upper : 'WEDDING') as EventTypeKey;
+}
+
+/** Mirrors backend EventNaming.GetDisplayName so the live preview matches what the server would
+ *  compute once the event is actually created. */
+function computeDisplayName(eventType: EventTypeKey, w: WeddingDraft): string {
+  if (eventType === 'WEDDING' && w.brideName.trim() && w.groomName.trim()) return `${w.brideName} & ${w.groomName}`;
+  if (eventType === 'PARTY' && w.brideName.trim()) return w.brideName;
+  if (eventType === 'CEREMONY' && w.eventTitle.trim()) return w.eventTitle;
+  if (w.eventTitle.trim()) return w.eventTitle;
+  return 'Event Invitation';
+}
+
+const slugify = (s: string) => s.toLowerCase().trim().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '') || '';
 
 const SECTION_LABELS: Record<SectionCode, string> = {
   welcome: 'Invitation',
@@ -167,10 +198,25 @@ function PersonaliseEditor() {
 
   const [templates, setTemplates] = useState<Template[]>([]);
   const [templateId] = useState<number>(Number(searchParams.get('template')) || 1);
-  const [wedding, setWedding] = useState({ brideName: 'Aisyah', groomName: 'Hariz', weddingDate: '', venue: 'Grand Ballroom', venueAddress: '' });
+  // The picker's ?event= choice, load-bearing here: drives which fields the form shows and what
+  // shape the preview/submit payloads take. Fixed for the life of this page (same as templateId).
+  const eventType = parseEventType(searchParams.get('event'));
+  const [wedding, setWedding] = useState<WeddingDraft>({ brideName: 'Aisyah', groomName: 'Hariz', eventTitle: '', weddingDate: '', venue: 'Grand Ballroom', venueAddress: '' });
   const [config, setConfig] = useState<Record<string, string>>({});
   const [itinerary, setItinerary] = useState<ItineraryRow[]>([]);
   const [previewReady, setPreviewReady] = useState(false);
+  // Guards the "persist draft" effect below from firing before the "seed defaults" effect has
+  // actually committed its result. Must be STATE, not a ref: under React StrictMode's dev-mode
+  // double-invoke, both effects run twice back-to-back with no commit in between, so a ref flag
+  // set during the seed effect's first pass is already true by the time persist's first pass
+  // runs in that SAME pass — persist would still read the stale `wedding` closure and write it to
+  // localStorage. The second (StrictMode) pass of the seed effect would then read that
+  // self-written stale draft back as if it were real saved data (templateId/eventType still
+  // match) and "rehydrate" from it, permanently locking in the wrong WEDDING-shaped placeholder
+  // fields for a PARTY/CEREMONY draft. Gating on state instead means persist's guard clause is
+  // still `false` in both pre-commit passes (state doesn't update synchronously across passes),
+  // so it never writes prematurely; it only runs for real once React commits the seeded values.
+  const [hasSeeded, setHasSeeded] = useState(false);
 
   const [showModal, setShowModal] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -178,32 +224,41 @@ function PersonaliseEditor() {
   const [sheetOpen, setSheetOpen] = useState(false); // mobile bottom-sheet expanded?
 
   // If logged in, hand off to the full dashboard.
-  useEffect(() => { if (getUser()) router.replace('/couple-admin'); }, [router]);
+  useEffect(() => { if (getUser()) router.replace('/organizer-admin'); }, [router]);
 
   // Load templates.
   useEffect(() => { templateService.getActive().then(setTemplates).catch(() => {}); }, []);
 
-  // Init: rehydrate a matching draft, else seed defaults.
+  // Init: rehydrate a matching draft, else seed type-aware defaults.
   useEffect(() => {
     let draft: Draft | null = null;
     try { draft = JSON.parse(localStorage.getItem(DRAFT_KEY) || 'null'); } catch {}
-    if (draft && draft.templateId === templateId) {
-      setWedding(draft.wedding);
+    if (draft && draft.templateId === templateId && parseEventType(draft.event ?? null) === eventType) {
+      setWedding({ ...draft.wedding, eventTitle: draft.wedding.eventTitle ?? '' });
       setConfig(draft.config);
       setItinerary(draft.itinerary || []);
     } else {
       const d = new Date(); d.setMonth(d.getMonth() + 6);
-      setWedding((w) => ({ ...w, weddingDate: w.weddingDate || d.toISOString().slice(0, 10) }));
+      const defaultDate = d.toISOString().slice(0, 10);
+      const seeded =
+        eventType === 'PARTY'
+          ? { brideName: 'Aisyah', groomName: '', eventTitle: '', weddingDate: defaultDate, venue: 'Grand Ballroom', venueAddress: '' }
+          : eventType === 'CEREMONY'
+          ? { brideName: '', groomName: '', eventTitle: "Ali's Aqiqah", weddingDate: defaultDate, venue: 'Grand Ballroom', venueAddress: '' }
+          : { brideName: 'Aisyah', groomName: 'Hariz', eventTitle: '', weddingDate: defaultDate, venue: 'Grand Ballroom', venueAddress: '' };
+      setWedding(seeded);
       setConfig(buildDefaultConfig(templateId));
       setItinerary([]);
     }
-  }, [templateId]);
+    setHasSeeded(true);
+  }, [templateId, eventType]);
 
-  // Persist draft on any change.
+  // Persist draft on any change — gated on hasSeeded, see its declaration above for why.
   useEffect(() => {
-    const draft: Draft = { templateId, event: searchParams.get('event') || undefined, wedding, config, itinerary };
+    if (!hasSeeded) return;
+    const draft: Draft = { templateId, event: eventType, wedding, config, itinerary };
     localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
-  }, [templateId, wedding, config, itinerary, searchParams]);
+  }, [hasSeeded, templateId, eventType, wedding, config, itinerary]);
 
   // Listen for preview handshake.
   useEffect(() => {
@@ -218,10 +273,19 @@ function PersonaliseEditor() {
   const pushPreview = useCallback(() => {
     const iframe = iframeRef.current;
     if (!iframe?.contentWindow) return;
+    // Native Event fields for Template8 (PARTY)/Template9 (CEREMONY) — mirrors exactly what
+    // AuthController.SelfRegister would persist onto the real Event row for this event type.
+    const name1 = eventType === 'WEDDING' || eventType === 'PARTY' ? (wedding.brideName || null) : null;
+    const name2 = eventType === 'WEDDING' ? (wedding.groomName || null) : null;
+    const eventTitle = eventType === 'CEREMONY' ? (wedding.eventTitle || null) : null;
+    const coupleName =
+      eventType === 'WEDDING' ? `${slugify(wedding.brideName || 'bride')}-and-${slugify(wedding.groomName || 'groom')}`
+      : eventType === 'PARTY' ? slugify(wedding.brideName || 'party')
+      : slugify(wedding.eventTitle || 'ceremony');
     const payload = {
       wedding: {
         weddingId: 0,
-        coupleName: `${wedding.brideName.toLowerCase().trim().replace(/\s+/g, '-')}-and-${wedding.groomName.toLowerCase().trim().replace(/\s+/g, '-')}`,
+        coupleName,
         brideName: wedding.brideName || 'Bride',
         groomName: wedding.groomName || 'Groom',
         weddingDate: wedding.weddingDate ? `${wedding.weddingDate}T10:00:00Z` : new Date(Date.now() + 6 * 30 * 864e5).toISOString(),
@@ -231,6 +295,10 @@ function PersonaliseEditor() {
         totalPhotos: 0, enabledFeaturesCount: 0, templateId,
         templateName: templates.find((t) => t.templateId === templateId)?.templateName ?? '',
         isRsvpOpen: false,
+        // Native Event fields, read by Template8/9 instead of brideName/groomName.
+        name1, name2, eventTitle,
+        eventType,
+        displayName: computeDisplayName(eventType, wedding),
       },
       coupleMedia: [],
       wishes: [
@@ -243,7 +311,7 @@ function PersonaliseEditor() {
     };
     localStorage.setItem('preview_draft', JSON.stringify(payload));
     iframe.contentWindow.postMessage({ type: 'PREVIEW_UPDATE', payload }, window.location.origin);
-  }, [wedding, config, itinerary, templateId, templates]);
+  }, [wedding, config, itinerary, templateId, templates, eventType]);
 
   useEffect(() => { if (previewReady) pushPreview(); }, [previewReady, pushPreview]);
 
@@ -265,14 +333,17 @@ function PersonaliseEditor() {
     try {
       const res = await authService.selfRegister({
         email, password,
-        brideName: wedding.brideName, groomName: wedding.groomName,
-        weddingDate: wedding.weddingDate ? `${wedding.weddingDate}T10:00:00Z` : '',
+        name1: eventType === 'WEDDING' || eventType === 'PARTY' ? wedding.brideName : undefined,
+        name2: eventType === 'WEDDING' ? wedding.groomName : undefined,
+        eventTitle: eventType === 'CEREMONY' ? wedding.eventTitle : undefined,
+        eventType,
+        eventDate: wedding.weddingDate ? `${wedding.weddingDate}T10:00:00Z` : '',
         venue: wedding.venue, venueAddress: wedding.venueAddress, templateId,
         config, itinerary,
       });
       localStorage.setItem('user', JSON.stringify({ email: res.email, role: res.role, weddingId: res.weddingId, tier: res.tier }));
       localStorage.removeItem(DRAFT_KEY);
-      router.push('/couple-admin');
+      router.push('/organizer-admin');
     } catch (err) {
       const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
       setSaveError(msg ?? 'Registration failed. Please try again.');
@@ -308,8 +379,18 @@ function PersonaliseEditor() {
           <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', overscrollBehavior: 'contain', WebkitOverflowScrolling: 'touch', padding: 18, display: 'flex', flexDirection: 'column', gap: 14 }}>
             {/* Your details */}
             <SectionCard title="Your details">
-              <MText label="First name" value={wedding.brideName} onChange={(v) => setWedding((w) => ({ ...w, brideName: v }))} placeholder="e.g. Aisyah" />
-              <MText label="Second name" value={wedding.groomName} onChange={(v) => setWedding((w) => ({ ...w, groomName: v }))} placeholder="e.g. Hariz" />
+              {eventType === 'WEDDING' && (
+                <>
+                  <MText label="Bride's name" value={wedding.brideName} onChange={(v) => setWedding((w) => ({ ...w, brideName: v }))} placeholder="e.g. Aisyah" />
+                  <MText label="Groom's name" value={wedding.groomName} onChange={(v) => setWedding((w) => ({ ...w, groomName: v }))} placeholder="e.g. Hariz" />
+                </>
+              )}
+              {eventType === 'PARTY' && (
+                <MText label="Honoree's name" value={wedding.brideName} onChange={(v) => setWedding((w) => ({ ...w, brideName: v }))} placeholder="e.g. Aiman" />
+              )}
+              {eventType === 'CEREMONY' && (
+                <MText label="Event title" value={wedding.eventTitle} onChange={(v) => setWedding((w) => ({ ...w, eventTitle: v }))} placeholder="e.g. Ali's Aqiqah" />
+              )}
               <MText label="Date" value={wedding.weddingDate} onChange={(v) => setWedding((w) => ({ ...w, weddingDate: v }))} type="date" />
               <MText label="Venue" value={wedding.venue} onChange={(v) => setWedding((w) => ({ ...w, venue: v }))} placeholder="e.g. Grand Ballroom" />
               <MText label="Venue address" value={wedding.venueAddress} onChange={(v) => setWedding((w) => ({ ...w, venueAddress: v }))} placeholder="Optional" />
@@ -354,7 +435,7 @@ function PersonaliseEditor() {
               {selected ? `${selected.templateName} · Live preview` : 'Live preview'}{previewReady ? '' : ' · loading…'}
             </span>
           </div>
-          <iframe ref={iframeRef} src="/couple-admin/preview" onLoad={() => setTimeout(pushPreview, 300)} style={{ flex: 1, border: 'none', width: '100%' }} title="Invitation preview" />
+          <iframe ref={iframeRef} src="/organizer-admin/preview" onLoad={() => setTimeout(pushPreview, 300)} style={{ flex: 1, border: 'none', width: '100%' }} title="Invitation preview" />
         </div>
       </div>
 

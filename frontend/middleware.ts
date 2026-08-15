@@ -1,19 +1,26 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { PUBLIC_EVENT_TYPE_SLUGS, urlSegmentForEventType } from '@/lib/eventTypes';
 
 /**
  * Custom-domain host resolution (PRO tier).
  *
- * When a request arrives on a couple's own domain (e.g. john-and-mary.com), we look the
- * host up in the backend and transparently rewrite it to that wedding's public invite
- * (`/wedding/[coupleName]`). Requests on the platform's own hosts pass straight through,
- * so the admin dashboards, funnel, etc. are unaffected.
+ * When a request arrives on an event owner's own domain (e.g. john-and-mary.com), we look the
+ * host up in the backend and transparently rewrite it to that event's public invite
+ * (`/wedding/[slug]`, `/party/[slug]`, or `/ceremony/[slug]` — whichever matches the event's
+ * actual type; custom domains aren't WEDDING-only, the tier/feature gate is generic). Requests
+ * on the platform's own hosts pass straight through, so the admin dashboards, funnel, etc. are
+ * unaffected.
  *
- * The backend (`GET /api/wedding/by-domain`) is the source of truth; this only rewrites.
- * Pair with reverse-proxy TLS for arbitrary domains (Caddy on-demand TLS or nginx+certbot)
- * and each couple pointing their DNS A/CNAME at the server.
+ * The backend (`GET /api/event/by-domain`) is the source of truth (its `EventDto` response
+ * already carries `slug` + `eventType`); this only rewrites. Pair with reverse-proxy TLS for
+ * arbitrary domains (Caddy on-demand TLS or nginx+certbot) and each owner pointing their DNS
+ * A/CNAME at the server.
  */
 
 const BACKEND_URL = process.env.BACKEND_URL ?? 'http://localhost:5000';
+
+// Any of the 3 public invite prefixes — an already-prefixed path is left untouched.
+const INVITE_PREFIXES = Object.values(PUBLIC_EVENT_TYPE_SLUGS).map((s) => `/${s}/`);
 
 // Hosts that are the platform itself — never treated as custom domains.
 // Configurable via PLATFORM_HOSTS (comma-separated); localhost + the primary site host
@@ -32,8 +39,9 @@ const PLATFORM_HOSTS = new Set(
 );
 
 // Small in-memory cache so we don't hit the backend on every request.
-// Keyed by normalized host → couple slug (or null when unmapped). Per-worker, TTL'd.
-type CacheEntry = { coupleName: string | null; expires: number };
+// Keyed by normalized host → { slug, eventType } (or null when unmapped). Per-worker, TTL'd.
+type ResolvedEvent = { slug: string; eventType: string };
+type CacheEntry = { event: ResolvedEvent | null; expires: number };
 const CACHE_TTL_MS = 60_000;
 const resolveCache = new Map<string, CacheEntry>();
 
@@ -54,27 +62,27 @@ function hostFromUrl(url: string | undefined): string {
   }
 }
 
-async function resolveCouple(host: string): Promise<string | null> {
+async function resolveEvent(host: string): Promise<ResolvedEvent | null> {
   const cached = resolveCache.get(host);
-  if (cached && cached.expires > Date.now()) return cached.coupleName;
+  if (cached && cached.expires > Date.now()) return cached.event;
 
-  let coupleName: string | null = null;
+  let event: ResolvedEvent | null = null;
   try {
     const res = await fetch(
-      `${BACKEND_URL}/api/wedding/by-domain?domain=${encodeURIComponent(host)}`,
+      `${BACKEND_URL}/api/event/by-domain?domain=${encodeURIComponent(host)}`,
       { signal: AbortSignal.timeout(2500) },
     );
     if (res.ok) {
       const data = await res.json();
-      coupleName = data?.coupleName ?? null;
+      event = data?.slug ? { slug: data.slug, eventType: data.eventType } : null;
     }
   } catch {
     // Network/timeout: fail open (pass through). Cache the miss briefly.
-    coupleName = null;
+    event = null;
   }
 
-  resolveCache.set(host, { coupleName, expires: Date.now() + CACHE_TTL_MS });
-  return coupleName;
+  resolveCache.set(host, { event, expires: Date.now() + CACHE_TTL_MS });
+  return event;
 }
 
 export async function middleware(request: NextRequest) {
@@ -84,16 +92,18 @@ export async function middleware(request: NextRequest) {
   if (!host || PLATFORM_HOSTS.has(host)) return NextResponse.next();
 
   const { pathname } = request.nextUrl;
-  // Already an invite path, or an internal one → don't touch.
-  if (pathname.startsWith('/wedding/')) return NextResponse.next();
+  // Already an invite path (any of the 3 type prefixes), or an internal one → don't touch.
+  if (INVITE_PREFIXES.some((prefix) => pathname.startsWith(prefix))) return NextResponse.next();
 
-  const coupleName = await resolveCouple(host);
-  if (!coupleName) return NextResponse.next(); // unmapped domain → normal handling (404s)
+  const event = await resolveEvent(host);
+  if (!event) return NextResponse.next(); // unmapped domain → normal handling (404s)
 
-  // Map the custom-domain path onto the wedding: "/" → invite root, "/rsvp" → invite/rsvp, …
+  // Map the custom-domain path onto the event's type-correct invite prefix:
+  // "/" → invite root, "/rsvp" → invite/rsvp, …
   const suffix = pathname === '/' ? '' : pathname;
+  const segment = urlSegmentForEventType(event.eventType);
   const url = request.nextUrl.clone();
-  url.pathname = `/wedding/${coupleName}${suffix}`;
+  url.pathname = `/${segment}/${event.slug}${suffix}`;
   return NextResponse.rewrite(url);
 }
 

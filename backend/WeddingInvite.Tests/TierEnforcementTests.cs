@@ -8,7 +8,7 @@ using Xunit;
 namespace WeddingInvite.Tests;
 
 /// <summary>
-/// Tier is a real, server-enforced entitlement: a wedding may not enable a feature
+/// Tier is a real, server-enforced entitlement: an event may not enable a feature
 /// above the tier of its couple admin. These tests pin the ceiling so it can't
 /// silently regress to a frontend-only gate.
 /// </summary>
@@ -44,30 +44,30 @@ public class TierEnforcementTests
     }
 
     // ── End-to-end through the service + repositories ──────────────────────────
-    private static WeddingFeatureService BuildService(TestDb db) => new(
-        new WeddingFeatureRepository(db.Context),
-        new WeddingRepository(db.Context),
+    private static EventFeatureService BuildService(TestDb db) => new(
+        new EventFeatureRepository(db.Context),
+        new EventRepository(db.Context),
         new FeatureRepository(db.Context),
         new UserRepository(db.Context),
         new PackageRepository(db.Context));
 
-    private static WeddingService BuildWeddingService(TestDb db) => new(
-        new WeddingRepository(db.Context),
+    private static EventService BuildEventService(TestDb db) => new(
+        new EventRepository(db.Context),
         new GuestRepository(db.Context),
         new PackageRepository(db.Context),
-        new WeddingFeatureRepository(db.Context),
+        new EventFeatureRepository(db.Context),
         new TemplateRepository(db.Context),
         new UserRepository(db.Context));
 
-    private static void SeedCouple(TestDb db, int weddingId, string tier)
+    private static void SeedCouple(TestDb db, int eventId, string tier)
     {
-        db.Context.Weddings.Add(new Wedding { WeddingId = weddingId, CoupleName = $"w{weddingId}", TemplateId = 1 });
+        db.Context.Events.Add(new Event { EventId = eventId, Slug = $"w{eventId}", TemplateId = 1 });
         db.Context.Users.Add(new User
         {
-            Email = $"c{weddingId}@x.com",
+            Email = $"c{eventId}@x.com",
             PasswordHash = "x",
-            Role = UserRoles.CoupleAdmin,
-            WeddingId = weddingId,
+            Role = UserRoles.OrganizerAdmin,
+            EventId = eventId,
             Tier = tier,
         });
         db.Context.SaveChanges();
@@ -123,13 +123,13 @@ public class TierEnforcementTests
         Assert.False(result.IsEnabled);
     }
 
-    // ── Custom domain: tier ceiling AND explicit per-wedding toggle (same two-step gate) ───────
+    // ── Custom domain: tier ceiling AND explicit per-event toggle (same two-step gate) ───────
     [Fact]
     public async Task PremiumWedding_CannotSetDomain_NotOnTier()
     {
         using var db = new TestDb();
         SeedCouple(db, 104, TierEntitlements.Premium);
-        var weddingSvc = BuildWeddingService(db);
+        var weddingSvc = BuildEventService(db);
 
         var ex = await Assert.ThrowsAsync<InvalidOperationException>(() =>
             weddingSvc.SetDomainAsync(104, "example.com"));
@@ -141,7 +141,7 @@ public class TierEnforcementTests
     {
         using var db = new TestDb();
         SeedCouple(db, 105, TierEntitlements.Pro);
-        var weddingSvc = BuildWeddingService(db);
+        var weddingSvc = BuildEventService(db);
 
         var ex = await Assert.ThrowsAsync<InvalidOperationException>(() =>
             weddingSvc.SetDomainAsync(105, "example.com"));
@@ -154,7 +154,7 @@ public class TierEnforcementTests
         using var db = new TestDb();
         SeedCouple(db, 106, TierEntitlements.Pro);
         var featureSvc = BuildService(db);
-        var weddingSvc = BuildWeddingService(db);
+        var weddingSvc = BuildEventService(db);
 
         await featureSvc.ToggleFeatureAsync(106, new ToggleFeatureDto { FeatureId = CustomDomainFeatureId, IsEnabled = true });
 

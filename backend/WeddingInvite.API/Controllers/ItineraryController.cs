@@ -10,37 +10,37 @@ namespace WeddingInvite.API.Controllers
     public class ItineraryController : ControllerBase
     {
         private readonly IItineraryService _itineraryService;
-        private readonly IWeddingAuthorizationService _weddingAuthorizationService;
+        private readonly IEventAuthorizationService _eventAuthorizationService;
 
         public ItineraryController(
             IItineraryService itineraryService,
-            IWeddingAuthorizationService weddingAuthorizationService)
+            IEventAuthorizationService eventAuthorizationService)
         {
             _itineraryService = itineraryService;
-            _weddingAuthorizationService = weddingAuthorizationService;
+            _eventAuthorizationService = eventAuthorizationService;
         }
 
-        // GET: api/itinerary/wedding/1  (public)
-        [HttpGet("wedding/{weddingId}")]
+        // GET: api/itinerary/event/1  (public)
+        [HttpGet("event/{eventId}")]
         [AllowAnonymous]
-        public async Task<ActionResult<IEnumerable<ItineraryItemDto>>> GetByWeddingId(int weddingId)
+        public async Task<ActionResult<IEnumerable<ItineraryItemDto>>> GetByEventId(int eventId)
         {
-            var items = await _itineraryService.GetByWeddingIdAsync(weddingId);
+            var items = await _itineraryService.GetByEventIdAsync(eventId);
             return Ok(items);
         }
 
-        // POST: api/itinerary/wedding/1
-        [HttpPost("wedding/{weddingId}")]
+        // POST: api/itinerary/event/1
+        [HttpPost("event/{eventId}")]
         [Authorize]
-        public async Task<ActionResult<ItineraryItemDto>> Create(int weddingId, [FromBody] CreateItineraryItemDto dto)
+        public async Task<ActionResult<ItineraryItemDto>> Create(int eventId, [FromBody] CreateItineraryItemDto dto)
         {
             var userEmail = User.Identity?.Name;
-            if (!await _weddingAuthorizationService.CanAccessWeddingAsync(userEmail!, weddingId))
+            if (!await _eventAuthorizationService.CanAccessEventAsync(userEmail!, eventId))
                 return Forbid();
 
             try
             {
-                var item = await _itineraryService.CreateAsync(weddingId, dto);
+                var item = await _itineraryService.CreateAsync(eventId, dto);
                 return Ok(item);
             }
             catch (KeyNotFoundException ex)
@@ -63,7 +63,7 @@ namespace WeddingInvite.API.Controllers
                 return NotFound(new { message = "Itinerary item not found" });
 
             var userEmail = User.Identity?.Name;
-            if (!await _weddingAuthorizationService.CanAccessWeddingAsync(userEmail!, existing.WeddingId))
+            if (!await _eventAuthorizationService.CanAccessEventAsync(userEmail!, existing.EventId))
                 return Forbid();
 
             try
@@ -87,23 +87,23 @@ namespace WeddingInvite.API.Controllers
                 return NotFound(new { message = "Itinerary item not found" });
 
             var userEmail = User.Identity?.Name;
-            if (!await _weddingAuthorizationService.CanAccessWeddingAsync(userEmail!, existing.WeddingId))
+            if (!await _eventAuthorizationService.CanAccessEventAsync(userEmail!, existing.EventId))
                 return Forbid();
 
             await _itineraryService.DeleteAsync(id);
             return Ok(new { message = "Deleted successfully" });
         }
 
-        // PUT: api/itinerary/wedding/1/reorder
-        [HttpPut("wedding/{weddingId}/reorder")]
+        // PUT: api/itinerary/event/1/reorder
+        [HttpPut("event/{eventId}/reorder")]
         [Authorize]
-        public async Task<IActionResult> Reorder(int weddingId, [FromBody] ReorderItineraryDto dto)
+        public async Task<IActionResult> Reorder(int eventId, [FromBody] ReorderItineraryDto dto)
         {
             var userEmail = User.Identity?.Name;
-            if (!await _weddingAuthorizationService.CanAccessWeddingAsync(userEmail!, weddingId))
+            if (!await _eventAuthorizationService.CanAccessEventAsync(userEmail!, eventId))
                 return Forbid();
 
-            await _itineraryService.ReorderAsync(weddingId, dto);
+            await _itineraryService.ReorderAsync(eventId, dto);
             return Ok(new { message = "Reordered successfully" });
         }
     }

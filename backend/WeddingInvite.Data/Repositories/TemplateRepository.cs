@@ -64,10 +64,10 @@ namespace WeddingInvite.Data.Repositories
             return true;
         }
 
-        public async Task<Dictionary<int, int>> GetWeddingCountsByTemplateAsync()
+        public async Task<Dictionary<int, int>> GetEventCountsByTemplateAsync()
         {
-            return await _context.Weddings
-                .GroupBy(w => w.TemplateId)
+            return await _context.Events
+                .GroupBy(e => e.TemplateId)
                 .Select(g => new { TemplateId = g.Key, Count = g.Count() })
                 .ToDictionaryAsync(x => x.TemplateId, x => x.Count);
         }

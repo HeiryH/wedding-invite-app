@@ -5,7 +5,7 @@ namespace WeddingInvite.Core.DTOs
     public class PhotoDto
     {
         public int PhotoId { get; set; }
-        public int WeddingId { get; set; }
+        public int EventId { get; set; }
         public string? GuestName { get; set; }
         public string PhotoUrl { get; set; } = string.Empty;
         public string? Caption { get; set; }

@@ -17,30 +17,30 @@ public class GuestServiceRsvpTests : IDisposable
 
     public GuestServiceRsvpTests()
     {
-        _sut = new GuestService(new GuestRepository(_db.Context), new WeddingRepository(_db.Context));
+        _sut = new GuestService(new GuestRepository(_db.Context), new EventRepository(_db.Context));
     }
 
-    private int SeedWedding(int maxPax = 0, int maxCapacity = 0, bool isRsvpOpen = true, bool isPublic = true, int monthsAhead = 3)
+    private int SeedEvent(int maxPax = 0, int maxCapacity = 0, bool isRsvpOpen = true, bool isPublic = true, int monthsAhead = 3)
     {
-        var wedding = new Wedding
+        var evt = new Event
         {
-            CoupleName = "test-" + Guid.NewGuid().ToString("N")[..6],
+            Slug = "test-" + Guid.NewGuid().ToString("N")[..6],
             TemplateId = 1,
-            WeddingDate = DateTime.UtcNow.AddMonths(monthsAhead),
+            EventDate = DateTime.UtcNow.AddMonths(monthsAhead),
             MaxPax = maxPax,
             MaxCapacity = maxCapacity,
             IsRsvpOpen = isRsvpOpen,
             IsPublic = isPublic,
         };
-        _db.Context.Weddings.Add(wedding);
+        _db.Context.Events.Add(evt);
         _db.Context.SaveChanges();
-        return wedding.WeddingId;
+        return evt.EventId;
     }
 
     private static CreateGuestDto Rsvp(int attendees, bool attending = true) => new()
     {
         GuestName = "Guest",
-        BrideOrGroomSide = "Bride",
+        GuestSide = "PRIMARY",
         NumberOfAttendees = attendees,
         IsAttending = attending,
     };
@@ -48,16 +48,16 @@ public class GuestServiceRsvpTests : IDisposable
     [Fact]
     public async Task Create_WithinLimits_Persists()
     {
-        var id = SeedWedding(maxPax: 5, maxCapacity: 100);
+        var id = SeedEvent(maxPax: 5, maxCapacity: 100);
         var result = await _sut.CreateAsync(id, Rsvp(3));
         Assert.Equal(3, result.NumberOfAttendees);
-        Assert.Equal(3, await new GuestRepository(_db.Fresh()).GetAttendingCountByWeddingIdAsync(id));
+        Assert.Equal(3, await new GuestRepository(_db.Fresh()).GetAttendingCountByEventIdAsync(id));
     }
 
     [Fact]
     public async Task Create_ExceedingMaxPax_Throws()
     {
-        var id = SeedWedding(maxPax: 2);
+        var id = SeedEvent(maxPax: 2);
         var ex = await Assert.ThrowsAsync<ArgumentException>(() => _sut.CreateAsync(id, Rsvp(3)));
         Assert.Contains("per RSVP", ex.Message);
     }
@@ -65,7 +65,7 @@ public class GuestServiceRsvpTests : IDisposable
     [Fact]
     public async Task Create_ExceedingMaxCapacity_Throws()
     {
-        var id = SeedWedding(maxCapacity: 5);
+        var id = SeedEvent(maxCapacity: 5);
         await _sut.CreateAsync(id, Rsvp(3));                 // total now 3
         // second RSVP of 3 would push total to 6 > cap of 5
         var ex = await Assert.ThrowsAsync<ArgumentException>(() => _sut.CreateAsync(id, Rsvp(3)));
@@ -75,7 +75,7 @@ public class GuestServiceRsvpTests : IDisposable
     [Fact]
     public async Task Create_AtExactCapacity_Succeeds()
     {
-        var id = SeedWedding(maxCapacity: 6);
+        var id = SeedEvent(maxCapacity: 6);
         await _sut.CreateAsync(id, Rsvp(3));
         var result = await _sut.CreateAsync(id, Rsvp(3));    // total exactly 6 == cap
         Assert.Equal(3, result.NumberOfAttendees);
@@ -84,7 +84,7 @@ public class GuestServiceRsvpTests : IDisposable
     [Fact]
     public async Task Create_NonAttending_IgnoresCapacity()
     {
-        var id = SeedWedding(maxCapacity: 1);
+        var id = SeedEvent(maxCapacity: 1);
         // "not attending" of 5 must not be blocked by capacity
         var result = await _sut.CreateAsync(id, Rsvp(5, attending: false));
         Assert.False(result.IsAttending);
@@ -93,7 +93,7 @@ public class GuestServiceRsvpTests : IDisposable
     [Fact]
     public async Task Create_WhenRsvpClosed_AndEnforced_Throws()
     {
-        var id = SeedWedding(isRsvpOpen: false);
+        var id = SeedEvent(isRsvpOpen: false);
         await Assert.ThrowsAsync<ArgumentException>(() => _sut.CreateAsync(id, Rsvp(1), enforceRsvpOpen: true));
     }
 
@@ -101,7 +101,7 @@ public class GuestServiceRsvpTests : IDisposable
     public async Task Create_WhenRsvpClosed_ButNotEnforced_Succeeds()
     {
         // Admin-side creation (enforceRsvpOpen: false) bypasses the open/public gates.
-        var id = SeedWedding(isRsvpOpen: false, isPublic: false);
+        var id = SeedEvent(isRsvpOpen: false, isPublic: false);
         var result = await _sut.CreateAsync(id, Rsvp(1), enforceRsvpOpen: false);
         Assert.Equal("Guest", result.GuestName);
     }
@@ -109,14 +109,14 @@ public class GuestServiceRsvpTests : IDisposable
     [Fact]
     public async Task Create_OnPrivateWedding_WhenEnforced_Throws()
     {
-        var id = SeedWedding(isPublic: false);
+        var id = SeedEvent(isPublic: false);
         await Assert.ThrowsAsync<InvalidOperationException>(() => _sut.CreateAsync(id, Rsvp(1), enforceRsvpOpen: true));
     }
 
     [Fact]
     public async Task Create_OnPastWedding_Throws()
     {
-        var id = SeedWedding(monthsAhead: -1);
+        var id = SeedEvent(monthsAhead: -1);
         await Assert.ThrowsAsync<InvalidOperationException>(() => _sut.CreateAsync(id, Rsvp(1)));
     }
 

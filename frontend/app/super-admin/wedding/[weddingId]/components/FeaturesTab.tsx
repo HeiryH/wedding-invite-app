@@ -1,7 +1,7 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { WeddingFeature } from '@/lib/api';
+import { EventFeature } from '@/lib/api';
 import { FeatureToggle } from '@/components/ui/FeatureToggle';
 import { Icon } from '@/components/ui/Icon';
 
@@ -13,7 +13,7 @@ const FEATURE_ICONS: Record<string, string> = {
 };
 
 interface FeaturesTabProps {
-  features: WeddingFeature[];
+  features: EventFeature[];
   onToggle: (featureId: number, featureCode: string, currentStatus: boolean) => void;
 }
 

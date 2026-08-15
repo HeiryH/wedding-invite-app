@@ -1,32 +1,36 @@
 'use client';
 
 import Icon from './Icon';
+import { tierLabel } from '@/lib/tierRank';
 
 interface WeddingCardData {
-  weddingId: number;
-  brideName: string;
-  groomName: string;
-  coupleName: string;
-  weddingDate: string;
+  eventId: number;
+  name1: string | null;
+  name2: string | null;
+  displayName: string;
+  slug: string;
+  eventType: string;
+  eventDate: string;
   venue: string;
-  templateName?: string;
+  templateName?: string | null;
   isActive: boolean;
   totalAttending: number;
   totalGuests: number;
+  ownerTier?: string;
 }
 
 interface WeddingCardProps {
   wedding: WeddingCardData;
   onManage: (id: number) => void;
-  onPreview: (coupleName: string) => void;
+  onPreview: (slug: string, eventType: string) => void;
   onToggleActive: (id: number, current: boolean) => void;
-  onDelete: (id: number, coupleName: string) => void;
-  onExport: (id: number, coupleName: string) => void;
+  onDelete: (id: number, slug: string) => void;
+  onExport: (id: number, slug: string) => void;
 }
 
 function getStatus(w: WeddingCardData): 'upcoming' | 'live' | 'draft' {
   if (!w.isActive) return 'draft';
-  if (new Date(w.weddingDate) > new Date()) return 'upcoming';
+  if (new Date(w.eventDate) > new Date()) return 'upcoming';
   return 'live';
 }
 
@@ -48,11 +52,19 @@ const STATUS_COLOR: Record<string, { bg: string; color: string }> = {
 
 const STATUS_LABEL: Record<string, string> = { upcoming: 'Upcoming', live: 'Live', draft: 'Draft' };
 
+const TIER_COLOR: Record<string, { bg: string; color: string }> = {
+  FREE:    { bg: 'var(--surface-sunken)',                                 color: 'var(--text-muted)' },
+  PREMIUM: { bg: 'color-mix(in srgb, var(--accent) 14%, transparent)',    color: 'var(--accent-deep)' },
+  PRO:     { bg: 'color-mix(in srgb, var(--brand) 10%, transparent)',     color: 'var(--brand)' },
+};
+
 export default function WeddingCard({ wedding, onManage, onPreview, onToggleActive, onDelete, onExport }: WeddingCardProps) {
   const status = getStatus(wedding);
-  const days = daysTo(wedding.weddingDate);
-  const date = new Date(wedding.weddingDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+  const days = daysTo(wedding.eventDate);
+  const date = new Date(wedding.eventDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
   const sc = STATUS_COLOR[status];
+  const tier = (wedding.ownerTier ?? 'FREE').toUpperCase();
+  const tc = TIER_COLOR[tier] ?? TIER_COLOR.FREE;
 
   return (
     <article
@@ -73,7 +85,7 @@ export default function WeddingCard({ wedding, onManage, onPreview, onToggleActi
         (e.currentTarget as HTMLElement).style.borderColor = 'var(--border-subtle)';
         (e.currentTarget as HTMLElement).style.boxShadow = 'none';
       }}
-      onClick={() => onManage(wedding.weddingId)}
+      onClick={() => onManage(wedding.eventId)}
     >
       {/* Left rail */}
       <div style={{ width: 4, flexShrink: 0, background: RAIL[status] }} />
@@ -85,18 +97,21 @@ export default function WeddingCard({ wedding, onManage, onPreview, onToggleActi
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10 }}>
           <div style={{ minWidth: 0, flex: '1 1 auto' }}>
             <div style={{ fontFamily: 'var(--font-display)', fontSize: 20, lineHeight: 1.1, letterSpacing: 'var(--tracking-tight)', color: 'var(--text-strong)' }}>
-              {wedding.brideName}{' '}
-              <span style={{ fontStyle: 'italic', color: 'var(--text-muted)', margin: '0 3px' }}>&amp;</span>
-              {' '}{wedding.groomName}
+              {wedding.displayName}
             </div>
             <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--text-subtle)', marginTop: 4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              /{wedding.coupleName}
+              /{wedding.slug}
             </div>
-            {wedding.templateName && (
-              <div style={{ display: 'inline-flex', alignItems: 'center', gap: 5, marginTop: 6, background: 'var(--brand-subtle)', padding: '3px 8px', borderRadius: 'var(--radius-full)', fontSize: 11, color: 'var(--brand)', fontFamily: 'var(--font-ui)', fontWeight: 500 }}>
-                <Icon name="design-nib" size={11} /> {wedding.templateName}
+            <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 6, marginTop: 6 }}>
+              {wedding.templateName && (
+                <div style={{ display: 'inline-flex', alignItems: 'center', gap: 5, background: 'var(--brand-subtle)', padding: '3px 8px', borderRadius: 'var(--radius-full)', fontSize: 11, color: 'var(--brand)', fontFamily: 'var(--font-ui)', fontWeight: 500 }}>
+                  <Icon name="design-nib" size={11} /> {wedding.templateName}
+                </div>
+              )}
+              <div style={{ display: 'inline-flex', alignItems: 'center', gap: 5, background: tc.bg, padding: '3px 8px', borderRadius: 'var(--radius-full)', fontSize: 11, color: tc.color, fontFamily: 'var(--font-ui)', fontWeight: 600, letterSpacing: 'var(--tracking-caps)', textTransform: 'uppercase' }}>
+                <Icon name="star" size={11} /> {tierLabel[tier] ?? tier}
               </div>
-            )}
+            </div>
           </div>
           <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '4px 9px', borderRadius: 'var(--radius-full)', fontSize: 10, letterSpacing: 'var(--tracking-caps)', textTransform: 'uppercase', fontWeight: 600, flexShrink: 0, fontFamily: 'var(--font-ui)', background: sc.bg, color: sc.color }}>
             <span style={{ width: 5, height: 5, borderRadius: '50%', background: 'currentColor', display: 'inline-block' }} />
@@ -137,7 +152,7 @@ export default function WeddingCard({ wedding, onManage, onPreview, onToggleActi
           </div>
           <div style={{ display: 'flex', gap: 6, flexShrink: 0 }} onClick={e => e.stopPropagation()}>
             <button
-              onClick={() => onPreview(wedding.coupleName)}
+              onClick={() => onPreview(wedding.slug, wedding.eventType)}
               style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '6px 10px', borderRadius: 'var(--radius-md)', fontSize: 12, fontWeight: 500, fontFamily: 'var(--font-ui)', background: 'var(--surface-card)', border: '1px solid var(--border-default)', color: 'var(--text-body)', cursor: 'pointer', transition: 'var(--transition-control)' }}
               onMouseEnter={e => (e.currentTarget.style.borderColor = 'var(--brand-border)')}
               onMouseLeave={e => (e.currentTarget.style.borderColor = 'var(--border-default)')}
@@ -145,14 +160,14 @@ export default function WeddingCard({ wedding, onManage, onPreview, onToggleActi
               <Icon name="external-link" size={12} /> Visit Website
             </button>
             <button
-              onClick={() => onToggleActive(wedding.weddingId, wedding.isActive)}
+              onClick={() => onToggleActive(wedding.eventId, wedding.isActive)}
               style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '6px 10px', borderRadius: 'var(--radius-md)', fontSize: 12, fontWeight: 500, fontFamily: 'var(--font-ui)', background: wedding.isActive ? 'var(--surface-sunken)' : '#e5f1ea', color: wedding.isActive ? 'var(--text-subtle)' : 'var(--success)', border: '1px solid var(--border-default)', cursor: 'pointer', transition: 'var(--transition-control)' }}
             >
               <Icon name={wedding.isActive ? 'pause' : 'play'} size={12} />
               {wedding.isActive ? 'Deactivate' : 'Activate'}
             </button>
             <button
-              onClick={() => onExport(wedding.weddingId, wedding.coupleName)}
+              onClick={() => onExport(wedding.eventId, wedding.slug)}
               style={{ display: 'inline-flex', alignItems: 'center', padding: '6px 8px', borderRadius: 'var(--radius-md)', background: 'var(--surface-card)', border: '1px solid var(--border-default)', color: 'var(--text-subtle)', cursor: 'pointer', transition: 'background var(--dur-fast) var(--ease-standard)' }}
               onMouseEnter={e => (e.currentTarget.style.background = 'var(--surface-sunken)')}
               onMouseLeave={e => (e.currentTarget.style.background = 'var(--surface-card)')}
@@ -162,7 +177,7 @@ export default function WeddingCard({ wedding, onManage, onPreview, onToggleActi
               <Icon name="download" size={12} />
             </button>
             <button
-              onClick={() => onDelete(wedding.weddingId, wedding.coupleName)}
+              onClick={() => onDelete(wedding.eventId, wedding.slug)}
               style={{ display: 'inline-flex', alignItems: 'center', padding: '6px 8px', borderRadius: 'var(--radius-md)', background: 'var(--surface-card)', border: '1px solid var(--border-default)', color: 'var(--danger)', cursor: 'pointer', transition: 'background var(--dur-fast) var(--ease-standard)' }}
               onMouseEnter={e => (e.currentTarget.style.background = 'color-mix(in srgb, var(--danger) 8%, transparent)')}
               onMouseLeave={e => (e.currentTarget.style.background = 'var(--surface-card)')}

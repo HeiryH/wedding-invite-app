@@ -3,11 +3,16 @@
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import {
-  weddingService, guestService, wishService, photoService,
-  weddingFeatureService, templateService,
+  eventService, guestService, wishService, photoService,
+  eventFeatureService, templateService,
   authService, tableService,
-  Wedding, Guest, Wish, Photo, WeddingFeature, Template, CoupleAdminUser, SeatingTable,
+  Event, Guest, Wish, Photo, EventFeature, Template, OrganizerAdminUser, SeatingTable,
 } from '@/lib/api';
+import { urlSegmentForEventType } from '@/lib/eventTypes';
+
+// Map a guest's wire-format `guestSide` to the UI's Bride/Groom label.
+const guestSideLabel = (guest: Guest): 'Bride' | 'Groom' | null =>
+  guest.guestSide === 'PRIMARY' ? 'Bride' : guest.guestSide === 'SECONDARY' ? 'Groom' : null;
 
 import OverviewTab from '@/app/super-admin/wedding/[weddingId]/components/OverviewTab';
 import GuestsTab from '@/app/super-admin/wedding/[weddingId]/components/GuestsTab';
@@ -27,13 +32,13 @@ export default function HostWeddingDetailPage() {
   const router = useRouter();
   const weddingId = parseInt(params.weddingId as string);
 
-  const [wedding, setWedding] = useState<Wedding | null>(null);
+  const [wedding, setWedding] = useState<Event | null>(null);
   const [guests, setGuests] = useState<Guest[]>([]);
   const [wishes, setWishes] = useState<Wish[]>([]);
   const [photos, setPhotos] = useState<Photo[]>([]);
-  const [features, setFeatures] = useState<WeddingFeature[]>([]);
+  const [features, setFeatures] = useState<EventFeature[]>([]);
   const [templates, setTemplates] = useState<Template[]>([]);
-  const [coupleAdmin, setCoupleAdmin] = useState<CoupleAdminUser | null>(null);
+  const [organizerAdmin, setOrganizerAdmin] = useState<OrganizerAdminUser | null>(null);
   const [tables, setTables] = useState<SeatingTable[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -49,14 +54,14 @@ export default function HostWeddingDetailPage() {
   const fetchData = async () => {
     try {
       setLoading(true);
-      const [weddingData, guestsData, wishesData, photosData, featuresData, templatesData, coupleAdminData, tablesData] = await Promise.all([
-        weddingService.getById(weddingId),
+      const [weddingData, guestsData, wishesData, photosData, featuresData, templatesData, organizerAdminData, tablesData] = await Promise.all([
+        eventService.getById(weddingId),
         guestService.getByWeddingId(weddingId),
         wishService.getByWeddingId(weddingId),
         photoService.getByWeddingId(weddingId),
-        weddingFeatureService.getWeddingWithFeatures(weddingId).then(r => r.features),
+        eventFeatureService.getEventWithFeatures(weddingId).then(r => r.features),
         templateService.getActive(),
-        authService.getCoupleAdmin(weddingId),
+        authService.getOrganizerAdmin(weddingId),
         tableService.getByWeddingId(weddingId),
       ]);
       setWedding(weddingData);
@@ -65,7 +70,7 @@ export default function HostWeddingDetailPage() {
       setPhotos(photosData);
       setFeatures(featuresData);
       setTemplates(templatesData);
-      setCoupleAdmin(coupleAdminData);
+      setOrganizerAdmin(organizerAdminData);
       setTables(tablesData);
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to load wedding data');
@@ -129,12 +134,12 @@ export default function HostWeddingDetailPage() {
 
   const handleToggleRsvp = async (isRsvpOpen: boolean) => {
     if (!wedding) return;
-    try { const updated = await weddingService.toggleRsvp(wedding.weddingId, isRsvpOpen); setWedding(updated); }
+    try { const updated = await eventService.toggleRsvp(wedding.eventId, isRsvpOpen); setWedding(updated); }
     catch (err: any) { alert(err.response?.data?.message || 'Failed'); }
   };
 
   const handleToggleFeature = async (featureId: number, featureCode: string, currentStatus: boolean) => {
-    try { await weddingFeatureService.toggleFeature(weddingId, { featureId, featureCode, isEnabled: !currentStatus }); await fetchData(); }
+    try { await eventFeatureService.toggleFeature(weddingId, { featureId, featureCode, isEnabled: !currentStatus }); await fetchData(); }
     catch (err: any) { alert(err.response?.data?.message || 'Failed to update feature'); }
   };
 
@@ -142,27 +147,27 @@ export default function HostWeddingDetailPage() {
     if (!wedding) return;
     const template = templates.find(t => t.templateId === templateId);
     if (!confirm(`Change to "${template?.templateName}"?`)) return;
-    try { const updated = await weddingService.updateTemplate(wedding.weddingId, templateId); setWedding(updated); }
+    try { const updated = await eventService.updateTemplate(wedding.eventId, templateId); setWedding(updated); }
     catch (err: any) { alert(err.response?.data?.message || 'Failed'); }
   };
 
   const exportGuestsToCSV = () => {
-    const rows = guests.map(g => [g.guestName, g.email || '', g.phoneNumber || '', g.brideOrGroomSide, g.isAttending ? 'Yes' : 'No', g.numberOfAttendees, g.songRequest || '', g.respondedDate ? new Date(g.respondedDate).toLocaleDateString() : '']);
+    const rows = guests.map(g => [g.guestName, g.email || '', g.phoneNumber || '', guestSideLabel(g) ?? '', g.isAttending ? 'Yes' : 'No', g.numberOfAttendees, g.songRequest || '', g.respondedDate ? new Date(g.respondedDate).toLocaleDateString() : '']);
     const csv = [['Name', 'Email', 'Phone', 'Side', 'Attending', 'Pax', 'Song', 'Date'].join(','), ...rows.map(r => r.map(c => `"${c}"`).join(','))].join('\n');
     const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
-    a.download = `${wedding?.coupleName}-guests.csv`; a.click();
+    a.download = `${wedding?.slug}-guests.csv`; a.click();
   };
 
   const exportWishesToCSV = () => {
     const rows = wishes.map(w => [w.guestName, w.message, new Date(w.createdDate).toLocaleDateString()]);
     const csv = [['Guest', 'Message', 'Date'].join(','), ...rows.map(r => r.map(c => `"${c}"`).join(','))].join('\n');
     const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
-    a.download = `${wedding?.coupleName}-wishes.csv`; a.click();
+    a.download = `${wedding?.slug}-wishes.csv`; a.click();
   };
 
   const filteredGuests = guests.filter(g => {
     if (!g.guestName.toLowerCase().includes(searchTerm.toLowerCase())) return false;
-    if (filterSide !== 'All' && g.brideOrGroomSide !== filterSide) return false;
+    if (filterSide !== 'All' && guestSideLabel(g) !== filterSide) return false;
     if (filterAttending === 'Yes' && !g.isAttending) return false;
     if (filterAttending === 'No' && g.isAttending) return false;
     return true;
@@ -179,8 +184,8 @@ export default function HostWeddingDetailPage() {
     totalGuests: guests.length,
     totalAttending: guests.filter(g => g.isAttending).reduce((s, g) => s + g.numberOfAttendees, 0),
     totalNotAttending: guests.filter(g => !g.isAttending).length,
-    brideSide: guests.filter(g => g.brideOrGroomSide === 'Bride').length,
-    groomSide: guests.filter(g => g.brideOrGroomSide === 'Groom').length,
+    brideSide: guests.filter(g => g.guestSide === 'PRIMARY').length,
+    groomSide: guests.filter(g => g.guestSide === 'SECONDARY').length,
     totalWishes: wishes.length,
     totalPhotos: photos.length,
     pendingPhotos: photos.filter(p => !p.isApproved).length,
@@ -207,9 +212,9 @@ export default function HostWeddingDetailPage() {
     </div>
   );
 
-  const daysToGo = Math.ceil((new Date(wedding.weddingDate).getTime() - Date.now()) / 86400000);
-  const weddingDateStr = new Date(wedding.weddingDate).toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
-  const weddingTimeStr = new Date(wedding.weddingDate).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+  const daysToGo = Math.ceil((new Date(wedding.eventDate).getTime() - Date.now()) / 86400000);
+  const weddingDateStr = new Date(wedding.eventDate).toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+  const weddingTimeStr = new Date(wedding.eventDate).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
   const weddingStatus = !wedding.isActive ? 'Draft' : daysToGo > 0 ? 'Upcoming' : 'Live';
 
   return (
@@ -217,7 +222,7 @@ export default function HostWeddingDetailPage() {
       {/* Back */}
       <button onClick={() => router.push('/host-admin')} className="lg:hidden"
         style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13, color: 'var(--text-muted)', marginBottom: 14, padding: '6px 12px', borderRadius: 'var(--radius-full)', background: 'var(--surface-card)', border: '1px solid var(--border-subtle)', cursor: 'pointer', fontFamily: 'var(--font-ui)' }}>
-        <Icon name="arrow-left" size={15} /> All weddings
+        <Icon name="arrow-left" size={15} /> All events
       </button>
 
       {/* Hero */}
@@ -235,14 +240,14 @@ export default function HostWeddingDetailPage() {
               <Badge tone={weddingStatus === 'Live' ? 'success' : weddingStatus === 'Upcoming' ? 'info' : 'neutral'} dot>{weddingStatus}</Badge>
             </div>
             <h1 style={{ margin: 0, fontFamily: 'var(--font-display)', fontSize: 'clamp(26px, 4vw, 38px)', fontWeight: 400, color: '#fff', lineHeight: 1.1, letterSpacing: 'var(--tracking-tight)' }}>
-              {wedding.brideName} & {wedding.groomName}
+              {wedding.displayName}
             </h1>
             <p style={{ margin: '10px 0 0', color: 'rgba(255,255,255,.75)', fontSize: 'var(--text-sm)', fontFamily: 'var(--font-ui)' }}>
               {weddingDateStr} · {weddingTimeStr} · {wedding.venue}
             </p>
           </div>
           <button
-            onClick={() => window.open(`/wedding/${wedding.coupleName}`, '_blank')}
+            onClick={() => window.open(`/${urlSegmentForEventType(wedding.eventType)}/${wedding.slug}`, '_blank')}
             style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 14px', borderRadius: 'var(--radius-md)', background: 'rgba(255,255,255,.15)', border: '1px solid rgba(255,255,255,.25)', color: '#fff', fontSize: 'var(--text-sm)', cursor: 'pointer', fontFamily: 'var(--font-ui)', fontWeight: 500, flexShrink: 0 }}
           >
             <Icon name="eye" size={15} /> Preview
@@ -279,6 +284,7 @@ export default function HostWeddingDetailPage() {
           guests={guests}
           isRsvpOpen={wedding.isRsvpOpen ?? true}
           onToggleRsvp={handleToggleRsvp}
+          showSide={(wedding.eventType ?? 'WEDDING') === 'WEDDING'}
         />
       )}
       {activeTab === 'guests' && (
@@ -293,6 +299,7 @@ export default function HostWeddingDetailPage() {
           setFilterAttending={setFilterAttending}
           onDelete={handleDeleteGuest}
           onExport={exportGuestsToCSV}
+          showSide={(wedding.eventType ?? 'WEDDING') === 'WEDDING'}
         />
       )}
       {activeTab === 'wishes' && (
@@ -324,14 +331,14 @@ export default function HostWeddingDetailPage() {
         <TemplatesTab
           templates={templates}
           currentTemplateId={wedding.templateId}
-          weddingTier={coupleAdmin?.tier}
+          weddingTier={organizerAdmin?.tier}
           onChangeTemplate={handleChangeTemplate}
-          onPreviewTemplate={(id) => window.open(`/wedding/${wedding.coupleName}?preview=${id}`, '_blank')}
+          onPreviewTemplate={(id) => window.open(`/${urlSegmentForEventType(wedding.eventType)}/${wedding.slug}?preview=${id}`, '_blank')}
         />
       )}
       {activeTab === 'access' && (
         <AccessTab
-          coupleAdmin={coupleAdmin}
+          organizerAdmin={organizerAdmin}
           weddingId={weddingId}
           onRefresh={fetchData}
         />

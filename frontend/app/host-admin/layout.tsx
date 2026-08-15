@@ -54,7 +54,7 @@ export default function HostAdminLayout({ children }: { children: React.ReactNod
       role="Host Admin"
       fabHref="/host-admin/wedding/create"
       sidePillLinks={[
-        { label: 'New wedding', href: '/host-admin/wedding/create' },
+        { label: 'New event', href: '/host-admin/wedding/create' },
       ]}
     >
       {children}

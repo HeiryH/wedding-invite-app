@@ -21,10 +21,14 @@ namespace WeddingInvite.Models
         public bool IsPremium { get; set; } = false; // kept in sync with Tier (Tier != FREE)
         public string Tier { get; set; } = "FREE"; // FREE | PREMIUM | PRO
         public int SortOrder { get; set; } = 0;
+
+        // Comma-separated subset of EventTypes.All, e.g. "WEDDING,CEREMONY" — which event
+        // pickers (the personalise funnel) should surface this template under.
+        public string EventTypes { get; set; } = Models.EventTypes.Wedding;
         
         public DateTime CreatedDate { get; set; } = DateTime.UtcNow;
         
         // Navigation property
-        public ICollection<Wedding> Weddings { get; set; } = new List<Wedding>();
+        public ICollection<Event> Events { get; set; } = new List<Event>();
     }
 }

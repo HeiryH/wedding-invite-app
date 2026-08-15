@@ -14,6 +14,7 @@ namespace WeddingInvite.Core.DTOs
         public bool IsPremium { get; set; }
         public string Tier { get; set; } = "FREE";
         public int SortOrder { get; set; }
+        public string EventTypes { get; set; } = "WEDDING";
     }
 
     public class TemplateUsageDto : TemplateDto
@@ -28,5 +29,6 @@ namespace WeddingInvite.Core.DTOs
         public string Tier { get; set; } = "FREE";
         public bool IsActive { get; set; }
         public int SortOrder { get; set; }
+        public string EventTypes { get; set; } = "WEDDING";
     }
 }

@@ -15,21 +15,21 @@ namespace WeddingInvite.Data.Repositories
         public async Task<User?> GetByIdAsync(int id)
         {
             return await _context.Users
-                .Include(u => u.Wedding)
+                .Include(u => u.Event)
                 .FirstOrDefaultAsync(u => u.UserId == id);
         }
-        
+
         public async Task<User?> GetByEmailAsync(string email)
         {
             return await _context.Users
-                .Include(u => u.Wedding)
+                .Include(u => u.Event)
                 .FirstOrDefaultAsync(u => u.Email == email);
         }
-        
-        public async Task<User?> GetByWeddingIdAsync(int weddingId)
+
+        public async Task<User?> GetByEventIdAsync(int eventId)
         {
             return await _context.Users
-                .FirstOrDefaultAsync(u => u.WeddingId == weddingId && u.Role == "COUPLE_ADMIN");
+                .FirstOrDefaultAsync(u => u.EventId == eventId && u.Role == UserRoles.OrganizerAdmin);
         }
 
         public async Task<User> CreateAsync(User user)

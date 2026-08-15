@@ -8,7 +8,7 @@ export default function robots(): MetadataRoute.Robots {
       userAgent: '*',
       allow: '/',
       // Keep admin surfaces out of search results.
-      disallow: ['/super-admin', '/host-admin', '/couple-admin', '/login', '/reset-password'],
+      disallow: ['/super-admin', '/host-admin', '/organizer-admin', '/login', '/reset-password'],
     },
     sitemap: `${siteUrl}/sitemap.xml`,
   };

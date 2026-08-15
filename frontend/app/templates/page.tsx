@@ -25,7 +25,7 @@ export default function TemplatesPage() {
   const handleSelect = (t: Template) => {
     if (user) {
       // Logged-in users: go to their customize page
-      router.push('/couple-admin/customize');
+      router.push('/organizer-admin/customize');
     } else {
       router.push(`/try?template=${t.templateId}`);
     }
@@ -46,7 +46,7 @@ export default function TemplatesPage() {
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
             {user ? (
               <a
-                href={user.role === 'SUPER_ADMIN' ? '/super-admin' : '/couple-admin'}
+                href={user.role === 'SUPER_ADMIN' ? '/super-admin' : '/organizer-admin'}
                 style={{ fontFamily: 'var(--font-ui)', fontSize: 'var(--text-sm)', color: 'var(--text-body)', textDecoration: 'none', padding: '6px 14px', borderRadius: 'var(--radius-full)', border: '1px solid var(--border-default)' }}
               >
                 Dashboard
