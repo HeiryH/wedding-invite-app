@@ -2,6 +2,42 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Branch topology — start here
+
+**`ae-unified` is the working branch and a strict superset of every other branch.** It integrates
+the two long-lived branches that had diverged from `main` (`d344ab7`) and never come back together:
+
+| Branch | State |
+|---|---|
+| **`ae-unified`** | **current work** — everything below, merged and verified |
+| `ae-adjust-editor` | superseded (Adjust Editor universalization; was dormant since 2026-07-26) |
+| `frontend-design-fix` | superseded (Wedding→Event rename, package/tier unification, T8/T9) |
+| `main` | unchanged at `d344ab7`, the common ancestor of both |
+
+The two originals are still on `origin` but should not be built on. Nothing from this merge has
+been **deployed** — production is still running pre-rename code.
+
+⚠️ **Naming in this document lags the code.** The Wedding→Event rename (`Wedding`→`Event`,
+`CoupleName`→`Slug`, `couple-admin`→`organizer-admin`, `/wedding/[coupleName]`→`/[eventType]/[slug]`)
+landed in `frontend-design-fix` and is now in `ae-unified`, but most prose below still says
+"wedding". Read `WeddingService`/`/api/wedding`/`WeddingId` as `EventService`/`/api/event`/`EventId`.
+The `WeddingInvite.*` C# assembly/namespace names were **not** renamed and are still correct.
+
+### Merging across branches here — the recurring hazard
+This repo accumulates uncommitted work in the shared working tree, and different sessions commit
+the *same* WIP to different branches (see the entangled-WIP pattern). When those branches merge,
+git sees no conflict — it happily keeps **both** copies:
+
+- After a rename, one copy becomes `Event*`-named while the `Wedding*` original survives as an
+  orphan that still compiles into the build. The `ae-unified` merge had to delete **9** such stale
+  duplicates (`Wedding{,Export}Service`, `IWeddingService`, `WeddingController`,
+  `WeddingFeatureService`, `wedding.service.ts`, 2 test files + interfaces).
+- The same thing happens *inside* files: a duplicated `getTemplateDefault` in
+  `templateConfig.service.ts` and a duplicated section in this very file.
+
+**So after any cross-branch merge here: build it, then grep for orphaned `Wedding*` files and
+duplicated members.** A clean `git merge` is not evidence of a correct merge.
+
 ## Commands
 
 ### Backend
@@ -16,12 +52,35 @@ dotnet ef migrations add <MigrationName> --project backend/WeddingInvite.Data --
 dotnet ef database update --project backend/WeddingInvite.Data --startup-project backend/WeddingInvite.API
 ```
 
-**Before applying any migration to the production SQLite file** (`wedding.db` on the VPS,
-`/opt/wedding-app` — see Quick Deploy below): take a manual file-level backup first
+**Before applying any migration to the production SQLite file** (the real path is
+`/opt/wedding-app/data/db/wedding.db` — **not** `data/wedding.db`, which is a stray empty file;
+see Quick Deploy below): take a manual file-level backup first
 (`cp wedding.db wedding.db.bak-$(date +%Y%m%d%H%M%S)`), and review the generated SQL with
 `dotnet ef migrations script` before running `database update` against it. EF's `RenameTable`/
 `RenameColumn` operations are safe for renames (no data loss), but there is no automatic
 pre-migration backup — this is a required manual step, not something the tooling does for you.
+
+### Duplicate migrations across branches (fixed in `ae-unified`, but read this before adding one)
+Two branches independently scaffolded migrations for the *same* schema change, so applying the
+combined set to a **fresh** DB failed with `table TemplateConfigDefaults already exists`. The
+reconciliation, and the rules it produced:
+
+- **A migration's duplicate is only safe to delete once you've checked what's unique in it.**
+  `20260723135311_UnifyTierGatingUnderPackages` was 95% redundant with
+  `20260726123038_AddTemplateConfigDefaultAndPackageTierUnification`, but held one raw
+  `migrationBuilder.Sql` backfill with no equivalent — granting `CUSTOM_DOMAIN` to events that
+  already had a `Domain`. Dropping it silently would have failed the two-step domain gate for
+  existing events. It survives as `20260817000000_BackfillCustomDomainFeature`.
+- **Keeping a migration out of timestamp order is fine only if nothing later rebuilds its table.**
+  `20260725000000_AddTemplateStagesJson` stays where it is (adds `Templates.IsAuthored`/`StagesJson`)
+  — verified that no later migration rebuilds `Templates`. SQLite EF does full table rebuilds for
+  column drops, and a rebuild scaffolded before those columns existed would silently drop them.
+  **Check this whenever you reorder or re-date a migration.**
+- **EF tolerates orphan `__EFMigrationsHistory` rows**, so deleting an already-applied migration
+  doesn't break existing databases — they simply have history rows for migrations no longer in the
+  assembly. Verify a change on **both** paths: a fresh DB *and* a copy of a real one.
+  `dotnet ef database update --connection "Data Source=/tmp/scratch.db"` is the cheap way to prove
+  the fresh path without touching your dev DB.
 
 ## Architecture
 
@@ -40,28 +99,6 @@ All repos/services are registered as **scoped** in `Program.cs`. When adding new
 - Tiers: `User.Tier` and `Template.Tier` are `FREE | PREMIUM | PRO` — templates are tier-gated. **No billing/payment integration exists yet** (tier changes are manual)
 - `Template.EventTypes` is a separate CSV field (`WEDDING`/`CEREMONY`/`PARTY`, e.g. `"WEDDING,CEREMONY"`) — which event the public `/personalise/picker` funnel shows a template under. Not tier-related; edited via a checkbox group on `/super-admin/themes`. `TemplateService.NormalizeEventTypes` upper-cases/validates on save and falls back to `WEDDING` if nothing recognised survives. `frontend/lib/eventTypes.ts` (`EVENT_TYPES`, `parseEventTypes`, `matchesEvent`) is the shared frontend vocabulary.
 - **Package rows ARE the tier definitions** (`Package`/`PackageFeature`, exactly `FREE`/`PREMIUM`/`PRO` — `PackageService` rejects creating or deleting any other code). `IPackageRepository.TierIncludesFeatureAsync` is the single source of truth for "does this tier include this feature," replacing the old hardcoded `TierEntitlements.AllowsFeature` map. Edited at `/super-admin/packages`. `Wedding.PackageId` no longer exists — a wedding's feature set comes from its owner's `User.Tier` alone, resolved through this lookup (see `WeddingFeatureService`/`WeddingService.SetDomainAsync`). Custom Domain needs both the PRO tier ceiling *and* an explicit per-wedding `WeddingFeature` toggle (same two-step gate as `PHOTO_BOOTH`/`SEATING`).
-
-### Wedding lifecycle: delete vs. deactivate
-`DELETE /api/wedding/{id}` (`WeddingService.DeleteAsync`) is a **real, permanent delete** — it removes
-the row and cascades all child data (Guests, Wishes, Photos, WeddingFeatures, Tables, ItineraryItems,
-WeddingTemplateConfig are `OnDelete(Cascade)`; the couple admin's `User.WeddingId` is `SetNull`), and
-frees the couple name for reuse. It also **best-effort deletes the on-disk upload directories**
-(`wwwroot/uploads/{id}/` — covers Couple/Guest photos and audio; `wwwroot/uploads/photos/{id}/` for a
-legacy pre-existing layout) via `TryDeleteDirectory`, swallowing filesystem errors since the DB delete
-has already committed by that point. To deactivate a wedding *without* deleting it, use
-`PUT /api/wedding/{id}/toggle-active` (`ToggleActiveAsync`, `IsActive`) — that's the "Drafts" bucket
-in the super-admin dashboard.
-
-**Export a wedding**: `GET /api/wedding/{id}/export` (`WeddingExportService.BuildExportZipAsync`,
-same `SUPER_ADMIN,HOST_ADMIN` + `CanAccessWeddingAsync` gate as Delete) streams back a zip of
-everything belonging to the wedding — `wedding.json`, the full effective `config.json`, `guests.csv`,
-`wishes.csv`, `itinerary.csv`, `seating.csv`, every photo under `photos/{couple,guest}/` (named by
-their on-disk `{guid}.ext`, with a `photos-manifest.csv` recording metadata + a `FileIncluded` flag
-for any DB row whose file is missing on disk), and `audio/` if `music.url` is configured and its file
-exists. Built fully in-memory (`MemoryStream`/`ZipArchive`, BCL only) — pairs naturally as "back this
-up before you delete it," but stands alone as a general data-portability export. Surfaced in the
-super-admin/host-admin wedding-list card (`WeddingCard`'s download icon) and the wedding detail page
-header ("Export data").
 
 ### Wedding lifecycle: delete vs. deactivate
 `DELETE /api/wedding/{id}` (`WeddingService.DeleteAsync`) is a **real, permanent delete** — it removes
@@ -143,9 +180,49 @@ The stage/layer compositor is a **shared, template-neutral engine**: `types.ts`,
 `Stage.tsx`/`Layer.tsx`/`Stage.module.css`, `hooks/{useBreakpoint,useStageReveal,useParallax}.ts`,
 `adjust/AdjustPanel.tsx`, and `engine.tsx` (a context supplying per-template `assetRoot` /
 `assetSizes` / `slotRegistry`). Templates opt in with their own `keyPrefix` and stage-definition
-map — `Template7-romangarden` (full compositor) and `Template5` (hybrid overlay) are the two
-consumers today. Layouts persist per-template as `t<N>.layout.<bp>.<stageId>`. When adding a
+map. Layouts persist per-template as `t<N>.layout.<bp>.<stageId>`. When adding a
 template, see `~/.claude/plans/t5-adjust-rollout.md`.
+
+### Every template now runs through this engine (`_shared/registry.ts`)
+`TEMPLATE_ENGINES` maps each `templateId` → `{keyPrefix, reveal, slotTheme?, resolveStages, stageIds}`.
+There are **no `templateId === N` branches** in `customize/page.tsx` any more — don't reintroduce
+them; add a registry entry. Two deliberately different geometry families live behind it:
+
+- **Fixed-stage compositor** (`reveal: true`) — full-screen `100svh` stages, absolute layer
+  positions. Template 7 today. `"Reveal off-screen"` only applies here.
+- **Flow + overlay** (`reveal: false`) — Templates 1–6: real DOM flow with a `SectionOverlay` per
+  section plus `anchor` pseudo-layers (`useAnchors`) that nudge existing elements by transform.
+
+This split is intentional, not an incomplete migration: content-heavy templates need real reflow,
+so forcing them onto fixed stages would be a regression.
+
+**Known gap — the anchor vocabulary can't reach generated visuals.** An `anchor` grabs an
+already-rendered *plain DOM element* and transforms it. That covers T5's ceremony card, but not
+its welcome section (names are SVG `<textPath>` whose curve is recomputed from character count) —
+which is why `T5_STAGES.welcome` ships with zero layers. Anything whose visual is *generated*
+rather than merely *positioned* (glass blur/tint as tunable parameters, arc text, particle fields,
+gradient masks) needs a **new layer `kind`**, not another `anchor()` call site. The proven recipe
+is `kind: 'scrollVideo'` (`_shared/effects/ScrollVideoLayer.tsx`): take the effect's hardcoded
+constants, promote them to fields on `Layer`, and wrap the effect in a component that reads them —
+storage, delta-diffing and per-breakpoint persistence then come for free. Unconverted candidates
+still hardcoding their constants: `Template6-fairygarden/scenes/PetalRain.tsx` (particle spawn
+ranges), `Template6-fairygarden/components/FallbackBackground.tsx`, and `Template5.tsx`'s
+background fade-mask gradient stops.
+
+### Authored templates — a template can be data, not code
+`Template.IsAuthored` + `Template.StagesJson` (a `Record<StageId, StageDef>` blob) render through
+`_shared/DataTemplate.tsx` on the same engine with **zero per-template React**. Authored in-app at
+`/super-admin/authoring/[templateId]`, which reuses the couple Adjust flow verbatim (`keyPrefix:
+'author'`) and the existing `/organizer-admin/preview` iframe rather than a parallel system.
+Functional blocks come from the shared `_shared/slots/` catalog (RSVP, countdown, names, details,
+itinerary, wishes, photo booth), styled through `--slot-*` CSS custom properties so authored
+templates get neutral defaults while T7 pins them to its own values.
+
+- **Two separate render paths must both handle the fallthrough**: `TemplateWrapper.tsx` (customize
+  preview) *and* the public `/[eventType]/[slug]/page.tsx`'s own inline renderer. Missing the
+  second one crashes the public page with `Cannot find module 'Template8'`.
+- Authored layout keys use the `ta<id>` prefix, so `TemplateConfigPolicy.LayoutKeyPattern` is
+  `^ta?\d+\.layout\.` — a `^t\d+` regex silently skips the PRO gate for them.
 
 ## Template 7 — Roman Garden (full stage compositor)
 
@@ -378,8 +455,32 @@ ScrollTrigger.create({
 
 **Canvas visibility on mount:** use a self-retrying rAF loop — `draw()` re-queues itself via `requestAnimationFrame` until `video.readyState >= 2` (HAVE_CURRENT_DATA). `readyState >= 1` only gives dimensions, not decoded pixel data.
 
+## Templates 1–4 — layout notes
+- **Templates 1 and 3 are single-page scroll, not tabs.** Every section mounts at once, ordered by
+  flex `order` off `sectionOrder`; the nav scrolls to a section and a scroll-spy syncs the active
+  highlight. (They previously mounted one section at a time via `AnimatePresence mode="wait"`.)
+  Consequences: the Adjust panel's "select a stage" **scrolls** to the stage like every other
+  continuous-scroll template, and each section needs `position: relative` so `SectionOverlay`'s
+  absolutely-positioned decorative layers anchor to *it* and not the page — easy to drop when
+  rewriting a `className`.
+- **Template 4** renders a `TornEdge` at *any* section colour change (not only dark→cream); its
+  section padding lives on an inner `div` so the torn edge sits flush against the section boundary.
+
 ## Known Issues
 - Admin-side guest creation: `guestService` posts to `/guest/rsvp`; re-verify the admin create path works end-to-end (historically broken; endpoint changed).
+- **Device-shape drift on the fixed-stage compositor (open, T7).** Layer `x`/`y`/`w`/`h` are
+  independent percentages of the stage box, and `useBreakpoint` buckets everything under 900px as
+  one `mobile` layout — so a composition tuned on a ~390×844 phone visibly separates on a very
+  different aspect ratio (Samsung Fold cover ~1:2.56, unfolded ~1:1.25). The background already
+  `object-fit: cover`s; the foreground does not follow it. Agreed fix (**not yet implemented**):
+  render the whole composition inside a fixed reference canvas and apply **one** shared
+  cover-crop transform to it, so every layer scales with the background as a unit — the same math
+  `bgFit: cover` already does, applied to the group. Lives in `Stage.tsx`/`Stage.module.css`; needs
+  no change to the stored per-layer percentages. Requires tagging layers "core" (never crop:
+  countdown, RSVP, names) vs "decorative" (croppable) per stage.
+- The Adjust preview device presets (`PreviewPanel.tsx`) are all standard phones (SE / 15 / Pro
+  Max) — there is no Fold-cover or Fold-unfolded preset, so the failure case above can't be
+  previewed without real hardware.
 
 ## Content Roadmap — SHIPPED (approved Apr 2026, delivered)
 Phases 1–4 are done and in production:
@@ -403,7 +504,10 @@ When the user says **"again"**, **"deploy"**, or **"push it"**:
 
 The script handles: `git add frontend/` → commit → push to GitHub → SSH to VPS → `docker compose build frontend && docker compose up -d frontend`.
 
-- Branch: `frontend-design-fix`
+- Branch: **`ae-unified`** (was `frontend-design-fix`; see Branch topology at the top). ⚠️ Nothing
+  from `ae-unified` has been deployed yet — production still runs pre-rename code, and prod's
+  `__EFMigrationsHistory` has **not** been checked against the reconciled migration chain. Do that
+  first, against `/opt/wedding-app/data/db/wedding.db`.
 - VPS: `root@139.180.154.175`, app at `/opt/wedding-app`
 - Password: in `.env.deploy` at repo root (never committed — load with `source .env.deploy`)
 - Public domain is **`thee-invite.oddstudio.app`** (moved off the bare `oddstudio.app` apex on
