@@ -28,9 +28,9 @@ export const isHostAdmin = (): boolean => {
   return user?.role === 'HOST_ADMIN';
 };
 
-export const isCoupleAdmin = (): boolean => {
+export const isOrganizerAdmin = (): boolean => {
   const user = getUser();
-  return user?.role === 'COUPLE_ADMIN';
+  return user?.role === 'ORGANIZER_ADMIN';
 };
 
 export const isAuthenticated = (): boolean => {

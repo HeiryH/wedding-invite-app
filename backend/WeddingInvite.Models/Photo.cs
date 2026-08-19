@@ -3,7 +3,7 @@ namespace WeddingInvite.Models
     public class Photo
     {
         public int PhotoId { get; set; }
-        public int WeddingId { get; set; }
+        public int EventId { get; set; }
         public string? GuestName { get; set; }
         public string FileName { get; set; } = string.Empty;
         public string FilePath { get; set; } = string.Empty;
@@ -29,7 +29,7 @@ namespace WeddingInvite.Models
         public DateTime CreatedDate { get; set; } = DateTime.UtcNow;
 
         // Navigation
-        public Wedding Wedding { get; set; } = null!;
+        public Event Event { get; set; } = null!;
         public User? ApprovedBy { get; set; }
     }
 
@@ -47,6 +47,12 @@ namespace WeddingInvite.Models
         public const int Extra2 = 4;
         public const int Extra3 = 5;
 
+        // Generic (non-WEDDING) equivalents of GroomPortrait/BridePortrait, added ahead of
+        // PARTY/CEREMONY template support: SubjectPortrait is the PARTY honoree, HonoreePortrait
+        // is the CEREMONY subject. Existing GroomPortrait/BridePortrait are untouched.
+        public const int SubjectPortrait = 6;
+        public const int HonoreePortrait = 7;
+
         // Section background image slots (10-12)
         public const int WelcomeBg = 10;
         public const int CeremonyBg = 11;
@@ -59,6 +65,6 @@ namespace WeddingInvite.Models
         // slot: a stage can hold many layer images, so uploads always insert a new row.
         public const int LayerImage = 20;
 
-        public static readonly int[] All = [GroomPortrait, BridePortrait, Extra1, Extra2, Extra3, WelcomeBg, CeremonyBg, CelebrationBg, Template5GlobalBg, LayerImage];
+        public static readonly int[] All = [GroomPortrait, BridePortrait, Extra1, Extra2, Extra3, WelcomeBg, CeremonyBg, CelebrationBg, Template5GlobalBg, LayerImage, SubjectPortrait, HonoreePortrait];
     }
 }

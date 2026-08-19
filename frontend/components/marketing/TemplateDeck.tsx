@@ -4,8 +4,32 @@ import { useEffect, useRef, useState } from 'react';
 import { TemplatePreview } from '@/components/templates/TemplatePreview';
 import type { Template } from '@/lib/api';
 
-// Swipeable 3-card deck (ported from the comp). Drag the top card to browse,
-// tap it to select. On select, a "Use this template" CTA pops.
+const CARD_ASPECT = '39 / 70';
+const FLY_MS = 260;
+const SNAP_MS = 320;
+const FLY_EASE = 'cubic-bezier(.32,.72,.35,1)';
+const SNAP_EASE = 'cubic-bezier(.22,1.1,.36,1)';
+const TAP_DIST = 12;
+const TAP_MS = 250;
+const COMMIT_FRACTION = 0.28; // of card width
+const COMMIT_VELOCITY = 0.5; // px/ms
+
+const ROLE_BASE: Record<'top' | 'mid' | 'back', { transform: string; z: number }> = {
+  top: { transform: 'translate(0,0) rotate(0deg) scale(1)', z: 3 },
+  mid: { transform: 'translate(16px,-12px) rotate(4deg) scale(.95)', z: 2 },
+  back: { transform: 'translate(-16px,-22px) rotate(-4deg) scale(.9)', z: 1 },
+};
+
+const cardBoxStyle: React.CSSProperties = {
+  position: 'absolute', inset: 0, borderRadius: 24, overflow: 'hidden',
+  border: '3px solid var(--mkt-ink)', boxShadow: '0 16px 30px rgba(23,19,13,.24)',
+  background: 'var(--mkt-card)',
+};
+
+// Swipeable card deck. The top card's drag follows the finger via direct DOM
+// mutation (no re-render per pointermove); a released swipe spawns a short-lived
+// "ghost" that continues flying off-screen while `order` cycles instantly
+// underneath, so the promoted card never visibly slides back into place.
 export function TemplateDeck({
   templates,
   onUse,
@@ -13,101 +37,155 @@ export function TemplateDeck({
   templates: Template[];
   onUse: (t: Template) => void;
 }) {
-  // order[0] = top card. Templates load async, so keep the order list in sync
-  // with the arriving list (a lazy useState initialiser would run only once,
-  // while templates was still empty).
   const [order, setOrder] = useState<number[]>([]);
   const [selected, setSelected] = useState(false);
-  const [drag, setDrag] = useState({ x: 0, y: 0, active: false });
-  const start = useRef({ x: 0, y: 0 });
+  const [ghost, setGhost] = useState<{ template: Template; startTransform: string; dir: 1 | -1 } | null>(null);
+
+  const boxRef = useRef<HTMLDivElement>(null);
+  const topRef = useRef<HTMLDivElement>(null);
+  const drag = useRef({ active: false, x: 0, y: 0, startX: 0, startY: 0, startT: 0, lastX: 0, lastT: 0, vx: 0, width: 240 });
 
   useEffect(() => {
     setOrder(templates.map((_, i) => i));
     setSelected(false);
+    setGhost(null);
   }, [templates]);
 
   if (templates.length === 0 || order.length === 0) return null;
 
-  const top = templates[order[0]];
-  const mid = templates[order[1 % order.length]];
-  const back = templates[order[2 % order.length]];
-  if (!top || !mid || !back) return null;
+  const n = Math.min(templates.length, 3);
+  const roles: Array<'top' | 'mid' | 'back'> = ['top', 'mid', 'back'].slice(0, n) as Array<'top' | 'mid' | 'back'>;
+  const cards = roles.map((role, i) => ({ role, t: templates[order[i % order.length]] }));
+  const top = cards.find((c) => c.role === 'top')!.t;
+  // Swipe-to-next only makes sense with >1 card, but tap-to-select must still work with exactly
+  // one (e.g. a PARTY/CEREMONY deck showing its single template) — gating `down` itself on
+  // `canDrag` used to swallow the pointerdown entirely for one-card decks, so the tap-detection
+  // logic in `up()` never even ran and the card could never be selected. `canDrag` still governs
+  // the drag-follow affordance/cursor and (via the `templates.length > 1` check already in `up`)
+  // whether a swipe actually commits to the next card.
+  const canDrag = templates.length > 1 && !selected;
+  const canSelect = !selected;
+
+  const applyTopTransform = (transform: string, opacity: number, transition: string) => {
+    const el = topRef.current;
+    if (!el) return;
+    el.style.transition = transition;
+    el.style.transform = transform;
+    el.style.opacity = String(opacity);
+  };
 
   const down = (e: React.PointerEvent) => {
-    if (selected) return;
-    start.current = { x: e.clientX, y: e.clientY };
-    setDrag({ x: 0, y: 0, active: true });
+    if (!canSelect) return;
+    const d = drag.current;
+    d.active = true; d.x = 0; d.y = 0;
+    d.startX = e.clientX; d.startY = e.clientY; d.startT = performance.now();
+    d.lastX = e.clientX; d.lastT = d.startT; d.vx = 0;
+    d.width = boxRef.current?.offsetWidth ?? 240;
+    applyTopTransform(ROLE_BASE.top.transform, 1, 'none');
     try { e.currentTarget.setPointerCapture(e.pointerId); } catch {}
   };
+
   const move = (e: React.PointerEvent) => {
-    if (!drag.active) return;
-    setDrag({ x: e.clientX - start.current.x, y: e.clientY - start.current.y, active: true });
+    const d = drag.current;
+    if (!d.active) return;
+    d.x = e.clientX - d.startX;
+    d.y = e.clientY - d.startY;
+    const now = performance.now();
+    const dt = now - d.lastT;
+    if (dt > 0) d.vx = (e.clientX - d.lastX) / dt;
+    d.lastX = e.clientX; d.lastT = now;
+
+    const rotate = Math.max(-14, Math.min(14, d.x / 22));
+    const opacity = Math.max(0.4, 1 - Math.abs(d.x) / 520);
+    applyTopTransform(`translate(${d.x}px, ${d.y * 0.4}px) rotate(${rotate}deg)`, opacity, 'none');
   };
+
+  const commitSwipe = (dirSign: 1 | -1) => {
+    const d = drag.current;
+    const dist = Math.abs(d.x) + Math.abs(d.y);
+    // Continue from wherever the finger left off, not from the base position.
+    const rotate = Math.max(-14, Math.min(14, d.x / 22));
+    const startTransform = dist > 0
+      ? `translate(${d.x}px, ${d.y * 0.4}px) rotate(${rotate}deg)`
+      : ROLE_BASE.top.transform;
+
+    setGhost({ template: top, startTransform, dir: dirSign });
+
+    // Reset the real "top" slot to its resting transform with no transition
+    // *before* the content swap below, so React's re-render is a no-op visually.
+    applyTopTransform(ROLE_BASE.top.transform, 1, 'none');
+    setOrder((o) => [...o.slice(1), o[0]]);
+  };
+
   const up = () => {
-    if (!drag.active) return;
-    const { x, y } = drag;
-    const dist = Math.abs(x) + Math.abs(y);
-    if (Math.abs(x) > 110) {
-      // cycle: send top to back
-      setOrder((o) => [...o.slice(1), o[0]]);
-      setDrag({ x: 0, y: 0, active: false });
-    } else if (dist < 10) {
+    const d = drag.current;
+    if (!d.active) return;
+    d.active = false;
+    const dist = Math.abs(d.x) + Math.abs(d.y);
+    const duration = performance.now() - d.startT;
+
+    const swiped = Math.abs(d.x) > d.width * COMMIT_FRACTION || Math.abs(d.vx) > COMMIT_VELOCITY;
+
+    if (dist < TAP_DIST && duration < TAP_MS) {
+      applyTopTransform(ROLE_BASE.top.transform, 1, 'none');
       setSelected(true);
-      setDrag({ x: 0, y: 0, active: false });
-    } else {
-      setDrag({ x: 0, y: 0, active: false });
+      return;
     }
+    if (swiped && templates.length > 1) {
+      commitSwipe(d.x >= 0 ? 1 : -1);
+      return;
+    }
+    // Snap back.
+    applyTopTransform(ROLE_BASE.top.transform, 1, `transform ${SNAP_MS}ms ${SNAP_EASE}`);
   };
-
-  const cardBox: React.CSSProperties = {
-    position: 'absolute', inset: 0, borderRadius: 24, overflow: 'hidden',
-    border: '3px solid var(--mkt-ink)', boxShadow: '0 16px 30px rgba(23,19,13,.24)',
-    background: 'var(--mkt-card)',
-  };
-
-  const layers = [
-    { t: back, z: 1, base: 'translate(-16px,-22px) rotate(-4deg) scale(.9)', op: selected ? 0.3 : 1, drag: false, key: 'back' },
-    { t: mid, z: 2, base: 'translate(16px,-12px) rotate(4deg) scale(.95)', op: selected ? 0.3 : 1, drag: false, key: 'mid' },
-    { t: top, z: 3, base: 'translate(0,0) rotate(0deg) scale(1)', op: 1, drag: true, key: 'top' },
-  ];
 
   return (
-    <div style={{ position: 'relative', width: 240, height: 420, margin: '0 auto' }}>
-      {layers.map((l) => {
-        const isTopDragging = l.drag && drag.active;
-        const transform = isTopDragging
-          ? `translate(${drag.x}px, ${drag.y * 0.4}px) rotate(${drag.x / 18}deg)`
-          : l.base;
-        const opacity = isTopDragging ? Math.max(0.35, 1 - Math.abs(drag.x) / 520) : l.op;
+    <div ref={boxRef} style={{ position: 'relative', width: 'min(240px, 62vw)', aspectRatio: CARD_ASPECT, margin: '0 auto' }}>
+      {cards.map(({ role, t }) => {
+        const base = ROLE_BASE[role];
+        const isTop = role === 'top';
+        const opacity = selected && !isTop ? 0.3 : 1;
         return (
           <div
-            key={l.key}
-            onPointerDown={l.drag ? down : undefined}
-            onPointerMove={l.drag ? move : undefined}
-            onPointerUp={l.drag ? up : undefined}
-            onPointerCancel={l.drag ? up : undefined}
+            key={role}
+            ref={isTop ? topRef : undefined}
+            onPointerDown={isTop ? down : undefined}
+            onPointerMove={isTop ? move : undefined}
+            onPointerUp={isTop ? up : undefined}
+            onPointerCancel={isTop ? up : undefined}
             style={{
-              position: 'absolute', inset: 0, zIndex: l.z, transform, opacity,
-              transition: isTopDragging ? 'none' : 'transform .5s cubic-bezier(.2,.8,.2,1), opacity .35s ease',
-              cursor: l.drag && !selected ? 'grab' : 'default', touchAction: 'pan-y',
+              position: 'absolute', inset: 0, zIndex: base.z,
+              transform: base.transform, opacity,
+              transition: 'opacity .35s ease',
+              cursor: isTop && canDrag ? 'grab' : 'default', touchAction: 'pan-y',
             }}
           >
-            <div style={cardBox}>
-              <TemplatePreview templateCode={l.t.templateCode} thumbnailUrl={l.t.thumbnailUrl} />
+            <div style={cardBoxStyle}>
+              <TemplatePreview templateCode={t.templateCode} thumbnailUrl={t.thumbnailUrl} aspect={CARD_ASPECT} />
             </div>
           </div>
         );
       })}
 
+      {ghost && (
+        <GhostCard
+          template={ghost.template}
+          startTransform={ghost.startTransform}
+          dir={ghost.dir}
+          onDone={() => setGhost(null)}
+        />
+      )}
+
       {selected && (
-        <div style={{ position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%,-50%)', zIndex: 9, animation: 'mkt-pop .3s ease both' }}>
-          <button onClick={() => onUse(top)} className="mkt-btn mkt-btn-dark" style={{ fontSize: 18, padding: '15px 30px', whiteSpace: 'nowrap', boxShadow: '0 8px 22px rgba(23,19,13,.35)' }}>
-            Use this template
-          </button>
+        <div style={{ position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%,-50%)', zIndex: 9 }}>
+          <div style={{ animation: 'mkt-pop .3s ease both' }}>
+            <button onClick={() => onUse(top)} className="mkt-btn mkt-btn-dark" style={{ fontSize: 16, padding: '13px 24px', whiteSpace: 'nowrap', boxShadow: '0 8px 22px rgba(23,19,13,.35)' }}>
+              Use this template
+            </button>
+          </div>
         </div>
       )}
 
-      {/* tap-to-deselect hint zone */}
       {selected && (
         <button
           onClick={() => setSelected(false)}
@@ -115,6 +193,45 @@ export function TemplateDeck({
           style={{ position: 'absolute', inset: 0, zIndex: 8, background: 'transparent', border: 'none', cursor: 'pointer' }}
         />
       )}
+    </div>
+  );
+}
+
+function GhostCard({
+  template,
+  startTransform,
+  dir,
+  onDone,
+}: {
+  template: Template;
+  startTransform: string;
+  dir: 1 | -1;
+  onDone: () => void;
+}) {
+  const [flown, setFlown] = useState(false);
+
+  useEffect(() => {
+    const raf = requestAnimationFrame(() => setFlown(true));
+    const timeout = setTimeout(onDone, FLY_MS + 40);
+    return () => { cancelAnimationFrame(raf); clearTimeout(timeout); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const endTransform = `translate(${dir * 160}%, ${dir * -12}%) rotate(${dir * 22}deg)`;
+
+  return (
+    <div
+      style={{
+        position: 'absolute', inset: 0, zIndex: 5,
+        transform: flown ? endTransform : startTransform,
+        opacity: flown ? 0 : 1,
+        transition: `transform ${FLY_MS}ms ${FLY_EASE}, opacity ${FLY_MS}ms ${FLY_EASE}`,
+        pointerEvents: 'none',
+      }}
+    >
+      <div style={cardBoxStyle}>
+        <TemplatePreview templateCode={template.templateCode} thumbnailUrl={template.thumbnailUrl} aspect={CARD_ASPECT} />
+      </div>
     </div>
   );
 }

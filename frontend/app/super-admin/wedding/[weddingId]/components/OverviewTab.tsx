@@ -20,13 +20,16 @@ interface OverviewTabProps {
   guests: Guest[];
   isRsvpOpen: boolean;
   onToggleRsvp: (isRsvpOpen: boolean) => void;
+  /** "Bride/Groom side" only applies to WEDDING events. Defaults true so existing (WEDDING)
+   *  call sites are unchanged. */
+  showSide?: boolean;
 }
 
 function pct(n: number, total: number) {
   return total > 0 ? Math.round((n / total) * 100) : 0;
 }
 
-export default function OverviewTab({ stats, guests, isRsvpOpen, onToggleRsvp }: OverviewTabProps) {
+export default function OverviewTab({ stats, guests, isRsvpOpen, onToggleRsvp, showSide = true }: OverviewTabProps) {
   const recentGuests = [...guests]
     .sort((a, b) => new Date(b.respondedDate || 0).getTime() - new Date(a.respondedDate || 0).getTime())
     .slice(0, 5);
@@ -88,37 +91,39 @@ export default function OverviewTab({ stats, guests, isRsvpOpen, onToggleRsvp }:
       </div>
 
       {/* Distribution */}
-      <div style={{ display: 'grid', gap: 16 }} className="md:grid-cols-2">
-        {/* Guest distribution */}
-        <Card padding="20px">
-          <p style={{ margin: '0 0 16px', fontFamily: 'var(--font-ui)', fontSize: 'var(--text-md)', fontWeight: 600, color: 'var(--text-strong)' }}>
-            Guest Distribution
-          </p>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-            <div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6, fontFamily: 'var(--font-ui)', fontSize: 'var(--text-sm)', color: 'var(--text-body)' }}>
-                <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-                  <Icon name="heart" size={13} style={{ color: 'var(--brand)' }} /> Bride&apos;s Side
-                </span>
-                <span style={{ fontWeight: 600, color: 'var(--text-strong)', fontFamily: 'var(--font-mono)', fontSize: 12 }}>
-                  {stats.brideSide}
-                </span>
+      <div style={{ display: 'grid', gap: 16 }} className={showSide ? 'md:grid-cols-2' : undefined}>
+        {/* Guest distribution — Bride/Groom side only applies to WEDDING events */}
+        {showSide && (
+          <Card padding="20px">
+            <p style={{ margin: '0 0 16px', fontFamily: 'var(--font-ui)', fontSize: 'var(--text-md)', fontWeight: 600, color: 'var(--text-strong)' }}>
+              Guest Distribution
+            </p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+              <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6, fontFamily: 'var(--font-ui)', fontSize: 'var(--text-sm)', color: 'var(--text-body)' }}>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                    <Icon name="heart" size={13} style={{ color: 'var(--brand)' }} /> Bride&apos;s Side
+                  </span>
+                  <span style={{ fontWeight: 600, color: 'var(--text-strong)', fontFamily: 'var(--font-mono)', fontSize: 12 }}>
+                    {stats.brideSide}
+                  </span>
+                </div>
+                <ProgressBar value={pct(stats.brideSide, stats.totalGuests)} tone="brand" />
               </div>
-              <ProgressBar value={pct(stats.brideSide, stats.totalGuests)} tone="brand" />
-            </div>
-            <div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6, fontFamily: 'var(--font-ui)', fontSize: 'var(--text-sm)', color: 'var(--text-body)' }}>
-                <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-                  <Icon name="user" size={13} style={{ color: 'var(--text-muted)' }} /> Groom&apos;s Side
-                </span>
-                <span style={{ fontWeight: 600, color: 'var(--text-strong)', fontFamily: 'var(--font-mono)', fontSize: 12 }}>
-                  {stats.groomSide}
-                </span>
+              <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6, fontFamily: 'var(--font-ui)', fontSize: 'var(--text-sm)', color: 'var(--text-body)' }}>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                    <Icon name="user" size={13} style={{ color: 'var(--text-muted)' }} /> Groom&apos;s Side
+                  </span>
+                  <span style={{ fontWeight: 600, color: 'var(--text-strong)', fontFamily: 'var(--font-mono)', fontSize: 12 }}>
+                    {stats.groomSide}
+                  </span>
+                </div>
+                <ProgressBar value={pct(stats.groomSide, stats.totalGuests)} tone="neutral" />
               </div>
-              <ProgressBar value={pct(stats.groomSide, stats.totalGuests)} tone="neutral" />
             </div>
-          </div>
-        </Card>
+          </Card>
+        )}
 
         {/* Attendance status */}
         <Card padding="20px">
@@ -184,7 +189,7 @@ export default function OverviewTab({ stats, guests, isRsvpOpen, onToggleRsvp }:
                     {guest.guestName}
                   </p>
                   <p style={{ margin: '2px 0 0', fontFamily: 'var(--font-ui)', fontSize: 'var(--text-sm)', color: 'var(--text-subtle)' }}>
-                    {guest.brideOrGroomSide} side · {guest.numberOfAttendees} guest(s)
+                    {guest.guestSide === 'PRIMARY' ? 'Bride' : guest.guestSide === 'SECONDARY' ? 'Groom' : 'Unspecified'} side · {guest.numberOfAttendees} guest(s)
                   </p>
                 </div>
                 <div style={{ textAlign: 'right' }}>

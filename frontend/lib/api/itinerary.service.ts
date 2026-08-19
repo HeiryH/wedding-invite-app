@@ -2,13 +2,13 @@ import { apiClient } from './client';
 import { ItineraryItem, CreateItineraryItem, UpdateItineraryItem, ReorderItinerary } from './types';
 
 export const itineraryService = {
-  getByWeddingId: async (weddingId: number): Promise<ItineraryItem[]> => {
-    const res = await apiClient.get<ItineraryItem[]>(`/itinerary/wedding/${weddingId}`);
+  getByWeddingId: async (eventId: number): Promise<ItineraryItem[]> => {
+    const res = await apiClient.get<ItineraryItem[]>(`/itinerary/event/${eventId}`);
     return res.data;
   },
 
-  create: async (weddingId: number, dto: CreateItineraryItem): Promise<ItineraryItem> => {
-    const res = await apiClient.post<ItineraryItem>(`/itinerary/wedding/${weddingId}`, dto);
+  create: async (eventId: number, dto: CreateItineraryItem): Promise<ItineraryItem> => {
+    const res = await apiClient.post<ItineraryItem>(`/itinerary/event/${eventId}`, dto);
     return res.data;
   },
 
@@ -21,7 +21,7 @@ export const itineraryService = {
     await apiClient.delete(`/itinerary/${id}`);
   },
 
-  reorder: async (weddingId: number, dto: ReorderItinerary): Promise<void> => {
-    await apiClient.put(`/itinerary/wedding/${weddingId}/reorder`, dto);
+  reorder: async (eventId: number, dto: ReorderItinerary): Promise<void> => {
+    await apiClient.put(`/itinerary/event/${eventId}/reorder`, dto);
   },
 };

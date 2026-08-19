@@ -3,14 +3,15 @@
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { weddingService, templateService, Wedding, Template } from '@/lib/api';
+import { eventService, templateService, Event, Template } from '@/lib/api';
+import { urlSegmentForEventType } from '@/lib/eventTypes';
 
 export default function EditWeddingPage() {
   const params = useParams();
   const router = useRouter();
   const weddingId = parseInt(params.weddingId as string);
 
-  const [wedding, setWedding] = useState<Wedding | null>(null);
+  const [wedding, setWedding] = useState<Event | null>(null);
   const [templates, setTemplates] = useState<Template[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -35,7 +36,7 @@ export default function EditWeddingPage() {
     try {
       setLoading(true);
       const [weddingData, templatesData] = await Promise.all([
-        weddingService.getById(weddingId),
+        eventService.getById(weddingId),
         templateService.getActive(),
       ]);
 
@@ -43,7 +44,7 @@ export default function EditWeddingPage() {
       setTemplates(templatesData);
 
       // Populate form
-      const weddingDate = new Date(weddingData.weddingDate);
+      const weddingDate = new Date(weddingData.eventDate);
       const year = weddingDate.getFullYear();
       const month = String(weddingDate.getMonth() + 1).padStart(2, '0');
       const day = String(weddingDate.getDate()).padStart(2, '0');
@@ -58,8 +59,8 @@ export default function EditWeddingPage() {
         .slice(0, 16);
 
       setFormData({
-        brideName: weddingData.brideName,
-        groomName: weddingData.groomName,
+        brideName: weddingData.name1 ?? '',
+        groomName: weddingData.name2 ?? '',
         weddingDate: formattedDateTime,
         venue: weddingData.venue,
         venueAddress: weddingData.venueAddress,
@@ -88,17 +89,17 @@ export default function EditWeddingPage() {
         venueAddress: formData.venueAddress.trim(),
       });
 
-      await weddingService.update(weddingId, {
-        brideName: formData.brideName.trim(),
-        groomName: formData.groomName.trim(),
-        weddingDate: new Date(formData.weddingDate).toISOString(),
+      await eventService.update(weddingId, {
+        name1: formData.brideName.trim(),
+        name2: formData.groomName.trim(),
+        eventDate: new Date(formData.weddingDate).toISOString(),
         venue: formData.venue.trim(),
         venueAddress: formData.venueAddress.trim(),
         // templateId: formData.templateId,
       });
 
       // Update template separately
-      // await fetch(`${process.env.NEXT_PUBLIC_API_URL}/wedding/${weddingId}/template`, {
+      // await fetch(`${process.env.NEXT_PUBLIC_API_URL}/event/${weddingId}/template`, {
       //   method: 'PUT',
       //   headers: { 'Content-Type': 'application/json' },
       //   body: JSON.stringify({ templateId: formData.templateId }),
@@ -106,7 +107,7 @@ export default function EditWeddingPage() {
 
       // 📤 Send template update separately (if changed)
       if (formData.templateId !== wedding?.templateId) {
-        await weddingService.updateTemplate(weddingId, formData.templateId);
+        await eventService.updateTemplate(weddingId, formData.templateId);
       }
 
       setSuccess(true);
@@ -159,7 +160,7 @@ export default function EditWeddingPage() {
             <div>
               <h1 className="text-3xl font-bold text-gray-800">Edit Wedding</h1>
               <p className="text-gray-600 mt-1">
-                {wedding?.brideName} & {wedding?.groomName}
+                {wedding?.displayName}
               </p>
             </div>
             <button
@@ -240,7 +241,7 @@ export default function EditWeddingPage() {
             <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
               <p className="text-sm text-gray-600 mb-1">📝 Current URL:</p>
               <p className="text-lg font-semibold text-blue-600">
-                /wedding/{wedding?.coupleName}
+                /{urlSegmentForEventType(wedding?.eventType)}/{wedding?.slug}
               </p>
               <p className="text-xs text-gray-500 mt-1">
                 (URL slug cannot be changed after creation)

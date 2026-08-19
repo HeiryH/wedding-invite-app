@@ -5,7 +5,7 @@ namespace WeddingInvite.Core.DTOs
         public int UserId { get; set; }
         public string Email { get; set; } = string.Empty;
         public string Role { get; set; } = string.Empty;
-        public int? WeddingId { get; set; }
+        public int? EventId { get; set; }
         public bool IsActive { get; set; }
         public string Tier { get; set; } = "FREE";
         public DateTime CreatedDate { get; set; }

@@ -16,8 +16,8 @@ const DEVICE_WIDTH: Record<Breakpoint, number> = { mobile: 390, desktop: 1280 };
 const DEVICE_HEIGHT = 760;
 
 // The Adjust panel and shared engine are both wedding-shaped: the whole draft goes through the
-// SAME preview iframe/postMessage protocol the couple-admin customize page already uses
-// (see app/(standalone)/couple-admin/preview/page.tsx) with a synthetic Wedding whose
+// SAME preview iframe/postMessage protocol the organizer-admin customize page already uses
+// (see app/(standalone)/organizer-admin/preview/page.tsx) with a synthetic Wedding whose
 // templateStagesJson carries the live-flattened draft — TemplateWrapper's authored-template
 // fallthrough (see CLAUDE.md) already renders straight from that field, so no new preview route
 // is needed. DataTemplate now renders real slot content (RSVP, itinerary, wishes, photo booth —
@@ -49,13 +49,13 @@ function buildPreviewWedding(templateId: number, templateName: string, stagesJso
 // Sample content so SLOT_AVAILABLE-gated blocks (itinerary, photo booth) aren't dropped while
 // authoring — mirrors customize/page.tsx's own SAMPLE_WISHES pattern.
 const SAMPLE_WISHES: Wish[] = [
-  { wishId: 1, weddingId: 0, guestName: 'Sarah', message: 'Wishing you a lifetime of happiness!', createdDate: new Date().toISOString() },
-  { wishId: 2, weddingId: 0, guestName: 'James', message: 'Congratulations to the happy couple!', createdDate: new Date().toISOString() },
+  { wishId: 1, eventId: 0, guestName: 'Sarah', message: 'Wishing you a lifetime of happiness!', createdDate: new Date().toISOString() },
+  { wishId: 2, eventId: 0, guestName: 'James', message: 'Congratulations to the happy couple!', createdDate: new Date().toISOString() },
 ];
 const SAMPLE_ITINERARY: ItineraryItem[] = [
-  { itineraryItemId: 1, weddingId: 0, label: 'Guest Arrival', detail: '10:00 AM', sortOrder: 0 },
-  { itineraryItemId: 2, weddingId: 0, label: 'Akad Nikah', detail: '11:00 AM', sortOrder: 1 },
-  { itineraryItemId: 3, weddingId: 0, label: 'Feast', detail: '12:30 PM', sortOrder: 2 },
+  { itineraryItemId: 1, eventId: 0, label: 'Guest Arrival', detail: '10:00 AM', sortOrder: 0 },
+  { itineraryItemId: 2, eventId: 0, label: 'Akad Nikah', detail: '11:00 AM', sortOrder: 1 },
+  { itineraryItemId: 3, eventId: 0, label: 'Feast', detail: '12:30 PM', sortOrder: 2 },
 ];
 
 export default function AuthoringEditorPage() {
@@ -210,7 +210,7 @@ export default function AuthoringEditorPage() {
     return templateService.uploadAsset(templateId, file);
   }, [templateId]);
 
-  // ── live preview: flatten + push to the (reused) couple-admin preview iframe ───────────────
+  // ── live preview: flatten + push to the (reused) organizer-admin preview iframe ───────────
   const previewStages = useMemo(
     () => flattenTemplate('author', skeleton, stageOrder, draftConfig),
     [skeleton, stageOrder, draftConfig],
@@ -433,7 +433,7 @@ export default function AuthoringEditorPage() {
           }}>
             <iframe
               ref={iframeRef}
-              src="/couple-admin/preview"
+              src="/organizer-admin/preview"
               style={{ width: '100%', height: '100%', border: 0 }}
               title="Template preview"
             />

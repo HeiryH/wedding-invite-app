@@ -18,6 +18,6 @@ namespace WeddingInvite.Models
         public DateTime CreatedDate { get; set; } = DateTime.UtcNow;
         
         // Navigation property
-        public ICollection<WeddingFeature> WeddingFeatures { get; set; } = new List<WeddingFeature>();
+        public ICollection<EventFeature> EventFeatures { get; set; } = new List<EventFeature>();
     }
 }

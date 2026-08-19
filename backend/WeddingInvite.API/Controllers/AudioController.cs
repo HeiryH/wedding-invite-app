@@ -13,18 +13,18 @@ public class AudioController : ControllerBase
     private static readonly string[] AllowedExtensions = { ".mp3", ".ogg", ".wav", ".aac", ".m4a", ".flac" };
     private const long MaxFileSizeBytes = 20 * 1024 * 1024; // 20 MB
 
-    private readonly IWeddingAuthorizationService _weddingAuthorizationService;
+    private readonly IEventAuthorizationService _eventAuthorizationService;
 
-    public AudioController(IWeddingAuthorizationService weddingAuthorizationService)
+    public AudioController(IEventAuthorizationService eventAuthorizationService)
     {
-        _weddingAuthorizationService = weddingAuthorizationService;
+        _eventAuthorizationService = eventAuthorizationService;
     }
 
-    [HttpPost("wedding/{weddingId}")]
-    public async Task<IActionResult> Upload(int weddingId, [FromForm] IFormFile file)
+    [HttpPost("event/{eventId}")]
+    public async Task<IActionResult> Upload(int eventId, [FromForm] IFormFile file)
     {
         var userEmail = User.Identity?.Name;
-        if (!await _weddingAuthorizationService.CanAccessWeddingAsync(userEmail!, weddingId))
+        if (!await _eventAuthorizationService.CanAccessEventAsync(userEmail!, eventId))
             return Forbid();
 
         if (file == null || file.Length == 0)
@@ -44,7 +44,7 @@ public class AudioController : ControllerBase
         if (!FileSignatureValidator.IsValidAudio(file, extension))
             return BadRequest(new { message = "File content does not match a valid audio format" });
 
-        var uploadsFolder = Path.Combine("wwwroot", "uploads", weddingId.ToString(), "audio");
+        var uploadsFolder = Path.Combine("wwwroot", "uploads", eventId.ToString(), "audio");
         Directory.CreateDirectory(uploadsFolder);
 
         var uniqueFileName = $"{Guid.NewGuid()}{extension}";
@@ -55,7 +55,7 @@ public class AudioController : ControllerBase
             await file.CopyToAsync(stream);
         }
 
-        var audioUrl = $"/uploads/{weddingId}/audio/{uniqueFileName}";
+        var audioUrl = $"/uploads/{eventId}/audio/{uniqueFileName}";
         return Ok(new { audioUrl });
     }
 }

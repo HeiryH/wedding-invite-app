@@ -16,23 +16,14 @@ dotnet ef migrations add <MigrationName> --project backend/WeddingInvite.Data --
 dotnet ef database update --project backend/WeddingInvite.Data --startup-project backend/WeddingInvite.API
 ```
 
-### Frontend
-```bash
-# From frontend/
-npm run dev     # Dev server on :3000
-npm run build   # Production build
-npm run lint    # ESLint
-```
+**Before applying any migration to the production SQLite file** (`wedding.db` on the VPS,
+`/opt/wedding-app` — see Quick Deploy below): take a manual file-level backup first
+(`cp wedding.db wedding.db.bak-$(date +%Y%m%d%H%M%S)`), and review the generated SQL with
+`dotnet ef migrations script` before running `database update` against it. EF's `RenameTable`/
+`RenameColumn` operations are safe for renames (no data loss), but there is no automatic
+pre-migration backup — this is a required manual step, not something the tooling does for you.
 
 ## Architecture
-
-### Monorepo Layout
-- `backend/` — ASP.NET Core 10 solution (`WeddingInvite.slnx`)
-  - `WeddingInvite.Models` — EF entity classes only
-  - `WeddingInvite.Data` — `AppDbContext`, repositories, migrations
-  - `WeddingInvite.Core` — DTOs, service interfaces + implementations
-  - `WeddingInvite.API` — controllers, DI wiring (`Program.cs`), static file serving
-- `frontend/` — Next.js 16 (App Router, TypeScript)
 
 ### Backend Pattern: Repository → Service → Controller
 All repos/services are registered as **scoped** in `Program.cs`. When adding new functionality:
@@ -47,6 +38,30 @@ All repos/services are registered as **scoped** in `Program.cs`. When adding new
 - Token is read from cookies in `Program.cs` via `OnMessageReceived` event
 - `IWeddingAuthorizationService` / `CanAccessWeddingAsync` enforces couple/host admin can only access their own wedding(s)
 - Tiers: `User.Tier` and `Template.Tier` are `FREE | PREMIUM | PRO` — templates are tier-gated. **No billing/payment integration exists yet** (tier changes are manual)
+- `Template.EventTypes` is a separate CSV field (`WEDDING`/`CEREMONY`/`PARTY`, e.g. `"WEDDING,CEREMONY"`) — which event the public `/personalise/picker` funnel shows a template under. Not tier-related; edited via a checkbox group on `/super-admin/themes`. `TemplateService.NormalizeEventTypes` upper-cases/validates on save and falls back to `WEDDING` if nothing recognised survives. `frontend/lib/eventTypes.ts` (`EVENT_TYPES`, `parseEventTypes`, `matchesEvent`) is the shared frontend vocabulary.
+- **Package rows ARE the tier definitions** (`Package`/`PackageFeature`, exactly `FREE`/`PREMIUM`/`PRO` — `PackageService` rejects creating or deleting any other code). `IPackageRepository.TierIncludesFeatureAsync` is the single source of truth for "does this tier include this feature," replacing the old hardcoded `TierEntitlements.AllowsFeature` map. Edited at `/super-admin/packages`. `Wedding.PackageId` no longer exists — a wedding's feature set comes from its owner's `User.Tier` alone, resolved through this lookup (see `WeddingFeatureService`/`WeddingService.SetDomainAsync`). Custom Domain needs both the PRO tier ceiling *and* an explicit per-wedding `WeddingFeature` toggle (same two-step gate as `PHOTO_BOOTH`/`SEATING`).
+
+### Wedding lifecycle: delete vs. deactivate
+`DELETE /api/wedding/{id}` (`WeddingService.DeleteAsync`) is a **real, permanent delete** — it removes
+the row and cascades all child data (Guests, Wishes, Photos, WeddingFeatures, Tables, ItineraryItems,
+WeddingTemplateConfig are `OnDelete(Cascade)`; the couple admin's `User.WeddingId` is `SetNull`), and
+frees the couple name for reuse. It also **best-effort deletes the on-disk upload directories**
+(`wwwroot/uploads/{id}/` — covers Couple/Guest photos and audio; `wwwroot/uploads/photos/{id}/` for a
+legacy pre-existing layout) via `TryDeleteDirectory`, swallowing filesystem errors since the DB delete
+has already committed by that point. To deactivate a wedding *without* deleting it, use
+`PUT /api/wedding/{id}/toggle-active` (`ToggleActiveAsync`, `IsActive`) — that's the "Drafts" bucket
+in the super-admin dashboard.
+
+**Export a wedding**: `GET /api/wedding/{id}/export` (`WeddingExportService.BuildExportZipAsync`,
+same `SUPER_ADMIN,HOST_ADMIN` + `CanAccessWeddingAsync` gate as Delete) streams back a zip of
+everything belonging to the wedding — `wedding.json`, the full effective `config.json`, `guests.csv`,
+`wishes.csv`, `itinerary.csv`, `seating.csv`, every photo under `photos/{couple,guest}/` (named by
+their on-disk `{guid}.ext`, with a `photos-manifest.csv` recording metadata + a `FileIncluded` flag
+for any DB row whose file is missing on disk), and `audio/` if `music.url` is configured and its file
+exists. Built fully in-memory (`MemoryStream`/`ZipArchive`, BCL only) — pairs naturally as "back this
+up before you delete it," but stands alone as a general data-portability export. Surfaced in the
+super-admin/host-admin wedding-list card (`WeddingCard`'s download icon) and the wedding detail page
+header ("Export data").
 
 ### Wedding lifecycle: delete vs. deactivate
 `DELETE /api/wedding/{id}` (`WeddingService.DeleteAsync`) is a **real, permanent delete** — it removes
@@ -73,24 +88,8 @@ header ("Export data").
 ### Frontend API Layer
 All API calls go through `frontend/lib/api/` and are exported from `index.ts`. Each service file wraps an `apiClient` (Axios instance). **Always add new service methods to the relevant service file and re-export from `index.ts`.**
 
-### Routing (Next.js App Router)
-- `/` — public landing
-- `/login` — shared login; redirects by role
-- `/super-admin/*` — SUPER_ADMIN dashboard (weddings, packages, features, themes, hosts, per-wedding tabs)
-- `/host-admin/*` — HOST_ADMIN (reseller) dashboard; create/manage owned weddings
-- `/couple-admin/*` — COUPLE_ADMIN dashboard + customize page
-- `/wedding/[coupleName]/*` — public invitation pages (feature-gated)
-- `/home`, `/templates`, `/try` — public self-serve funnel
-
-### Frontend → Backend Proxy
-`next.config.ts` rewrites:
-- `/api/*` → `http://localhost:5000/api/*`
-- `/uploads/*` → `http://localhost:5000/uploads/*`
-
-So all frontend fetches use relative paths (`/api/...`). `NEXT_PUBLIC_API_URL=/api` means `API_BASE = ''` for photo/static URLs.
-
 ### Feature Gating
-Features are toggled per-wedding via `WeddingFeature` junction table. Codes in `FeatureCodes.cs`: `RSVP`, `WISHES`, `PHOTO_BOOTH`, `SEATING`, `GALLERY`, `COUNTDOWN`, `CUSTOM_DOMAIN`. Public pages check feature state before rendering tabs/sections.
+Features are toggled per-wedding via `WeddingFeature` junction table. Public pages check feature state before rendering tabs/sections.
 
 ### Template Customization
 `WeddingTemplateConfig` stores key-value config per wedding. Templates read it with a
@@ -132,10 +131,10 @@ inspector renders itself from `getConfigFields(templateId, role)` — there are 
   keeps un-touched keys live and makes "reset a stage" revert to the *theme's* starting design.
   Because the customize page echoes the merged bag on load, a couple's untouched keys round-trip as
   no-ops. A sub-PRO couple renders the inherited `t7.layout.*` but can't Adjust it (PRO-gated).
-  Admin endpoints: `GET/PUT/DELETE /api/template/{id}/default-config[...]`.
-
-### EF Migrations (28 total, in order)
-`InitialCreate` → `AddFeaturesAndPhotos` → `AddTemplates` → `RenameTemplateToTemplates` → `AddUsers` → `AddPhotoModeration` → `AddPackages` → `AddWeddingMedia` → `MergeWeddingMediaIntoPhoto` → `AddTemplateConfig` → `AddUserIsActive` → `AddSeatingTables` → `AddTemplate4MinimalNoir` → `AddTemplate5DreamingFloralSky` → `AddItinerary` → `AddTemplate6FairyGarden` → `AddWeddingMaxPax` → `AddWeddingCapacity` → `AddWeddingIsRsvpOpen` → `AddWeddingCreatedBy` → `AddTemplateTier` → `AddUserTier` → `AddWeddingIsPublic` → `AddTemplate7RomanGarden` → … → `AddLandingContent` → `AddTemplateConfigDefault`
+  Admin endpoints: `GET/PUT/DELETE /api/template/{id}/default-config[...]`. Also surfaces on
+  `/template-preview/[code]` (the no-real-wedding sample/thumbnail render), via
+  `GET /api/template-config/template/{id}/default`, so a template's picker thumbnail reflects its
+  captured design instead of raw code defaults.
 
 ## Stage + layer engine (`components/templates/_shared/`)
 
@@ -407,3 +406,26 @@ The script handles: `git add frontend/` → commit → push to GitHub → SSH to
 - Branch: `frontend-design-fix`
 - VPS: `root@139.180.154.175`, app at `/opt/wedding-app`
 - Password: in `.env.deploy` at repo root (never committed — load with `source .env.deploy`)
+- Public domain is **`thee-invite.oddstudio.app`** (moved off the bare `oddstudio.app` apex on
+  2026-07-29 — see below). `.env`'s `SITE_URL`/`CORS_ORIGIN`/`PLATFORM_DOMAIN` and
+  `next.config`-adjacent metadata all key off `NEXT_PUBLIC_SITE_URL`, which is baked in at
+  **Docker build time** (a build arg, not just container runtime env — `robots.ts`/`sitemap.ts`/
+  `layout.tsx` have no dynamic APIs so Next statically prerenders them during `next build`).
+  Changing the domain again means updating both the `.env` value *and* rebuilding, not just
+  restarting.
+- ⚠️ **The actual reverse proxy in production is Nginx Proxy Manager** (`npm-npm-1` container,
+  GUI admin on `127.0.0.1:81`, SSH-tunnel only), **not** the `Caddyfile`/`CUSTOM_DOMAINS.md` in
+  this repo — that describes an on-demand-TLS migration that was drafted but never deployed.
+  Adding/editing a domain means logging into the NPM UI and adding/editing a **Proxy Host**, not
+  touching the Caddyfile. `CUSTOM_DOMAINS.md`'s Caddy plan (and the PRO custom-domain auto-TLS
+  `ask` flow it describes) is not actually wired up live.
+- **This VPS now also hosts an unrelated second app**: ODDSTUDIO's own marketing site (Next.js +
+  headless WordPress), at `/opt/oddstudio/` — see that project's own `CLAUDE.md` /
+  `DEPLOYMENT.md`. It owns the bare `oddstudio.app`/`www.oddstudio.app` apex (which is why this
+  app moved to the `thee-invite` subdomain). The two apps are separate Compose projects sharing
+  one NPM instance (multi-homed across `wedding-app_default` and `oddstudio_default` networks)
+  and the same 955MB/1-CPU box — **RAM is genuinely tight** (steady state ~130–275MB available
+  depending on recent build/journal buildup). Before adding services or doing anything
+  memory-heavy here, check `free -h` and consider `docker builder prune -af` +
+  `journalctl --vacuum-time=3d` on the VPS first — both accumulate fast from routine deploys and
+  are the biggest reclaimable chunks, well before container tuning matters.

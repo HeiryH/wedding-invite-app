@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using WeddingInvite.Core.DTOs;
 using WeddingInvite.Core.Services;
+using WeddingInvite.Core.Utilities;
 using WeddingInvite.Data.Repositories;
 using WeddingInvite.Models;
 
@@ -14,7 +15,8 @@ namespace WeddingInvite.API.Controllers
     {
         private readonly IAuthService _authService;
         private readonly IUserRepository _userRepo;
-        private readonly IWeddingRepository _weddingRepo;
+        private readonly IEventRepository _eventRepo;
+        private readonly ITemplateRepository _templateRepo;
         private readonly IGuestService _guestService;
         private readonly IWishService _wishService;
         private readonly ITemplateConfigService _configService;
@@ -24,7 +26,8 @@ namespace WeddingInvite.API.Controllers
         public AuthController(
             IAuthService authService,
             IUserRepository userRepo,
-            IWeddingRepository weddingRepo,
+            IEventRepository eventRepo,
+            ITemplateRepository templateRepo,
             IGuestService guestService,
             IWishService wishService,
             ITemplateConfigService configService,
@@ -33,7 +36,8 @@ namespace WeddingInvite.API.Controllers
         {
             _authService = authService;
             _userRepo = userRepo;
-            _weddingRepo = weddingRepo;
+            _eventRepo = eventRepo;
+            _templateRepo = templateRepo;
             _guestService = guestService;
             _wishService = wishService;
             _configService = configService;
@@ -100,24 +104,24 @@ namespace WeddingInvite.API.Controllers
             }
         }
 
-        // ── Couple-admin account management ──────────────────────────────────
+        // ── Organizer-admin account management ────────────────────────────────
         // Super admin: any wedding. Host admin: only their own weddings.
 
-        // POST: api/auth/create-couple-admin
-        [HttpPost("create-couple-admin")]
+        // POST: api/auth/create-organizer-admin
+        [HttpPost("create-organizer-admin")]
         [Authorize(Roles = "SUPER_ADMIN,HOST_ADMIN")]
-        public async Task<ActionResult<UserDto>> CreateCoupleAdmin([FromBody] CreateCoupleAdminDto createDto)
+        public async Task<ActionResult<UserDto>> CreateOrganizerAdmin([FromBody] CreateOrganizerAdminDto createDto)
         {
             if (User.IsInRole(UserRoles.HostAdmin))
             {
-                if (!await HostOwnsWeddingAsync(createDto.WeddingId))
+                if (!await HostOwnsEventAsync(createDto.EventId))
                     return Forbid();
             }
 
             try
             {
-                var user = await _authService.CreateCoupleAdminForWeddingAsync(
-                    createDto.WeddingId, createDto.Email, createDto.Password);
+                var user = await _authService.CreateOrganizerAdminForEventAsync(
+                    createDto.EventId, createDto.Email, createDto.Password);
                 return Ok(user);
             }
             catch (ArgumentException ex)
@@ -126,30 +130,30 @@ namespace WeddingInvite.API.Controllers
             }
         }
 
-        // GET: api/auth/couple-admin/{weddingId}
-        [HttpGet("couple-admin/{weddingId}")]
+        // GET: api/auth/organizer-admin/{eventId}
+        [HttpGet("organizer-admin/{eventId}")]
         [Authorize(Roles = "SUPER_ADMIN,HOST_ADMIN")]
-        public async Task<ActionResult<UserDto>> GetCoupleAdmin(int weddingId)
+        public async Task<ActionResult<UserDto>> GetOrganizerAdmin(int eventId)
         {
             if (User.IsInRole(UserRoles.HostAdmin))
             {
-                if (!await HostOwnsWeddingAsync(weddingId))
+                if (!await HostOwnsEventAsync(eventId))
                     return Forbid();
             }
 
-            var user = await _authService.GetCoupleAdminAsync(weddingId);
+            var user = await _authService.GetOrganizerAdminAsync(eventId);
             if (user == null) return NotFound();
             return Ok(user);
         }
 
-        // PATCH: api/auth/couple-admin/{userId}/active
-        [HttpPatch("couple-admin/{userId}/active")]
+        // PATCH: api/auth/organizer-admin/{userId}/active
+        [HttpPatch("organizer-admin/{userId}/active")]
         [Authorize(Roles = "SUPER_ADMIN,HOST_ADMIN")]
         public async Task<ActionResult<UserDto>> SetActive(int userId, [FromBody] SetActiveDto dto)
         {
             if (User.IsInRole(UserRoles.HostAdmin))
             {
-                if (!await HostOwnsCoupleAdminAsync(userId))
+                if (!await HostOwnsOrganizerAdminAsync(userId))
                     return Forbid();
             }
 
@@ -164,8 +168,8 @@ namespace WeddingInvite.API.Controllers
             }
         }
 
-        // PATCH: api/auth/couple-admin/{userId}/tier
-        [HttpPatch("couple-admin/{userId}/tier")]
+        // PATCH: api/auth/organizer-admin/{userId}/tier
+        [HttpPatch("organizer-admin/{userId}/tier")]
         [Authorize(Roles = "SUPER_ADMIN")]
         public async Task<ActionResult<UserDto>> SetTier(int userId, [FromBody] SetTierDto dto)
         {
@@ -184,14 +188,14 @@ namespace WeddingInvite.API.Controllers
             }
         }
 
-        // PUT: api/auth/couple-admin/{userId}/reset-password
-        [HttpPut("couple-admin/{userId}/reset-password")]
+        // PUT: api/auth/organizer-admin/{userId}/reset-password
+        [HttpPut("organizer-admin/{userId}/reset-password")]
         [Authorize(Roles = "SUPER_ADMIN,HOST_ADMIN")]
         public async Task<IActionResult> ResetPassword(int userId, [FromBody] ResetPasswordDto dto)
         {
             if (User.IsInRole(UserRoles.HostAdmin))
             {
-                if (!await HostOwnsCoupleAdminAsync(userId))
+                if (!await HostOwnsOrganizerAdminAsync(userId))
                     return Forbid();
             }
 
@@ -206,14 +210,14 @@ namespace WeddingInvite.API.Controllers
             }
         }
 
-        // DELETE: api/auth/couple-admin/{userId}
-        [HttpDelete("couple-admin/{userId}")]
+        // DELETE: api/auth/organizer-admin/{userId}
+        [HttpDelete("organizer-admin/{userId}")]
         [Authorize(Roles = "SUPER_ADMIN,HOST_ADMIN")]
         public async Task<IActionResult> DeleteUser(int userId)
         {
             if (User.IsInRole(UserRoles.HostAdmin))
             {
-                if (!await HostOwnsCoupleAdminAsync(userId))
+                if (!await HostOwnsOrganizerAdminAsync(userId))
                     return Forbid();
             }
 
@@ -263,32 +267,63 @@ namespace WeddingInvite.API.Controllers
         {
             try
             {
-                // Parse wedding date (default to 6 months from now if missing/invalid)
-                if (!DateTime.TryParse(dto.WeddingDate, out var weddingDate) || weddingDate < DateTime.UtcNow)
-                    weddingDate = DateTime.UtcNow.AddMonths(6);
+                // Parse event date (default to 6 months from now if missing/invalid)
+                if (!DateTime.TryParse(dto.EventDate, out var eventDate) || eventDate < DateTime.UtcNow)
+                    eventDate = DateTime.UtcNow.AddMonths(6);
 
-                // Generate a unique couple-name slug
-                var baseSlug = GenerateSelfSlug(dto.BrideName, dto.GroomName);
+                var eventType = string.IsNullOrWhiteSpace(dto.EventType)
+                    ? EventTypes.Wedding
+                    : dto.EventType.ToUpperInvariant();
+
+                // Same naming validation EventService.CreateAsync applies — self-register builds
+                // its own Event (to keep it private-by-default, see IsPublic below) rather than
+                // calling through EventService, so it needs its own copy of this gate.
+                if (!EventNaming.HasRequiredNaming(eventType, dto.Name1, dto.Name2, dto.EventTitle))
+                {
+                    var message = eventType switch
+                    {
+                        EventTypes.Wedding => "Both names are required for a wedding",
+                        EventTypes.Party => "A name is required",
+                        EventTypes.Ceremony => "An event title is required",
+                        _ => "Naming details are required",
+                    };
+                    return BadRequest(new { message });
+                }
+
+                // Same template/event-type gate EventService.CreateAsync applies — without this a
+                // self-serve user could pick a PARTY template for a WEDDING event (or vice versa).
+                var templateId = dto.TemplateId > 0 ? dto.TemplateId : 1;
+                var chosenTemplate = await _templateRepo.GetByIdAsync(templateId);
+                if (chosenTemplate == null)
+                    return BadRequest(new { message = "Invalid template ID" });
+                if (!TemplateEventGate.Supports(chosenTemplate.EventTypes, eventType))
+                    return BadRequest(new { message = $"The '{chosenTemplate.TemplateName}' template doesn't support {eventType} events." });
+
+                // Generate a unique slug via the shared, type-aware SlugGenerator (replacing the old
+                // per-controller, WEDDING-only GenerateSelfSlug implementation).
+                var baseSlug = SlugGenerator.GenerateBaseSlug(eventType, dto.Name1, dto.Name2, dto.EventTitle);
                 var slug = baseSlug;
                 var suffix = 2;
-                while (await _weddingRepo.CoupleNameExistsAsync(slug))
+                while (await _eventRepo.SlugExistsAsync(slug))
                     slug = $"{baseSlug}-{suffix++}";
 
-                // Create the wedding
-                var wedding = new Wedding
+                // Create the event
+                var evt = new Event
                 {
-                    CoupleName    = slug,
-                    BrideName     = dto.BrideName.Trim(),
-                    GroomName     = dto.GroomName.Trim(),
-                    WeddingDate   = weddingDate,
+                    Slug          = slug,
+                    EventType     = eventType,
+                    Name1         = dto.Name1?.Trim(),
+                    Name2         = dto.Name2?.Trim(),
+                    EventTitle    = dto.EventTitle?.Trim(),
+                    EventDate     = eventDate,
                     Venue         = string.IsNullOrWhiteSpace(dto.Venue) ? "TBD" : dto.Venue.Trim(),
                     VenueAddress  = dto.VenueAddress?.Trim() ?? string.Empty,
-                    TemplateId    = dto.TemplateId > 0 ? dto.TemplateId : 1,
+                    TemplateId    = templateId,
                     IsActive      = true,
                     IsPublic      = false,
                     CreatedDate   = DateTime.UtcNow,
                 };
-                var createdWedding = await _weddingRepo.CreateAsync(wedding);
+                var createdEvent = await _eventRepo.CreateAsync(evt);
 
                 // Carry through any guest-personalised content. Best-effort: a bad
                 // config or itinerary row must never block account creation. The
@@ -299,11 +334,11 @@ namespace WeddingInvite.API.Controllers
                     try
                     {
                         await _configService.SaveConfigAsync(
-                            createdWedding.WeddingId, dto.Config, UserRoles.CoupleAdmin, "FREE");
+                            createdEvent.EventId, dto.Config, UserRoles.OrganizerAdmin, "FREE");
                     }
                     catch (Exception ex)
                     {
-                        _logger.LogWarning(ex, "self-register: failed to save guest config for wedding {WeddingId}", createdWedding.WeddingId);
+                        _logger.LogWarning(ex, "self-register: failed to save guest config for event {EventId}", createdEvent.EventId);
                     }
                 }
 
@@ -315,7 +350,7 @@ namespace WeddingInvite.API.Controllers
                         if (string.IsNullOrWhiteSpace(item.Label) && string.IsNullOrWhiteSpace(item.Detail)) continue;
                         try
                         {
-                            await _itineraryService.CreateAsync(createdWedding.WeddingId, new CreateItineraryItemDto
+                            await _itineraryService.CreateAsync(createdEvent.EventId, new CreateItineraryItemDto
                             {
                                 Label = item.Label,
                                 Detail = item.Detail,
@@ -324,16 +359,16 @@ namespace WeddingInvite.API.Controllers
                         }
                         catch (Exception ex)
                         {
-                            _logger.LogWarning(ex, "self-register: failed to save itinerary row for wedding {WeddingId}", createdWedding.WeddingId);
+                            _logger.LogWarning(ex, "self-register: failed to save itinerary row for event {EventId}", createdEvent.EventId);
                         }
                     }
                 }
 
-                // Create the couple-admin account
-                var user = await _authService.CreateCoupleAdminForWeddingAsync(
-                    createdWedding.WeddingId, dto.Email.Trim().ToLower(), dto.Password);
+                // Create the organizer-admin account
+                var user = await _authService.CreateOrganizerAdminForEventAsync(
+                    createdEvent.EventId, dto.Email.Trim().ToLower(), dto.Password);
 
-                var token = _authService.GenerateJwtToken(user.Email, user.Role, user.WeddingId);
+                var token = _authService.GenerateJwtToken(user.Email, user.Role, user.EventId);
 
                 Response.Cookies.Append("token", token, new CookieOptions
                 {
@@ -349,7 +384,7 @@ namespace WeddingInvite.API.Controllers
                     Token     = token,
                     Email     = user.Email,
                     Role      = user.Role,
-                    WeddingId = user.WeddingId,
+                    EventId   = user.EventId,
                     Tier      = user.Tier,
                 });
             }
@@ -380,22 +415,22 @@ namespace WeddingInvite.API.Controllers
             var user = string.IsNullOrEmpty(email) ? null : await _userRepo.GetByEmailAsync(email);
             if (user == null) return Unauthorized();
 
-            object? wedding = null;
+            object? evt = null;
             object guests = Array.Empty<object>();
             object wishes = Array.Empty<object>();
 
-            if (user.WeddingId is int wid)
+            if (user.EventId is int wid)
             {
-                wedding = await _weddingRepo.GetByIdAsync(wid);
-                guests = await _guestService.GetByWeddingIdAsync(wid);
-                wishes = await _wishService.GetByWeddingIdAsync(wid);
+                evt = await _eventRepo.GetByIdAsync(wid);
+                guests = await _guestService.GetByEventIdAsync(wid);
+                wishes = await _wishService.GetByEventIdAsync(wid);
             }
 
             var export = new
             {
                 exportedAt = DateTime.UtcNow,
                 account = new { user.Email, user.Role, user.Tier, user.CreatedDate },
-                wedding,
+                wedding = evt,
                 guests,
                 wishes,
             };
@@ -441,33 +476,21 @@ namespace WeddingInvite.API.Controllers
 
         // ── Ownership helpers ──────────────────────────────────────────────────
 
-        private static string GenerateSelfSlug(string brideName, string groomName)
-        {
-            static string First(string name) =>
-                new string(name.Trim().Split(' ')[0].ToLower()
-                    .Where(c => char.IsLetterOrDigit(c)).ToArray());
-            var b = First(brideName);
-            var g = First(groomName);
-            if (string.IsNullOrEmpty(b)) b = "bride";
-            if (string.IsNullOrEmpty(g)) g = "groom";
-            return $"{b}-and-{g}";
-        }
-
-        private async Task<bool> HostOwnsWeddingAsync(int weddingId)
+        private async Task<bool> HostOwnsEventAsync(int eventId)
         {
             var userEmail = User.Identity?.Name;
             var host = await _userRepo.GetByEmailAsync(userEmail!);
             if (host == null) return false;
 
-            var wedding = await _weddingRepo.GetByIdAsync(weddingId);
-            return wedding?.CreatedByUserId == host.UserId;
+            var evt = await _eventRepo.GetByIdAsync(eventId);
+            return evt?.CreatedByUserId == host.UserId;
         }
 
-        private async Task<bool> HostOwnsCoupleAdminAsync(int coupleAdminUserId)
+        private async Task<bool> HostOwnsOrganizerAdminAsync(int organizerAdminUserId)
         {
-            var target = await _userRepo.GetByIdAsync(coupleAdminUserId);
-            if (target?.WeddingId == null) return false;
-            return await HostOwnsWeddingAsync(target.WeddingId.Value);
+            var target = await _userRepo.GetByIdAsync(organizerAdminUserId);
+            if (target?.EventId == null) return false;
+            return await HostOwnsEventAsync(target.EventId.Value);
         }
     }
 }

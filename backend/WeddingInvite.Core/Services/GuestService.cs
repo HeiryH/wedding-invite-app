@@ -7,25 +7,25 @@ namespace WeddingInvite.Core.Services
     public class GuestService : IGuestService
     {
         private readonly IGuestRepository _guestRepo;
-        private readonly IWeddingRepository _weddingRepo;
-        
+        private readonly IEventRepository _eventRepo;
+
         public GuestService(
             IGuestRepository guestRepo,
-            IWeddingRepository weddingRepo)
+            IEventRepository eventRepo)
         {
             _guestRepo = guestRepo;
-            _weddingRepo = weddingRepo;
+            _eventRepo = eventRepo;
         }
-        
+
         public async Task<GuestDto?> GetByIdAsync(int id)
         {
             var guest = await _guestRepo.GetByIdAsync(id);
             if (guest == null) return null;
-            
+
             return MapToDto(guest);
         }
-        
-        public async Task<IEnumerable<GuestDto>> GetByWeddingIdAsync(int weddingId, int? page = null, int? pageSize = null)
+
+        public async Task<IEnumerable<GuestDto>> GetByEventIdAsync(int eventId, int? page = null, int? pageSize = null)
         {
             int? skip = null, take = null;
             if (page is > 0 && pageSize is > 0)
@@ -33,82 +33,88 @@ namespace WeddingInvite.Core.Services
                 skip = (page.Value - 1) * pageSize.Value;
                 take = pageSize.Value;
             }
-            var guests = await _guestRepo.GetByWeddingIdAsync(weddingId, skip, take);
+            var guests = await _guestRepo.GetByEventIdAsync(eventId, skip, take);
             return guests.Select(MapToDto);
         }
 
-        public async Task<int> GetCountAsync(int weddingId)
+        public async Task<int> GetCountAsync(int eventId)
         {
-            return await _guestRepo.CountByWeddingIdAsync(weddingId);
+            return await _guestRepo.CountByEventIdAsync(eventId);
         }
-        
-        public async Task<GuestDto> CreateAsync(int weddingId, CreateGuestDto createDto, bool enforceRsvpOpen = false)
+
+        public async Task<GuestDto> CreateAsync(int eventId, CreateGuestDto createDto, bool enforceRsvpOpen = false)
         {
             // BUSINESS VALIDATION
-            
-            // 1. Check if wedding exists
-            var wedding = await _weddingRepo.GetByIdAsync(weddingId);
-            if (wedding == null)
-                throw new KeyNotFoundException($"Wedding with ID {weddingId} not found");
-            
-            // 2. Check if wedding has already passed
-            if (wedding.WeddingDate < DateTime.UtcNow)
-                throw new InvalidOperationException("Cannot RSVP to a past wedding");
 
-            // 2b. Block RSVP on private (self-serve free) weddings
-            if (enforceRsvpOpen && !wedding.IsPublic)
+            // 1. Check if event exists
+            var evt = await _eventRepo.GetByIdAsync(eventId);
+            if (evt == null)
+                throw new KeyNotFoundException($"Event with ID {eventId} not found");
+
+            // 2. Check if event has already passed
+            if (evt.EventDate < DateTime.UtcNow)
+                throw new InvalidOperationException("Cannot RSVP to a past event");
+
+            // 2b. Block RSVP on private (self-serve free) events
+            if (enforceRsvpOpen && !evt.IsPublic)
                 throw new InvalidOperationException("This invitation is not yet shared publicly.");
 
             // 2c. Check if RSVPs are open (only enforced on public submissions)
-            if (enforceRsvpOpen && !wedding.IsRsvpOpen)
-                throw new ArgumentException("RSVPs are closed for this wedding.");
+            if (enforceRsvpOpen && !evt.IsRsvpOpen)
+                throw new ArgumentException("RSVPs are closed for this event.");
 
             // 3. Validate guest name
             if (string.IsNullOrWhiteSpace(createDto.GuestName))
                 throw new ArgumentException("Guest name is required");
-            
-            // 4. Validate side selection
-            if (createDto.BrideOrGroomSide != "Bride" && createDto.BrideOrGroomSide != "Groom")
-                throw new ArgumentException("Please select either Bride or Groom side");
-            
+
+            // 4. Validate side selection — only required/meaningful for WEDDING events. Non-WEDDING
+            //    events don't have a "side" concept, so the value is simply not required or stored.
+            string? guestSide = null;
+            if (evt.EventType == Models.EventTypes.Wedding)
+            {
+                if (createDto.GuestSide != "PRIMARY" && createDto.GuestSide != "SECONDARY")
+                    throw new ArgumentException("Please select either Bride or Groom side");
+                guestSide = createDto.GuestSide;
+            }
+
             // 5. Validate number of attendees
             if (createDto.NumberOfAttendees < 1)
                 throw new ArgumentException("Number of attendees must be at least 1");
-            
+
             if (createDto.NumberOfAttendees > 10)
                 throw new ArgumentException("Maximum 10 attendees per RSVP");
 
             // 6. Check per-entry pax limit (MaxPax)
-            if (wedding.MaxPax > 0 && createDto.NumberOfAttendees > wedding.MaxPax)
-                throw new ArgumentException($"Maximum {wedding.MaxPax} guest(s) per RSVP.");
+            if (evt.MaxPax > 0 && createDto.NumberOfAttendees > evt.MaxPax)
+                throw new ArgumentException($"Maximum {evt.MaxPax} guest(s) per RSVP.");
 
-            // 7. Check total wedding capacity (MaxCapacity)
-            if (wedding.MaxCapacity > 0 && createDto.IsAttending)
+            // 7. Check total event capacity (MaxCapacity)
+            if (evt.MaxCapacity > 0 && createDto.IsAttending)
             {
-                var currentPax = await _guestRepo.GetAttendingCountByWeddingIdAsync(weddingId);
-                if (currentPax + createDto.NumberOfAttendees > wedding.MaxCapacity)
+                var currentPax = await _guestRepo.GetAttendingCountByEventIdAsync(eventId);
+                if (currentPax + createDto.NumberOfAttendees > evt.MaxCapacity)
                     throw new ArgumentException("Sorry, this event has reached its guest capacity.");
             }
 
             // Create guest
             var guest = new Guest
             {
-                WeddingId = weddingId,
+                EventId = eventId,
                 GuestName = createDto.GuestName.Trim(),
                 Email = createDto.Email.Trim(),
                 PhoneNumber = createDto.PhoneNumber.Trim(),
-                BrideOrGroomSide = createDto.BrideOrGroomSide,
+                GuestSide = guestSide,
                 NumberOfAttendees = createDto.NumberOfAttendees,
                 SongRequest = createDto.SongRequest.Trim(),
                 IsAttending = createDto.IsAttending,
                 RespondedDate = DateTime.UtcNow,
                 TableId = createDto.IsAttending ? createDto.TableId : null,
             };
-            
+
             var created = await _guestRepo.CreateAsync(guest);
             return MapToDto(created);
         }
-        
+
         public async Task<GuestDto> UpdateAsync(int id, UpdateGuestDto updateDto)
         {
             var guest = await _guestRepo.GetByIdAsync(id);
@@ -118,7 +124,7 @@ namespace WeddingInvite.Core.Services
             guest.GuestName = updateDto.GuestName.Trim();
             guest.Email = updateDto.Email.Trim();
             guest.PhoneNumber = updateDto.PhoneNumber.Trim();
-            guest.BrideOrGroomSide = updateDto.BrideOrGroomSide;
+            guest.GuestSide = updateDto.GuestSide;
             guest.NumberOfAttendees = updateDto.NumberOfAttendees;
             guest.SongRequest = updateDto.SongRequest.Trim();
             guest.IsAttending = updateDto.IsAttending;
@@ -131,23 +137,23 @@ namespace WeddingInvite.Core.Services
         {
             return await _guestRepo.DeleteAsync(id);
         }
-        
-        public async Task<int> GetAttendingCountAsync(int weddingId)
+
+        public async Task<int> GetAttendingCountAsync(int eventId)
         {
-            return await _guestRepo.GetAttendingCountByWeddingIdAsync(weddingId);
+            return await _guestRepo.GetAttendingCountByEventIdAsync(eventId);
         }
-        
+
         // HELPER METHOD
         private GuestDto MapToDto(Guest guest)
         {
             return new GuestDto
             {
                 GuestId = guest.GuestId,
-                WeddingId = guest.WeddingId,
+                EventId = guest.EventId,
                 GuestName = guest.GuestName,
                 Email = guest.Email,
                 PhoneNumber = guest.PhoneNumber,
-                BrideOrGroomSide = guest.BrideOrGroomSide,
+                GuestSide = guest.GuestSide,
                 NumberOfAttendees = guest.NumberOfAttendees,
                 SongRequest = guest.SongRequest,
                 IsAttending = guest.IsAttending,

@@ -38,11 +38,11 @@ builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 // Repositories
-builder.Services.AddScoped<IWeddingRepository, WeddingRepository>();
+builder.Services.AddScoped<IEventRepository, EventRepository>();
 builder.Services.AddScoped<IGuestRepository, GuestRepository>();
 builder.Services.AddScoped<IWishRepository, WishRepository>();
 builder.Services.AddScoped<IFeatureRepository, FeatureRepository>();
-builder.Services.AddScoped<IWeddingFeatureRepository, WeddingFeatureRepository>();
+builder.Services.AddScoped<IEventFeatureRepository, EventFeatureRepository>();
 builder.Services.AddScoped<IPhotoRepository, PhotoRepository>();
 builder.Services.AddScoped<ITemplateRepository, TemplateRepository>();
 builder.Services.AddScoped<IUserRepository, UserRepository>(); // ADD THIS
@@ -55,18 +55,18 @@ builder.Services.AddScoped<IPasswordResetTokenRepository, PasswordResetTokenRepo
 builder.Services.AddScoped<ILandingRepository, LandingRepository>();
 
 // Services
-builder.Services.AddScoped<IWeddingService, WeddingService>();
+builder.Services.AddScoped<IEventService, EventService>();
 builder.Services.AddScoped<IGuestService, GuestService>();
 builder.Services.AddScoped<IWishService, WishService>();
 builder.Services.AddScoped<IFeatureService, FeatureService>();
-builder.Services.AddScoped<IWeddingFeatureService, WeddingFeatureService>();
+builder.Services.AddScoped<IEventFeatureService, EventFeatureService>();
 builder.Services.AddScoped<IPhotoService, PhotoService>();
 builder.Services.AddScoped<ITemplateService, TemplateService>();
 builder.Services.AddScoped<IPackageService, PackageService>();
 builder.Services.AddScoped<IAuthService, AuthService>(); // ADD THIS
-builder.Services.AddScoped<IWeddingAuthorizationService, WeddingAuthorizationService>(); // ✅ RENAMED
+builder.Services.AddScoped<IEventAuthorizationService, EventAuthorizationService>(); // ✅ RENAMED
 builder.Services.AddScoped<ITemplateConfigService, TemplateConfigService>();
-builder.Services.AddScoped<IWeddingExportService, WeddingExportService>();
+builder.Services.AddScoped<IEventExportService, EventExportService>();
 builder.Services.AddScoped<ITableService, TableService>();
 builder.Services.AddScoped<IItineraryService, ItineraryService>();
 builder.Services.AddScoped<IEmailService, EmailService>();

@@ -2,39 +2,39 @@ import { apiClient } from './client';
 import { Photo, ApprovePhotoRequest } from './types';
 
 export const photoService = {
-  // Get all photos for a wedding (admin only)
-  getByWeddingId: async (weddingId: number): Promise<Photo[]> => {
-    const response = await apiClient.get<Photo[]>(`/photo/wedding/${weddingId}`);
+  // Get all photos for an event (admin only)
+  getByWeddingId: async (eventId: number): Promise<Photo[]> => {
+    const response = await apiClient.get<Photo[]>(`/photo/event/${eventId}`);
     return response.data;
   },
 
   // Get approved photos (public)
-  getApprovedByWeddingId: async (weddingId: number): Promise<Photo[]> => {
-    const response = await apiClient.get<Photo[]>(`/photo/wedding/${weddingId}/approved`);
+  getApprovedByWeddingId: async (eventId: number): Promise<Photo[]> => {
+    const response = await apiClient.get<Photo[]>(`/photo/event/${eventId}/approved`);
     return response.data;
   },
 
   // Get pending photos (admin only)
-  getPendingByWeddingId: async (weddingId: number): Promise<Photo[]> => {
-    const response = await apiClient.get<Photo[]>(`/photo/wedding/${weddingId}/pending`);
+  getPendingByWeddingId: async (eventId: number): Promise<Photo[]> => {
+    const response = await apiClient.get<Photo[]>(`/photo/event/${eventId}/pending`);
     return response.data;
   },
 
   // Get visible photos (currently used by invitation)
-  getVisibleByWeddingId: async (weddingId: number): Promise<Photo[]> => {
-    const response = await apiClient.get<Photo[]>(`/photo/wedding/${weddingId}/visible`);
+  getVisibleByWeddingId: async (eventId: number): Promise<Photo[]> => {
+    const response = await apiClient.get<Photo[]>(`/photo/event/${eventId}/visible`);
     return response.data;
   },
 
   // Get couple media (public - for template rendering)
-  getCoupleMediaByWeddingId: async (weddingId: number): Promise<Photo[]> => {
-    const response = await apiClient.get<Photo[]>(`/photo/wedding/${weddingId}/couple-media`);
+  getCoupleMediaByWeddingId: async (eventId: number): Promise<Photo[]> => {
+    const response = await apiClient.get<Photo[]>(`/photo/event/${eventId}/couple-media`);
     return response.data;
   },
 
   // Upload photo (guest or couple)
   upload: async (
-    weddingId: number,
+    eventId: number,
     guestName: string,
     caption: string,
     file: File,
@@ -49,7 +49,7 @@ export const photoService = {
     if (templateSlot !== undefined) formData.append('TemplateSlot', templateSlot.toString());
 
     const response = await apiClient.post<Photo>(
-      `/photo/wedding/${weddingId}`,
+      `/photo/event/${eventId}`,
       formData,
       {
         headers: {

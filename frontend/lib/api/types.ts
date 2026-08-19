@@ -1,5 +1,75 @@
-// ========== Wedding Types ==========
+// ========== Event Types ==========
+//
+// EventDto (backend, camelCased on the wire): eventId, slug, eventType, name1, name2, eventTitle,
+// displayName, eventDate, venue, venueAddress, isActive, isRsvpOpen, isPublic, totalGuests,
+// totalAttending, daysUntilEvent, totalPhotos, enabledFeaturesCount, templateId, templateName,
+// templateCode, maxPax, maxCapacity, showCapacityWarning, createdByUserId, createdByEmail, domain.
+// This is the real API contract — used everywhere except the legacy `Wedding` shape below.
 
+export interface Event {
+  eventId: number;
+  slug: string;
+  eventType: string;
+  name1: string | null;
+  name2: string | null;
+  eventTitle: string | null;
+  displayName: string;
+  eventDate: string;
+  venue: string;
+  venueAddress: string;
+  totalGuests: number;
+  totalAttending: number;
+  daysUntilEvent: number;
+  isActive: boolean;
+  isPublic: boolean;
+  totalPhotos: number;
+  enabledFeaturesCount: number;
+  templateId: number;
+  templateName: string;
+  templateCode?: string | null;
+  maxPax?: number;
+  maxCapacity?: number;
+  showCapacityWarning?: boolean;
+  isRsvpOpen?: boolean;
+  createdByUserId?: number;
+  createdByEmail?: string;
+  domain?: string | null;
+  ownerTier: 'FREE' | 'PREMIUM' | 'PRO';
+}
+
+export interface CreateEvent {
+  slug: string;
+  eventType: string;
+  name1: string;
+  name2: string;
+  eventTitle?: string;
+  eventDate: string;
+  venue: string;
+  venueAddress: string;
+  templateId?: number;
+}
+
+export interface UpdateEventDto {
+  name1: string;
+  name2: string;
+  eventTitle?: string;
+  eventDate: string;
+  venue: string;
+  venueAddress: string;
+  maxPax?: number;
+  maxCapacity?: number;
+  showCapacityWarning?: boolean;
+}
+
+// ── Legacy `Wedding` view model ─────────────────────────────────────────────
+// The 7 template components (components/templates/Template1.tsx … Template7-romangarden/) and
+// their shared preview/adjust machinery (TemplateWrapper, _shared/types.ts, the customize page's
+// PreviewPanel + standalone preview iframe, template-preview, try/page.tsx, personalise) are out
+// of scope for this pass and still read `.brideName`/`.groomName`/`.coupleName`/`.weddingId`/
+// `.weddingDate`/`.daysUntilWedding` directly off a `wedding` prop typed as `Wedding`. Rather than
+// touch 15+ template-internal files, callers that fetch the new `Event` shape build a small
+// `Wedding`-shaped adapter object (old field names) at the page boundary before handing data to a
+// template — see app/[eventType]/[slug]/page.tsx and app/organizer-admin/customize/page.tsx.
 export interface Wedding {
   weddingId: number;
   coupleName: string;
@@ -13,8 +83,8 @@ export interface Wedding {
   daysUntilWedding: number;
   isActive: boolean;
   isPublic: boolean;
-  totalPhotos: number;           // NEW
-  enabledFeaturesCount: number;  // NEW
+  totalPhotos: number;
+  enabledFeaturesCount: number;
   templateId: number;
   templateName: string;
   /** Only set when the template is authored (data, not a React component) — see TemplateWrapper. */
@@ -26,39 +96,27 @@ export interface Wedding {
   createdByUserId?: number;
   createdByEmail?: string;
   domain?: string | null;
-}
-
-export interface CreateWedding {
-  coupleName: string;
-  brideName: string;
-  groomName: string;
-  weddingDate: string;
-  venue: string;
-  venueAddress: string;
-  templateId?: number;
-}
-
-export interface UpdateWeddingDto {
-  brideName: string;
-  groomName: string;
-  weddingDate: string;
-  venue: string;
-  venueAddress: string;
-  templateId?: number;
-  maxPax?: number;
-  maxCapacity?: number;
-  showCapacityWarning?: boolean;
+  // ── Native Event fields, carried alongside the legacy shape above ──────────
+  // Templates 8 (PARTY) and 9 (CEREMONY) read these instead of brideName/groomName:
+  // PARTY has one honoree (name1), CEREMONY has no individual names at all (eventTitle only).
+  // Templates 1–7 ignore these; page.tsx populates them on the same adapter object rather than
+  // branching, so one object serves both the legacy and native field-name callers.
+  name1?: string | null;
+  name2?: string | null;
+  eventTitle?: string | null;
+  eventType?: string;
+  displayName?: string;
 }
 
 // ========== Guest Types ==========
 
 export interface Guest {
   guestId: number;
-  weddingId: number;
+  eventId: number;
   guestName: string;
   email: string;
   phoneNumber: string;
-  brideOrGroomSide: 'Bride' | 'Groom';
+  guestSide?: 'PRIMARY' | 'SECONDARY' | null;
   numberOfAttendees: number;
   songRequest: string;
   isAttending: boolean;
@@ -71,7 +129,7 @@ export interface CreateGuest {
   guestName: string;
   email: string;
   phoneNumber: string;
-  brideOrGroomSide: 'Bride' | 'Groom';
+  guestSide?: 'PRIMARY' | 'SECONDARY' | null;
   numberOfAttendees: number;
   songRequest: string;
   isAttending: boolean;
@@ -82,7 +140,7 @@ export interface CreateGuest {
 
 export interface Wish {
   wishId: number;
-  weddingId: number;
+  eventId: number;
   guestName: string;
   message: string;
   createdDate: string;
@@ -98,7 +156,7 @@ export interface CreateWish {
 
 export interface Photo {
   photoId: number;
-  weddingId: number;
+  eventId: number;
   guestName?: string;
   photoUrl: string;
   caption?: string;
@@ -163,9 +221,9 @@ export interface UpdateFeature {
   sortOrder: number;
 }
 
-export interface WeddingFeature {
-  weddingFeatureId: number;
-  weddingId: number;
+export interface EventFeature {
+  eventFeatureId: number;
+  eventId: number;
   featureId: number;
   featureCode: string;
   featureName: string;
@@ -176,9 +234,9 @@ export interface WeddingFeature {
   enabledDate: string;
 }
 
-export interface WeddingWithFeatures {
-  wedding: Wedding;
-  features: WeddingFeature[];
+export interface EventWithFeatures {
+  event: Event;
+  features: EventFeature[];
 }
 
 export interface ToggleFeature {
@@ -218,6 +276,7 @@ export interface Template {
   /** Only meaningful when isAuthored — the Record<StageId,StageDef> JSON the authoring editor
    *  reads back in. Null for every hand-coded template. */
   stagesJson?: string | null;
+  eventTypes: string;
 }
 
 export interface TemplateWithUsage extends Template {
@@ -230,6 +289,7 @@ export interface UpdateTemplate {
   tier: 'FREE' | 'PREMIUM' | 'PRO';
   isActive: boolean;
   sortOrder: number;
+  eventTypes: string;
 }
 
 // Creates a brand-new authored template (data, not code) on a blank canvas.
@@ -392,7 +452,7 @@ export interface LandingDto {
 
 export interface ItineraryItem {
   itineraryItemId: number;
-  weddingId: number;
+  eventId: number;
   label: string;
   detail: string;
   sortOrder: number;
@@ -424,7 +484,7 @@ export interface TableGuest {
 
 export interface SeatingTable {
   tableId: number;
-  weddingId: number;
+  eventId: number;
   tableName: string;
   capacity: number;
   sortOrder: number;
@@ -433,7 +493,7 @@ export interface SeatingTable {
 }
 
 export interface CreateSeatingTable {
-  weddingId: number;
+  eventId: number;
   tableName: string;
   capacity: number;
   sortOrder: number;

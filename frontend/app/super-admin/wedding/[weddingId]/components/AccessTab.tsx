@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { authService, CoupleAdminUser } from '@/lib/api';
+import { authService, OrganizerAdminUser } from '@/lib/api';
 import { getUser } from '@/lib/auth';
 import { tierLabel } from '@/lib/tierRank';
 
@@ -9,12 +9,12 @@ type Tier = 'FREE' | 'PREMIUM' | 'PRO';
 const TIERS: Tier[] = ['FREE', 'PREMIUM', 'PRO'];
 
 interface AccessTabProps {
-  coupleAdmin: CoupleAdminUser | null;
+  organizerAdmin: OrganizerAdminUser | null;
   weddingId: number;
   onRefresh: () => void;
 }
 
-export default function AccessTab({ coupleAdmin, weddingId, onRefresh }: AccessTabProps) {
+export default function AccessTab({ organizerAdmin, weddingId, onRefresh }: AccessTabProps) {
   // Create form state
   const [newEmail, setNewEmail] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -41,7 +41,7 @@ export default function AccessTab({ coupleAdmin, weddingId, onRefresh }: AccessT
     setCreating(true);
     setCreateError('');
     try {
-      await authService.createCoupleAdmin(weddingId, newEmail.trim(), newPassword);
+      await authService.createOrganizerAdmin(weddingId, newEmail.trim(), newPassword);
       setNewEmail('');
       setNewPassword('');
       onRefresh();
@@ -53,10 +53,10 @@ export default function AccessTab({ coupleAdmin, weddingId, onRefresh }: AccessT
   };
 
   const handleToggleActive = async () => {
-    if (!coupleAdmin) return;
+    if (!organizerAdmin) return;
     setToggling(true);
     try {
-      await authService.setActive(coupleAdmin.userId, !coupleAdmin.isActive);
+      await authService.setActive(organizerAdmin.userId, !organizerAdmin.isActive);
       onRefresh();
     } catch {
       alert('Failed to update access status');
@@ -66,10 +66,10 @@ export default function AccessTab({ coupleAdmin, weddingId, onRefresh }: AccessT
   };
 
   const handleResetPassword = async () => {
-    if (!coupleAdmin || !resetPassword.trim()) return;
+    if (!organizerAdmin || !resetPassword.trim()) return;
     setResetting(true);
     try {
-      await authService.resetPassword(coupleAdmin.userId, resetPassword);
+      await authService.resetPassword(organizerAdmin.userId, resetPassword);
       setResetPassword('');
       setShowReset(false);
       alert('Password updated successfully');
@@ -81,10 +81,10 @@ export default function AccessTab({ coupleAdmin, weddingId, onRefresh }: AccessT
   };
 
   const handleSetTier = async (tier: Tier) => {
-    if (!coupleAdmin || tier === coupleAdmin.tier?.toUpperCase()) return;
+    if (!organizerAdmin || tier === organizerAdmin.tier?.toUpperCase()) return;
     setSettingTier(true);
     try {
-      await authService.setTier(coupleAdmin.userId, tier);
+      await authService.setTier(organizerAdmin.userId, tier);
       onRefresh();
     } catch {
       alert('Failed to update account tier');
@@ -94,10 +94,10 @@ export default function AccessTab({ coupleAdmin, weddingId, onRefresh }: AccessT
   };
 
   const handleDelete = async () => {
-    if (!coupleAdmin) return;
-    if (!confirm(`Delete account for ${coupleAdmin.email}? The couple will lose access immediately.`)) return;
+    if (!organizerAdmin) return;
+    if (!confirm(`Delete account for ${organizerAdmin.email}? The organizer will lose access immediately.`)) return;
     try {
-      await authService.deleteUser(coupleAdmin.userId);
+      await authService.deleteUser(organizerAdmin.userId);
       onRefresh();
     } catch {
       alert('Failed to delete account');
@@ -105,18 +105,18 @@ export default function AccessTab({ coupleAdmin, weddingId, onRefresh }: AccessT
   };
 
   // ── No account yet ────────────────────────────────────────────────────────
-  if (!coupleAdmin) {
+  if (!organizerAdmin) {
     return (
       <div className="max-w-lg">
         <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-6">
           <p className="text-sm text-blue-800">
-            Create a login account so the couple can access their wedding dashboard to view RSVPs,
+            Create a login account so the event organizer can access their dashboard to view RSVPs,
             wishes, photos, and customize their invitation.
           </p>
         </div>
 
         <div className="bg-white rounded-xl border border-gray-200 p-6 space-y-4">
-          <h3 className="font-semibold text-gray-800 text-lg">Create Couple Admin Account</h3>
+          <h3 className="font-semibold text-gray-800 text-lg">Create Event Organizer Account</h3>
 
           {createError && (
             <p className="text-sm text-red-600 bg-red-50 px-3 py-2 rounded-lg">{createError}</p>
@@ -128,7 +128,7 @@ export default function AccessTab({ coupleAdmin, weddingId, onRefresh }: AccessT
               type="email"
               value={newEmail}
               onChange={(e) => setNewEmail(e.target.value)}
-              placeholder="couple@example.com"
+              placeholder="organizer@example.com"
               className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 focus:ring-2 focus:ring-rose-300 focus:border-rose-400 focus:outline-none"
             />
           </div>
@@ -163,28 +163,28 @@ export default function AccessTab({ coupleAdmin, weddingId, onRefresh }: AccessT
       <div className="bg-white rounded-xl border border-gray-200 p-6">
         <div className="flex items-start justify-between mb-4">
           <div>
-            <h3 className="font-semibold text-gray-800 text-lg">{coupleAdmin.email}</h3>
+            <h3 className="font-semibold text-gray-800 text-lg">{organizerAdmin.email}</h3>
             <p className="text-xs text-gray-400 mt-0.5">
-              Created {new Date(coupleAdmin.createdDate).toLocaleDateString('en-US', {
+              Created {new Date(organizerAdmin.createdDate).toLocaleDateString('en-US', {
                 year: 'numeric', month: 'long', day: 'numeric',
               })}
             </p>
           </div>
           <span
             className={`px-3 py-1 rounded-full text-xs font-semibold ${
-              coupleAdmin.isActive
+              organizerAdmin.isActive
                 ? 'bg-green-100 text-green-700'
                 : 'bg-red-100 text-red-700'
             }`}
           >
-            {coupleAdmin.isActive ? 'Active' : 'Disabled'}
+            {organizerAdmin.isActive ? 'Active' : 'Disabled'}
           </span>
         </div>
 
         <p className="text-sm text-gray-500 mb-5">
-          {coupleAdmin.isActive
-            ? 'The couple can log in and manage their wedding dashboard.'
-            : 'Access is disabled. The couple cannot log in until you re-enable it.'}
+          {organizerAdmin.isActive
+            ? 'The event organizer can log in and manage their dashboard.'
+            : 'Access is disabled. The event organizer cannot log in until you re-enable it.'}
         </p>
 
         {/* Tier selector — SUPER_ADMIN only */}
@@ -193,7 +193,7 @@ export default function AccessTab({ coupleAdmin, weddingId, onRefresh }: AccessT
             <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Account Tier</p>
             <div className="flex gap-2">
               {TIERS.map(t => {
-                const current = (coupleAdmin.tier ?? 'FREE').toUpperCase() === t;
+                const current = (organizerAdmin.tier ?? 'FREE').toUpperCase() === t;
                 const colors: Record<Tier, string> = {
                   FREE:    current ? 'bg-gray-200 text-gray-800 border-gray-400' : 'bg-white text-gray-500 border-gray-200 hover:border-gray-400',
                   PREMIUM: current ? 'bg-yellow-100 text-yellow-800 border-yellow-400' : 'bg-white text-gray-500 border-gray-200 hover:border-yellow-300',
@@ -220,14 +220,14 @@ export default function AccessTab({ coupleAdmin, weddingId, onRefresh }: AccessT
             onClick={handleToggleActive}
             disabled={toggling}
             className={`w-full py-2.5 rounded-lg font-medium text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
-              coupleAdmin.isActive
+              organizerAdmin.isActive
                 ? 'bg-gray-100 text-gray-700 hover:bg-red-50 hover:text-red-700 border border-gray-200'
                 : 'bg-green-500 text-white hover:bg-green-600'
             }`}
           >
             {toggling
               ? 'Updating…'
-              : coupleAdmin.isActive
+              : organizerAdmin.isActive
               ? 'Disable Access'
               : 'Enable Access'}
           </button>
@@ -278,7 +278,7 @@ export default function AccessTab({ coupleAdmin, weddingId, onRefresh }: AccessT
       </div>
 
       <p className="text-xs text-gray-400">
-        Login URL: <span className="font-mono">/login</span> — share the email and password with the couple.
+        Login URL: <span className="font-mono">/login</span> — share the email and password with the organizer.
       </p>
     </div>
   );

@@ -6,40 +6,40 @@ namespace WeddingInvite.Data.Repositories
     public class  WishRepository : IWishRepository
     {
         private readonly AppDbContext _context;
-        
+
         public WishRepository(AppDbContext context)
         {
             _context = context;
         }
-        
+
         public async Task<Wish?> GetByIdAsync(int id)
         {
             return await _context.Wishes
-                .Include(w => w.Wedding)
+                .Include(w => w.Event)
                 .FirstOrDefaultAsync(w => w.WishId == id);
         }
-        
-        public async Task<IEnumerable<Wish>> GetByWeddingIdAsync(int weddingId)
+
+        public async Task<IEnumerable<Wish>> GetByEventIdAsync(int eventId)
         {
             return await _context.Wishes
                 .AsNoTracking() // read-only list for display
-                .Where(w => w.WeddingId == weddingId)
+                .Where(w => w.EventId == eventId)
                 .OrderByDescending(w => w.CreatedDate)
                 .ToListAsync();
         }
-        
+
         public async Task<Wish> CreateAsync(Wish wish)
         {
             _context.Wishes.Add(wish);
             await _context.SaveChangesAsync();
             return wish;
         }
-        
+
         public async Task<bool> DeleteAsync(int id)
         {
             var wish = await _context.Wishes.FindAsync(id);
             if (wish == null) return false;
-            
+
             _context.Wishes.Remove(wish);
             await _context.SaveChangesAsync();
             return true;

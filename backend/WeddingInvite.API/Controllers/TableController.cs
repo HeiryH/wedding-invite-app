@@ -10,24 +10,24 @@ namespace WeddingInvite.API.Controllers
     public class TableController : ControllerBase
     {
         private readonly ITableService _tableService;
-        private readonly IWeddingAuthorizationService _weddingAuthorizationService;
+        private readonly IEventAuthorizationService _eventAuthorizationService;
         private readonly IGuestService _guestService;
 
         public TableController(
             ITableService tableService,
-            IWeddingAuthorizationService weddingAuthorizationService,
+            IEventAuthorizationService eventAuthorizationService,
             IGuestService guestService)
         {
             _tableService = tableService;
-            _weddingAuthorizationService = weddingAuthorizationService;
+            _eventAuthorizationService = eventAuthorizationService;
             _guestService = guestService;
         }
 
-        // GET: api/table/wedding/1
-        [HttpGet("wedding/{weddingId}")]
-        public async Task<ActionResult<IEnumerable<TableDto>>> GetByWeddingId(int weddingId)
+        // GET: api/table/event/1
+        [HttpGet("event/{eventId}")]
+        public async Task<ActionResult<IEnumerable<TableDto>>> GetByEventId(int eventId)
         {
-            var tables = await _tableService.GetByWeddingIdAsync(weddingId);
+            var tables = await _tableService.GetByEventIdAsync(eventId);
             return Ok(tables);
         }
 
@@ -37,7 +37,7 @@ namespace WeddingInvite.API.Controllers
         public async Task<ActionResult<TableDto>> Create([FromBody] CreateTableDto dto)
         {
             var userEmail = User.Identity?.Name;
-            if (!await _weddingAuthorizationService.CanAccessWeddingAsync(userEmail!, dto.WeddingId))
+            if (!await _eventAuthorizationService.CanAccessEventAsync(userEmail!, dto.EventId))
                 return Forbid();
 
             try
@@ -61,7 +61,7 @@ namespace WeddingInvite.API.Controllers
                 return NotFound(new { message = "Table not found" });
 
             var userEmail = User.Identity?.Name;
-            if (!await _weddingAuthorizationService.CanAccessWeddingAsync(userEmail!, existing.WeddingId))
+            if (!await _eventAuthorizationService.CanAccessEventAsync(userEmail!, existing.EventId))
                 return Forbid();
 
             try
@@ -85,7 +85,7 @@ namespace WeddingInvite.API.Controllers
                 return NotFound(new { message = "Table not found" });
 
             var userEmail = User.Identity?.Name;
-            if (!await _weddingAuthorizationService.CanAccessWeddingAsync(userEmail!, existing.WeddingId))
+            if (!await _eventAuthorizationService.CanAccessEventAsync(userEmail!, existing.EventId))
                 return Forbid();
 
             await _tableService.DeleteAsync(id);
@@ -102,7 +102,7 @@ namespace WeddingInvite.API.Controllers
                 return NotFound(new { message = "Guest not found" });
 
             var userEmail = User.Identity?.Name;
-            if (!await _weddingAuthorizationService.CanAccessWeddingAsync(userEmail!, guest.WeddingId))
+            if (!await _eventAuthorizationService.CanAccessEventAsync(userEmail!, guest.EventId))
                 return Forbid();
 
             try
@@ -130,7 +130,7 @@ namespace WeddingInvite.API.Controllers
                 return NotFound(new { message = "Guest not found" });
 
             var userEmail = User.Identity?.Name;
-            if (!await _weddingAuthorizationService.CanAccessWeddingAsync(userEmail!, guest.WeddingId))
+            if (!await _eventAuthorizationService.CanAccessEventAsync(userEmail!, guest.EventId))
                 return Forbid();
 
             try

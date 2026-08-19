@@ -58,7 +58,7 @@ export default function SuperAdminLayout({ children }: { children: React.ReactNo
       fabHref="/super-admin/wedding/create"
       homeHref="/home"
       sidePillLinks={[
-        { label: 'New wedding', href: '/super-admin/wedding/create' },
+        { label: 'New event', href: '/super-admin/wedding/create' },
         { label: 'Packages', href: '/super-admin/packages' },
       ]}
     >

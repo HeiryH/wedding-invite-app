@@ -159,10 +159,10 @@ function TryEditor() {
     }).catch(console.error);
   }, [searchParams]);
 
-  // If already logged in, send to couple-admin
+  // If already logged in, send to organizer-admin
   useEffect(() => {
     const user = getUser();
-    if (user) router.replace('/couple-admin');
+    if (user) router.replace('/organizer-admin');
   }, [router]);
 
   // Listen for preview ready
@@ -227,8 +227,8 @@ function TryEditor() {
     setSaving(true);
     try {
       const res = await authService.selfRegister({
-        email, password, brideName, groomName,
-        weddingDate: weddingDate ? `${weddingDate}T10:00:00Z` : '',
+        email, password, name1: brideName, name2: groomName, eventType: 'WEDDING',
+        eventDate: weddingDate ? `${weddingDate}T10:00:00Z` : '',
         venue, venueAddress, templateId,
       });
 
@@ -240,7 +240,7 @@ function TryEditor() {
         tier: res.tier,
       }));
 
-      router.push('/couple-admin');
+      router.push('/organizer-admin');
     } catch (err: any) {
       setSaveError(err?.response?.data?.message ?? 'Registration failed. Please try again.');
     } finally {
@@ -359,7 +359,7 @@ function TryEditor() {
           {/* iframe */}
           <iframe
             ref={iframeRef}
-            src="/couple-admin/preview"
+            src="/organizer-admin/preview"
             onLoad={handleIframeLoad}
             style={{ flex: 1, border: 'none', width: '100%' }}
             title="Invitation preview"

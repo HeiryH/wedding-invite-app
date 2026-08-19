@@ -7,41 +7,41 @@ using Xunit;
 namespace WeddingInvite.Tests;
 
 /// <summary>
-/// Custom domain is a PRO-tier perk (see TierEnforcementTests for the tier + per-wedding
+/// Custom domain is a PRO-tier perk (see TierEnforcementTests for the tier + per-event
 /// toggle gate itself): once enabled, a domain is normalized, validated, and globally unique.
 /// These tests pin that contract.
 /// </summary>
 public class CustomDomainTests
 {
-    private static WeddingService BuildService(TestDb db) => new(
-        new WeddingRepository(db.Context),
+    private static EventService BuildService(TestDb db) => new(
+        new EventRepository(db.Context),
         new GuestRepository(db.Context),
         new PackageRepository(db.Context),
-        new WeddingFeatureRepository(db.Context),
+        new EventFeatureRepository(db.Context),
         new TemplateRepository(db.Context),
         new UserRepository(db.Context));
 
     private const int CustomDomainFeatureId = 3; // seeded CUSTOM_DOMAIN
 
-    private static void SeedCouple(TestDb db, int weddingId, string tier)
+    private static void SeedCouple(TestDb db, int eventId, string tier)
     {
-        db.Context.Weddings.Add(new Wedding { WeddingId = weddingId, CoupleName = $"w{weddingId}", TemplateId = 1 });
+        db.Context.Events.Add(new Event { EventId = eventId, Slug = $"w{eventId}", TemplateId = 1 });
         db.Context.Users.Add(new User
         {
-            Email = $"c{weddingId}@x.com",
+            Email = $"c{eventId}@x.com",
             PasswordHash = "x",
-            Role = UserRoles.CoupleAdmin,
-            WeddingId = weddingId,
+            Role = UserRoles.OrganizerAdmin,
+            EventId = eventId,
             Tier = tier,
         });
         db.Context.SaveChanges();
     }
 
-    // Custom domain needs the tier AND an explicit per-wedding toggle (same as PHOTO_BOOTH/
+    // Custom domain needs the tier AND an explicit per-event toggle (same as PHOTO_BOOTH/
     // SEATING) — tests that aren't specifically about the toggle itself enable it directly here.
-    private static void EnableCustomDomain(TestDb db, int weddingId)
+    private static void EnableCustomDomain(TestDb db, int eventId)
     {
-        db.Context.WeddingFeatures.Add(new WeddingFeature { WeddingId = weddingId, FeatureId = CustomDomainFeatureId, IsEnabled = true });
+        db.Context.EventFeatures.Add(new EventFeature { EventId = eventId, FeatureId = CustomDomainFeatureId, IsEnabled = true });
         db.Context.SaveChanges();
     }
 
@@ -108,7 +108,7 @@ public class CustomDomainTests
     }
 
     [Fact]
-    public async Task GetByDomain_ResolvesTheWedding()
+    public async Task GetByDomain_ResolvesTheEvent()
     {
         using var db = new TestDb();
         SeedCouple(db, 206, TierEntitlements.Pro);
@@ -119,6 +119,6 @@ public class CustomDomainTests
         // Lookup normalizes the incoming host too.
         var found = await svc.GetByDomainAsync("WWW.Resolve-Me.com");
         Assert.NotNull(found);
-        Assert.Equal(206, found!.WeddingId);
+        Assert.Equal(206, found!.EventId);
     }
 }

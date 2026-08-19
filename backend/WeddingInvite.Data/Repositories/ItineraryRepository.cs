@@ -17,10 +17,10 @@ namespace WeddingInvite.Data.Repositories
             return await _context.ItineraryItems.FindAsync(id);
         }
 
-        public async Task<IEnumerable<ItineraryItem>> GetByWeddingIdAsync(int weddingId)
+        public async Task<IEnumerable<ItineraryItem>> GetByEventIdAsync(int eventId)
         {
             return await _context.ItineraryItems
-                .Where(i => i.WeddingId == weddingId)
+                .Where(i => i.EventId == eventId)
                 .OrderBy(i => i.SortOrder)
                 .ToListAsync();
         }
@@ -49,11 +49,11 @@ namespace WeddingInvite.Data.Repositories
             return true;
         }
 
-        public async Task ReorderAsync(int weddingId, List<(int id, int sortOrder)> updates)
+        public async Task ReorderAsync(int eventId, List<(int id, int sortOrder)> updates)
         {
             var ids = updates.Select(u => u.id).ToList();
             var items = await _context.ItineraryItems
-                .Where(i => i.WeddingId == weddingId && ids.Contains(i.ItineraryItemId))
+                .Where(i => i.EventId == eventId && ids.Contains(i.ItineraryItemId))
                 .ToListAsync();
 
             foreach (var item in items)

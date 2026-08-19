@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { templateService, weddingService, TemplateWithUsage, UpdateTemplate, Wedding } from '@/lib/api';
+import { templateService, eventService, TemplateWithUsage, UpdateTemplate, Event } from '@/lib/api';
 import { TemplatePreview } from '@/components/templates/TemplatePreview';
 import { Icon } from '@/components/ui/Icon';
 import { Button } from '@/components/ui/Button';
@@ -11,6 +11,8 @@ import { Textarea } from '@/components/ui/Textarea';
 import { Switch } from '@/components/ui/Switch';
 import { Badge } from '@/components/ui/Badge';
 import { Card } from '@/components/ui/Card';
+import { Checkbox } from '@/components/ui/Checkbox';
+import { EVENT_TYPES, parseEventTypes } from '@/lib/eventTypes';
 
 type Tier = 'FREE' | 'PREMIUM' | 'PRO';
 
@@ -30,6 +32,7 @@ interface EditForm {
   templateName: string;
   description: string;
   tier: Tier;
+  eventTypes: string[];
 }
 
 export default function ThemesPage() {
@@ -38,11 +41,11 @@ export default function ThemesPage() {
   const [error, setError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<number | null>(null);
   const [editingId, setEditingId] = useState<number | null>(null);
-  const [form, setForm] = useState<EditForm>({ templateName: '', description: '', tier: 'FREE' });
+  const [form, setForm] = useState<EditForm>({ templateName: '', description: '', tier: 'FREE', eventTypes: ['WEDDING'] });
   const [saving, setSaving] = useState(false);
 
   // Per-template "starting design" state.
-  const [weddings, setWeddings] = useState<Wedding[]>([]);
+  const [weddings, setWeddings] = useState<Event[]>([]);
   const [defaultCounts, setDefaultCounts] = useState<Record<number, number>>({});
   const [pickWeddingId, setPickWeddingId] = useState<Record<number, number>>({});
   const [designBusyId, setDesignBusyId] = useState<number | null>(null);
@@ -57,7 +60,7 @@ export default function ThemesPage() {
       setLoading(true);
       const [themeData, weddingData] = await Promise.all([
         templateService.getUsage(),
-        weddingService.getAll(),
+        eventService.getAll(),
       ]);
       setThemes(themeData);
       setWeddings(weddingData);
@@ -124,6 +127,7 @@ export default function ThemesPage() {
       tier: theme.tier,
       isActive: theme.isActive,
       sortOrder: theme.sortOrder,
+      eventTypes: theme.eventTypes,
       ...changes,
     };
     return templateService.update(theme.templateId, payload);
@@ -144,7 +148,7 @@ export default function ThemesPage() {
   };
 
   const openEdit = (theme: TemplateWithUsage) => {
-    setForm({ templateName: theme.templateName, description: theme.description, tier: theme.tier });
+    setForm({ templateName: theme.templateName, description: theme.description, tier: theme.tier, eventTypes: parseEventTypes(theme.eventTypes) });
     setEditingId(theme.templateId);
     setError(null);
   };
@@ -154,7 +158,7 @@ export default function ThemesPage() {
     setSaving(true);
     setError(null);
     try {
-      const updated = await persist(theme, form);
+      const updated = await persist(theme, { ...form, eventTypes: form.eventTypes.join(',') });
       setThemes(prev => prev.map(t => t.templateId === theme.templateId ? { ...t, ...updated } : t));
       setEditingId(null);
     } catch {
@@ -230,6 +234,9 @@ export default function ThemesPage() {
                     </h3>
                     <Badge tone={tb.tone}>{tb.label}</Badge>
                     {!theme.isActive && <Badge tone="neutral">Inactive</Badge>}
+                    {parseEventTypes(theme.eventTypes).map(ev => (
+                      <Badge key={ev} tone="neutral">{EVENT_TYPES.find(e => e.key === ev)?.label ?? ev}</Badge>
+                    ))}
                   </div>
 
                   {theme.description && (
@@ -296,8 +303,8 @@ export default function ThemesPage() {
                               {themeWeddings.length === 0 ? 'No invites on this theme' : 'Choose an invite…'}
                             </option>
                             {themeWeddings.map(w => (
-                              <option key={w.weddingId} value={w.weddingId}>
-                                {w.coupleName} ({w.brideName} &amp; {w.groomName})
+                              <option key={w.eventId} value={w.eventId}>
+                                {w.slug} ({w.displayName})
                               </option>
                             ))}
                           </select>
@@ -385,6 +392,27 @@ export default function ThemesPage() {
                                 >
                                   {t.label}
                                 </Button>
+                              ))}
+                            </div>
+                          </div>
+                          {/* Event types */}
+                          <div style={{ marginBottom: 16 }}>
+                            <p style={{ fontFamily: 'var(--font-ui)', fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--text-strong)', margin: '0 0 8px' }}>
+                              Event types
+                            </p>
+                            <div style={{ display: 'flex', gap: 16 }}>
+                              {EVENT_TYPES.map(ev => (
+                                <Checkbox
+                                  key={ev.key}
+                                  label={ev.label}
+                                  checked={form.eventTypes.includes(ev.key)}
+                                  onChange={e => setForm({
+                                    ...form,
+                                    eventTypes: e.target.checked
+                                      ? [...form.eventTypes, ev.key]
+                                      : form.eventTypes.filter(k => k !== ev.key),
+                                  })}
+                                />
                               ))}
                             </div>
                           </div>

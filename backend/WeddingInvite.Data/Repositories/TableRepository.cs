@@ -19,11 +19,11 @@ namespace WeddingInvite.Data.Repositories
                 .FirstOrDefaultAsync(t => t.TableId == id);
         }
 
-        public async Task<IEnumerable<Table>> GetByWeddingIdAsync(int weddingId)
+        public async Task<IEnumerable<Table>> GetByEventIdAsync(int eventId)
         {
             return await _context.Tables
                 .Include(t => t.Guests)
-                .Where(t => t.WeddingId == weddingId)
+                .Where(t => t.EventId == eventId)
                 .OrderBy(t => t.SortOrder)
                 .ThenBy(t => t.TableName)
                 .ToListAsync();

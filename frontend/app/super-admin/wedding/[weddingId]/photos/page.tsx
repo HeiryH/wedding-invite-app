@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { photoService, weddingService, Photo, Wedding } from '@/lib/api';
+import { photoService, eventService, Photo, Event } from '@/lib/api';
 import { getImageUrl } from '@/lib/utils';
 import PhotoSkeleton from '@/components/skeletons/PhotoSkeleton';
 
@@ -12,7 +12,7 @@ export default function PhotoManagementPage() {
     const router = useRouter();
     const weddingId = parseInt(params.weddingId as string);
 
-    const [wedding, setWedding] = useState<Wedding | null>(null);
+    const [wedding, setWedding] = useState<Event | null>(null);
     const [photos, setPhotos] = useState<Photo[]>([]);
     const [filter, setFilter] = useState<'all' | 'pending' | 'approved' | 'featured'>('pending');
     const [loading, setLoading] = useState(true);
@@ -26,7 +26,7 @@ export default function PhotoManagementPage() {
         try {
             setLoading(true);
             const [weddingData, photosData] = await Promise.all([
-                weddingService.getById(weddingId),
+                eventService.getById(weddingId),
                 photoService.getByWeddingId(weddingId),
             ]);
             setWedding(weddingData);
@@ -119,7 +119,7 @@ export default function PhotoManagementPage() {
                         <div>
                             <h1 className="text-3xl font-bold text-gray-800">Photo Management</h1>
                             <p className="text-gray-600 mt-1">
-                                {wedding?.brideName} & {wedding?.groomName}
+                                {wedding?.displayName}
                             </p>
                         </div>
                         <div className="flex gap-3">

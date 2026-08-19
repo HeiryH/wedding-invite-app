@@ -40,7 +40,7 @@ const COMMON_FIELDS: TemplateConfigField[] = [
     section: 'invitation',
     group: 'Heading',
     chip: 'Content',
-    templateIds: [1, 2, 3, 4, 5, 6],
+    templateIds: [1, 2, 3, 4, 5, 6, 8, 9],
   },
   {
     key: 'invite.heading.color',
@@ -53,7 +53,7 @@ const COMMON_FIELDS: TemplateConfigField[] = [
     section: 'invitation',
     attachTo: 'invite.heading',
     presets: 'heading',
-    templateIds: [1, 2, 3, 4, 5, 6],
+    templateIds: [1, 2, 3, 4, 5, 6, 8, 9],
   },
   {
     key: 'invite.heading.shadow',
@@ -66,7 +66,7 @@ const COMMON_FIELDS: TemplateConfigField[] = [
     adminOnly: false,
     section: 'invitation',
     attachTo: 'invite.heading',
-    templateIds: [1, 2, 3, 4, 6],
+    templateIds: [1, 2, 3, 4, 6, 8, 9],
   },
   {
     key: 'invite.heading.align',
@@ -80,7 +80,7 @@ const COMMON_FIELDS: TemplateConfigField[] = [
     section: 'invitation',
     group: 'Heading',
     chip: 'Content',
-    templateIds: [1, 2, 3, 4, 6],
+    templateIds: [1, 2, 3, 4, 6, 8, 9],
   },
   {
     key: 'invite.heading.animation',
@@ -94,7 +94,7 @@ const COMMON_FIELDS: TemplateConfigField[] = [
     section: 'invitation',
     group: 'Heading',
     chip: 'Content',
-    templateIds: [1, 2, 3, 4, 6],
+    templateIds: [1, 2, 3, 4, 6, 8, 9],
   },
   {
     key: 'invite.body',
@@ -107,7 +107,7 @@ const COMMON_FIELDS: TemplateConfigField[] = [
     section: 'invitation',
     group: 'Invitation Message',
     chip: 'Content',
-    templateIds: [1, 2, 3, 4, 6, 7],
+    templateIds: [1, 2, 3, 4, 6, 7, 8, 9],
   },
   {
     key: 'invite.body.align',
@@ -121,7 +121,7 @@ const COMMON_FIELDS: TemplateConfigField[] = [
     section: 'invitation',
     group: 'Invitation Message',
     chip: 'Content',
-    templateIds: [1, 2, 3, 4],
+    templateIds: [1, 2, 3, 4, 8, 9],
   },
 
   // ── General / details ───────────────────────────────────────────────────────
@@ -176,7 +176,7 @@ const COMMON_FIELDS: TemplateConfigField[] = [
     fieldType: 'hidden',
     adminOnly: false,
     section: 'general',
-    templateIds: [1, 2, 3, 4, 6, 7],
+    templateIds: [1, 2, 3, 4, 6, 7, 8, 9],
   },
 
   // ── Ceremony ────────────────────────────────────────────────────────────────
@@ -205,7 +205,7 @@ const COMMON_FIELDS: TemplateConfigField[] = [
     section: 'ceremony',
     group: 'Ceremony / Walimah',
     chip: 'Content',
-    templateIds: [1, 2, 3, 4, 6],
+    templateIds: [1, 2, 3, 4, 6, 8, 9],
   },
 
   // ── RSVP ────────────────────────────────────────────────────────────────────
@@ -249,7 +249,7 @@ const COMMON_FIELDS: TemplateConfigField[] = [
     block: 'welcome',
     group: 'Section Background',
     chip: 'Background',
-    templateIds: [1, 2, 3],
+    templateIds: [1, 2, 3, 8],
   },
   {
     key: 'section.ceremony.bg',
@@ -263,7 +263,7 @@ const COMMON_FIELDS: TemplateConfigField[] = [
     block: 'itinerary',
     group: 'Section Background',
     chip: 'Background',
-    templateIds: [1, 2, 3, 4],
+    templateIds: [1, 2, 3, 4, 8],
   },
   {
     key: 'section.celebration.bg',
@@ -277,7 +277,7 @@ const COMMON_FIELDS: TemplateConfigField[] = [
     block: 'photobooth',
     group: 'Section Background',
     chip: 'Background',
-    templateIds: [1, 2, 3, 4],
+    templateIds: [1, 2, 3, 4, 8],
   },
 
   // ── Footer ──────────────────────────────────────────────────────────────────
@@ -589,6 +589,88 @@ const TEMPLATE7_EXTRA_FIELDS: TemplateConfigField[] = [
   // The T7 PRO Adjust dock is launched from a dedicated header button now, not a schema field.
 ];
 
+// ── Template 8 — Gilded Arch (PARTY) ────────────────────────────────────────
+// One honoree (event.name1), no "sides". `party.age` is the hero's big milestone numeral — a
+// genuinely new field, nothing else in the schema models it.
+const TEMPLATE8_EXTRA_FIELDS: TemplateConfigField[] = [
+  {
+    key: 'party.age',
+    label: 'Age / Milestone Number',
+    hint: 'The big number in the hero (e.g. 30, 7, 1st)',
+    defaultValue: '1',
+    maxLength: 6,
+    richText: false,
+    fieldType: 'text',
+    adminOnly: false,
+    section: 'invitation',
+    group: 'Hero',
+    chip: 'Content',
+    templateIds: [8],
+  },
+  {
+    key: 'names.honoree.color',
+    label: 'Honoree Name Color',
+    fieldType: 'color',
+    defaultValue: '',
+    maxLength: 20,
+    richText: false,
+    adminOnly: false,
+    section: 'styling',
+    block: 'details',
+    attachTo: 'event.name1',
+    presets: 'generic',
+    templateIds: [8],
+  },
+  {
+    key: 'names.honoree.shadow',
+    label: 'Honoree Name Shadow',
+    fieldType: 'select',
+    options: ['none', 'soft', 'strong', 'glow'],
+    defaultValue: 'none',
+    maxLength: 10,
+    richText: false,
+    adminOnly: false,
+    section: 'styling',
+    block: 'details',
+    attachTo: 'event.name1',
+    templateIds: [8],
+  },
+];
+
+// ── Template 9 — Engraved Certificate (CEREMONY) ────────────────────────────
+// No individual honoree — event.eventTitle carries the whole hero, so it gets the same
+// color/shadow attachment pair the *.bride/groom.color fields give WEDDING's names.
+const TEMPLATE9_EXTRA_FIELDS: TemplateConfigField[] = [
+  {
+    key: 'title.color',
+    label: 'Event Title Color',
+    fieldType: 'color',
+    defaultValue: '',
+    maxLength: 20,
+    richText: false,
+    adminOnly: false,
+    section: 'styling',
+    block: 'details',
+    attachTo: 'event.eventTitle',
+    presets: 'heading',
+    templateIds: [9],
+  },
+  {
+    key: 'title.shadow',
+    label: 'Event Title Shadow',
+    fieldType: 'select',
+    options: ['none', 'soft', 'strong', 'glow'],
+    defaultValue: 'none',
+    maxLength: 10,
+    richText: false,
+    adminOnly: false,
+    section: 'styling',
+    block: 'details',
+    attachTo: 'event.eventTitle',
+    templateIds: [9],
+  },
+];
+
 const TEMPLATE_CONFIGS: Record<number, TemplateConfigField[]> = {
   1: COMMON_FIELDS,
   2: COMMON_FIELDS,
@@ -597,6 +679,8 @@ const TEMPLATE_CONFIGS: Record<number, TemplateConfigField[]> = {
   5: [...COMMON_FIELDS, ...SECTION_TITLE_FIELDS, ...TEMPLATE5_EXTRA_FIELDS],
   6: [...COMMON_FIELDS, ...TEMPLATE6_EXTRA_FIELDS],
   7: [...COMMON_FIELDS, ...SECTION_TITLE_FIELDS, ...TEMPLATE7_EXTRA_FIELDS],
+  8: [...COMMON_FIELDS, ...TEMPLATE8_EXTRA_FIELDS],
+  9: [...COMMON_FIELDS, ...TEMPLATE9_EXTRA_FIELDS],
 };
 
 function fieldsFor(templateId: number): TemplateConfigField[] {
@@ -634,7 +718,7 @@ export function blockOf(field: TemplateConfigField): TemplateConfigBlock {
  * The curated field set for the guest self-serve Personalise page — content the
  * guest writes, not the styling/layout "chrome" a couple tweaks in the full editor.
  *
- * Derived from getConfigFields (as a FREE couple) so it inherits templateIds /
+ * Derived from getConfigFields (as a FREE organizer) so it inherits templateIds /
  * adminOnly / minTier gating for free and stays in sync as the schema grows.
  * A field can opt in/out explicitly via `guestEssential`.
  */
@@ -642,7 +726,7 @@ const GUEST_CONTENT_CHIPS = new Set(['Content', 'Schedule', 'RSVP', 'Wishes', 'F
 const GUEST_CONTENT_TYPES = new Set(['text', 'richtext', 'boolean']);
 
 export function getGuestFields(templateId: number): TemplateConfigField[] {
-  return getConfigFields(templateId, 'COUPLE_ADMIN', 'FREE').filter((f) => {
+  return getConfigFields(templateId, 'ORGANIZER_ADMIN', 'FREE').filter((f) => {
     if (f.guestEssential !== undefined) return f.guestEssential;
     return (
       GUEST_CONTENT_TYPES.has(f.fieldType) &&

@@ -8,29 +8,29 @@ export const guestService = {
     return response.data;
   },
 
-  // Get all guests for a wedding
-  getByWeddingId: async (weddingId: number): Promise<Guest[]> => {
-    const response = await apiClient.get<Guest[]>(`/guest/wedding/${weddingId}`);
+  // Get all guests for an event
+  getByWeddingId: async (eventId: number): Promise<Guest[]> => {
+    const response = await apiClient.get<Guest[]>(`/guest/event/${eventId}`);
     return response.data;
   },
 
   // Get attending count
-  getAttendingCount: async (weddingId: number): Promise<number> => {
-    const response = await apiClient.get<{ weddingId: number; attendingCount: number }>(
-      `/guest/wedding/${weddingId}/count`
+  getAttendingCount: async (eventId: number): Promise<number> => {
+    const response = await apiClient.get<{ eventId: number; attendingCount: number }>(
+      `/guest/event/${eventId}/count`
     );
     return response.data.attendingCount;
   },
 
   // Admin-side guest creation — authorized endpoint, bypasses the RSVP open/public gates
-  create: async (weddingId: number, data: CreateGuest): Promise<Guest> => {
-    const response = await apiClient.post<Guest>('/guest', { ...data, weddingId });
+  create: async (eventId: number, data: CreateGuest): Promise<Guest> => {
+    const response = await apiClient.post<Guest>('/guest', { ...data, eventId });
     return response.data;
   },
 
   // Public RSVP submission from the invitation page — enforces RSVP open + public gates
-  rsvp: async (weddingId: number, data: CreateGuest): Promise<Guest> => {
-    const response = await apiClient.post<Guest>('/guest/rsvp', { ...data, weddingId });
+  rsvp: async (eventId: number, data: CreateGuest): Promise<Guest> => {
+    const response = await apiClient.post<Guest>('/guest/rsvp', { ...data, eventId });
     return response.data;
   },
 

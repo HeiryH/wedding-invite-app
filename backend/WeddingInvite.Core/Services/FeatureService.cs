@@ -7,12 +7,12 @@ namespace WeddingInvite.Core.Services
     public class FeatureService : IFeatureService
     {
         private readonly IFeatureRepository _featureRepo;
-        private readonly IWeddingFeatureRepository _weddingFeatureRepo;
+        private readonly IEventFeatureRepository _eventFeatureRepo;
 
-        public FeatureService(IFeatureRepository featureRepo, IWeddingFeatureRepository weddingFeatureRepo)
+        public FeatureService(IFeatureRepository featureRepo, IEventFeatureRepository eventFeatureRepo)
         {
             _featureRepo = featureRepo;
-            _weddingFeatureRepo = weddingFeatureRepo;
+            _eventFeatureRepo = eventFeatureRepo;
         }
         
         public async Task<FeatureDto?> GetByIdAsync(int id)
@@ -46,7 +46,7 @@ namespace WeddingInvite.Core.Services
         public async Task<IEnumerable<FeatureUsageDto>> GetAllWithUsageAsync()
         {
             var features = await _featureRepo.GetAllAsync();
-            var counts = await _weddingFeatureRepo.GetEnabledCountsByFeatureAsync();
+            var counts = await _eventFeatureRepo.GetEnabledCountsByFeatureAsync();
 
             return features
                 .Select(f => new FeatureUsageDto

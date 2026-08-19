@@ -30,7 +30,7 @@ function TableModal({ weddingId, table, onClose, onSaved }: {
     setSaving(true);
     try {
       if (table) { await tableService.update(table.tableId, form as UpdateSeatingTable); }
-      else { await tableService.create({ weddingId, ...form } as CreateSeatingTable); }
+      else { await tableService.create({ eventId: weddingId, ...form } as CreateSeatingTable); }
       onSaved(); onClose();
     } catch { alert('Failed to save table. Please try again.'); }
     finally { setSaving(false); }

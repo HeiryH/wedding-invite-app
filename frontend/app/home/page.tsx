@@ -8,19 +8,7 @@ import { TemplatePreview } from '@/components/templates/TemplatePreview';
 import { MarketingNav } from '@/components/marketing/MarketingNav';
 import { TemplateMarquee } from '@/components/marketing/TemplateMarquee';
 import { Wordmark } from '@/components/marketing/Wordmark';
-
-// ── In-code defaults (used until/unless the super-admin CMS overrides them) ──
-const DEFAULT_FEATURES = [
-  { title: 'Designer templates', body: '120+ hand-crafted invites for weddings, parties & ceremonies — no design skills needed.', meta: '#8fd8f2' },
-  { title: 'Instant RSVP', body: 'Guests tap to reply. You watch responses roll in, live.', meta: '#f2b7ab' },
-  { title: 'Live guest list', body: "Track who's coming, dietary notes and plus-ones in one place.", meta: '#8fe6b0' },
-  { title: 'Share anywhere', body: 'One link works on WhatsApp, Instagram, SMS or email.', meta: '#e9c98a' },
-];
-
-const DEFAULT_QUOTES = [
-  { body: 'Made our wedding invite in one lunch break. Everyone asked who designed it.', meta: '— Nur & Idris, Wedding' },
-  { body: 'The RSVP tracker saved my sanity for a 200-person party.', meta: '— Mel, Birthday' },
-];
+import { LANDING_CONTENT_DEFAULTS, DEFAULT_FEATURE_ITEMS, DEFAULT_STORY_ITEMS, DEFAULT_MIDDLE_SECTIONS } from '@/lib/landing/defaults';
 
 const PRICING = [
   { tier: 'Free', price: 'Free forever', highlight: false, description: 'Try the editor and see how it feels before committing.', features: ['1 free invitation template', 'Full editor access', 'Private preview (self-test only)', 'Test RSVPs & wishes'], cta: 'Get started free', ctaHref: '/personalise/picker' },
@@ -29,7 +17,7 @@ const PRICING = [
 ];
 
 const SECTION_PAD = 'clamp(56px, 8vw, 96px) clamp(20px, 5vw, 72px)';
-const DEFAULT_MIDDLE = ['features', 'pricing', 'stories', 'about'];
+const DEFAULT_MIDDLE = DEFAULT_MIDDLE_SECTIONS;
 
 export default function HomePage() {
   const [templates, setTemplates] = useState<Template[]>([]);
@@ -44,14 +32,16 @@ export default function HomePage() {
   const startFunnel = () => router.push('/personalise/picker');
 
   // CMS helpers: scalar content with fallback, and repeatable items by section.
-  const c = (key: string, fallback: string) => landing?.content?.[key] ?? fallback;
+  // `||` (not `??`) so a saved-but-empty override still falls back to the live default
+  // rather than blanking the heading.
+  const c = (key: string) => landing?.content?.[key] || LANDING_CONTENT_DEFAULTS[key] || '';
   const itemsOf = (sectionKey: string, fallback: { title?: string; body: string; meta: string }[]) => {
     const rows = (landing?.items ?? []).filter((i) => i.sectionKey === sectionKey && i.isActive).sort((a, b) => a.sortOrder - b.sortOrder);
     return rows.length > 0 ? rows.map((r: LandingItemDto) => ({ title: r.title, body: r.body, meta: r.meta })) : fallback;
   };
 
-  const features = itemsOf('features', DEFAULT_FEATURES);
-  const quotes = itemsOf('stories', DEFAULT_QUOTES);
+  const features = itemsOf('features', DEFAULT_FEATURE_ITEMS);
+  const quotes = itemsOf('stories', DEFAULT_STORY_ITEMS);
 
   // Middle-section order + visibility from CMS (hero/footer are always shown).
   const middleOrder = useMemo(() => {
@@ -68,8 +58,8 @@ export default function HomePage() {
         return (
           <section key="features" id="features" style={{ padding: SECTION_PAD, background: 'var(--mkt-card)', borderTop: '2px solid var(--mkt-ink)', borderBottom: '2px solid var(--mkt-ink)' }}>
             <div style={{ maxWidth: 940, margin: '0 auto' }}>
-              <h2 style={{ fontFamily: 'var(--mkt-serif)', fontWeight: 700, fontSize: 'clamp(34px, 5vw, 44px)', lineHeight: 1, margin: 0 }}>{c('features.title', 'Features')}</h2>
-              <p style={{ fontFamily: 'var(--mkt-sans)', fontSize: 16, color: 'var(--mkt-muted)', marginTop: 8 }}>{c('features.subtitle', 'Everything to send a beautiful invite.')}</p>
+              <h2 style={{ fontFamily: 'var(--mkt-serif)', fontWeight: 700, fontSize: 'clamp(34px, 5vw, 44px)', lineHeight: 1, margin: 0 }}>{c('features.title')}</h2>
+              <p style={{ fontFamily: 'var(--mkt-sans)', fontSize: 16, color: 'var(--mkt-muted)', marginTop: 8 }}>{c('features.subtitle')}</p>
               <div style={{ marginTop: 28, display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 16 }}>
                 {features.map((f, i) => (
                   <motion.div key={i} initial={{ opacity: 0, y: 16 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.08, duration: 0.45 }} className="mkt-card" style={{ display: 'flex', gap: 15, alignItems: 'flex-start', padding: 18 }}>
@@ -88,8 +78,8 @@ export default function HomePage() {
         return (
           <section key="pricing" id="pricing" style={{ padding: SECTION_PAD }}>
             <div style={{ maxWidth: 1040, margin: '0 auto' }}>
-              <h2 style={{ fontFamily: 'var(--mkt-serif)', fontWeight: 700, fontSize: 'clamp(34px, 5vw, 44px)', lineHeight: 1, margin: 0 }}>{c('pricing.title', 'Pricing')}</h2>
-              <p style={{ fontFamily: 'var(--mkt-sans)', fontSize: 16, color: 'var(--mkt-muted)', marginTop: 8 }}>{c('pricing.subtitle', "Start free. Upgrade when you're ready.")}</p>
+              <h2 style={{ fontFamily: 'var(--mkt-serif)', fontWeight: 700, fontSize: 'clamp(34px, 5vw, 44px)', lineHeight: 1, margin: 0 }}>{c('pricing.title')}</h2>
+              <p style={{ fontFamily: 'var(--mkt-sans)', fontSize: 16, color: 'var(--mkt-muted)', marginTop: 8 }}>{c('pricing.subtitle')}</p>
               <div style={{ marginTop: 28, display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 18 }}>
                 {PRICING.map((plan, i) => (
                   <motion.div key={plan.tier} initial={{ opacity: 0, y: 18 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.09, duration: 0.45 }} style={{ position: 'relative', background: plan.highlight ? '#faedcf' : 'var(--mkt-card)', border: '2.5px solid var(--mkt-ink)', borderRadius: 22, padding: 22, boxShadow: '0 7px 0 rgba(23,19,13,.12)' }}>
@@ -113,13 +103,13 @@ export default function HomePage() {
         return (
           <section key="stories" id="stories" style={{ padding: SECTION_PAD, background: 'var(--mkt-card)', borderTop: '2px solid var(--mkt-ink)', borderBottom: '2px solid var(--mkt-ink)' }}>
             <div style={{ maxWidth: 1040, margin: '0 auto' }}>
-              <h2 style={{ fontFamily: 'var(--mkt-serif)', fontWeight: 700, fontSize: 'clamp(34px, 5vw, 44px)', lineHeight: 1, margin: 0 }}>{c('stories.title', 'Stories')}</h2>
-              <p style={{ fontFamily: 'var(--mkt-sans)', fontSize: 16, color: 'var(--mkt-muted)', marginTop: 8 }}>{c('stories.subtitle', 'Real celebrations, really sent.')}</p>
+              <h2 style={{ fontFamily: 'var(--mkt-serif)', fontWeight: 700, fontSize: 'clamp(34px, 5vw, 44px)', lineHeight: 1, margin: 0 }}>{c('stories.title')}</h2>
+              <p style={{ fontFamily: 'var(--mkt-sans)', fontSize: 16, color: 'var(--mkt-muted)', marginTop: 8 }}>{c('stories.subtitle')}</p>
               {templates.length > 0 && (
                 <div style={{ marginTop: 22, display: 'flex', gap: 16, overflowX: 'auto', paddingBottom: 6 }}>
                   {templates.slice(0, 6).map((t) => (
                     <div key={t.templateId} style={{ flex: 'none', width: 150, borderRadius: 18, overflow: 'hidden', border: '3px solid var(--mkt-ink)', boxShadow: '0 10px 22px rgba(23,19,13,.18)' }}>
-                      <TemplatePreview templateCode={t.templateCode} thumbnailUrl={t.thumbnailUrl} />
+                      <TemplatePreview templateCode={t.templateCode} thumbnailUrl={t.thumbnailUrl} aspect="390 / 700" />
                     </div>
                   ))}
                 </div>
@@ -139,21 +129,21 @@ export default function HomePage() {
         return (
           <section key="about" id="about" style={{ padding: SECTION_PAD }}>
             <div style={{ maxWidth: 720, margin: '0 auto' }}>
-              <h2 style={{ fontFamily: 'var(--mkt-serif)', fontWeight: 700, fontSize: 'clamp(34px, 5vw, 44px)', lineHeight: 1, margin: 0 }}>{c('about.title', 'About')}</h2>
+              <h2 style={{ fontFamily: 'var(--mkt-serif)', fontWeight: 700, fontSize: 'clamp(34px, 5vw, 44px)', lineHeight: 1, margin: 0 }}>{c('about.title')}</h2>
               <p style={{ fontFamily: 'var(--mkt-serif)', fontWeight: 600, fontSize: 'clamp(22px, 3.4vw, 30px)', lineHeight: 1.2, marginTop: 22 }}>
-                {c('about.heading', 'The Invit_e is a little studio product for people who care how the invitation feels.')}
+                {c('about.heading')}
               </p>
               <p style={{ fontFamily: 'var(--mkt-sans)', fontSize: 16, color: 'var(--mkt-muted-2)', lineHeight: 1.6, marginTop: 18 }}>
-                {c('about.body', 'Built by ODDSTUDIO, we make templates that look hand-designed, then let you fill them in from your phone in minutes — no design skills, no fuss.')}
+                {c('about.body')}
               </p>
               <div style={{ display: 'flex', gap: 12, marginTop: 26, flexWrap: 'wrap' }}>
                 <div className="mkt-card" style={{ flex: '1 1 160px', padding: 16, textAlign: 'center', boxShadow: 'none' }}>
-                  <div style={{ fontFamily: 'var(--mkt-serif)', fontWeight: 700, fontSize: 32 }}>{c('about.stat1.value', '40k+')}</div>
-                  <div style={{ fontFamily: 'var(--mkt-sans)', fontSize: 13, color: 'var(--mkt-muted)' }}>{c('about.stat1.label', 'invites sent')}</div>
+                  <div style={{ fontFamily: 'var(--mkt-serif)', fontWeight: 700, fontSize: 32 }}>{c('about.stat1.value')}</div>
+                  <div style={{ fontFamily: 'var(--mkt-sans)', fontSize: 13, color: 'var(--mkt-muted)' }}>{c('about.stat1.label')}</div>
                 </div>
                 <div className="mkt-card" style={{ flex: '1 1 160px', padding: 16, textAlign: 'center', boxShadow: 'none' }}>
-                  <div style={{ fontFamily: 'var(--mkt-serif)', fontWeight: 700, fontSize: 32 }}>{c('about.stat2.value', '120+')}</div>
-                  <div style={{ fontFamily: 'var(--mkt-sans)', fontSize: 13, color: 'var(--mkt-muted)' }}>{c('about.stat2.label', 'templates')}</div>
+                  <div style={{ fontFamily: 'var(--mkt-serif)', fontWeight: 700, fontSize: 32 }}>{c('about.stat2.value')}</div>
+                  <div style={{ fontFamily: 'var(--mkt-sans)', fontSize: 13, color: 'var(--mkt-muted)' }}>{c('about.stat2.label')}</div>
                 </div>
               </div>
               <button onClick={startFunnel} className="mkt-btn mkt-btn-dark" style={{ width: '100%', marginTop: 26, fontSize: 19, padding: 15 }}>Make your first invite</button>
@@ -176,7 +166,7 @@ export default function HomePage() {
             <Wordmark size={76} stacked byline />
           </div>
           <p style={{ fontFamily: 'var(--mkt-serif)', fontSize: 'clamp(16px, 2.4vw, 22px)', marginTop: 18, color: '#2a231a' }}>
-            {c('hero.tagline', 'Weddings · Parties · Ceremonies')}
+            {c('hero.tagline')}
           </p>
         </div>
         <div style={{ marginTop: 'clamp(32px, 5vw, 56px)' }}>
@@ -194,7 +184,7 @@ export default function HomePage() {
         <span className="mkt-wordmark" style={{ fontSize: 22, color: 'var(--mkt-card)' }}>
           <span>The Invit</span><span className="u">_</span><span className="e">e</span>
         </span>
-        <p style={{ fontFamily: 'var(--mkt-sans)', fontSize: 14, color: 'rgba(251,247,239,0.5)', margin: 0 }}>{c('footer.tagline', 'Made with love for unforgettable celebrations')}</p>
+        <p style={{ fontFamily: 'var(--mkt-sans)', fontSize: 14, color: 'rgba(251,247,239,0.5)', margin: 0 }}>{c('footer.tagline')}</p>
         <a href="/login" style={{ fontFamily: 'var(--mkt-sans)', fontSize: 14, color: 'rgba(251,247,239,0.7)' }}>Sign in →</a>
       </footer>
     </div>

@@ -27,10 +27,14 @@ namespace WeddingInvite.Models
         // of a per-template React component. Null/IsAuthored=false for every hand-coded template.
         public bool IsAuthored { get; set; } = false;
         public string? StagesJson { get; set; }
+
+        // Comma-separated subset of EventTypes.All, e.g. "WEDDING,CEREMONY" — which event
+        // pickers (the personalise funnel) should surface this template under.
+        public string EventTypes { get; set; } = Models.EventTypes.Wedding;
         
         public DateTime CreatedDate { get; set; } = DateTime.UtcNow;
         
         // Navigation property
-        public ICollection<Wedding> Weddings { get; set; } = new List<Wedding>();
+        public ICollection<Event> Events { get; set; } = new List<Event>();
     }
 }

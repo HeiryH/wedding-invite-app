@@ -10,28 +10,28 @@ namespace WeddingInvite.API.Controllers
     public class TemplateConfigController : ControllerBase
     {
         private readonly ITemplateConfigService _configService;
-        private readonly IWeddingAuthorizationService _authService;
+        private readonly IEventAuthorizationService _authService;
 
         public TemplateConfigController(
             ITemplateConfigService configService,
-            IWeddingAuthorizationService authService)
+            IEventAuthorizationService authService)
         {
             _configService = configService;
             _authService = authService;
         }
 
-        // GET: api/template-config/wedding/5  (public — invitation page reads it)
-        [HttpGet("wedding/{weddingId}")]
-        public async Task<ActionResult<Dictionary<string, string>>> GetByWeddingId(int weddingId)
+        // GET: api/template-config/event/5  (public — invitation page reads it)
+        [HttpGet("event/{eventId}")]
+        public async Task<ActionResult<Dictionary<string, string>>> GetByEventId(int eventId)
         {
-            var config = await _configService.GetConfigAsync(weddingId);
+            var config = await _configService.GetConfigAsync(eventId);
             return Ok(config);
         }
 
         // GET: api/template-config/template/7/default  (public — the sample/thumbnail preview
-        // renders no real wedding, so it reads the template's captured "starting design" directly.
+        // renders no real event, so it reads the template's captured "starting design" directly.
         // Already couple-content-free by construction (SetDefaultFromWeddingAsync strips it), so
-        // this is safe to expose with no auth — same posture as the wedding-config GET above.)
+        // this is safe to expose with no auth — same posture as the event-config GET above.)
         [HttpGet("template/{templateId}/default")]
         public async Task<ActionResult<Dictionary<string, string>>> GetTemplateDefault(int templateId)
         {
@@ -39,16 +39,16 @@ namespace WeddingInvite.API.Controllers
             return Ok(config);
         }
 
-        // PUT: api/template-config/wedding/5  (authorized — couple admin or super admin)
-        [HttpPut("wedding/{weddingId}")]
+        // PUT: api/template-config/event/5  (authorized — couple admin or super admin)
+        [HttpPut("event/{eventId}")]
         [Authorize]
-        public async Task<ActionResult> Save(int weddingId, [FromBody] Dictionary<string, string> config)
+        public async Task<ActionResult> Save(int eventId, [FromBody] Dictionary<string, string> config)
         {
             var email = User.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value
                         ?? User.FindFirst("email")?.Value
                         ?? string.Empty;
 
-            if (!await _authService.CanAccessWeddingAsync(email, weddingId))
+            if (!await _authService.CanAccessEventAsync(email, eventId))
                 return Forbid();
 
             var error = TemplateConfigPolicy.Validate(config);
@@ -62,7 +62,7 @@ namespace WeddingInvite.API.Controllers
             // Tier gates the stage-layout (t*.layout.*) keys — the Adjust panel is PRO-only.
             var tier = User.FindFirst("Tier")?.Value;
 
-            await _configService.SaveConfigAsync(weddingId, config, role, tier);
+            await _configService.SaveConfigAsync(eventId, config, role, tier);
             return NoContent();
         }
     }

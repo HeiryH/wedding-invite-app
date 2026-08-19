@@ -1,15 +1,15 @@
 import { apiClient } from './client';
 
 export const templateConfigService = {
-  getByWeddingId: async (weddingId: number): Promise<Record<string, string>> => {
+  getByWeddingId: async (eventId: number): Promise<Record<string, string>> => {
     const response = await apiClient.get<Record<string, string>>(
-      `/template-config/wedding/${weddingId}`
+      `/template-config/event/${eventId}`
     );
     return response.data;
   },
 
-  save: async (weddingId: number, config: Record<string, string>): Promise<void> => {
-    await apiClient.put(`/template-config/wedding/${weddingId}`, config);
+  save: async (eventId: number, config: Record<string, string>): Promise<void> => {
+    await apiClient.put(`/template-config/event/${eventId}`, config);
   },
 
   // The template's captured "starting design" (empty object if none is set) — used by the

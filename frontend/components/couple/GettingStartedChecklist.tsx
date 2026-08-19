@@ -2,9 +2,11 @@
 
 import { useEffect, useState } from 'react';
 import { Icon } from '@/components/ui/Icon';
+import { urlSegmentForEventType } from '@/lib/eventTypes';
 
 interface Props {
   coupleName: string;
+  eventType: string;
   detailsComplete: boolean;
   guestCount: number;
   isPublic: boolean;
@@ -17,7 +19,7 @@ const CUSTOMIZED_KEY = 'onboarding.customized';
 const PREVIEWED_KEY = 'onboarding.previewed';
 
 export function GettingStartedChecklist({
-  coupleName, detailsComplete, guestCount, isPublic, onEditDetails, onAddGuests,
+  coupleName, eventType, detailsComplete, guestCount, isPublic, onEditDetails, onAddGuests,
 }: Props) {
   // localStorage-backed flags for the two "explore" steps (no server signal for them).
   const [customized, setCustomized] = useState(false);
@@ -34,12 +36,12 @@ export function GettingStartedChecklist({
     { label: 'Add your names, date & venue', done: detailsComplete,
       cta: 'Edit details', onClick: onEditDetails },
     { label: 'Design your invitation', done: customized,
-      cta: 'Customize', href: '/couple-admin/customize',
+      cta: 'Customize', href: '/organizer-admin/customize',
       mark: () => { localStorage.setItem(CUSTOMIZED_KEY, '1'); setCustomized(true); } },
     { label: 'Invite your guests', done: guestCount > 0,
       cta: 'Add guests', onClick: onAddGuests },
     { label: 'Preview & share your invitation', done: previewed,
-      cta: 'Preview', href: `/wedding/${coupleName}`, external: true,
+      cta: 'Preview', href: `/${urlSegmentForEventType(eventType)}/${coupleName}`, external: true,
       mark: () => { localStorage.setItem(PREVIEWED_KEY, '1'); setPreviewed(true); } },
   ];
 

@@ -5,6 +5,11 @@ WORKDIR /app
 ARG BACKEND_URL=http://backend:5000
 ENV BACKEND_URL=$BACKEND_URL
 
+# robots.ts/sitemap.ts/layout.tsx have no dynamic APIs, so Next.js statically prerenders
+# them at build time — NEXT_PUBLIC_SITE_URL must be present here, not just at container run time.
+ARG NEXT_PUBLIC_SITE_URL=https://oddstudio.app
+ENV NEXT_PUBLIC_SITE_URL=$NEXT_PUBLIC_SITE_URL
+
 COPY package*.json ./
 RUN npm ci
 

@@ -35,8 +35,8 @@ export default function LoginPage() {
         router.push('/super-admin');
       } else if (response.role === 'HOST_ADMIN') {
         router.push('/host-admin');
-      } else if (response.role === 'COUPLE_ADMIN') {
-        router.push('/couple-admin');
+      } else if (response.role === 'ORGANIZER_ADMIN') {
+        router.push('/organizer-admin');
       } else {
         setError('Unknown user role');
       }

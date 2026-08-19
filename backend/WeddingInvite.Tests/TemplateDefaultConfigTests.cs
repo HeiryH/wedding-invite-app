@@ -19,35 +19,35 @@ public class TemplateDefaultConfigTests
     private static TemplateConfigService ConfigService(TestDb db) => new(
         new TemplateConfigRepository(db.Context),
         new TemplateConfigDefaultRepository(db.Context),
-        new WeddingRepository(db.Context));
+        new EventRepository(db.Context));
 
-    private static WeddingService WeddingSvc(TestDb db) => new(
-        new WeddingRepository(db.Context),
+    private static EventService EventSvc(TestDb db) => new(
+        new EventRepository(db.Context),
         new GuestRepository(db.Context),
         new PackageRepository(db.Context),
-        new WeddingFeatureRepository(db.Context),
+        new EventFeatureRepository(db.Context),
         new TemplateRepository(db.Context),
         new UserRepository(db.Context));
 
     private static int SeedWedding(TestDb db, string coupleName, int templateId, string tier = "PRO")
     {
-        var w = new Wedding
+        var w = new Event
         {
-            CoupleName = coupleName,
-            BrideName = "B", GroomName = "G",
-            WeddingDate = new DateTime(2027, 12, 1),
+            Slug = coupleName,
+            Name1 = "B", Name2 = "G",
+            EventDate = new DateTime(2027, 12, 1),
             Venue = "V",
             TemplateId = templateId,
         };
-        db.Context.Weddings.Add(w);
+        db.Context.Events.Add(w);
         db.Context.SaveChanges();
         db.Context.Users.Add(new User
         {
-            Email = $"{coupleName}@x.com", PasswordHash = "x", Role = UserRoles.CoupleAdmin,
-            WeddingId = w.WeddingId, Tier = tier,
+            Email = $"{coupleName}@x.com", PasswordHash = "x", Role = UserRoles.OrganizerAdmin,
+            EventId = w.EventId, Tier = tier,
         });
         db.Context.SaveChanges();
-        return w.WeddingId;
+        return w.EventId;
     }
 
     [Fact]
@@ -114,11 +114,11 @@ public class TemplateDefaultConfigTests
         Assert.Empty(await svc.GetConfigAsync(target));
 
         // Switch it to t7 → it now inherits the t7 default, without any seeded rows being written.
-        await WeddingSvc(db).UpdateTemplateAsync(target, TemplateId);
+        await EventSvc(db).UpdateTemplateAsync(target, TemplateId);
 
         var effective = await svc.GetConfigAsync(target);
         Assert.Equal("#2b2621", effective["scene.ink.tint"]);
-        Assert.Empty(await new TemplateConfigRepository(db.Fresh()).GetByWeddingIdAsync(target)); // no rows
+        Assert.Empty(await new TemplateConfigRepository(db.Fresh()).GetByEventIdAsync(target)); // no rows
     }
 
     [Fact]
@@ -132,7 +132,7 @@ public class TemplateDefaultConfigTests
         await svc.SetDefaultFromWeddingAsync(TemplateId, sourceId);
 
         var invite = SeedWedding(db, "invite", TemplateId);
-        await svc.SaveConfigAsync(invite, new() { ["scene.ink.tint"] = "#111111" }, UserRoles.CoupleAdmin, "PRO");
+        await svc.SaveConfigAsync(invite, new() { ["scene.ink.tint"] = "#111111" }, UserRoles.OrganizerAdmin, "PRO");
 
         Assert.Equal("#111111", (await svc.GetConfigAsync(invite))["scene.ink.tint"]); // override wins
 
@@ -177,9 +177,9 @@ public class TemplateDefaultConfigTests
         {
             ["scene.ink.tint"] = "#2b2621", // equals default → must NOT be stored (stays live)
             ["invite.heading"] = "Custom heading", // a real override → stored
-        }, UserRoles.CoupleAdmin, "PRO");
+        }, UserRoles.OrganizerAdmin, "PRO");
 
-        var rows = new TemplateConfigRepository(db.Fresh()).GetByWeddingIdAsync(invite).Result.ToList();
+        var rows = new TemplateConfigRepository(db.Fresh()).GetByEventIdAsync(invite).Result.ToList();
         Assert.DoesNotContain(rows, r => r.ConfigKey == "scene.ink.tint");
         Assert.Contains(rows, r => r.ConfigKey == "invite.heading");
     }

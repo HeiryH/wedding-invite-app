@@ -8,16 +8,16 @@ namespace WeddingInvite.Core.Services
     {
         private readonly ITableRepository _tableRepo;
         private readonly IGuestRepository _guestRepo;
-        private readonly IWeddingRepository _weddingRepo;
+        private readonly IEventRepository _eventRepo;
 
         public TableService(
             ITableRepository tableRepo,
             IGuestRepository guestRepo,
-            IWeddingRepository weddingRepo)
+            IEventRepository eventRepo)
         {
             _tableRepo = tableRepo;
             _guestRepo = guestRepo;
-            _weddingRepo = weddingRepo;
+            _eventRepo = eventRepo;
         }
 
         public async Task<TableDto?> GetByIdAsync(int id)
@@ -26,17 +26,17 @@ namespace WeddingInvite.Core.Services
             return table == null ? null : MapToDto(table);
         }
 
-        public async Task<IEnumerable<TableDto>> GetByWeddingIdAsync(int weddingId)
+        public async Task<IEnumerable<TableDto>> GetByEventIdAsync(int eventId)
         {
-            var tables = await _tableRepo.GetByWeddingIdAsync(weddingId);
+            var tables = await _tableRepo.GetByEventIdAsync(eventId);
             return tables.Select(MapToDto);
         }
 
         public async Task<TableDto> CreateAsync(CreateTableDto dto)
         {
-            var wedding = await _weddingRepo.GetByIdAsync(dto.WeddingId);
-            if (wedding == null)
-                throw new KeyNotFoundException($"Wedding with ID {dto.WeddingId} not found");
+            var evt = await _eventRepo.GetByIdAsync(dto.EventId);
+            if (evt == null)
+                throw new KeyNotFoundException($"Event with ID {dto.EventId} not found");
 
             if (string.IsNullOrWhiteSpace(dto.TableName))
                 throw new ArgumentException("Table name is required");
@@ -46,7 +46,7 @@ namespace WeddingInvite.Core.Services
 
             var table = new Table
             {
-                WeddingId = dto.WeddingId,
+                EventId = dto.EventId,
                 TableName = dto.TableName.Trim(),
                 Capacity = dto.Capacity,
                 SortOrder = dto.SortOrder,
@@ -91,8 +91,8 @@ namespace WeddingInvite.Core.Services
             if (guest == null)
                 throw new KeyNotFoundException($"Guest with ID {guestId} not found");
 
-            if (guest.WeddingId != table.WeddingId)
-                throw new InvalidOperationException("Guest and table must belong to the same wedding");
+            if (guest.EventId != table.EventId)
+                throw new InvalidOperationException("Guest and table must belong to the same event");
 
             guest.TableId = tableId;
             await _guestRepo.UpdateAsync(guest);
@@ -113,7 +113,7 @@ namespace WeddingInvite.Core.Services
             return new TableDto
             {
                 TableId = table.TableId,
-                WeddingId = table.WeddingId,
+                EventId = table.EventId,
                 TableName = table.TableName,
                 Capacity = table.Capacity,
                 SortOrder = table.SortOrder,

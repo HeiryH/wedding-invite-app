@@ -2,8 +2,8 @@ import { apiClient } from './client';
 import { SeatingTable, CreateSeatingTable, UpdateSeatingTable } from './types';
 
 export const tableService = {
-  getByWeddingId: async (weddingId: number): Promise<SeatingTable[]> => {
-    const res = await apiClient.get<SeatingTable[]>(`/table/wedding/${weddingId}`);
+  getByWeddingId: async (eventId: number): Promise<SeatingTable[]> => {
+    const res = await apiClient.get<SeatingTable[]>(`/table/event/${eventId}`);
     return res.data;
   },
 

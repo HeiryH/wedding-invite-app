@@ -3,7 +3,7 @@ namespace WeddingInvite.Core.DTOs
     public class ItineraryItemDto
     {
         public int ItineraryItemId { get; set; }
-        public int WeddingId { get; set; }
+        public int EventId { get; set; }
         public string Label { get; set; } = string.Empty;
         public string Detail { get; set; } = string.Empty;
         public int SortOrder { get; set; }
