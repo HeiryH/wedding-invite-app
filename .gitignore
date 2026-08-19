@@ -25,6 +25,9 @@ backend/**/bin\
 *.db
 *.db-shm
 *.db-wal
+# Manual pre-migration backups — CLAUDE.md prescribes `cp wedding.db wedding.db.bak-$(date +%Y%m%d%H%M%S)`,
+# and that name does not end in .db, so it escapes the rule above.
+*.db.bak-*
 
 ############################
 # Uploaded content
