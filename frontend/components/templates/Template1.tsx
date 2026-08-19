@@ -67,12 +67,36 @@ export default function Template1({
   };
   const [activeSection, setActiveSection] = useState<SectionCode>('welcome');
 
-  // Only one section is mounted at a time (AnimatePresence mode="wait"), so the Adjust panel's
-  // "select a stage" affordance can't scroll to it like the continuous-scroll templates — it
-  // switches this tab instead, driven by the same editor.selectedStage the panel already sets.
+  // Single-page flow: nav scrolls to the section instead of switching tabs.
+  const scrollToSection = (code: SectionCode) => {
+    setActiveSection(code);
+    document.getElementById(code)?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  // Scroll spy: keep the nav's active-tab highlight in sync while scrolling.
+  useEffect(() => {
+    const handleScroll = () => {
+      const scrollPosition = window.scrollY + 200;
+      for (const code of sectionOrder) {
+        const element = document.getElementById(code);
+        if (element) {
+          const { offsetTop, offsetHeight } = element;
+          if (scrollPosition >= offsetTop && scrollPosition < offsetTop + offsetHeight) {
+            setActiveSection(code);
+            break;
+          }
+        }
+      }
+    };
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, [sectionOrder.join(',')]);
+
+  // Every section is mounted at once now, so the Adjust panel's "select a stage" affordance
+  // scrolls to it like the other continuous-scroll templates instead of switching a tab.
   useEffect(() => {
     if (editor?.enabled && editor.selectedStage && editor.selectedStage !== activeSection) {
-      setActiveSection(editor.selectedStage as SectionCode);
+      scrollToSection(editor.selectedStage as SectionCode);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editor?.selectedStage, editor?.enabled]);
@@ -136,7 +160,7 @@ export default function Template1({
       });
       setTimeout(() => {
         setRsvpSuccess(false);
-        setActiveSection('wishes');
+        scrollToSection('wishes');
       }, 2000);
     } catch {
       alert('Failed to submit RSVP');
@@ -167,7 +191,7 @@ export default function Template1({
       });
       setTimeout(() => {
         setRsvpSuccess(false);
-        setActiveSection('wishes');
+        scrollToSection('wishes');
       }, 2000);
     } catch (err) {
       alert('Failed to submit RSVP');
@@ -248,7 +272,7 @@ export default function Template1({
               return (
                 <button
                   key={item.name}
-                  onClick={() => setActiveSection(item.section)}
+                  onClick={() => scrollToSection(item.section)}
                 >
                   <motion.div
                     className={`relative px-3 sm:px-4 py-2 rounded-lg transition-colors ${isActive
@@ -274,19 +298,16 @@ export default function Template1({
         </div>
       </nav>
 
-      {/* Content */}
-      <main className="max-w-4xl mx-auto px-4 py-12">
-        <AnimatePresence mode="wait">
+      {/* Content: single-page flow — every section renders at once, nav scrolls between them */}
+      <main className="max-w-4xl mx-auto px-4 py-12 flex flex-col">
           {/* Welcome Section */}
-          {activeSection === 'welcome' && (
             <motion.div
-              key="invitation"
+              id="welcome"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
               transition={{ duration: 0.3 }}
-              style={sectionBgStyle(customConfig?.['section.welcome.bg'], API_BASE)}
-              className="relative rounded-2xl"
+              style={{ order: sectionOrder.indexOf('welcome'), ...sectionBgStyle(customConfig?.['section.welcome.bg'], API_BASE) }}
+              className="relative rounded-2xl mb-16 scroll-mt-24"
             >
               <SectionOverlay stageId="welcome" {...overlayProps} />
               {/* Hero Section */}
@@ -403,7 +424,7 @@ export default function Template1({
               {/* CTA Buttons */}
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
                 <motion.button
-                  onClick={() => setActiveSection('rsvp')}
+                  onClick={() => scrollToSection('rsvp')}
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                   className="px-8 py-4 bg-gradient-to-r from-rose-500 to-pink-500 text-white font-semibold rounded-xl shadow-lg"
@@ -412,7 +433,7 @@ export default function Template1({
                 </motion.button>
 
                 <motion.button
-                  onClick={() => setActiveSection('wishes')}
+                  onClick={() => scrollToSection('wishes')}
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                   className="px-8 py-4 bg-white text-rose-600 font-semibold rounded-xl border-2 border-rose-200"
@@ -430,17 +451,17 @@ export default function Template1({
                 </p>
               </div>
             </motion.div>
-          )}
 
           {/* Walimah Section */}
-          {activeSection === 'walimah' && (
+          {sectionOrder.includes('walimah') && (
             <motion.div
-              key="walimah"
+              id="walimah"
               initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
               transition={{ duration: 0.3 }}
-              className={`relative bg-white rounded-2xl shadow-md p-8 ${alignClass(customConfig?.['walimah.body.align'])}`}
+              style={{ order: sectionOrder.indexOf('walimah') }}
+              className={`relative bg-white rounded-2xl shadow-md p-8 mb-16 scroll-mt-24 ${alignClass(customConfig?.['walimah.body.align'])}`}
             >
               <SectionOverlay stageId="walimah" {...overlayProps} />
               <h2 className="text-3xl font-bold text-rose-500 mb-6" style={a('walimah', 'title')}>Ceremony Details</h2>
@@ -452,14 +473,15 @@ export default function Template1({
           )}
 
           {/* Itinerary Section */}
-          {activeSection === 'itinerary' && (
+          {sectionOrder.includes('itinerary') && (
             <motion.div
-              key="itinerary"
+              id="itinerary"
               initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
               transition={{ duration: 0.3 }}
-              className="relative bg-white rounded-2xl shadow-md p-8"
+              style={{ order: sectionOrder.indexOf('itinerary') }}
+              className="relative bg-white rounded-2xl shadow-md p-8 mb-16 scroll-mt-24"
             >
               <SectionOverlay stageId="itinerary" {...overlayProps} />
               {(() => {
@@ -488,15 +510,14 @@ export default function Template1({
           )}
 
           {/* RSVP Section */}
-          {activeSection === 'rsvp' && (
             <motion.div
-              key="rsvp"
+              id="rsvp"
               initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
               transition={{ duration: 0.3 }}
-              className="relative max-w-2xl mx-auto rounded-2xl"
-              style={sectionBgStyle(customConfig?.['section.ceremony.bg'], API_BASE)}
+              className="relative max-w-2xl mx-auto rounded-2xl mb-16 scroll-mt-24"
+              style={{ order: sectionOrder.indexOf('rsvp'), ...sectionBgStyle(customConfig?.['section.ceremony.bg'], API_BASE) }}
             >
               <SectionOverlay stageId="rsvp" {...overlayProps} />
               <div className="text-center mb-8" style={a('rsvp', 'heading')}>
@@ -707,18 +728,16 @@ export default function Template1({
                 )}
               </AnimatePresence>
             </motion.div>
-          )}
 
           {/* Wishes Section */}
-          {activeSection === 'wishes' && (
             <motion.div
-              key="wishes"
+              id="wishes"
               initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
               transition={{ duration: 0.3 }}
-              style={sectionBgStyle(customConfig?.['section.celebration.bg'], API_BASE)}
-              className="relative rounded-2xl"
+              style={{ order: sectionOrder.indexOf('wishes'), ...sectionBgStyle(customConfig?.['section.celebration.bg'], API_BASE) }}
+              className="relative rounded-2xl mb-16 scroll-mt-24"
             >
               <SectionOverlay stageId="wishes" {...overlayProps} />
               <div className="text-center mb-12" style={a('wishes', 'heading')}>
@@ -814,17 +833,17 @@ export default function Template1({
                 </div>
               </div>
             </motion.div>
-          )}
 
           {/* Photos Section */}
-      {activeSection === 'photobooth' && photoBoothEnabled && (
+      {sectionOrder.includes('photobooth') && photoBoothEnabled && (
         <motion.div
-          key="photos"
+          id="photobooth"
           initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
           transition={{ duration: 0.3 }}
-          className="relative"
+          style={{ order: sectionOrder.indexOf('photobooth') }}
+          className="relative mb-16 scroll-mt-24"
         >
           <SectionOverlay stageId="photobooth" {...overlayProps} />
           <div className="text-center mb-12" style={a('photobooth', 'heading')}>
@@ -940,7 +959,6 @@ export default function Template1({
           </div>
         </motion.div>
       )}
-    </AnimatePresence>
   </main>
   <footer className="text-center py-6 text-gray-400 text-xs">
     {t('footer.tagline', 'Made with love for our special day')}

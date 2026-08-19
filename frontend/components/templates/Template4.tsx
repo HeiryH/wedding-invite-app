@@ -748,7 +748,10 @@ export default function Template4({
         <TornEdge fromDark={false} />
         <div className="py-16 px-6">
           <div className="max-w-sm mx-auto" style={a('t4-schedule', 'schedule')}>
-            <p className="text-center text-[9px] tracking-[0.35em] uppercase text-[#6A6A64] mb-10">Schedule</p>
+            <div className="text-center mb-10">
+              <p className="text-[10px] tracking-[0.35em] uppercase text-[#6A6A64] mb-2">Order of the day</p>
+              <h2 className="text-4xl italic font-normal text-white">Schedule</h2>
+            </div>
             {[
               { time: '20:00 Hs', label: 'Arrival — Take your seat', icon: <IcoPin /> },
               { time: '20:30 Hs', label: 'Ceremony', icon: <IcoRings /> },
@@ -782,12 +785,16 @@ export default function Template4({
       {varSections.map((code, idx) => {
         const prevColor = idx === 0 ? 'dark' : T4_SECTION_COLOR[varSections[idx - 1]];
         const thisColor = T4_SECTION_COLOR[code];
-        const needsTornEdge = prevColor === 'dark' && thisColor === 'cream';
+        // Torn edge at any color change — each section below already hardcodes the
+        // correct fromDark for its one possible transition direction (rsvp/photobooth
+        // are always cream, wishes is always dark, so the incoming color is implied).
+        const needsTornEdge = prevColor !== thisColor;
 
         if (code === 'rsvp') return (
-          <section key="rsvp" id="t4-rsvp" className="relative bg-[#F7F6F1] py-20 px-6" style={sectionBgStyle(customConfig?.['section.ceremony.bg'], API_BASE)}>
+          <section key="rsvp" id="t4-rsvp" className="relative bg-[#F7F6F1]" style={sectionBgStyle(customConfig?.['section.ceremony.bg'], API_BASE)}>
             <SectionOverlay stageId="t4-rsvp" {...overlayProps} />
             {needsTornEdge && <TornEdge fromDark />}
+            <div className="py-20 px-6">
             <div className="max-w-lg mx-auto">
               <motion.div initial={{ opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.5 }}>
                 <div className="text-center mb-10" style={a('t4-rsvp', 'heading')}>
@@ -843,13 +850,15 @@ export default function Template4({
                 </AnimatePresence>
               </motion.div>
             </div>
+            </div>
           </section>
         );
 
         if (code === 'wishes') return (
-          <section key="wishes" id="t4-wishes" className="relative bg-[#1C1C1A] py-20 px-6" style={sectionBgStyle(customConfig?.['section.celebration.bg'], API_BASE)}>
+          <section key="wishes" id="t4-wishes" className="relative bg-[#1C1C1A]" style={sectionBgStyle(customConfig?.['section.celebration.bg'], API_BASE)}>
             <SectionOverlay stageId="t4-wishes" {...overlayProps} />
             {needsTornEdge && <TornEdge fromDark={false} />}
+            <div className="py-20 px-6">
             <div className="max-w-4xl mx-auto">
               <motion.div initial={{ opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.5 }}>
                 <div className="text-center mb-12" style={a('t4-wishes', 'heading')}>
@@ -886,6 +895,7 @@ export default function Template4({
                   </div>
                 </div>
               </motion.div>
+            </div>
             </div>
           </section>
         );
