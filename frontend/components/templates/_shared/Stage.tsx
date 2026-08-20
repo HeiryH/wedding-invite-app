@@ -58,10 +58,15 @@ export default function Stage({
   // shape. Scenery = the decorative kinds; real content (slots) stays outside and keeps adapting
   // to the actual screen — except a slot explicitly flagged `canvasAnchor`, which is composed
   // against the art and has to crop with it.
-  const canvasDef = def.flow ? undefined : def.canvas;
   const inCanvas = (l: LayerModel) =>
     l.canvasAnchor || l.kind === 'img' || l.kind === 'shape' || l.kind === 'text';
-  const canvasLayers = canvasDef ? visible.filter(inCanvas) : [];
+  const declared = def.flow ? undefined : def.canvas?.[slotProps.breakpoint ?? 'mobile'];
+  const declaredLayers = declared ? visible.filter(inCanvas) : [];
+  // A stage can declare a canvas and still have nothing to put in it — the compiled ceremony row
+  // strips each beat's art (registry.ts) and leaves only its slot. Fall back to the plain path
+  // rather than wrapping nothing and imposing size containment for no benefit.
+  const canvasDef = declaredLayers.length > 0 ? declared : undefined;
+  const canvasLayers = canvasDef ? declaredLayers : [];
   const looseLayers = canvasDef ? visible.filter((l) => !inCanvas(l)) : visible;
   // The canvas wrapper is `translate`d, so it establishes a stacking context: its members can no
   // longer interleave with layers outside it. Every shipped stage already keeps art strictly
@@ -177,7 +182,7 @@ export default function Stage({
         </>
       ) : (
         <>
-          {canvasDef && canvasLayers.length > 0 && (
+          {canvasDef && (
             <div
               className={styles.artCanvas}
               data-canvas

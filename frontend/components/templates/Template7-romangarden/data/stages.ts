@@ -27,10 +27,11 @@ export const T7_STAGES: Record<string, StageDef> = {
     label: 'Welcome',
     bg: 'welcome/background.webp',
     bgFit: 'cover',
-    // The scenery (arch, stairs, fountain, column, barrier) is one picture composed for a 390x844
-    // screen, so it cover-crops as a unit with the background instead of pulling apart on an
-    // unusual aspect ratio. See StageDef.canvas.
-    canvas: { w: 390, h: 844 },
+    // The scenery is one picture composed for a 390x844 screen, so it cover-crops as a unit with
+    // the background instead of pulling apart on an unusual aspect ratio. Mobile only: the desktop
+    // composition is a different picture with its own reference shape, and desktop aspect ratios
+    // don't vary the way phone ones do. See StageDef.canvas.
+    canvas: { mobile: { w: 390, h: 844 } },
     layers: [
       L({ id: 'arch',      kind: 'img',  src: 'welcome/arch.webp',           x: 50, y: 40, w: 92,  z: 3, order: 0, depth: 0.5 }),
       L({ id: 'barrier',   kind: 'img',  src: 'welcome/barrier.webp',        x: 50, y: 68, w: 140, z: 5, order: 1, depth: 1.1 }),
@@ -67,6 +68,7 @@ export const T7_STAGES: Record<string, StageDef> = {
     label: 'Ceremony',
     bg: 'ceremony/background.webp',
     bgFit: 'cover',
+    canvas: { mobile: { w: 390, h: 844 } },
     layers: [
       // A landscape architrave: on a portrait phone its straight top edge saws a visible seam
       // across the screen, and scaling it up to hide that pushes the columns off both sides.
@@ -91,6 +93,7 @@ export const T7_STAGES: Record<string, StageDef> = {
     label: 'The Couple',
     bg: 'ceremony/background.webp',
     bgFit: 'cover',
+    canvas: { mobile: { w: 390, h: 844 } },
     layers: [
       // A landscape architrave: on a portrait phone its straight top edge saws a visible seam
       // across the screen, and scaling it up to hide that pushes the columns off both sides.
@@ -115,6 +118,7 @@ export const T7_STAGES: Record<string, StageDef> = {
     label: 'Details',
     bg: 'ceremony/background.webp',
     bgFit: 'cover',
+    canvas: { mobile: { w: 390, h: 844 } },
     layers: [
       // A landscape architrave: on a portrait phone its straight top edge saws a visible seam
       // across the screen, and scaling it up to hide that pushes the columns off both sides.
@@ -139,6 +143,7 @@ export const T7_STAGES: Record<string, StageDef> = {
     label: 'Programme',
     bg: 'ceremony/background.webp',
     bgFit: 'cover',
+    canvas: { mobile: { w: 390, h: 844 } },
     layers: [
       // Desktop-only — see the note on the other ceremony stages.
       L({ id: 'pillars',   kind: 'img',  src: 'ceremony/pillars.webp',         x: 50, y: 46, w: 145, z: 2, order: 0, depth: 0.4, hidden: true }),
@@ -188,6 +193,7 @@ export const T7_STAGES: Record<string, StageDef> = {
     label: 'RSVP',
     bg: 'rsvp/background.webp',
     bgFit: 'cover',
+    canvas: { mobile: { w: 390, h: 844 } },
     layers: [
       L({ id: 'frame', kind: 'img',  src: 'rsvp/frame.webp',      x: 50, y: 44, w: 148, z: 2, order: 0, depth: 0.3 }),
       L({ id: 'pots',  kind: 'img',  src: 'rsvp/plant-pots.webp', x: 50, y: 90, w: 140, z: 3, order: 2, depth: 1.2 }),
@@ -205,9 +211,10 @@ export const T7_STAGES: Record<string, StageDef> = {
     label: 'Wishes',
     bg: 'wishes/background.webp',
     bgFit: 'cover',
+    canvas: { mobile: { w: 390, h: 844 } },
     layers: [
       L({ id: 'title',     kind: 'img',  src: 'wishes/title.webp',           x: 50, y: 13, w: 84,  z: 3, order: 0, depth: 0.4 }),
-      L({ id: 'titleText', kind: 'slot', slot: 'wishTitle',                  x: 50, y: 15, w: 66, h: 9, z: 6, order: 0, chain: false, depth: 0.4 }),
+      L({ id: 'titleText', kind: 'slot', slot: 'wishTitle',                  x: 50, y: 15, w: 66, h: 9, z: 6, order: 0, chain: false, depth: 0.4, canvasAnchor: true }),
       L({ id: 'partition', kind: 'img',  src: 'wishes/title-partition.webp', x: 50, y: 21, w: 34,  z: 4, order: 1, depth: 0.5 }),
       L({ id: 'prompt',    kind: 'slot', slot: 'wishPrompt',                 x: 50, y: 27, w: 80, h: 7, z: 5, order: 2, chain: false, depth: 0.3 }),
       L({ id: 'card',      kind: 'img',  src: 'wishes/msg.webp',             x: 50, y: 50, w: 108, z: 3, order: 2, depth: 0.3 }),
@@ -232,6 +239,7 @@ export const T7_STAGES: Record<string, StageDef> = {
     label: 'Photos',
     bg: 'photobooth/background.webp',
     bgFit: 'cover',
+    canvas: { mobile: { w: 390, h: 844 } },
     layers: [
       L({ id: 'partition', kind: 'img',  src: 'photobooth/title-partition.webp', x: 50, y: 14, w: 36,  z: 3, order: 0, depth: 0.5 }),
       L({ id: 'frame',     kind: 'img',  src: 'photobooth/frame.webp',           x: 50, y: 46, w: 100, z: 2, order: 1, depth: 0.3 }),

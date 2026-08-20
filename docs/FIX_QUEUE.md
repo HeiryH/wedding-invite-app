@@ -9,7 +9,7 @@ Status legend: `[ ]` todo · `[x]` done · `[~]` in progress · `[-]` deliberate
 
 ## Issue 1 — Template art falls apart on odd-shaped screens
 
-**Branch:** `ae-unified` · **Status:** A/B/C done + `welcome` converted; D continues · **Raised:** 2026-08-19
+**Branch:** `ae-unified` · **Status:** A/B/C/D done for **mobile**; desktop deferred (see below) · **Raised:** 2026-08-19
 
 ### The problem in plain English
 
@@ -117,9 +117,32 @@ different scales in the same frame.
       shares the arch's coordinates and must crop with it). **No retuning needed** — at the
       reference aspect the canvas resolves to exactly the stage box, so the numbers carry over
       unchanged.
-- [ ] Then the remaining fixed T7 stages, one at a time.
-- [ ] Assert `ceremony-rail` never gets a `canvas` — it's a third coordinate system (% of an
-      `N*100vw` row) with its own pan transforms and an externally-rendered background.
+- [x] All seven remaining fixed stages converted (`ceremony-{walimah,couple,details,programme}`,
+      `rsvp`, `wishes`, `photobooth`). `wishes.titleText` is flagged `canvasAnchor` — it is text set
+      **on** the decorative title plate and both sit ~35% above centre, far enough out that a
+      vertical crop would visibly separate them. Every other slot sits near the vertical centre,
+      where drift is negligible, so it stays outside and keeps adapting.
+- [x] `ceremony-rail` confirmed excluded — its geometry is a % of the whole `N*100vw` row.
+- [x] Hardened: a stage may *declare* a canvas and have no art to put in it (the compiled ceremony
+      row strips each beat's art in `registry.ts`). `Stage.tsx` falls back to the plain path rather
+      than wrapping nothing and imposing size containment for no benefit.
+
+**Canvas is per-breakpoint — found the hard way.** The first cut applied one reference shape to
+both breakpoints, which **regressed desktop**: forcing the mobile 390×844 aspect onto a 1440×900
+viewport builds a canvas 3116px tall, spreading the art over 3.5× the viewport and cropping it.
+Measured art scaling 0.875–0.889 against content at 1.138 — the same bug, inverted. `canvas` is now
+`Partial<Record<Breakpoint, {w,h}>>`; a breakpoint left out has no canvas and renders exactly as
+before. T7 ships **`mobile` only**, verified absent from the desktop DOM.
+
+### Verified — every mobile stage, 390×844 → 344×882
+
+All seven rendered stages scale **uniformly within 1px** of the background's own cover factor
+(1.045). An earlier "spread" reading was measurement noise: a 1px rounding step on a 15px
+`partition` is 6.7%, so the check now compares predicted vs actual **pixels**, not ratios.
+
+To surface the ceremony beats at all, a temporary `walimah.body` row was inserted for event 20
+(they are gated on it) and **deleted afterwards** — dev DB backed up first, row count back to 82.
+Note their art is `hidden` on mobile by design, so on phones those beats carry only their slot.
 
 **E. Verify**
 - [ ] Shapes: `390×844` (reference), `344×882` (fold cover), `360×780`, `430×932`, `844×390`
@@ -148,6 +171,14 @@ Every piece now scales by the **same** +4.5% — which is exactly the background
 (882/844) — instead of shrinking while the gaps grew. Separation relative to art size was drifting
 **+18.4%**; it is now **+0.05%**. At the reference aspect the numbers are byte-identical to before,
 as the math guarantees (canvas ≡ stage there).
+
+### Deferred — desktop has the same drift, unfixed
+
+Measured at 1440×900 → 1280×1024 with no canvas active (i.e. today's shipped behaviour): art
+scales 0.875–0.889 while slot content scales 1.138. That is the *same* width-vs-height split this
+issue is about, present on desktop and **not addressed** by this pass. Fixing it means adding a
+`desktop` reference aspect per stage and retuning each desktop composition against it — a separate
+piece of work, and lower value since desktop aspect ratios vary far less than phone ones.
 
 ### Known limitation — landscape
 

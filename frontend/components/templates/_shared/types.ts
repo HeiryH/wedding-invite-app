@@ -255,9 +255,15 @@ export interface StageDef {
    * the actual screen, because cropping an RSVP form is never acceptable while cropping a
    * decorative pot is the whole point. Leave unset for today's behaviour, byte for byte.
    *
+   * **Per breakpoint**, because a stage's mobile and desktop compositions are different pictures
+   * with different reference shapes — forcing the mobile aspect on a desktop layout spreads the art
+   * across a canvas several times the viewport's height and crops it. A breakpoint left out simply
+   * has no canvas and renders exactly as before, so a stage can opt in for `mobile` only (which is
+   * where aspect ratios actually vary wildly — fold covers, tall Androids) and leave desktop alone.
+   *
    * Only valid on a fixed (non-`flow`) stage — a flow stage has no definite height to fit against.
    */
-  canvas?: { w: number; h: number };
+  canvas?: Partial<Record<Breakpoint, { w: number; h: number }>>;
   /** Optional shipped defaults for the background's placement (overridable via StageLayout). */
   bgPosition?: string;
   bgScale?: number;
