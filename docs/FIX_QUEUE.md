@@ -9,7 +9,7 @@ Status legend: `[ ]` todo · `[x]` done · `[~]` in progress · `[-]` deliberate
 
 ## Issue 1 — Template art falls apart on odd-shaped screens
 
-**Branch:** `ae-unified` · **Status:** A/B/C/D done for **mobile**; desktop deferred (see below) · **Raised:** 2026-08-19
+**Branch:** `ae-unified` · **Status:** DONE for **mobile** (A–F); desktop deferred (see below) · **Raised:** 2026-08-19
 
 ### The problem in plain English
 
@@ -144,18 +144,46 @@ To surface the ceremony beats at all, a temporary `walimah.body` row was inserte
 (they are gated on it) and **deleted afterwards** — dev DB backed up first, row count back to 82.
 Note their art is `hidden` on mobile by design, so on phones those beats carry only their slot.
 
-**E. Verify**
-- [ ] Shapes: `390×844` (reference), `344×882` (fold cover), `360×780`, `430×932`, `844×390`
-      (landscape), `768×1024`, `1440×900`.
-- [ ] `tsc --noEmit` clean · `next build` clean.
-- [ ] The 9 existing stored `*.layout.*` rows (8× `t7`, 1× `t10`) plus the 8 `TemplateConfigDefaults`
-      layout rows still render. Deltas are per-layer patches so they keep working — they just want
-      retuning.
+**E. Verify** — DONE 2026-08-21
 
-**F. Docs**
-- [ ] Update `CLAUDE.md` Known Issues: replace the old cover-crop plan with this one.
-- [ ] Correct the stale claim that the failure "can't be previewed without real hardware" — the
-      preview panel has had custom width/height sliders (`280–1600 × 400–1200`) for a while.
+Seven-shape sweep of `welcome`, every layer's height ratio against the 390×844 reference:
+
+| layer | fold 344×882 | s24 360×780 | max 430×932 | ipad 768×1024 | land 844×390 | desktop 1440×900 |
+|---|---|---|---|---|---|---|
+| arch / stairs / barrier / fountain / column | 1.045 | 0.924 | 1.104 | 1.969 | 2.164 | *varies 1.48–1.98* |
+| countdown (canvasAnchor) | 1.045 | 0.924 | 1.104 | 1.969 | 2.164 | 0.863 |
+| cue (outside canvas) | 1.045 | 0.924 | 1.104 | 1.213 | 0.462 | 0.914 |
+| canvas box | 408×882 | 360×780 | 431×932 | 768×1662 | 844×1827 | none |
+| crop X / Y | 15.6 / 0% | 0.1 / 0% | 0.2 / 0% | 0 / 38.4% | 0 / 78.6% | — |
+
+- [x] **Phones are exact** — every canvas member scales identically, crop is horizontal and small.
+- [x] **iPad uniform but heavily cropped** (38.4% vertical; `cue`, correctly outside, diverges at
+      1.213). Screenshotted: proportions are faithful and it reads as a deliberate cover zoom, with
+      the stairs falling below the fold. Accepted, not a bug. If the stairs ever need to be visible
+      a `tablet` breakpoint is the answer — `useBreakpoint` buckets everything under 900px as mobile.
+- [x] **Landscape** 78.6% vertical crop, as documented below.
+- [x] **Desktop** has no canvas, so its varying ratios are the pre-existing drift (see Deferred).
+- [x] `tsc --noEmit` 0 errors · `next build` 30/30 pages.
+- [x] **Parallax unaffected** — `--sl-par` is −3.1498px at both 390×844 and 344×882, confirming the
+      "sized, not scaled" choice: a transform would have multiplied these.
+- [x] **Reveal off-screen verified end-to-end** by driving the standalone preview with a
+      `PREVIEW_UPDATE` payload: reveal off → stage 1000×1200; reveal on → stage pinned to exactly
+      the `frameW/frameH` sent (344×882), `overflow: visible`, canvas 408×882 bleeding 32px each
+      side. That bleed is precisely the art a fold phone crops, which is what reveal is for.
+- [~] **`cqi` typography — inconclusive, and harmless.** T7's hero type is clamped to a px floor at
+      phone sizes (24px at both 390 and 344), so the canvas cannot move it either way; at iPad the
+      canvas width equals the stage width, so the two are indistinguishable. No behaviour change,
+      but the canvas's `container-type: inline-size` is currently unexercised by real type.
+- [ ] Stored layout deltas: the 9 `*.layout.*` rows and 8 default rows were **not** re-verified
+      against a rendered invitation — they are per-layer patches so they keep applying, but a
+      composition tuned pre-canvas may want retuning.
+
+**F. Docs** — DONE 2026-08-21
+- [x] `CLAUDE.md` Known Issues rewritten: the old "one shared cover-crop transform" plan is replaced
+      by what was actually built, including the per-breakpoint constraint, the `container-type:
+      size` requirement, the stacking-context invariant, and the still-open desktop case.
+- [x] Corrected the stale "can't be previewed without real hardware" claim, and documented that
+      reveal now honours the previewed size via `EditorHandle.frameW/frameH`.
 
 ---
 

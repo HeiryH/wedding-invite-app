@@ -468,19 +468,50 @@ ScrollTrigger.create({
 
 ## Known Issues
 - Admin-side guest creation: `guestService` posts to `/guest/rsvp`; re-verify the admin create path works end-to-end (historically broken; endpoint changed).
-- **Device-shape drift on the fixed-stage compositor (open, T7).** Layer `x`/`y`/`w`/`h` are
-  independent percentages of the stage box, and `useBreakpoint` buckets everything under 900px as
-  one `mobile` layout — so a composition tuned on a ~390×844 phone visibly separates on a very
-  different aspect ratio (Samsung Fold cover ~1:2.56, unfolded ~1:1.25). The background already
-  `object-fit: cover`s; the foreground does not follow it. Agreed fix (**not yet implemented**):
-  render the whole composition inside a fixed reference canvas and apply **one** shared
-  cover-crop transform to it, so every layer scales with the background as a unit — the same math
-  `bgFit: cover` already does, applied to the group. Lives in `Stage.tsx`/`Stage.module.css`; needs
-  no change to the stored per-layer percentages. Requires tagging layers "core" (never crop:
-  countdown, RSVP, names) vs "decorative" (croppable) per stage.
-- The Adjust preview device presets (`PreviewPanel.tsx`) are all standard phones (SE / 15 / Pro
-  Max) — there is no Fold-cover or Fold-unfolded preset, so the failure case above can't be
-  previewed without real hardware.
+- **Device-shape drift on the fixed-stage compositor — FIXED on mobile (2026-08-20), open on
+  desktop.** The cause was sharper than "independent percentages": a `chain: true` layer takes its
+  height from stage **width** while its `y` is a percentage of stage **height**, so on a taller,
+  narrower screen the art *shrinks* while the gaps between pieces *grow* and the scene pulls apart
+  — measured on T7 `welcome` at 344×882: art −11.7%, gaps +4.5%, a **+18.4%** drift in separation
+  relative to art size, while the background cover-scaled the other way.
+
+  **The fix is `StageDef.canvas`** (`_shared/types.ts`), an opt-in per-stage *reference aspect*.
+  The stage's scenery composes inside one box of that aspect which cover-fits the device, exactly
+  as `bgFit: 'cover'` already does for the background, so every piece scales and crops as a unit.
+  Result: all art now scales by the background's own cover factor, drift **+0.05%**. Key points:
+  - **Scenery in, content out.** `img`/`shape`/`text` go in the canvas; `slot` layers stay outside
+    and keep adapting to the real screen — cropping a decorative pot is the point, cropping an RSVP
+    form never is. A slot composed *against* the art opts in with `Layer.canvasAnchor` (T7's
+    `welcome.countdown` shares the arch's coordinates; `wishes.titleText` is set on the title
+    plate). Slots near the vertical centre drift negligibly and are deliberately left outside.
+  - **Sized, not scaled.** `.artCanvas` uses `width: max(100cqw, 100cqh * var(--sl-ar))` — no
+    `transform: scale()`, which would soften text, multiply `useParallax`'s px offsets and stack a
+    third transform under the entrance/exit chain. **`cqh` needs `container-type: size`**, which
+    `inline-size` does not provide, so `.stage[data-has-canvas]` upgrades — valid only because a
+    canvas stage is never `flow`, which `Stage.tsx` enforces rather than trusting the caller.
+  - **Per breakpoint** (`Partial<Record<Breakpoint, {w,h}>>`). Applying one reference to both
+    **regresses desktop**: the mobile 390×844 aspect on a 1440×900 viewport builds a canvas 3116px
+    tall and crops it. A breakpoint left out has no canvas and renders exactly as before. **T7 ships
+    `mobile` only.**
+  - **The wrapper establishes a stacking context**, so canvas members can't interleave with layers
+    outside it. All nine T7 stages already keep art strictly below content, so nothing repaints; a
+    dev-only `console.warn` guards any future stage that breaks the invariant.
+  - **`ceremony-rail` is excluded** — its geometry is a % of the whole `N*100vw` row.
+  - **Editor dragging** converts pointer px against `closest('[data-canvas], [data-stage]')`, so a
+    layer measures the frame its percentages actually live in. Because the canvas is a real layout
+    box, its rect needs no compensation.
+  - Verified across seven shapes: phones uniform; iPad uniform but heavily cropped (38% vertical —
+    proportionally faithful, stairs fall below the fold); landscape unchanged (art identical in
+    size, cropped rather than squashed — a portrait invitation is degenerate there regardless).
+  - **Still open — desktop.** Measured at 1440×900 → 1280×1024 with no canvas active (today's
+    behaviour): art scales 0.875–0.889 while content scales 1.138. Same root cause, unaddressed.
+    Fixing it means adding a `desktop` reference per stage and retuning each desktop composition.
+    Lower value than mobile — desktop aspect ratios vary far less. See `docs/FIX_QUEUE.md` Issue 1.
+- The Adjust preview (`PreviewPanel.tsx`) has **custom width/height sliders** (280–1600 × 400–1200)
+  plus presets including **Fold cover 344×882** and **Landscape 844×390**, so odd shapes are
+  testable without hardware. "Reveal off-screen" honours those custom dimensions: the frame size
+  rides `EditorHandle.frameW/frameH` through `PREVIEW_UPDATE` (and the standalone preview page's
+  field-by-field rebuild) to the template, which previously pinned its own hardcoded 390×844.
 
 ## Content Roadmap — SHIPPED (approved Apr 2026, delivered)
 Phases 1–4 are done and in production:
