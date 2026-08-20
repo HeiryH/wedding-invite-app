@@ -510,8 +510,9 @@ The script handles: `git add frontend/` → commit → push to GitHub → SSH to
   first, against `/opt/wedding-app/data/db/wedding.db`.
 - VPS: `root@139.180.154.175`, app at `/opt/wedding-app`
 - Password: in `.env.deploy` at repo root (never committed — load with `source .env.deploy`)
-- Public domain is **`thee-invite.oddstudio.app`** (moved off the bare `oddstudio.app` apex on
-  2026-07-29 — see below). `.env`'s `SITE_URL`/`CORS_ORIGIN`/`PLATFORM_DOMAIN` and
+- Public domain is **`theinvit-e.oddstudio.app`** (moved off the bare `oddstudio.app` apex on
+  2026-07-29, then renamed from `thee-invite` on 2026-08-20 — the old subdomain was **dropped, not
+  redirected**, so any invitation link shared before that date is dead. See below). `.env`'s `SITE_URL`/`CORS_ORIGIN`/`PLATFORM_DOMAIN` and
   `next.config`-adjacent metadata all key off `NEXT_PUBLIC_SITE_URL`, which is baked in at
   **Docker build time** (a build arg, not just container runtime env — `robots.ts`/`sitemap.ts`/
   `layout.tsx` have no dynamic APIs so Next statically prerenders them during `next build`).
@@ -526,7 +527,7 @@ The script handles: `git add frontend/` → commit → push to GitHub → SSH to
 - **This VPS now also hosts an unrelated second app**: ODDSTUDIO's own marketing site (Next.js +
   headless WordPress), at `/opt/oddstudio/` — see that project's own `CLAUDE.md` /
   `DEPLOYMENT.md`. It owns the bare `oddstudio.app`/`www.oddstudio.app` apex (which is why this
-  app moved to the `thee-invite` subdomain). The two apps are separate Compose projects sharing
+  app moved to the `theinvit-e` subdomain). The two apps are separate Compose projects sharing
   one NPM instance (multi-homed across `wedding-app_default` and `oddstudio_default` networks)
   and the same 955MB/1-CPU box — **RAM is genuinely tight** (steady state ~130–275MB available
   depending on recent build/journal buildup). Before adding services or doing anything
