@@ -89,10 +89,14 @@ export default function Layer({ layer, slotProps, eager, selected, editing, flow
     if (mode === 'move') {
       window.parent.postMessage({ type: 'PREVIEW_LAYER_SELECT', layerId: layer.id }, window.location.origin);
     }
-    // Layer geometry is a percentage of the stage, so the stage's own on-screen box is the frame
-    // of reference for converting a pixel drag delta back into that same percentage space.
-    const stageEl = boxRef.current?.closest<HTMLElement>('[data-stage]');
-    const rect = stageEl?.getBoundingClientRect();
+    // Layer geometry is a percentage of its positioning frame, so that frame's own on-screen box
+    // is what converts a pixel drag delta back into the same percentage space. For a layer inside
+    // an aspect-locked art canvas (Stage.tsx / StageDef.canvas) the frame is the canvas — which is
+    // deliberately a real layout box, not a scaled one, so its rect needs no compensation. Falling
+    // back to the stage would make every drag drift by the cover-crop factor, worst on exactly the
+    // screen shapes the canvas exists to fix.
+    const frameEl = boxRef.current?.closest<HTMLElement>('[data-canvas], [data-stage]');
+    const rect = frameEl?.getBoundingClientRect();
     if (!rect || rect.width === 0 || rect.height === 0) return;
     dragRef.current = {
       pointerId: e.pointerId, mode,

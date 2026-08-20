@@ -108,6 +108,14 @@ export interface Layer {
   /** Reveal stagger index: delay = 0.35s + order * 0.22s. */
   order: number;
 
+  /**
+   * Pulls this layer into the stage's art canvas (see `StageDef.canvas`) even though it wouldn't
+   * qualify by kind. For a `slot` that is *composed against* the scenery rather than merely placed
+   * on the screen — T7's `welcome` countdown shares the arch's exact coordinates, so it has to
+   * crop with the arch or it slides out of it. Ignored when the stage has no `canvas`.
+   */
+  canvasAnchor?: boolean;
+
   chain: boolean;
   hidden: boolean;
   opacity: number;
@@ -232,6 +240,24 @@ export interface StageDef {
   /** Background image path (relative to the asset root). Empty ⇒ no background layer. */
   bg: string;
   bgFit: ObjectFit;
+  /**
+   * Opt-in **aspect-locked art canvas**. When set, the stage's scenery (`img`/`shape`/`text`
+   * layers, plus any layer flagged `canvasAnchor`) is composed inside one box of exactly this
+   * aspect ratio, which is then cover-fitted to the device — the same crop `bgFit: 'cover'`
+   * already applies to the background. Every piece therefore scales and crops **as a unit**
+   * instead of drifting apart when the screen's aspect ratio changes.
+   *
+   * The numbers are a *reference shape*, not pixels: `{ w: 390, h: 844 }` means "this scene was
+   * composed for a 390x844 screen". Stored layer percentages are unchanged — they simply resolve
+   * against the canvas instead of the raw stage box.
+   *
+   * Real content (`slot` layers) deliberately stays **outside** the canvas and keeps adapting to
+   * the actual screen, because cropping an RSVP form is never acceptable while cropping a
+   * decorative pot is the whole point. Leave unset for today's behaviour, byte for byte.
+   *
+   * Only valid on a fixed (non-`flow`) stage — a flow stage has no definite height to fit against.
+   */
+  canvas?: { w: number; h: number };
   /** Optional shipped defaults for the background's placement (overridable via StageLayout). */
   bgPosition?: string;
   bgScale?: number;
@@ -292,4 +318,8 @@ export interface EditorHandle {
   selectedLayer?: string;
   /** Editor-only: relax the stage's overflow clip so layers nudged off-screen stay visible. */
   revealOverflow?: boolean;
+  /** Editor-only: the previewed device box (px) each stage pins itself to while revealing, so
+   *  bleed spills around it. Falls back to the template's own constants when absent. */
+  frameW?: number;
+  frameH?: number;
 }

@@ -36,7 +36,7 @@ import { Icon } from '@/components/ui/Icon';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import CharacterCount from '@tiptap/extension-character-count';
-import { PreviewPanel, type Device, type EditorMode } from './_components/PreviewPanel';
+import { PreviewPanel, DEVICE_DEFAULT_DIMS, type Device, type EditorMode } from './_components/PreviewPanel';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL?.replace('/api', '') ?? '';
 
@@ -782,6 +782,11 @@ export default function CustomizePage() {
   const [editorMode, setEditorMode] = useState<EditorMode>('expanded');
   const [device, setDevice] = useState<Device>('mobile');
   const [manualZoom, setManualZoom] = useState<number | null>(null);
+  // Lifted out of PreviewPanel: "Reveal off-screen" pins each stage to the previewed device size
+  // *inside* the iframe, so the template needs these too — they ride the PREVIEW_UPDATE editor
+  // payload below. Kept here (like `device`/`manualZoom`) so both consumers read one source.
+  const [customW, setCustomW] = useState(DEVICE_DEFAULT_DIMS.mobile.w);
+  const [customH, setCustomH] = useState(DEVICE_DEFAULT_DIMS.mobile.h);
   const [subSection, setSubSection] = useState('');
   // Adjust (stage-layout) dock: open state + which layer is selected, so the preview can outline it.
   const [adjusting, setAdjusting] = useState(false);
@@ -950,6 +955,10 @@ export default function CustomizePage() {
         selectedStage: activeStage,
         selectedLayer,
         revealOverflow: revealOverflow && canReveal,
+        // The device box the stage pins itself to while revealing. Without these the template
+        // falls back to its own hardcoded 390x844 and reveal ignores the size you're previewing.
+        frameW: customW,
+        frameH: customH,
       },
     };
     payloadRef.current = payload;
@@ -961,7 +970,7 @@ export default function CustomizePage() {
         { type: 'PREVIEW_UPDATE', payload: payloadRef.current }, window.location.origin,
       );
     });
-  }, [draftConfig, weddingDraft, coupleMedia, photoBoothEnabled, itinerary, wedding, adjusting, device, activeStage, selectedLayer, revealOverflow, canReveal]);
+  }, [draftConfig, weddingDraft, coupleMedia, photoBoothEnabled, itinerary, wedding, adjusting, device, activeStage, selectedLayer, revealOverflow, canReveal, customW, customH]);
 
   // Replay the latest payload when the iframe (re)mounts, and handle canvas-originated selection
   // + drag/resize. Layer.tsx posts these directly (it has no callback prop into this tree — it's
@@ -1690,6 +1699,10 @@ export default function CustomizePage() {
           editorMode={editorMode}
           onShowEditor={() => setEditorMode('expanded')}
           wedding={wedding}
+          customW={customW}
+          customH={customH}
+          setCustomW={setCustomW}
+          setCustomH={setCustomH}
           revealOverflow={canAdjust && adjusting && revealOverflow && canReveal}
         />
 

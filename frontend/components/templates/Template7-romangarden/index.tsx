@@ -39,8 +39,10 @@ interface Template7Props {
   editor?: EditorHandle;
 }
 
-/** Real device dims per breakpoint (mirrors the preview's DEVICE_DIMS). In "Reveal off-screen"
- *  mode the stage is pinned to these so bleed spills around it in the widened preview iframe. */
+/** Fallback device dims per breakpoint. In "Reveal off-screen" mode the stage is pinned to the
+ *  real device size so bleed spills around it in the widened preview iframe; the customize page
+ *  sends the size actually being previewed as `editor.frameW/frameH` and these are only used when
+ *  it doesn't (e.g. the authoring preview, which never reveals). */
 const REVEAL_FRAME_W: Record<Breakpoint, number> = { mobile: 390, desktop: 1440 };
 const REVEAL_FRAME_H: Record<Breakpoint, number> = { mobile: 844, desktop: 900 };
 
@@ -291,8 +293,8 @@ export default function Template7({
             // Outline the layer the parent's Adjust dock currently has selected.
             editing={editing && editor?.selectedStage === r.def.id}
             revealOverflow={editing && Boolean(editor?.revealOverflow)}
-            revealFrameW={REVEAL_FRAME_W[breakpoint]}
-            revealFrameH={REVEAL_FRAME_H[breakpoint]}
+            revealFrameW={editor?.frameW ?? REVEAL_FRAME_W[breakpoint]}
+            revealFrameH={editor?.frameH ?? REVEAL_FRAME_H[breakpoint]}
             selectedLayer={editor?.selectedLayer}
           />
         ));

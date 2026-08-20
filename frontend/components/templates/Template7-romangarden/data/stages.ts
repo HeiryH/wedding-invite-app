@@ -27,6 +27,10 @@ export const T7_STAGES: Record<string, StageDef> = {
     label: 'Welcome',
     bg: 'welcome/background.webp',
     bgFit: 'cover',
+    // The scenery (arch, stairs, fountain, column, barrier) is one picture composed for a 390x844
+    // screen, so it cover-crops as a unit with the background instead of pulling apart on an
+    // unusual aspect ratio. See StageDef.canvas.
+    canvas: { w: 390, h: 844 },
     layers: [
       L({ id: 'arch',      kind: 'img',  src: 'welcome/arch.webp',           x: 50, y: 40, w: 92,  z: 3, order: 0, depth: 0.5 }),
       L({ id: 'barrier',   kind: 'img',  src: 'welcome/barrier.webp',        x: 50, y: 68, w: 140, z: 5, order: 1, depth: 1.1 }),
@@ -34,7 +38,7 @@ export const T7_STAGES: Record<string, StageDef> = {
       L({ id: 'column',    kind: 'img',  src: 'welcome/plant-column.webp',   x: 87, y: 55, w: 26,  z: 4, order: 3, depth: 1.5 }),
       L({ id: 'stairs',    kind: 'img',  src: 'welcome/stairs.webp',         x: 50, y: 90, w: 105, z: 6, order: 4, depth: 0.8 }),
       // The hero container shows instantly (anim 'none'); its sub-layers below own the animation.
-      L({ id: 'countdown', kind: 'slot', slot: 'countdown',                  x: 50, y: 40, w: 74, h: 42, z: 7, order: 5, chain: false, depth: 0.2, anim: 'none' }),
+      L({ id: 'countdown', kind: 'slot', slot: 'countdown',                  x: 50, y: 40, w: 74, h: 42, z: 7, order: 5, chain: false, depth: 0.2, anim: 'none', canvasAnchor: true }),
       L({ id: 'cue',       kind: 'slot', slot: 'scrollCue',                  x: 50, y: 95, w: 50, h: 7,  z: 8, order: 6, chain: false, depth: 0 }),
       // Sub-layers of the hero — no visual of their own; the `countdown` slot applies each one's
       // nudge/hide/animation to the matching element (see HeroSlots). Nested under `countdown` in

@@ -83,6 +83,42 @@
   z-index: 900;
 }
 
+ /* ── Aspect-locked art canvas (StageDef.canvas) ──────────────────────────────────────────────
+   The stage's scenery composed as ONE picture and cover-fitted to the device, exactly like `.bg`
+   above — so the pieces scale and crop together instead of drifting apart on an unusual screen
+   shape. Without it, `chain: true` art takes its height from the stage's *width* while its `y` is
+   a percentage of the stage's *height*: on a taller, narrower screen the art shrinks while the
+   gaps between pieces grow, and the scene visibly pulls apart.
+
+   SIZED, NOT SCALED, deliberately. A `transform: scale()` would soften text, multiply the px
+   parallax offsets useParallax writes, and stack a third transform under the entrance/exit chain.
+   Sizing leaves every layer's own percentage math untouched and keeps getBoundingClientRect
+   honest — which is what keeps editor dragging correct. */
+.stage[data-has-canvas] {
+  /* cqh is a block-axis unit and needs a *size* container; `inline-size` only provides cqi/cqw.
+     Safe here because a canvas stage is never `flow` — its height is always definite (100svh, or
+     the pinned height in "Reveal off-screen"). */
+  container-type: size;
+}
+
+.artCanvas {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  translate: -50% -50%;
+  /* Cover: grow until both axes are filled and let the rest overflow the stage's clip. Both
+     formulas resolve to the same ratio, so the canvas is only ever cropped, never distorted. */
+  width: max(100cqw, 100cqh * var(--sl-ar));
+  height: max(100cqh, 100cqw / var(--sl-ar));
+  /* `cqi` inside the canvas now tracks the artwork rather than the device, so art-attached type
+     scales with the picture it belongs to. Slot content stays outside and keeps sizing against
+     the real screen. */
+  container-type: inline-size;
+  /* Art is inert anyway; children that need hits (a canvasAnchor slot, or any layer in the editor)
+     re-enable it themselves via the .layerBox rules below — `none` here does not block them. */
+  pointer-events: none;
+}
+
 .bg {
   position: absolute;
   inset: 0;

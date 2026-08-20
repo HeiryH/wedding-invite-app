@@ -23,6 +23,8 @@ interface PreviewPayload {
     selectedStage?: string;
     selectedLayer?: string;
     revealOverflow?: boolean;
+    frameW?: number;
+    frameH?: number;
   };
 }
 
@@ -101,6 +103,8 @@ export default function PreviewPage() {
               selectedStage: payload.editor.selectedStage,
               selectedLayer: payload.editor.selectedLayer,
               revealOverflow: payload.editor.revealOverflow,
+              frameW: payload.editor.frameW,
+              frameH: payload.editor.frameH,
             }
           : undefined
       }

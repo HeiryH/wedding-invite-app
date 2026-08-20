@@ -9,17 +9,14 @@ import { REVEAL_VPAD } from '@/components/templates/_shared/types';
 export type Device = 'mobile' | 'tablet' | 'desktop';
 export type EditorMode = 'expanded' | 'collapsed' | 'hidden';
 
-export const DEVICE_DIMS: Record<Device, { w: number; h: number }> = {
-  mobile:  { w: 390,  h: 844  },
-  tablet:  { w: 768,  h: 1024 },
-  desktop: { w: 1440, h: 900  },
-};
-
 // Clip-box corner radius per device (cosmetic only — no bezel, no padding)
 const DEVICE_RADIUS: Record<Device, number> = { mobile: 26, tablet: 16, desktop: 10 };
 
-const DEVICE_DEFAULT_W: Record<Device, number> = { mobile: 390,  tablet: 768,  desktop: 1280 };
-const DEVICE_DEFAULT_H: Record<Device, number> = { mobile: 844,  tablet: 900,  desktop: 720 };
+export const DEVICE_DEFAULT_DIMS: Record<Device, { w: number; h: number }> = {
+  mobile:  { w: 390,  h: 844 },
+  tablet:  { w: 768,  h: 900 },
+  desktop: { w: 1280, h: 720 },
+};
 
 const SECTION_ICONS: Record<string, string> = {
   welcome: 'image', walimah: 'calendar', rsvp: 'star',
@@ -42,6 +39,12 @@ interface PreviewPanelProps {
   editorMode: EditorMode;
   onShowEditor: () => void;
   wedding: Wedding | null;
+  /** Previewed viewport size. Lifted to the customize page because the template needs it too —
+   *  "Reveal off-screen" pins each stage to this size inside the iframe. */
+  customW: number;
+  customH: number;
+  setCustomW: (w: number) => void;
+  setCustomH: (h: number) => void;
   /** "Reveal off-screen" (PRO Adjust): widen the canvas so art cropped by the device edge spills
    *  into view around the (dashed-framed) device column instead of being clipped. */
   revealOverflow?: boolean;
@@ -64,28 +67,27 @@ const numInputStyle: React.CSSProperties = {
 export function PreviewPanel({
   iframeRef, device, setDevice, manualZoom, setManualZoom,
   activeBlock, onSelectBlock, sectionOrder, editorMode, onShowEditor, wedding,
+  customW, customH, setCustomW, setCustomH,
   revealOverflow = false,
 }: PreviewPanelProps) {
   const stageRef = useRef<HTMLDivElement>(null);
   const [autoZoom, setAutoZoom] = useState(80);
   const [showSizePanel, setShowSizePanel] = useState(false);
-  const [customW, setCustomW] = useState(DEVICE_DEFAULT_W[device]);
-  const [customH, setCustomH] = useState(DEVICE_DEFAULT_H[device]);
 
   const zoom = manualZoom ?? autoZoom;
-  const defaultW = DEVICE_DEFAULT_W[device];
-  const defaultH = DEVICE_DEFAULT_H[device];
+  const defaultW = DEVICE_DEFAULT_DIMS[device].w;
+  const defaultH = DEVICE_DEFAULT_DIMS[device].h;
 
   // Reveal mode enlarges the canvas around a pinned device-sized stage so cropped art spills into
   // the extra room on all four sides. Width uses REVEAL_FACTOR; height adds REVEAL_VPAD top+bottom
   // (kept in sync with Stage's margin-block).
-  const iframeW = revealOverflow ? Math.round(DEVICE_DIMS[device].w * REVEAL_FACTOR) : customW;
-  const iframeH = revealOverflow ? Math.round(DEVICE_DIMS[device].h * (1 + 2 * REVEAL_VPAD)) : customH;
+  const iframeW = revealOverflow ? Math.round(customW * REVEAL_FACTOR) : customW;
+  const iframeH = revealOverflow ? Math.round(customH * (1 + 2 * REVEAL_VPAD)) : customH;
 
   // When device preset changes, reset custom dims to device defaults
   useEffect(() => {
-    setCustomW(DEVICE_DEFAULT_W[device]);
-    setCustomH(DEVICE_DEFAULT_H[device]);
+    setCustomW(DEVICE_DEFAULT_DIMS[device].w);
+    setCustomH(DEVICE_DEFAULT_DIMS[device].h);
     setManualZoom(null);
   }, [device]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -366,6 +368,9 @@ export function PreviewPanel({
               { label: 'iPhone 15 Pro Max', w: 430, h: 932 },
               { label: 'Galaxy S24', w: 360, h: 780 },
               { label: 'iPad', w: 768, h: 1024 },
+              // Aspect-ratio outliers — these are where the fixed-stage compositor visibly drifts.
+              { label: 'Fold cover', w: 344, h: 882 },
+              { label: 'Landscape', w: 844, h: 390 },
             ] as { label: string; w: number; h: number }[]).map(p => (
               <button
                 key={p.label}

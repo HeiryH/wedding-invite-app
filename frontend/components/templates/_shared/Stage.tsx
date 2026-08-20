@@ -52,6 +52,44 @@ export default function Stage({
       : '';
 
   const visible = layers.filter((l) => !l.hidden);
+
+  // An aspect-locked art canvas (StageDef.canvas) composes the scenery as one picture that
+  // cover-fits the device, so it crops as a unit instead of drifting apart on an unusual screen
+  // shape. Scenery = the decorative kinds; real content (slots) stays outside and keeps adapting
+  // to the actual screen — except a slot explicitly flagged `canvasAnchor`, which is composed
+  // against the art and has to crop with it.
+  const canvasDef = def.flow ? undefined : def.canvas;
+  const inCanvas = (l: LayerModel) =>
+    l.canvasAnchor || l.kind === 'img' || l.kind === 'shape' || l.kind === 'text';
+  const canvasLayers = canvasDef ? visible.filter(inCanvas) : [];
+  const looseLayers = canvasDef ? visible.filter((l) => !inCanvas(l)) : visible;
+  // The canvas wrapper is `translate`d, so it establishes a stacking context: its members can no
+  // longer interleave with layers outside it. Every shipped stage already keeps art strictly
+  // behind content, so pinning the group at the highest art z is faithful — but it is an
+  // invariant a future stage could break silently, hence the dev warning.
+  const canvasZ = canvasLayers.reduce((m, l) => Math.max(m, l.z), 0);
+  if (process.env.NODE_ENV !== 'production' && canvasDef) {
+    const clash = looseLayers.find((l) => l.z <= canvasZ);
+    if (clash) {
+      console.warn(
+        `[Stage:${def.id}] layer "${clash.id}" (z ${clash.z}) sits at or below the art canvas ` +
+        `(z ${canvasZ}), so it will paint behind the whole canvas instead of interleaving. ` +
+        `Raise its z above ${canvasZ}, or flag it canvasAnchor to move it into the canvas.`,
+      );
+    }
+  }
+
+  const renderLayer = (l: LayerModel) => (
+    <Layer
+      key={l.id}
+      layer={l}
+      slotProps={slotProps}
+      eager={eager}
+      selected={editing && selectedLayer === l.id}
+      editing={editing}
+      onScrollVideoOpen={onScrollVideoOpen}
+    />
+  );
   // Flow mode splits layers into two populations rendered in separate containers (see
   // Stage.module.css's .flowOverlay/.flowStack) — decorative art still positions as a % of the
   // section; slot content flows normally and is what actually gives the section its height.
@@ -66,6 +104,7 @@ export default function Stage({
       className={styles.stage}
       data-stage={def.id}
       data-flow={def.flow || undefined}
+      data-has-canvas={canvasDef ? true : undefined}
       data-seen={seen}
       data-editing={editing || undefined}
       data-reveal={revealOverflow || undefined}
@@ -137,17 +176,18 @@ export default function Stage({
           </div>
         </>
       ) : (
-        visible.map((l) => (
-          <Layer
-            key={l.id}
-            layer={l}
-            slotProps={slotProps}
-            eager={eager}
-            selected={editing && selectedLayer === l.id}
-            editing={editing}
-            onScrollVideoOpen={onScrollVideoOpen}
-          />
-        ))
+        <>
+          {canvasDef && canvasLayers.length > 0 && (
+            <div
+              className={styles.artCanvas}
+              data-canvas
+              style={{ ['--sl-ar' as string]: canvasDef.w / canvasDef.h, zIndex: canvasZ }}
+            >
+              {canvasLayers.map(renderLayer)}
+            </div>
+          )}
+          {looseLayers.map(renderLayer)}
+        </>
       )}
     </section>
   );
