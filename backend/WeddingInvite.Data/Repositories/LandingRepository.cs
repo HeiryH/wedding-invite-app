@@ -73,6 +73,11 @@ namespace WeddingInvite.Data.Repositories
             row.Body = patch.Body;
             row.ImageUrl = patch.ImageUrl;
             row.Meta = patch.Meta;
+            row.Price = patch.Price;
+            row.Features = patch.Features;
+            row.Cta = patch.Cta;
+            row.CtaHref = patch.CtaHref;
+            row.Highlighted = patch.Highlighted;
             await _context.SaveChangesAsync();
             return row;
         }

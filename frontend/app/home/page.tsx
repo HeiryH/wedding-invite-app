@@ -8,13 +8,7 @@ import { TemplatePreview } from '@/components/templates/TemplatePreview';
 import { MarketingNav } from '@/components/marketing/MarketingNav';
 import { TemplateMarquee } from '@/components/marketing/TemplateMarquee';
 import { Wordmark } from '@/components/marketing/Wordmark';
-import { LANDING_CONTENT_DEFAULTS, DEFAULT_FEATURE_ITEMS, DEFAULT_STORY_ITEMS, DEFAULT_MIDDLE_SECTIONS } from '@/lib/landing/defaults';
-
-const PRICING = [
-  { tier: 'Free', price: 'Free forever', highlight: false, description: 'Try the editor and see how it feels before committing.', features: ['1 free invitation template', 'Full editor access', 'Private preview (self-test only)', 'Test RSVPs & wishes'], cta: 'Get started free', ctaHref: '/personalise/picker' },
-  { tier: 'Premium', price: 'Contact us', highlight: true, description: 'Share your invitation with real guests and unlock premium designs.', features: ['All free features', 'Shareable public link', 'All premium templates', 'RSVP management', 'Wishes & guestbook'], cta: 'Contact us to upgrade', ctaHref: '/login' },
-  { tier: 'Pro', price: 'Contact us', highlight: false, description: 'The full experience for couples who want everything.', features: ['All premium features', 'All Pro templates', 'Photo booth', 'Seating arrangement', 'Priority support'], cta: 'Contact us to upgrade', ctaHref: '/login' },
-];
+import { LANDING_CONTENT_DEFAULTS, DEFAULT_FEATURE_ITEMS, DEFAULT_STORY_ITEMS, DEFAULT_PRICING_ITEMS, DEFAULT_MIDDLE_SECTIONS, LandingDefaultItem } from '@/lib/landing/defaults';
 
 const SECTION_PAD = 'clamp(56px, 8vw, 96px) clamp(20px, 5vw, 72px)';
 const DEFAULT_MIDDLE = DEFAULT_MIDDLE_SECTIONS;
@@ -35,13 +29,16 @@ export default function HomePage() {
   // `||` (not `??`) so a saved-but-empty override still falls back to the live default
   // rather than blanking the heading.
   const c = (key: string) => landing?.content?.[key] || LANDING_CONTENT_DEFAULTS[key] || '';
-  const itemsOf = (sectionKey: string, fallback: { title?: string; body: string; meta: string }[]) => {
+  const itemsOf = (sectionKey: string, fallback: LandingDefaultItem[]): LandingDefaultItem[] => {
     const rows = (landing?.items ?? []).filter((i) => i.sectionKey === sectionKey && i.isActive).sort((a, b) => a.sortOrder - b.sortOrder);
-    return rows.length > 0 ? rows.map((r: LandingItemDto) => ({ title: r.title, body: r.body, meta: r.meta })) : fallback;
+    return rows.length > 0
+      ? rows.map((r: LandingItemDto) => ({ title: r.title, body: r.body, meta: r.meta, price: r.price, features: r.features, cta: r.cta, ctaHref: r.ctaHref, highlighted: r.highlighted }))
+      : fallback;
   };
 
   const features = itemsOf('features', DEFAULT_FEATURE_ITEMS);
   const quotes = itemsOf('stories', DEFAULT_STORY_ITEMS);
+  const pricing = itemsOf('pricing', DEFAULT_PRICING_ITEMS);
 
   // Middle-section order + visibility from CMS (hero/footer are always shown).
   const middleOrder = useMemo(() => {
@@ -81,20 +78,23 @@ export default function HomePage() {
               <h2 style={{ fontFamily: 'var(--mkt-serif)', fontWeight: 700, fontSize: 'clamp(34px, 5vw, 44px)', lineHeight: 1, margin: 0 }}>{c('pricing.title')}</h2>
               <p style={{ fontFamily: 'var(--mkt-sans)', fontSize: 16, color: 'var(--mkt-muted)', marginTop: 8 }}>{c('pricing.subtitle')}</p>
               <div style={{ marginTop: 28, display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 18 }}>
-                {PRICING.map((plan, i) => (
-                  <motion.div key={plan.tier} initial={{ opacity: 0, y: 18 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.09, duration: 0.45 }} style={{ position: 'relative', background: plan.highlight ? '#faedcf' : 'var(--mkt-card)', border: '2.5px solid var(--mkt-ink)', borderRadius: 22, padding: 22, boxShadow: '0 7px 0 rgba(23,19,13,.12)' }}>
-                    {plan.highlight && <div style={{ position: 'absolute', top: -13, right: 18, fontFamily: 'var(--mkt-sans)', fontWeight: 600, fontSize: 12, letterSpacing: '.06em', background: 'var(--mkt-gold)', color: 'var(--mkt-ink)', border: '2px solid var(--mkt-ink)', borderRadius: 999, padding: '4px 12px' }}>POPULAR</div>}
-                    <div style={{ fontFamily: 'var(--mkt-sans)', fontWeight: 600, fontSize: 20 }}>{plan.tier}</div>
-                    <div style={{ fontFamily: 'var(--mkt-serif)', fontWeight: 700, fontSize: 34, marginTop: 2 }}>{plan.price}</div>
-                    <p style={{ fontFamily: 'var(--mkt-sans)', fontSize: 14, color: 'var(--mkt-muted)', margin: '10px 0 0', lineHeight: 1.5 }}>{plan.description}</p>
-                    <ul style={{ listStyle: 'none', padding: 0, margin: '16px 0 0', display: 'flex', flexDirection: 'column', gap: 9 }}>
-                      {plan.features.map((f) => (
-                        <li key={f} style={{ display: 'flex', gap: 8, alignItems: 'flex-start', fontFamily: 'var(--mkt-sans)', fontSize: 14, color: 'var(--mkt-ink)' }}><span style={{ color: 'var(--mkt-gold-ink)', fontWeight: 700, flexShrink: 0 }}>✓</span>{f}</li>
-                      ))}
-                    </ul>
-                    <a href={plan.ctaHref} className={plan.highlight ? 'mkt-btn mkt-btn-dark' : 'mkt-btn'} style={{ display: 'block', textAlign: 'center', marginTop: 18, fontSize: 15, padding: '12px', boxShadow: plan.highlight ? '0 5px 0 rgba(23,19,13,.18)' : '0 5px 0 rgba(23,19,13,.14)' }}>{plan.cta}</a>
-                  </motion.div>
-                ))}
+                {pricing.map((plan, i) => {
+                  const planFeatures = (plan.features ?? '').split('\n').map((f) => f.trim()).filter(Boolean);
+                  return (
+                    <motion.div key={plan.title ?? i} initial={{ opacity: 0, y: 18 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.09, duration: 0.45 }} style={{ position: 'relative', background: plan.highlighted ? '#faedcf' : 'var(--mkt-card)', border: '2.5px solid var(--mkt-ink)', borderRadius: 22, padding: 22, boxShadow: '0 7px 0 rgba(23,19,13,.12)' }}>
+                      {plan.highlighted && <div style={{ position: 'absolute', top: -13, right: 18, fontFamily: 'var(--mkt-sans)', fontWeight: 600, fontSize: 12, letterSpacing: '.06em', background: 'var(--mkt-gold)', color: 'var(--mkt-ink)', border: '2px solid var(--mkt-ink)', borderRadius: 999, padding: '4px 12px' }}>POPULAR</div>}
+                      <div style={{ fontFamily: 'var(--mkt-sans)', fontWeight: 600, fontSize: 20 }}>{plan.title}</div>
+                      <div style={{ fontFamily: 'var(--mkt-serif)', fontWeight: 700, fontSize: 34, marginTop: 2 }}>{plan.price}</div>
+                      <p style={{ fontFamily: 'var(--mkt-sans)', fontSize: 14, color: 'var(--mkt-muted)', margin: '10px 0 0', lineHeight: 1.5 }}>{plan.body}</p>
+                      <ul style={{ listStyle: 'none', padding: 0, margin: '16px 0 0', display: 'flex', flexDirection: 'column', gap: 9 }}>
+                        {planFeatures.map((f) => (
+                          <li key={f} style={{ display: 'flex', gap: 8, alignItems: 'flex-start', fontFamily: 'var(--mkt-sans)', fontSize: 14, color: 'var(--mkt-ink)' }}><span style={{ color: 'var(--mkt-gold-ink)', fontWeight: 700, flexShrink: 0 }}>✓</span>{f}</li>
+                        ))}
+                      </ul>
+                      <a href={plan.ctaHref || '/login'} className={plan.highlighted ? 'mkt-btn mkt-btn-dark' : 'mkt-btn'} style={{ display: 'block', textAlign: 'center', marginTop: 18, fontSize: 15, padding: '12px', boxShadow: plan.highlighted ? '0 5px 0 rgba(23,19,13,.18)' : '0 5px 0 rgba(23,19,13,.14)' }}>{plan.cta}</a>
+                    </motion.div>
+                  );
+                })}
               </div>
             </div>
           </section>

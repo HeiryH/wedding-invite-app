@@ -29,5 +29,12 @@ namespace WeddingInvite.Models
         public string Body { get; set; } = string.Empty;
         public string ImageUrl { get; set; } = string.Empty;
         public string Meta { get; set; } = string.Empty; // free-form (e.g. a colour swatch, an attribution)
+
+        // Pricing-only fields — empty string / false for every other section's rows.
+        public string Price { get; set; } = string.Empty; // e.g. "Free forever", "$99/mo", "Contact us"
+        public string Features { get; set; } = string.Empty; // newline-separated bullet list
+        public string Cta { get; set; } = string.Empty; // button label, e.g. "Get started free"
+        public string CtaHref { get; set; } = string.Empty; // button link, e.g. "/personalise/picker"
+        public bool Highlighted { get; set; } // shows the "POPULAR" ribbon
     }
 }

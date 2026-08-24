@@ -27,6 +27,11 @@ namespace WeddingInvite.Core.DTOs
         public string Body { get; set; } = string.Empty;
         public string ImageUrl { get; set; } = string.Empty;
         public string Meta { get; set; } = string.Empty;
+        public string Price { get; set; } = string.Empty;
+        public string Features { get; set; } = string.Empty;
+        public string Cta { get; set; } = string.Empty;
+        public string CtaHref { get; set; } = string.Empty;
+        public bool Highlighted { get; set; }
     }
 
     // ── Write DTOs ────────────────────────────────────────────────────────────
@@ -52,5 +57,10 @@ namespace WeddingInvite.Core.DTOs
         public string Body { get; set; } = string.Empty;
         public string ImageUrl { get; set; } = string.Empty;
         public string Meta { get; set; } = string.Empty;
+        public string Price { get; set; } = string.Empty;
+        public string Features { get; set; } = string.Empty;
+        public string Cta { get; set; } = string.Empty;
+        public string CtaHref { get; set; } = string.Empty;
+        public bool Highlighted { get; set; }
     }
 }

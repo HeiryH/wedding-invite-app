@@ -23,6 +23,11 @@ export interface LandingDefaultItem {
   title?: string;
   body: string;
   meta: string;
+  price?: string;
+  features?: string;
+  cta?: string;
+  ctaHref?: string;
+  highlighted?: boolean;
 }
 
 export const DEFAULT_FEATURE_ITEMS: LandingDefaultItem[] = [
@@ -30,6 +35,12 @@ export const DEFAULT_FEATURE_ITEMS: LandingDefaultItem[] = [
   { title: 'Instant RSVP', body: 'Guests tap to reply. You watch responses roll in, live.', meta: '#f2b7ab' },
   { title: 'Live guest list', body: "Track who's coming, dietary notes and plus-ones in one place.", meta: '#8fe6b0' },
   { title: 'Share anywhere', body: 'One link works on WhatsApp, Instagram, SMS or email.', meta: '#e9c98a' },
+];
+
+export const DEFAULT_PRICING_ITEMS: LandingDefaultItem[] = [
+  { title: 'Free', body: 'Try the editor and see how it feels before committing.', meta: '', price: 'Free forever', features: '1 free invitation template\nFull editor access\nPrivate preview (self-test only)\nTest RSVPs & wishes', cta: 'Get started free', ctaHref: '/personalise/picker', highlighted: false },
+  { title: 'Premium', body: 'Share your invitation with real guests and unlock premium designs.', meta: '', price: 'Contact us', features: 'All free features\nShareable public link\nAll premium templates\nRSVP management\nWishes & guestbook', cta: 'Contact us to upgrade', ctaHref: '/login', highlighted: true },
+  { title: 'Pro', body: 'The full experience for couples who want everything.', meta: '', price: 'Contact us', features: 'All premium features\nAll Pro templates\nPhoto booth\nSeating arrangement\nPriority support', cta: 'Contact us to upgrade', ctaHref: '/login', highlighted: false },
 ];
 
 export const DEFAULT_STORY_ITEMS: LandingDefaultItem[] = [

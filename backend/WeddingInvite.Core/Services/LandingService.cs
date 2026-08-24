@@ -75,6 +75,11 @@ namespace WeddingInvite.Core.Services
             Body = dto.Body,
             ImageUrl = dto.ImageUrl,
             Meta = dto.Meta,
+            Price = dto.Price,
+            Features = dto.Features,
+            Cta = dto.Cta,
+            CtaHref = dto.CtaHref,
+            Highlighted = dto.Highlighted,
         };
 
         private static LandingSectionDto MapSection(LandingSection s) => new()
@@ -86,6 +91,7 @@ namespace WeddingInvite.Core.Services
         {
             Id = i.Id, SectionKey = i.SectionKey, SortOrder = i.SortOrder, IsActive = i.IsActive,
             Title = i.Title, Body = i.Body, ImageUrl = i.ImageUrl, Meta = i.Meta,
+            Price = i.Price, Features = i.Features, Cta = i.Cta, CtaHref = i.CtaHref, Highlighted = i.Highlighted,
         };
     }
 }

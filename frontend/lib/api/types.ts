@@ -440,6 +440,11 @@ export interface LandingItemDto {
   body: string;
   imageUrl: string;
   meta: string;
+  price: string;
+  features: string;
+  cta: string;
+  ctaHref: string;
+  highlighted: boolean;
 }
 
 export interface LandingDto {
