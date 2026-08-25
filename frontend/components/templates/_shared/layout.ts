@@ -12,7 +12,7 @@ export const layoutKey = (prefix: string, bp: Breakpoint, stage: StageId) =>
  *  (_shared/authoring/flatten.ts), which needs the same field list to diff a breakpoint's
  *  resolved layers against each other. */
 export const OVERRIDABLE: (keyof Layer)[] = [
-  'x', 'y', 'w', 'h', 's', 'z', 'order', 'chain', 'hidden', 'opacity', 'depth',
+  'x', 'y', 'w', 'h', 's', 'z', 'order', 'chain', 'hidden', 'opacity', 'depth', 'textScale',
   'color', 'fill', 'fontSize', 'fontWeight', 'radius', 'text', 'src', 'shape', 'label',
   'anim', 'animDur', 'animOut',
   // text styling (types.ts) — usable by kind 'text', and by kind 'anchor' when `styleable`.
@@ -25,8 +25,9 @@ export const OVERRIDABLE: (keyof Layer)[] = [
   // kind 'scrollVideo' effect params (types.ts) — same delta mechanism, no geometry involved.
   'videoSrc', 'triggerStart', 'triggerEnd', 'scrub', 'pivot', 'holdWidth', 'videoStartSec',
   'openThreshold', 'resetSec', 'chromaThreshold', 'chromaFade',
-  // kind 'slot' presentation mode ('inline' | 'sheet') — see DataTemplate.tsx.
-  'presentation',
+  // kind 'slot' presentation mode ('inline' | 'sheet') and which named sheet it belongs to /
+  // opens — see _shared/SheetHost.tsx and _shared/slots/sheets.tsx.
+  'presentation', 'sheetId',
 ];
 
 /** Background placement the Adjust panel can override, over and above the shipped stage bg. */

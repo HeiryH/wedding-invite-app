@@ -17,7 +17,9 @@ import { useBreakpoint } from '@/components/templates/_shared/hooks/useBreakpoin
 import { EngineProvider } from '@/components/templates/_shared/engine';
 import Stage from '@/components/templates/_shared/Stage';
 import HorizontalRail, { type RailPanel } from '@/components/templates/_shared/HorizontalRail';
-import { SLOT_REGISTRY, stageHasContent, visibleSlotLayers } from '@/components/templates/_shared/slots';
+import { SLOT_REGISTRY, sheetLayerGroups, stageHasContent, visibleSlotLayers } from '@/components/templates/_shared/slots';
+import { SlotFlowProviders } from '@/components/templates/_shared/slots/FlowProviders';
+import SheetHost from '@/components/templates/_shared/SheetHost';
 import { fontVar } from '@/lib/fonts/curated';
 import NavBar from './components/NavBar';
 import styles from './Template7.module.css';
@@ -49,6 +51,12 @@ const REVEAL_FRAME_H: Record<Breakpoint, number> = { mobile: 844, desktop: 900 }
 /** The shared-art stage for the compiled ceremony row (see `data/stages.ts`). Stable identity so
  *  the `useStageLayout` memo below isn't invalidated every render. */
 const CEREMONY_RAIL_IDS: StageId[] = ['ceremony-rail'];
+
+/** nav.size / nav.textSize (templateConfigSchema.ts) — a `select`, not a slider (this schema has
+ *  no numeric field type), so friendly words map to the actual multiplier here. */
+const NAV_SIZE_SCALE: Record<string, number> = {
+  compact: 0.8, default: 1, large: 1.2, xlarge: 1.4,
+};
 
 /** Nav label per logical section, overridable via nav.* config. */
 const NAV_FALLBACK: Record<string, string> = {
@@ -105,6 +113,20 @@ export default function Template7({
   const grain = t('scene.paper.grain', 'true') !== 'false';
   const parallaxMode = t('scene.parallax', 'on');
   const ceremonyLayout = t('scene.ceremony.layout', 'stack');
+  // The bottom nav pill is position:fixed chrome — not a stage-bound layer, so it's tuned via
+  // plain config (like scene.parallax) rather than the Adjust dock. See nav.size/nav.textSize in
+  // templateConfigSchema.ts.
+  const navScale = NAV_SIZE_SCALE[t('nav.size', 'default')] ?? 1;
+  const navTextScale = NAV_SIZE_SCALE[t('nav.textSize', 'default')] ?? 1;
+
+  // Adjust panel's "Card" section (Blur/Tint/Opacity/Radius) — glassmorphism for every
+  // `.panel`-based slot at once (walimah/couple/details/RSVP/wishes/...), mirroring Template 5's
+  // own frosted-glass card. Blur 0 (the default) is "off": every `--slot-panel-*` var below is
+  // left unset, so slots.module.css's neutral scrim renders exactly as before.
+  const cardBlurPx = Number(t('t7.layout.slotTheme.cardBlur', '0')) || 0;
+  const cardTint = t('t7.layout.slotTheme.cardTint', '#fffbf4');
+  const cardTintOpacity = Number(t('t7.layout.slotTheme.cardTintOpacity', '0.45')) || 0.45;
+  const cardRadius = Number(t('t7.layout.slotTheme.cardRadius', '24')) || 0;
 
   const slotProps: SlotProps = useMemo(
     () => ({
@@ -141,6 +163,11 @@ export default function Template7({
   // `customConfig`, so the layout renders directly from it — no cross-iframe patch protocol, no
   // optimistic shadow. `editor` only carries which layer to outline while editing.
   const stages = useStageLayout('t7', T7_STAGES, stageIds, breakpoint, customConfig);
+  // Forms live in a bottom sheet rather than on the stage: a stage is an art composition (scenery
+  // drawn around a specific element) while a form is variable-height content, so inline it has to
+  // reserve a fixed box its absolutely-positioned neighbours can never reflow into. Collected
+  // across every stage so one host can mount them all — see _shared/SheetHost.tsx.
+  const sheetGroups = useMemo(() => sheetLayerGroups(stages, slotProps), [stages, slotProps]);
   // The compiled-row shared art lives in its own stage (row-relative coordinates), resolved
   // independently so it isn't a scroll section. Only consumed when the ceremony renders as a row.
   const ceremonyRail = useStageLayout('t7', T7_STAGES, CEREMONY_RAIL_IDS, breakpoint, customConfig);
@@ -204,6 +231,7 @@ export default function Template7({
   }));
 
   return (
+    <SlotFlowProviders>
     <EngineProvider value={{ assetRoot: T7_ASSETS, assetSizes: T7_ASSET_SIZES, slotRegistry: SLOT_REGISTRY }}>
     {/* The shared _shared/slots/slots.module.css used by every kind:'slot' layer below is
         neutral by default (for authored templates) — this block overrides those --slot-* custom
@@ -233,7 +261,18 @@ export default function Template7({
         '--slot-panel-scrim-3': 'rgba(244, 241, 234, 0.28)',
         '--slot-accent-ink': '#efebe1',
         '--slot-radius': '0',
-        '--slot-submit-bg': "url('/templates/t7/wishes/submit-btn.webp')",
+        '--t7-nav-scale': navScale,
+        '--t7-nav-text-scale': navTextScale,
+        // Card Blur/Tint/Opacity/Radius (Adjust panel "Theme" section) — see cardBlurPx above.
+        // Left unset at 0 (the default) so slots.module.css's own `var(--slot-panel-*, ...)`
+        // fallbacks apply, unchanged from before these existed.
+        ...(cardBlurPx > 0 ? {
+          '--slot-panel-bg': `color-mix(in srgb, ${cardTint} ${Math.round(cardTintOpacity * 100)}%, transparent)`,
+          '--slot-panel-blur': `blur(${cardBlurPx}px) saturate(140%)`,
+          '--slot-panel-border': '1px solid rgba(255, 255, 255, 0.45)',
+          '--slot-panel-radius': `${cardRadius}px`,
+          '--slot-panel-shadow': '0 1px 2px rgba(120,86,70,0.04), 0 8px 24px rgba(214,168,150,0.12), 0 24px 60px rgba(180,130,110,0.08)',
+        } : null),
       } as CSSProperties}
     >
       {stageGroups.map(({ code, items }) => {
@@ -323,7 +362,14 @@ export default function Template7({
         <div className={styles.fleuron}>❦</div>
         <p className={styles.footerTagline}>{t('footer.tagline', 'Made with love for our special day')}</p>
       </footer>
+
+      {/* Inside `.wrapper` deliberately: T7's --slot-* theme tokens are set inline on that div, so
+          a sheet mounted outside it would render unthemed. Safe for `position: fixed` — .wrapper
+          is only position:relative/overflow-x:clip with no transform/filter/contain, which is why
+          .tint and .grain already sit here as fixed, full-viewport layers. */}
+      <SheetHost groups={sheetGroups} slotProps={slotProps} editor={editor} />
     </div>
     </EngineProvider>
+    </SlotFlowProviders>
   );
 }

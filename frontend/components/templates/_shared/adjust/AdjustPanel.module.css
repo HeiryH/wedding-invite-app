@@ -1,14 +1,14 @@
-/* Docked column filling the right rail of the customize page (was a floating overlay inside the
-   preview iframe). It keeps its own dark "workbench" theme so it reads as a tool, distinct from
-   the invitation being edited. */
+/* Docked column filling the right rail of the customize page. Uses the same design-system tokens
+   as the rest of the customize page (surface/text/border/accent vars from app/globals.css) so it
+   reads as part of the same tool, not a separate dark "workbench" bolted on. */
 .panel {
   width: 100%;
   height: 100%;
   display: flex;
   flex-direction: column;
-  background: rgba(28, 24, 18, 0.98);
-  color: #ECE2D1;
-  font-family: 'Cormorant Garamond', Georgia, serif;
+  background: var(--surface-card);
+  color: var(--text-strong);
+  font-family: var(--font-ui);
   font-size: 14px;
 }
 
@@ -18,7 +18,7 @@
   justify-content: space-between;
   padding: 12px 15px 11px;
   user-select: none;
-  border-bottom: 1px solid #3A3125;
+  border-bottom: 1px solid var(--border-subtle);
   flex-shrink: 0;
 }
 
@@ -26,13 +26,13 @@
   font-size: 13px;
   letter-spacing: 0.16em;
   text-transform: uppercase;
-  color: #CD9A6A;
+  color: var(--gold-600);
 }
 
 .close {
   background: none;
   border: none;
-  color: #ECE2D1;
+  color: var(--text-muted);
   font-size: 22px;
   line-height: 1;
   cursor: pointer;
@@ -48,7 +48,7 @@
   font-size: 10px;
   letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: #8A7A63;
+  color: var(--text-muted);
   margin: 12px 0 6px;
 }
 .label:first-child { margin-top: 0; }
@@ -62,24 +62,24 @@
 .tab {
   padding: 5px 9px;
   border-radius: 7px;
-  border: 1px solid #4A4034;
-  background: #151109;
-  color: #A99A83;
+  border: 1px solid var(--border-default);
+  background: var(--surface-sunken);
+  color: var(--text-muted);
   font-family: inherit;
   font-size: 12.5px;
   cursor: pointer;
 }
 .tabActive {
-  border-color: #C98A54;
-  background: #4A3821;
-  color: #F0DCC0;
+  border-color: var(--gold-400);
+  background: var(--gold-50);
+  color: var(--gold-700);
 }
 
 .layers {
   max-height: 180px;
   overflow-y: auto;
-  background: #120E08;
-  border: 1px solid #3A3125;
+  background: var(--surface-sunken);
+  border: 1px solid var(--border-subtle);
   border-radius: 9px;
   padding: 5px;
 }
@@ -94,15 +94,15 @@
   margin-bottom: 2px;
 }
 .rowActive {
-  background: #4A3821;
-  border-color: #C98A54;
+  background: var(--gold-50);
+  border-color: var(--gold-400);
 }
 
 .grip {
   cursor: grab;
   touch-action: none;
   user-select: none;
-  color: #7D6E59;
+  color: var(--text-subtle);
   padding: 0 2px;
   min-width: 12px;
   text-align: center;
@@ -111,7 +111,7 @@
 .caret {
   background: none;
   border: none;
-  color: #A99A83;
+  color: var(--text-muted);
   cursor: pointer;
   font-size: 11px;
   padding: 0 2px;
@@ -123,7 +123,7 @@
 }
 
 .bgRow {
-  color: #A99A83;
+  color: var(--text-muted);
   font-style: italic;
 }
 
@@ -131,7 +131,7 @@
   flex: 1;
   font-size: 14px;
   cursor: pointer;
-  color: #ECE2D1;
+  color: var(--text-strong);
   user-select: none;
   text-align: left;
   background: none;
@@ -139,21 +139,21 @@
   font-family: inherit;
 }
 .nameHidden {
-  color: #6F6252;
+  color: var(--text-faint);
   text-decoration: line-through;
 }
 
 .iconBtn {
   background: none;
   border: none;
-  color: #C98A54;
+  color: var(--gold-500);
   font-size: 13px;
   line-height: 1;
   padding: 2px 4px;
   cursor: pointer;
 }
-.iconBtnOff { color: #6F6252; }
-.iconBtnDanger { color: #B06A4E; }
+.iconBtnOff { color: var(--text-faint); }
+.iconBtnDanger { color: var(--danger); }
 
 .control {
   display: grid;
@@ -165,22 +165,22 @@
 
 .control span {
   font-size: 13px;
-  color: #BCAE98;
+  color: var(--text-muted);
 }
 
 .control input[type='range'] {
-  accent-color: #C98A54;
+  accent-color: var(--gold-400);
   width: 100%;
 }
 
 .num {
   width: 100%;
   padding: 3px 5px;
-  background: #151109;
-  color: #E6D8C0;
-  border: 1px solid #3A3125;
+  background: var(--surface-sunken);
+  color: var(--text-strong);
+  border: 1px solid var(--border-default);
   border-radius: 5px;
-  font-family: 'SF Mono', ui-monospace, monospace;
+  font-family: var(--font-mono);
   font-size: 11px;
   text-align: right;
 }
@@ -188,9 +188,9 @@
 .select {
   width: 100%;
   padding: 6px 7px;
-  background: #151109;
-  color: #ECE2D1;
-  border: 1px solid #4A4034;
+  background: var(--surface-sunken);
+  color: var(--text-strong);
+  border: 1px solid var(--border-default);
   border-radius: 8px;
   font-family: inherit;
   font-size: 14px;
@@ -205,9 +205,9 @@
 .btn {
   flex: 1;
   padding: 7px 0;
-  background: #2D2213;
-  border: 1px solid #6D5433;
-  color: #E6C79C;
+  background: var(--surface-sunken);
+  border: 1px solid var(--border-default);
+  color: var(--text-strong);
   border-radius: 7px;
   font-family: inherit;
   font-size: 13px;
@@ -219,9 +219,9 @@
 }
 
 .btnGhost {
-  background: #3A3226;
-  border-color: #574A39;
-  color: #C3B49C;
+  background: var(--surface-card);
+  border-color: var(--border-subtle);
+  color: var(--text-muted);
 }
 
 .chain {
@@ -233,25 +233,25 @@
   font-family: inherit;
   font-size: 12px;
   letter-spacing: 0.02em;
-  background: #2D2213;
-  border: 1px solid #6D5433;
-  color: #E6C79C;
+  background: var(--surface-sunken);
+  border: 1px solid var(--border-default);
+  color: var(--text-strong);
 }
 .chainOff {
-  background: #3A3226;
-  border-color: #574A39;
-  color: #C3B49C;
+  background: var(--surface-card);
+  border-color: var(--border-subtle);
+  color: var(--text-muted);
 }
 
 .divider {
-  border-top: 1px solid #3A3125;
+  border-top: 1px solid var(--border-subtle);
   margin-top: 12px;
   padding-top: 10px;
 }
 
 .note {
   font-size: 12px;
-  color: #8FAE7A;
+  color: var(--success);
   text-align: center;
   min-height: 15px;
   margin-top: 5px;

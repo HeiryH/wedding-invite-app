@@ -210,6 +210,18 @@ const COMMON_FIELDS: TemplateConfigField[] = [
 
   // ── RSVP ────────────────────────────────────────────────────────────────────
   {
+    key: 'rsvp.title',
+    label: 'RSVP Title',
+    defaultValue: 'RSVP',
+    maxLength: 30,
+    richText: false,
+    fieldType: 'text',
+    adminOnly: false,
+    section: 'rsvp',
+    group: 'RSVP',
+    chip: 'RSVP',
+  },
+  {
     key: 'rsvp.subtitle',
     label: 'RSVP Subtitle',
     defaultValue: 'Kindly reply by one week before the wedding date',
@@ -235,6 +247,21 @@ const COMMON_FIELDS: TemplateConfigField[] = [
     group: 'Wishes & Guestbook',
     chip: 'Content',
   },
+
+  // Wish form + its optional photo step. These live in the shared wish slots, so they're
+  // registered for every template rather than pinned to T7 — an authored template that drops in
+  // `wishForm` gets the same controls. Until now every one of these strings was hardcoded in
+  // WishSlots.tsx, i.e. invisible to the couple no matter what they typed.
+  { key: 'wish.form_title', label: 'Wish Form Title', fieldType: 'text', defaultValue: 'Leave a Wish', maxLength: 40, richText: false, adminOnly: false, section: 'wishes', group: 'Wishes & Guestbook', chip: 'Content' },
+  { key: 'wish.message_placeholder', label: 'Message Placeholder', fieldType: 'text', defaultValue: 'Write your wish for the couple…', maxLength: 120, richText: false, adminOnly: false, section: 'wishes', group: 'Wishes & Guestbook', chip: 'Content' },
+  { key: 'wish.name_placeholder', label: 'Name Placeholder', fieldType: 'text', defaultValue: 'Your name *', maxLength: 40, richText: false, adminOnly: false, section: 'wishes', group: 'Wishes & Guestbook', chip: 'Content' },
+  { key: 'wish.submit_label', label: 'Send Wish Button', fieldType: 'text', defaultValue: 'Send Wish', maxLength: 30, richText: false, adminOnly: false, section: 'wishes', group: 'Wishes & Guestbook', chip: 'Content' },
+  { key: 'wish.sent_message', label: 'Wish Sent Message', fieldType: 'text', defaultValue: 'Thank you — your wish was sent.', maxLength: 120, richText: false, adminOnly: false, section: 'wishes', group: 'Wishes & Guestbook', chip: 'Content' },
+  { key: 'wish.photo_title', label: 'Photo Step Title', fieldType: 'text', defaultValue: 'Add a photo?', maxLength: 40, richText: false, adminOnly: false, section: 'wishes', group: 'Wishes & Guestbook', chip: 'Content' },
+  { key: 'wish.photo_prompt', label: 'Photo Step Prompt', fieldType: 'text', defaultValue: 'Optional — share a snapshot to go with your wish.', maxLength: 120, richText: false, adminOnly: false, section: 'wishes', group: 'Wishes & Guestbook', chip: 'Content' },
+  { key: 'wish.photo_choose_label', label: 'Choose Photo Button', fieldType: 'text', defaultValue: 'Choose a Photo', maxLength: 30, richText: false, adminOnly: false, section: 'wishes', group: 'Wishes & Guestbook', chip: 'Content' },
+  { key: 'wish.photo_caption_placeholder', label: 'Photo Caption Placeholder', fieldType: 'text', defaultValue: 'Caption (optional)', maxLength: 60, richText: false, adminOnly: false, section: 'wishes', group: 'Wishes & Guestbook', chip: 'Content' },
+  { key: 'wish.photo_skip_label', label: 'Skip Photo Button', fieldType: 'text', defaultValue: 'Skip', maxLength: 20, richText: false, adminOnly: false, section: 'wishes', group: 'Wishes & Guestbook', chip: 'Content' },
 
   // ── Section backgrounds ─────────────────────────────────────────────────────
   {
@@ -475,6 +502,32 @@ const SECTION_TITLE_FIELDS: TemplateConfigField[] = [
     templateIds: [7],
   },
   {
+    key: 'photobooth.prompt',
+    label: 'Prompt',
+    defaultValue: 'Snap a photo, leave it in our gallery, and cherish it with us forever.',
+    maxLength: 120,
+    richText: false,
+    fieldType: 'text',
+    adminOnly: false,
+    section: 'photobooth',
+    group: 'Photo Booth',
+    chip: 'Content',
+    templateIds: [7],
+  },
+  {
+    key: 'photobooth.upload_label',
+    label: 'Photo Upload Button',
+    defaultValue: 'Upload a Photo',
+    maxLength: 30,
+    richText: false,
+    fieldType: 'text',
+    adminOnly: false,
+    section: 'photobooth',
+    group: 'Photo Booth',
+    chip: 'Content',
+    templateIds: [7],
+  },
+  {
     key: 'general.brideFirst',
     label: "Bride's name first",
     hint: "Toggle to put the groom's name first",
@@ -570,6 +623,13 @@ const TEMPLATE5_EXTRA_FIELDS: TemplateConfigField[] = [
 
   { key: 'nav.welcome',  label: 'Nav: Welcome',  fieldType: 'text', defaultValue: 'Welcome',  maxLength: 20, richText: false, adminOnly: true, section: 'navigation', group: 'Navigation Labels', chip: 'Display' },
   { key: 'nav.ceremony', label: 'Nav: Ceremony', fieldType: 'text', defaultValue: 'Ceremony', maxLength: 20, richText: false, adminOnly: true, section: 'navigation', group: 'Navigation Labels', chip: 'Display' },
+  // T7's own bottom nav pill is position:fixed chrome, outside any one stage's box — not a
+  // draggable layer, so it's tuned here (like scene.parallax / scene.ink.tint) rather than in the
+  // Adjust dock. `nav.size` scales the whole pill (padding/gap/buttons together, via transform —
+  // fine for a small fixed-size control with no reflow-sensitive content); `nav.textSize` is an
+  // independent multiplier on just the button labels.
+  { key: 'nav.size', label: 'Nav Bar Size', fieldType: 'select', defaultValue: 'default', maxLength: 10, richText: false, adminOnly: false, options: ['compact', 'default', 'large', 'xlarge'], section: 'navigation', group: 'Navigation Bar', chip: 'Display', templateIds: [7] },
+  { key: 'nav.textSize', label: 'Nav Bar Text Size', fieldType: 'select', defaultValue: 'default', maxLength: 10, richText: false, adminOnly: false, options: ['compact', 'default', 'large', 'xlarge'], section: 'navigation', group: 'Navigation Bar', chip: 'Display', templateIds: [7] },
 ];
 
 // ── Template 7 — Roman Garden ───────────────────────────────────────────────
@@ -584,8 +644,23 @@ const TEMPLATE7_EXTRA_FIELDS: TemplateConfigField[] = [
 
   { key: 'ceremony.panel.couple_title', label: 'Couple Stage Title', fieldType: 'text', defaultValue: 'The Bride & Groom', maxLength: 40, richText: false, adminOnly: false, section: 'ceremony', group: 'Ceremony Stages', chip: 'Content' },
   { key: 'ceremony.panel.details_title', label: 'Details Stage Title', fieldType: 'text', defaultValue: 'Ceremony Details', maxLength: 40, richText: false, adminOnly: false, section: 'ceremony', group: 'Ceremony Stages', chip: 'Content' },
+  { key: 'ceremony.when_label', label: 'Date Row Label', fieldType: 'text', defaultValue: 'When', maxLength: 20, richText: false, adminOnly: false, section: 'ceremony', group: 'Ceremony Stages', chip: 'Content' },
+  { key: 'ceremony.where_label', label: 'Venue Row Label', fieldType: 'text', defaultValue: 'Where', maxLength: 20, richText: false, adminOnly: false, section: 'ceremony', group: 'Ceremony Stages', chip: 'Content' },
+  { key: 'ceremony.calendar_label', label: 'Add to Calendar Button', fieldType: 'text', defaultValue: 'Add to Calendar', maxLength: 30, richText: false, adminOnly: false, section: 'ceremony', group: 'Ceremony Stages', chip: 'Content' },
+  { key: 'ceremony.map_label', label: 'View Map Button', fieldType: 'text', defaultValue: 'View Map', maxLength: 30, richText: false, adminOnly: false, section: 'ceremony', group: 'Ceremony Stages', chip: 'Content' },
+  { key: 'ceremony.map_hide_label', label: 'Hide Map Button', fieldType: 'text', defaultValue: 'Hide Map', maxLength: 30, richText: false, adminOnly: false, section: 'ceremony', group: 'Ceremony Stages', chip: 'Content' },
 
   { key: 'rsvp.seating_prompt', label: 'Seating Prompt', fieldType: 'text', defaultValue: 'Choose your table', maxLength: 60, richText: false, adminOnly: false, section: 'rsvp', group: 'RSVP', chip: 'RSVP' },
+
+  // Pop-up triggers. T7's RSVP and wish forms live in bottom sheets rather than on the stage (a
+  // stage is an art composition; a form is variable-height content, and inline it has to reserve a
+  // box its neighbours can never reflow into). What stays on the stage is the button that opens
+  // them — so its wording, and optionally its artwork, are the couple's to set. Read by
+  // `_shared/slots/SheetTriggerSlot.tsx` as `sheet.<sheetId>.label` / `.image`.
+  { key: 'sheet.rsvp.label', label: 'RSVP Button Text', fieldType: 'text', defaultValue: 'RSVP Now', maxLength: 30, richText: false, adminOnly: false, section: 'rsvp', group: 'RSVP', chip: 'RSVP' },
+  { key: 'sheet.rsvp.image', label: 'RSVP Button Artwork', hint: 'Optional — replaces the button with your own image.', fieldType: 'image', defaultValue: '', maxLength: 500, richText: false, adminOnly: false, section: 'rsvp', group: 'RSVP', chip: 'RSVP' },
+  { key: 'sheet.wish.label', label: 'Wish Button Text', fieldType: 'text', defaultValue: 'Write a Wish', maxLength: 30, richText: false, adminOnly: false, section: 'wishes', group: 'Wishes & Guestbook', chip: 'Content' },
+  { key: 'sheet.wish.image', label: 'Wish Button Artwork', hint: 'Optional — replaces the button with your own image (it gently floats in place).', fieldType: 'image', defaultValue: '', maxLength: 500, richText: false, adminOnly: false, section: 'wishes', group: 'Wishes & Guestbook', chip: 'Content' },
   // The T7 PRO Adjust dock is launched from a dedicated header button now, not a schema field.
 ];
 

@@ -1,15 +1,15 @@
 'use client';
 
-import { useState } from 'react';
-import { AnimatePresence, motion } from 'framer-motion';
-import { CreateWish } from '@/lib/api';
+import { useRef, useState } from 'react';
 import type { SlotProps } from '../types';
+import { isActiveWishStep, useWishFlow } from './wishFlow';
+import { useSheets } from './sheets';
+import { uploadPhotoFile } from './PhotoBoothSlot';
 import styles from './slots.module.css';
 
-/**
- * wishes/title.webp is an empty engraved cartouche — a plate meant to hold text, not art with
- * the title baked in. Without this it renders as a conspicuously blank box.
- */
+/** Four independent layers — title, prompt, form, list — each its own absolutely-positioned
+ *  slot in data/stages.ts's `wishes` stage. */
+
 export function WishTitleSlot({ t }: SlotProps) {
   return (
     <div className={styles.plateTitle}>
@@ -18,7 +18,6 @@ export function WishTitleSlot({ t }: SlotProps) {
   );
 }
 
-/** Its own layer, not part of the form: inside the form it landed on the ruled card's flourish. */
 export function WishPromptSlot({ t }: SlotProps) {
   return (
     <p className={styles.sectionLead} style={{ margin: 0 }}>
@@ -28,16 +27,19 @@ export function WishPromptSlot({ t }: SlotProps) {
 }
 
 /**
- * The message field is always visible but starts collapsed to one line; focusing it expands the
- * card and slides in the name field + submit button — ported from Template5.tsx's own wish form
- * (a lighter-weight ask than showing every field up front). Sits inside the ruled-card art
- * (wishes/msg.webp — a separate layer) same as before.
+ * Step 1 of the wish sheet.
+ *
+ * The old inline version started collapsed to one line and expanded on focus, purely to keep its
+ * reserved box on the stage small — a workaround for living in an absolutely-positioned layer that
+ * its neighbours could never reflow around. In a sheet there's room to show every field at once,
+ * so the expand/collapse (and the `onBlur` containment check that made tabbing between fields
+ * work) is gone rather than ported.
  */
-export function WishFormSlot({ onSubmitWish, editing }: SlotProps) {
-  const [form, setForm] = useState<CreateWish>({ guestName: '', message: '' });
-  const [submitting, setSubmitting] = useState(false);
-  const [sent, setSent] = useState(false);
-  const [expanded, setExpanded] = useState(false);
+export function WishFormSlot({ onSubmitWish, editing, editor, t, photoBoothEnabled, onUploadPhoto }: SlotProps) {
+  const { step, setStep, form, setForm, submitting, setSubmitting, sent, setSent } = useWishFlow();
+  const { close } = useSheets();
+
+  if (!isActiveWishStep(editing, editor?.selectedLayer, step, 'form')) return null;
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -47,8 +49,16 @@ export function WishFormSlot({ onSubmitWish, editing }: SlotProps) {
       await onSubmitWish(form);
       setForm({ guestName: '', message: '' });
       setSent(true);
-      setExpanded(false);
-      setTimeout(() => setSent(false), 3000);
+      // Unlike the RSVP flow, the step advance sits *inside* the success branch rather than being
+      // hoisted above the `editing` guard. RSVP hoists because selecting-the-seating-layer aside,
+      // that's the only way an editor reaches step 2; here the editor reaches the photo step by
+      // selecting the `wishPhoto` layer (see isActiveWishStep), so the transition can stay honest
+      // and only fire on a real submit.
+      if (photoBoothEnabled && onUploadPhoto) {
+        setStep('photo');
+      } else {
+        setTimeout(() => { setSent(false); close(); }, 1500);
+      }
     } catch {
       alert('Failed to submit your wish');
     } finally {
@@ -57,46 +67,103 @@ export function WishFormSlot({ onSubmitWish, editing }: SlotProps) {
   };
 
   return (
-    <form
-      className={styles.wishCardBody}
-      onSubmit={submit}
-      onBlur={(e) => { if (!e.currentTarget.contains(e.relatedTarget as Node)) setExpanded(false); }}
-    >
+    <form className={styles.wishCardBody} onSubmit={submit}>
+      <h3 className={styles.panelTitle}>{t('wish.form_title', 'Leave a Wish')}</h3>
+      {sent && <p className={styles.sectionLead}>{t('wish.sent_message', 'Thank you — your wish was sent.')}</p>}
       <textarea
         className={styles.wishTextarea}
-        placeholder="Write your wish for the couple…"
+        placeholder={t('wish.message_placeholder', 'Write your wish for the couple…')}
         required
-        rows={expanded ? 3 : 1}
+        rows={3}
         value={form.message}
-        onFocus={() => setExpanded(true)}
         onChange={(e) => setForm((f) => ({ ...f, message: e.target.value }))}
       />
-      <AnimatePresence>
-        {expanded && (
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
-            exit={{ opacity: 0, height: 0 }}
-            style={{ overflow: 'hidden', display: 'flex', flexDirection: 'column', gap: '0.55rem' }}
-          >
-            {sent && <p className={styles.sectionLead}>Thank you — your wish was sent.</p>}
-            <input
-              className={styles.field}
-              placeholder="Your name *"
-              required
-              value={form.guestName}
-              onChange={(e) => setForm((f) => ({ ...f, guestName: e.target.value }))}
-            />
-            {/* The engraved submit-btn art is this button's background, rather than its own
-                layer — a separate layer would have to be kept in sync with the button's
-                position forever. */}
-            <button type="submit" className={styles.wishSubmit} disabled={submitting}>
-              {submitting ? 'Sending…' : 'Send Wish'}
-            </button>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      <input
+        className={styles.field}
+        placeholder={t('wish.name_placeholder', 'Your name *')}
+        required
+        value={form.guestName}
+        onChange={(e) => setForm((f) => ({ ...f, guestName: e.target.value }))}
+      />
+      <button type="submit" className={`${styles.plaque} ${styles.plaqueBtn}`} disabled={submitting}>
+        {submitting ? 'Sending…' : t('wish.submit_label', 'Send Wish')}
+      </button>
     </form>
+  );
+}
+
+/**
+ * Step 2 of the wish sheet — an optional photo, offered right after a wish lands because that's
+ * when a guest is already in a sharing frame of mind. Gated on `photoBoothEnabled`
+ * (`SLOT_AVAILABLE.wishPhoto`), so with the feature off the flow simply ends at step 1.
+ */
+export function WishPhotoSlot({ onUploadPhoto, editing, editor, t }: SlotProps) {
+  const { step, setStep, sent, setSent } = useWishFlow();
+  const { close } = useSheets();
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [file, setFile] = useState<File | null>(null);
+  const [caption, setCaption] = useState('');
+  const [busy, setBusy] = useState(false);
+
+  if (!isActiveWishStep(editing, editor?.selectedLayer, step, 'photo')) return null;
+
+  const finish = () => { setStep('form'); setSent(false); setFile(null); setCaption(''); close(); };
+
+  const send = async () => {
+    if (!file || !onUploadPhoto || editing) return;
+    setBusy(true);
+    try {
+      await uploadPhotoFile(onUploadPhoto, file, { caption });
+      finish();
+    } catch {
+      alert('Failed to upload your photo');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className={styles.wishCardBody}>
+      {sent && <p className={styles.sectionLead}>{t('wish.sent_message', 'Thank you — your wish was sent.')}</p>}
+      <h3 className={styles.panelTitle}>{t('wish.photo_title', 'Add a photo?')}</h3>
+      <p className={styles.sectionLead}>
+        {t('wish.photo_prompt', 'Optional — share a snapshot to go with your wish.')}
+      </p>
+
+      <input
+        ref={inputRef}
+        type="file"
+        accept="image/*"
+        className={styles.hiddenInput}
+        onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+      />
+      <button type="button" className={styles.linkBtn} onClick={() => inputRef.current?.click()}>
+        {file ? file.name : t('wish.photo_choose_label', 'Choose a Photo')}
+      </button>
+
+      {file && (
+        <input
+          className={styles.field}
+          placeholder={t('wish.photo_caption_placeholder', 'Caption (optional)')}
+          value={caption}
+          onChange={(e) => setCaption(e.target.value)}
+        />
+      )}
+
+      <div className={styles.wishPhotoActions}>
+        <button type="button" className={styles.linkBtn} onClick={finish}>
+          {t('wish.photo_skip_label', 'Skip')}
+        </button>
+        <button
+          type="button"
+          className={`${styles.plaque} ${styles.plaqueBtn}`}
+          onClick={send}
+          disabled={!file || busy}
+        >
+          {busy ? 'Uploading…' : t('photobooth.upload_label', 'Upload a Photo')}
+        </button>
+      </div>
+    </div>
   );
 }
 

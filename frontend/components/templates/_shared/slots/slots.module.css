@@ -31,7 +31,7 @@
 }
 .themeLabel {
   font-family: var(--slot-font-display, system-ui, sans-serif);
-  font-size: clamp(0.6rem, 1.5cqi, 0.78rem);
+  font-size: calc(clamp(0.6rem, 1.5cqi, 0.78rem) * var(--slot-text-scale, 1));
   font-weight: 600;
   letter-spacing: 0.32em;
   text-transform: uppercase;
@@ -43,7 +43,7 @@
   flex-direction: column;
   gap: 0.15rem;
   font-family: var(--slot-font-display, system-ui, sans-serif);
-  font-size: clamp(1.5rem, 5.5cqi, 3rem);
+  font-size: calc(clamp(1.5rem, 5.5cqi, 3rem) * var(--slot-text-scale, 1));
   font-weight: 600;
   letter-spacing: 0.02em;
   line-height: 1.15;
@@ -55,14 +55,14 @@
   font-family: var(--slot-font-serif, Georgia, serif);
   font-style: italic;
   font-weight: 400;
-  font-size: 0.5em;
+  font-size: calc(0.5em * var(--slot-text-scale, 1));
   letter-spacing: 0.1em;
   color: var(--slot-ink-soft, #6b6863);
   text-transform: lowercase;
 }
 .weddingDate {
   font-family: var(--slot-font-serif, Georgia, serif);
-  font-size: clamp(0.85rem, 2cqi, 1.05rem);
+  font-size: calc(clamp(0.85rem, 2cqi, 1.05rem) * var(--slot-text-scale, 1));
   letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--slot-ink, #2b2a28);
@@ -71,7 +71,7 @@
 .hijriDate {
   font-family: var(--slot-font-serif, Georgia, serif);
   font-style: italic;
-  font-size: clamp(0.75rem, 1.7cqi, 0.9rem);
+  font-size: calc(clamp(0.75rem, 1.7cqi, 0.9rem) * var(--slot-text-scale, 1));
   color: var(--slot-ink-soft, #6b6863);
   margin: 0.25rem 0 0;
 }
@@ -94,14 +94,14 @@
 .countNum {
   font-family: var(--slot-font-display, system-ui, sans-serif);
   font-weight: 600;
-  font-size: clamp(1rem, 3cqi, 1.6rem);
+  font-size: calc(clamp(1rem, 3cqi, 1.6rem) * var(--slot-text-scale, 1));
   font-variant-numeric: tabular-nums;
   line-height: 1;
   color: var(--slot-ink, #2b2a28);
 }
 .countLabel {
   font-family: var(--slot-font-serif, Georgia, serif);
-  font-size: clamp(0.55rem, 1.2cqi, 0.68rem);
+  font-size: calc(clamp(0.55rem, 1.2cqi, 0.68rem) * var(--slot-text-scale, 1));
   letter-spacing: 0.14em;
   text-transform: uppercase;
   color: var(--slot-ink-soft, #6b6863);
@@ -119,7 +119,7 @@
   cursor: pointer;
   font-family: var(--slot-font-display, system-ui, sans-serif);
   font-weight: 600;
-  font-size: 0.68rem;
+  font-size: calc(0.68rem * var(--slot-text-scale, 1));
   letter-spacing: 0.24em;
   text-transform: uppercase;
   color: var(--slot-ink-soft, #6b6863);
@@ -139,7 +139,9 @@
   background: var(--slot-ink, #2b2a28);
   color: var(--slot-accent-ink, #f5f4f2);
   font-family: var(--slot-font-display, system-ui, sans-serif);
-  font-size: clamp(0.66rem, 1.5cqi, 0.9rem);
+  /* `--slot-text-scale` is set per-layer on the slot wrapper (Layer.tsx) and inherits down to
+     every button inside it, so the Adjust panel's Text Size slider covers submit buttons too. */
+  font-size: calc(clamp(0.66rem, 1.5cqi, 0.9rem) * var(--slot-text-scale, 1));
   font-weight: 600;
   letter-spacing: 0.14em;
   text-transform: uppercase;
@@ -177,11 +179,25 @@
 
 .sectionLead {
   font-family: var(--slot-font-serif, Georgia, serif);
-  font-size: clamp(0.9rem, 1.8cqi, 1.1rem);
+  font-size: calc(clamp(0.9rem, 1.8cqi, 1.1rem) * var(--slot-text-scale, 1));
   font-style: italic;
   color: var(--slot-ink-soft, #6b6863);
   text-align: center;
   margin: 0 0 0.75rem;
+}
+
+/* ── Section flow: a group of SectionPiece children that reflow when one is hidden ─────────── */
+/* Used by *ContentSlot components (WishesContentSlot etc.) — a plain flex column, so removing a
+   hidden SectionPiece (it returns null, not display:none-on-a-placeholder) closes its gap for
+   real, the same way HeroSlots.tsx's `.heroInner` already does for the countdown. */
+.sectionFlow {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: center;
+  gap: clamp(0.75rem, 3cqi, 1.5rem);
+  height: 100%;
+  text-align: center;
 }
 
 /* ── Panel: the scrim card every content slot sits on ────────────────────────────────────── */
@@ -212,7 +228,7 @@
 .panelTitle {
   font-family: var(--slot-font-display, system-ui, sans-serif);
   font-weight: 600;
-  font-size: clamp(1.05rem, 3cqi, 1.7rem);
+  font-size: calc(clamp(1.05rem, 3cqi, 1.7rem) * var(--slot-text-scale, 1));
   letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--slot-ink, #2b2a28);
@@ -220,7 +236,7 @@
 }
 .panelBody {
   font-family: var(--slot-font-serif, Georgia, serif);
-  font-size: clamp(0.9rem, 1.9cqi, 1.05rem);
+  font-size: calc(clamp(0.9rem, 1.9cqi, 1.05rem) * var(--slot-text-scale, 1));
   line-height: 1.75;
   color: var(--slot-ink-soft, #6b6863);
   margin: 0;
@@ -238,14 +254,14 @@
 .coupleName {
   font-family: var(--slot-font-display, system-ui, sans-serif);
   font-weight: 600;
-  font-size: clamp(1.1rem, 3.4cqi, 1.9rem);
+  font-size: calc(clamp(1.1rem, 3.4cqi, 1.9rem) * var(--slot-text-scale, 1));
   letter-spacing: 0.01em;
   color: var(--slot-ink, #2b2a28);
 }
 .coupleAmp {
   font-family: var(--slot-font-serif, Georgia, serif);
   font-style: italic;
-  font-size: 1.1rem;
+  font-size: calc(1.1rem * var(--slot-text-scale, 1));
   color: var(--slot-ink-faint, #9a9690);
 }
 
@@ -253,7 +269,7 @@
 .detailLabel {
   font-family: var(--slot-font-display, system-ui, sans-serif);
   font-weight: 600;
-  font-size: 0.62rem;
+  font-size: calc(0.62rem * var(--slot-text-scale, 1));
   letter-spacing: 0.2em;
   text-transform: uppercase;
   color: var(--slot-ink-faint, #9a9690);
@@ -261,7 +277,7 @@
 }
 .detailValue {
   font-family: var(--slot-font-serif, Georgia, serif);
-  font-size: clamp(0.95rem, 2cqi, 1.1rem);
+  font-size: calc(clamp(0.95rem, 2cqi, 1.1rem) * var(--slot-text-scale, 1));
   color: var(--slot-ink, #2b2a28);
 }
 .detailActions {
@@ -302,7 +318,7 @@
   border: 1px solid var(--slot-rule, rgba(43, 42, 40, 0.16));
   color: var(--slot-ink, #2b2a28);
   font-family: var(--slot-font-serif, Georgia, serif);
-  font-size: 0.9rem;
+  font-size: calc(0.9rem * var(--slot-text-scale, 1));
   text-decoration: none;
 }
 .mapEmbed {
@@ -352,14 +368,14 @@
   display: block;
   font-family: var(--slot-font-display, system-ui, sans-serif);
   font-weight: 600;
-  font-size: 0.62rem;
+  font-size: calc(0.62rem * var(--slot-text-scale, 1));
   letter-spacing: 0.16em;
   text-transform: uppercase;
   color: var(--slot-ink-faint, #9a9690);
 }
 .itineraryTitle {
   font-family: var(--slot-font-serif, Georgia, serif);
-  font-size: clamp(0.95rem, 2cqi, 1.1rem);
+  font-size: calc(clamp(0.95rem, 2cqi, 1.1rem) * var(--slot-text-scale, 1));
   font-weight: 400;
   color: var(--slot-ink, #2b2a28);
   margin: 0.15rem 0 0;
@@ -379,7 +395,13 @@
   border: 1px solid var(--slot-rule, rgba(43, 42, 40, 0.16));
   border-radius: var(--slot-radius, 8px);
   font-family: var(--slot-font-serif, Georgia, serif);
-  font-size: 0.95rem;
+  /* Was a fixed 0.95rem. cqi now resolves against this slot's own box (see .slot in
+     Stage.module.css), so text grows with a widened panel instead of just its surrounding
+     whitespace. Floor is barely above the old value (a phone at this layer's *default* width sees
+     ~16px vs 15.2px before — imperceptible); ceiling is reached once the box approaches the width
+     of a typical phone screen, which is the realistic max on mobile since a slot can't usefully
+     grow past the stage it's centered in. */
+  font-size: calc(clamp(1rem, 5cqi, 1.3rem) * var(--slot-text-scale, 1));
   color: var(--slot-ink, #2b2a28);
   outline: none;
   box-sizing: border-box;
@@ -398,7 +420,8 @@
   border: 1px solid var(--slot-rule, rgba(43, 42, 40, 0.16));
   border-radius: var(--slot-radius, 8px);
   font-family: var(--slot-font-serif, Georgia, serif);
-  font-size: 0.85rem;
+  /* Same reasoning as .field above. */
+  font-size: calc(clamp(0.9rem, 4.3cqi, 1.15rem) * var(--slot-text-scale, 1));
   color: var(--slot-ink-soft, #6b6863);
   cursor: pointer;
   transition: background 0.2s ease, color 0.2s ease;
@@ -422,20 +445,32 @@
   cursor: pointer;
   font-family: var(--slot-font-serif, Georgia, serif);
   font-style: italic;
-  font-size: 0.9rem;
+  font-size: calc(0.9rem * var(--slot-text-scale, 1));
   color: var(--slot-ink-soft, #6b6863);
   text-decoration: underline;
 }
 .notice {
   font-family: var(--slot-font-serif, Georgia, serif);
   font-style: italic;
-  font-size: 1rem;
+  font-size: calc(1rem * var(--slot-text-scale, 1));
   color: var(--slot-ink-soft, #6b6863);
   margin: 1.2rem 0;
 }
 
 /* ── Seating ──────────────────────────────────────────────────────────────────────────────── */
 .seating { margin-top: 0.4rem; }
+/* Was previously referenced by SeatingChart.tsx with no matching rule (fell back to the
+   browser's default heading styles) — given its own definition here, matching .panelTitle's
+   family/weight/case but a size step down since it's a sub-heading within its own layer. */
+.sectionTitle {
+  font-family: var(--slot-font-display, system-ui, sans-serif);
+  font-weight: 600;
+  font-size: calc(clamp(0.95rem, 2.6cqi, 1.3rem) * var(--slot-text-scale, 1));
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--slot-ink, #2b2a28);
+  margin: 0 0 0.3rem;
+}
 .tableGrid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(5.2rem, 1fr));
@@ -480,12 +515,12 @@
 }
 .tableName {
   font-family: var(--slot-font-serif, Georgia, serif);
-  font-size: 0.78rem;
+  font-size: calc(0.78rem * var(--slot-text-scale, 1));
   color: var(--slot-ink, #2b2a28);
 }
 .tableSeats {
   font-family: var(--slot-font-serif, Georgia, serif);
-  font-size: 0.66rem;
+  font-size: calc(0.66rem * var(--slot-text-scale, 1));
   color: var(--slot-ink-faint, #9a9690);
 }
 .tableSelected .tableIconWrap::after {
@@ -505,7 +540,7 @@
 .plateTitle h2 {
   font-family: var(--slot-font-display, system-ui, sans-serif);
   font-weight: 600;
-  font-size: clamp(0.85rem, 2.6cqi, 1.35rem);
+  font-size: calc(clamp(0.85rem, 2.6cqi, 1.35rem) * var(--slot-text-scale, 1));
   letter-spacing: 0.08em;
   text-transform: uppercase;
   text-align: center;
@@ -529,40 +564,14 @@
   border: 1px solid var(--slot-rule, rgba(43, 42, 40, 0.16));
   border-radius: var(--slot-radius, 8px);
   font-family: var(--slot-font-serif, Georgia, serif);
-  font-size: 0.95rem;
+  /* Same reasoning as .field above. */
+  font-size: calc(clamp(1rem, 5cqi, 1.3rem) * var(--slot-text-scale, 1));
   color: var(--slot-ink, #2b2a28);
   resize: vertical;
   outline: none;
   box-sizing: border-box;
 }
 .wishTextarea::placeholder { color: var(--slot-ink-faint, #9a9690); font-style: italic; }
-
-/* Deliberately left pointing at T7's own engraved button art (see the CSS comment on
-   --slot-submit-bg below) — one of a small number of accepted residual T7 image borrows, same
-   treatment as the table icon and photo frames. Neutral consumers get a plain filled button via
-   the color fallback; only T7 (which sets --slot-submit-bg explicitly) sees the carved graphic. */
-.wishSubmit {
-  align-self: center;
-  min-width: 11rem;
-  padding: 0.85rem 2rem;
-  background-color: var(--slot-ink, #2b2a28);
-  background-image: var(--slot-submit-bg, none);
-  background-position: center;
-  background-size: 100% 100%;
-  background-repeat: no-repeat;
-  border: none;
-  border-radius: var(--slot-radius, 8px);
-  cursor: pointer;
-  font-family: var(--slot-font-display, system-ui, sans-serif);
-  font-weight: 600;
-  font-size: 0.7rem;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: var(--slot-accent-ink, #f5f4f2);
-  transition: opacity 0.2s ease;
-}
-.wishSubmit:hover:not(:disabled) { opacity: 0.85; }
-.wishSubmit:disabled { opacity: 0.5; cursor: default; }
 
 .wishList {
   display: flex;
@@ -580,7 +589,7 @@
 .wishFrom {
   font-family: var(--slot-font-display, system-ui, sans-serif);
   font-weight: 600;
-  font-size: 0.62rem;
+  font-size: calc(0.62rem * var(--slot-text-scale, 1));
   letter-spacing: 0.16em;
   text-transform: uppercase;
   color: var(--slot-ink-soft, #6b6863);
@@ -588,14 +597,14 @@
 .wishMsg {
   font-family: var(--slot-font-serif, Georgia, serif);
   font-style: italic;
-  font-size: 0.92rem;
+  font-size: calc(0.92rem * var(--slot-text-scale, 1));
   color: var(--slot-ink, #2b2a28);
   margin: 0.2rem 0 0;
 }
 .empty {
   font-family: var(--slot-font-serif, Georgia, serif);
   font-style: italic;
-  font-size: 0.9rem;
+  font-size: calc(0.9rem * var(--slot-text-scale, 1));
   color: var(--slot-ink-faint, #9a9690);
   text-align: center;
   margin: 0;
@@ -616,6 +625,10 @@
   left: 0;
   right: 0;
   bottom: 0;
+  /* Bottom sheets are a phone idiom; left un-capped it stretches to the full window on a desktop,
+     which leaves a form's fields absurdly wide. Centred once it stops filling the width. */
+  max-width: 560px;
+  margin-inline: auto;
   max-height: 88vh;
   overflow-y: auto;
   padding: 1.6rem 1.2rem calc(1.6rem + env(safe-area-inset-bottom));
@@ -631,6 +644,56 @@
   cursor: grab;
   touch-action: none;
 }
+/* Skip sits beside Upload rather than under it — declining is a peer choice here, not a
+   subordinate one (the whole step is optional). */
+.wishPhotoActions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-top: 0.35rem;
+}
+
+/* ── Sheet trigger (SheetTriggerSlot.tsx) ────────────────────────────────────────────────────
+   The button is the hit target and fills the layer's box, so the layer's own geometry sizes it;
+   the img is inert so a click always lands on the button. `object-fit: contain` keeps supplied
+   artwork in proportion however the couple resizes the layer. */
+.triggerArtBtn {
+  display: block;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
+.triggerArt {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+  pointer-events: none;
+}
+/* Centres the fallback text button within the layer box (the art path fills it instead). */
+.triggerBtnWrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+}
+
+/* Shown in place of the drag handle + × while the Adjust panel is holding the sheet open (see
+   SheetHost.tsx) — dismissing it there would only re-open on the next render. */
+.sheetEditorNote {
+  margin: 0 0 0.9rem;
+  text-align: center;
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--slot-ink-faint, #9b9284);
+}
+
 .sheetClose {
   position: absolute;
   top: 0.8rem;
@@ -734,33 +797,11 @@
   padding: 2.5rem 0;
   color: var(--slot-ink-soft, #6b6863);
   font-family: var(--slot-font-serif, Georgia, serif);
-  font-size: 0.75rem;
+  font-size: calc(0.75rem * var(--slot-text-scale, 1));
   letter-spacing: 0.08em;
 }
 
 /* ── Photo booth ──────────────────────────────────────────────────────────────────────────── */
-.steps {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  margin: 0.8rem 0;
-}
-.step { text-align: center; }
-.stepTitle {
-  font-family: var(--slot-font-display, system-ui, sans-serif);
-  font-weight: 600;
-  font-size: 0.7rem;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  color: var(--slot-ink, #2b2a28);
-}
-.stepDesc {
-  font-family: var(--slot-font-serif, Georgia, serif);
-  font-style: italic;
-  font-size: 0.85rem;
-  color: var(--slot-ink-soft, #6b6863);
-  margin: 0.15rem 0 0;
-}
 .uploadRow {
   display: flex;
   justify-content: center;

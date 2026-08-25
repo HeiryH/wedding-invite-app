@@ -83,14 +83,27 @@ export interface Layer {
   slot?: SlotId;
   /**
    * kind 'slot' only. 'inline' (default, undefined) renders in place like any other layer.
-   * 'sheet' renders nothing in place — instead `DataTemplate` mounts it as a drag-to-dismiss
-   * bottom sheet, opened when a `scrollVideo` layer elsewhere on the page reports itself fully
-   * open and the guest taps it (mirrors Template5.tsx's own envelope→RSVP coupling, generalized:
-   * any authored template can pair a `scrollVideo` envelope with any sheet-presented slot, not
-   * just RSVP). See `_shared/slots/index.ts`'s `visibleSlotLayers` (excludes it from inline
-   * render, same treatment as an `anchor`) and `DataTemplate.tsx`.
+   * 'sheet' renders nothing in place — instead `_shared/SheetHost.tsx` mounts it in a
+   * drag-to-dismiss bottom sheet, opened by a trigger naming the same `sheetId`. Forms live here:
+   * a stage is an art composition (art drawn *around* a specific element), while a form is
+   * variable-height content, so an inline form has to reserve a fixed box its neighbours can never
+   * reflow into. See `_shared/slots/index.ts`'s `visibleSlotLayers` (excludes it from inline
+   * render, same treatment as an `anchor`) and `sheetLayerGroups`.
    */
   presentation?: 'inline' | 'sheet';
+  /**
+   * Names a bottom sheet (see `_shared/slots/sheets.tsx`). Dual-purpose, by role:
+   * - on a `presentation: 'sheet'` layer — which sheet this layer is *content of*. Several layers
+   *   can share one id; they become that sheet's steps, ordered by `z` descending (the Adjust
+   *   panel's front-to-back list order — row dragging rewrites `z`, not `order`).
+   * - on a trigger (`slot: 'sheetTrigger'`, or a `kind: 'scrollVideo'` layer) — which sheet it
+   *   *opens*. This is what makes an mp4 envelope a data change rather than a code change: swap
+   *   the trigger layer's `kind` to `'scrollVideo'`, keep the same `sheetId`.
+   *
+   * `undefined` ⇒ `'default'`, the back-compat path for the single unnamed sheet authored
+   * templates shipped before sheets were named.
+   */
+  sheetId?: string;
   /** kind 'text' */
   text?: string;
   /** kind 'shape' */
@@ -119,6 +132,14 @@ export interface Layer {
   chain: boolean;
   hidden: boolean;
   opacity: number;
+  /**
+   * kind 'slot' only. Multiplies the box-relative `cqi` text sizes in slots.module.css's form
+   * elements (`.field`/`.choice`/`.wishTextarea` — see `--slot-text-scale`, applied in Layer.tsx).
+   * Complements Width/Height: those grow the box (and, via the slot's own container-query context,
+   * already grow its text somewhat); this is a direct manual override for "still too small to
+   * read" without having to keep widening the box past what the layout can fit. 1 = default.
+   */
+  textScale?: number;
   /** Parallax factor. 0 = welded to the background. Defaults to z/10 when absent. */
   depth?: number;
 
@@ -310,6 +331,14 @@ export interface SlotProps {
   config?: Record<string, string>;
   breakpoint?: Breakpoint;
   editor?: EditorHandle;
+  /**
+   * The layer this slot is being rendered as. Injected by `Layer.tsx` (and `SheetHost.tsx`) at
+   * render time rather than built into any `slotProps` construction site, so the three places that
+   * assemble `SlotProps` need to know nothing about it. Lets a generic slot read its own
+   * configuration — `sheetTrigger` reads `layer.sheetId` to know which sheet to open, instead of
+   * needing one hardcoded component per sheet.
+   */
+  layer?: Layer;
 }
 
 /**

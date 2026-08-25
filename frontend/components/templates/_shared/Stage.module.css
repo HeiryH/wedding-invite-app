@@ -65,6 +65,8 @@
 
 .flowSlotContent {
   width: 100%;
+  /* Same reasoning as .slot below: slot text/fields should scale off this box's own width. */
+  container-type: inline-size;
 }
 
 /* Editor-only: "Reveal off-screen". The preview widens the iframe and this pins the stage to the
@@ -170,7 +172,13 @@
 }
 
 /* A slot holds real content — a form, a list — so it must be able to scroll on a short phone
-   rather than clip. */
+   rather than clip. `container-type: inline-size` makes every `cqi` value inside slots.module.css
+   (and any fixed-rem value converted to cqi there) track THIS box's own width instead of the whole
+   stage's — so growing a slot's Width in the Adjust panel makes its text/fields genuinely bigger
+   and more readable, not just its empty surrounding space. Before this, text was stage-relative
+   only, so Width/Height changes couldn't fix "too small to read on a real phone" — only the
+   paint-only Scale transform could, which is what grows the box past the stage's clip in the first
+   place (see AdjustPanel.tsx's slot-overflow warning). */
 .slot {
   width: 100%;
   height: 100%;
@@ -178,6 +186,7 @@
   overscroll-behavior: contain;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
+  container-type: inline-size;
 }
 .slot::-webkit-scrollbar {
   display: none;
@@ -220,6 +229,17 @@
 .layerBox[data-selected='true'] {
   outline: 2px dashed #C98A54;
   outline-offset: 3px;
+}
+
+/* A slot component can render nothing (e.g. RsvpFormSlot/RsvpSeatingSlot each stand down while
+   the other owns the step, per _shared/slots/rsvpFlow.tsx) while still occupying its full box —
+   without this, that box's default `pointer-events: auto` sits over whatever's positioned
+   underneath (often the sibling that's actually showing) and silently eats its clicks, in both
+   normal and editing mode alike (the `:has()` clause outweighs `[data-editing='true']
+   .layerBox`'s specificity, so this wins regardless of source order). Selecting a stood-down
+   layer still works via the Adjust panel's layer list, which doesn't need canvas hit-testing. */
+.layerBox:has(> .layerInner .slot:empty) {
+  pointer-events: none;
 }
 
 /* Editor-only resize handle, rendered only on the selected layer. Positioned relative to

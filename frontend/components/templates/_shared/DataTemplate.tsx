@@ -1,16 +1,16 @@
 'use client';
 
-import { useMemo, useState, type CSSProperties } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { useMemo, type CSSProperties } from 'react';
 import { EngineProvider } from './engine';
 import { useStageReveal } from './hooks/useStageReveal';
 import { useParallax } from './hooks/useParallax';
 import { useStageLayout } from './layout';
 import Stage from './Stage';
-import { SLOT_REGISTRY, stageHasContent, visibleSlotLayers } from './slots';
+import { SLOT_REGISTRY, sheetLayerGroups, stageHasContent, visibleSlotLayers } from './slots';
+import { SlotFlowProviders } from './slots/FlowProviders';
+import SheetHost from './SheetHost';
 import { fontVar } from '@/lib/fonts/curated';
 import type { StageDef, SlotProps, Breakpoint, EditorHandle } from './types';
-import slotStyles from './slots/slots.module.css';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL?.replace('/api', '') ?? '';
 
@@ -54,19 +54,12 @@ export default function DataTemplate({
   // costing the guest a full screen of empty scrolling — same rule Template 7 applies.
   const visible = resolved.filter((r) => stageHasContent(r.layers, slotProps));
 
-  // Envelope → sheet coupling (Layer.presentation): a `presentation:'sheet'` slot has no inline
-  // visual (visibleSlotLayers excludes it) — instead it mounts here as a drag-to-dismiss bottom
-  // sheet, opened by tapping any `scrollVideo` layer on the page once it reports itself fully
-  // open. Generalizes Template5.tsx's own envelope-tap-to-RSVP gesture to any authored template.
-  const [sheetOpen, setSheetOpen] = useState(false);
-  const sheetLayer = useMemo(() => {
-    for (const r of visible) {
-      const l = r.layers.find((x) => x.kind === 'slot' && x.presentation === 'sheet' && !x.hidden);
-      if (l) return l;
-    }
-    return undefined;
-  }, [visible]);
-  const SheetSlot = sheetLayer?.slot ? SLOT_REGISTRY[sheetLayer.slot] : undefined;
+  // `presentation:'sheet'` slots have no inline visual (visibleSlotLayers excludes them) — they
+  // mount in the shared bottom sheet instead, keyed by `Layer.sheetId`. A `scrollVideo` layer
+  // opens the sheet naming the same id (Layer.tsx), which is Template5.tsx's own
+  // envelope-tap-to-RSVP gesture generalized to any authored template — and now to any number of
+  // named sheets, each with its own steps, rather than the single unnamed one this used to find.
+  const sheetGroups = useMemo(() => sheetLayerGroups(visible, slotProps), [visible, slotProps]);
 
   // The Adjust panel's "Theme" section (Phase 5) — `${keyPrefix}.layout.slotTheme.*`. Only set the
   // custom property when an override exists, so an untouched authored template keeps
@@ -113,6 +106,7 @@ export default function DataTemplate({
   const pageBgPosition = customConfig?.['template.bgPosition'] || 'center';
 
   return (
+    <SlotFlowProviders>
     <EngineProvider value={{ assetRoot, assetSizes, slotRegistry: SLOT_REGISTRY }}>
       {pageBg && (
         <div
@@ -146,38 +140,20 @@ export default function DataTemplate({
             // this exact prop; a stage with its own bg image still draws that image on top,
             // since only the *fill* is suppressed, not a real background.
             transparent={Boolean(pageBg)}
-            onScrollVideoOpen={() => setSheetOpen(true)}
           />
         ))}
       </div>
 
-      {SheetSlot && (
-        <AnimatePresence>
-          {sheetOpen && (
-            <motion.div
-              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-              className={slotStyles.sheetOverlay}
-              onClick={() => setSheetOpen(false)}
-            >
-              <motion.div
-                initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
-                transition={{ type: 'spring', stiffness: 300, damping: 35 }}
-                drag="y"
-                dragConstraints={{ top: 0, bottom: 0 }}
-                dragElastic={{ top: 0, bottom: 0.4 }}
-                onDragEnd={(_, info) => { if (info.offset.y > 80 || info.velocity.y > 300) setSheetOpen(false); }}
-                onClick={(e) => e.stopPropagation()}
-                className={slotStyles.sheetCard}
-                style={themeStyle}
-              >
-                <div className={slotStyles.sheetDragHandle} />
-                <button className={slotStyles.sheetClose} onClick={() => setSheetOpen(false)} aria-label="Close">×</button>
-                <SheetSlot {...slotProps} />
-              </motion.div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      )}
+      <SheetHost
+        groups={sheetGroups}
+        slotProps={slotProps}
+        // The sheet mounts outside `<div ref={rootRef} style={themeStyle}>`, so it has to
+        // re-apply the theme tokens itself (T7 mounts inside its themed wrapper and doesn't).
+        themeStyle={themeStyle}
+        editor={editor}
+      />
+
     </EngineProvider>
+    </SlotFlowProviders>
   );
 }

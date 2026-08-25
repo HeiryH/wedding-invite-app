@@ -293,13 +293,45 @@ export default function AdjustPanel({
   // positioned rectangle — so it gets its own control set in place of X/Y/Width/etc, and no
   // Animation tab (the enter/exit vocabulary doesn't apply to a scroll-scrubbed effect).
   const isScrollVideo = current?.kind === 'scrollVideo';
+  // A slot holds real content (a form, a list) that reflows to fill its box — unlike art, it
+  // can't be safely cropped. `s` (Scale) is a paint-only `transform: scale()`, so it grows the
+  // rendered box without growing what the stage reserves for it: past a certain Scale/Height
+  // combination the box's own edges push outside the stage and `.stage{overflow:hidden}` clips
+  // it, silently, on shorter screens than whatever the editor happened to preview on. Width/X
+  // stay unwarned here — a slot only ever overflows visibly on the axis the guest scrolls,
+  // vertical, since `.slot` itself is centered and constrained to the stage's own width.
+  const isSlot = current?.kind === 'slot';
+  // A sheet-presented slot has no box on the stage — it renders in the bottom sheet, which sets
+  // its own size and position (see _shared/SheetHost.tsx). Its x/y/w/h survive as inert leftovers,
+  // so every geometry control below would be a lie, and the overflow warning would fire off
+  // numbers that no longer describe anything.
+  const isSheet = current?.presentation === 'sheet';
+  const slotVOverflow = isSlot && !isSheet && current && !current.chain
+    ? (() => {
+        const effH = current.h * current.s;
+        const top = current.y - effH / 2;
+        const bottom = current.y + effH / 2;
+        if (top < 0) return `overflows the top of the stage by ${Math.abs(top).toFixed(1)}% on every screen — shorter phones will clip it`;
+        if (bottom > 100) return `overflows the bottom of the stage by ${(bottom - 100).toFixed(1)}% on every screen — shorter phones will clip it`;
+        return null;
+      })()
+    : null;
+  // Every slot's rendered text (titles, prompts, form fields, list items, button labels) reads
+  // `--slot-text-scale` (see slots.module.css), so the Text Size control is offered for any slot
+  // layer — except the couple with none: nav/music render icon-only fixed chrome.
+  const NO_TEXT_SLOTS = new Set(['nav', 'music']);
+  const hasSlotText = isSlot && Boolean(current?.slot) && !NO_TEXT_SLOTS.has(current!.slot!);
   const bgSelected = selectedLayer === BG_ID;
   // Only text layers and anchors explicitly flagged `styleable` (Phase 3) expose the Style tab —
   // most anchors wrap a live component/name with no free-form text styling to override.
   const canStyle = current?.kind === 'text' || Boolean(current?.styleable);
 
-  const nameOf = (l: Layer) =>
-    l.label ?? (l.kind === 'slot' ? `▤ ${l.slot}` : l.id);
+  const nameOf = (l: Layer) => {
+    const n = l.label ?? (l.kind === 'slot' ? `▤ ${l.slot}` : l.id);
+    // Marks a layer that renders in a pop-up rather than on the stage, so the list explains
+    // itself even for authored templates that never set a label.
+    return l.presentation === 'sheet' ? `${n} ⇱` : n;
+  };
 
   // ── a single layer row (optionally a sub-layer) ────────────────────────────
   const renderRow = (l: Layer, indent: boolean) => {
@@ -582,7 +614,7 @@ export default function AdjustPanel({
               </div>
             )}
 
-            {isScrollVideo || detailTab === 'layout' ? (
+            {isScrollVideo || isSheet || detailTab === 'layout' ? (
               <>
                 <div className={styles.control} style={{ gridTemplateColumns: '54px 1fr' }}>
                   <span>Name</span>
@@ -641,12 +673,22 @@ export default function AdjustPanel({
                   </>
                 ) : (
                   <>
+                    {isSheet && (
+                      <p style={{ fontSize: 12, lineHeight: 1.5, color: 'var(--text-muted)', margin: '4px 0 10px' }}>
+                        Shown in a pop-up, which sets its own size and position. To change the order
+                        steps appear in, drag this row in the list above.
+                      </p>
+                    )}
                     {/* Anchors nudge an existing element by an offset — X/Y here is a translate, not
                         an absolute position. 50 = no offset. */}
-                    <Slider label={isAnchor ? 'Nudge X' : 'X'} value={current.x} min={-20} max={120} step={0.5} onChange={set('x')} />
-                    <Slider label={isAnchor ? 'Nudge Y' : 'Y'} value={current.y} min={-20} max={120} step={0.5} onChange={set('y')} />
+                    {!isSheet && (
+                      <>
+                        <Slider label={isAnchor ? 'Nudge X' : 'X'} value={current.x} min={-20} max={120} step={0.5} onChange={set('x')} />
+                        <Slider label={isAnchor ? 'Nudge Y' : 'Y'} value={current.y} min={-20} max={120} step={0.5} onChange={set('y')} />
+                      </>
+                    )}
 
-                    {!isAnchor && (
+                    {!isAnchor && !isSheet && (
                       <>
                         <Slider label="Width" value={current.w} min={3} max={200} step={0.5} onChange={set('w')} />
                         {!current.chain && (
@@ -663,10 +705,40 @@ export default function AdjustPanel({
                       </>
                     )}
 
-                    <Slider label="Scale" value={current.s} min={0.2} max={3} step={0.02} onChange={set('s')} />
-                    <Slider label="Opacity" value={current.opacity} min={0} max={1} step={0.05} onChange={set('opacity')} />
+                    {/* Scale is a paint-only transform — fine for art (nothing inside an image
+                        needs to reflow), wrong for anything with real content, which is why it's
+                        no longer offered for text/slot/shape layers. Those size themselves via
+                        Width/Height (which reflows correctly) and, for slot layers with form
+                        text, the Text Size control below (a real font-size, not a paint scale).
+                        Anchors are the one non-image exception: they wrap an already-rendered DOM
+                        element by nudge/transform (see types.ts), have no box of their own to
+                        offer Width/Height on, so Scale is their only sizing control. */}
+                    {(isImage || isAnchor) && !isSheet && (
+                      <Slider label="Scale" value={current.s} min={0.2} max={3} step={0.02} onChange={set('s')} />
+                    )}
+                    {slotVOverflow && (
+                      <div style={{
+                        fontSize: 11.5, lineHeight: 1.4, color: 'var(--warning)',
+                        background: 'var(--warning-subtle)', border: '1px solid var(--warning-border)',
+                        borderRadius: 8, padding: '6px 8px', margin: '-2px 0 8px',
+                      }}>
+                        ⚠ This panel {slotVOverflow}. Lower Height (or move Y toward centre) so
+                        content can&apos;t be cut off.
+                      </div>
+                    )}
+                    {hasSlotText && (
+                      <Slider
+                        label="Text Size"
+                        value={current.textScale ?? 1}
+                        min={0.7} max={1.8} step={0.05}
+                        onChange={set('textScale')}
+                      />
+                    )}
+                    {!isSheet && (
+                      <Slider label="Opacity" value={current.opacity} min={0} max={1} step={0.05} onChange={set('opacity')} />
+                    )}
 
-                    {!isAnchor && (
+                    {!isAnchor && !isSheet && (
                       <Slider label="Depth" value={current.depth ?? current.z / 10} min={0} max={3} step={0.1} onChange={set('depth')} />
                     )}
                   </>
@@ -687,7 +759,7 @@ export default function AdjustPanel({
                     ))}
                   </select>
                 </div>
-                <Slider label="Size" value={current.fontSize ?? 4} min={1.5} max={12} step={0.25} onChange={set('fontSize')} />
+                <Slider label="Text Size" value={current.fontSize ?? 4} min={1.5} max={12} step={0.25} onChange={set('fontSize')} />
                 <div className={styles.control} style={{ gridTemplateColumns: '54px 1fr' }}>
                   <span>Weight</span>
                   <select
@@ -855,7 +927,7 @@ export default function AdjustPanel({
                 )}
               </>
             ) : (
-              <p style={{ fontSize: 12, color: '#8A7A63', marginTop: 8 }}>
+              <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 8 }}>
                 Animation isn&rsquo;t available for this element.
               </p>
             )}
@@ -865,7 +937,7 @@ export default function AdjustPanel({
             </button>
           </>
         ) : (
-          <p style={{ fontSize: 12, color: '#8A7A63', marginTop: 8 }}>
+          <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 8 }}>
             Pick a layer above, or add one with + Text / + Shape / + Image.
           </p>
         )}

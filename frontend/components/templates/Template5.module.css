@@ -74,6 +74,31 @@
   }
 }
 
+@keyframes t5-hint-bounce {
+
+  0%,
+  56%,
+  100% {
+    transform: translateY(0);
+  }
+
+  64% {
+    transform: translateY(-7px);
+  }
+
+  72% {
+    transform: translateY(0);
+  }
+
+  80% {
+    transform: translateY(-3px);
+  }
+
+  88% {
+    transform: translateY(0);
+  }
+}
+
 @keyframes t5-rise {
   from {
     opacity: 0;
@@ -237,6 +262,8 @@
 }
 
 .invitationContent {
+  width: 100%;
+  max-width: 40rem;
   min-height: 550px;
   display: flex;
   flex-direction: column;
@@ -354,6 +381,8 @@
 
 /* ── Invitation layout: minimal ──────────────────────────────────── */
 .invitationContentMinimal {
+  width: 100%;
+  max-width: 40rem;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -416,6 +445,8 @@
 
 /* ── Invitation layout: ornate ───────────────────────────────────── */
 .invitationContentOrnate {
+  width: 100%;
+  max-width: 40rem;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -710,7 +741,7 @@
 /* Glassmorphism aturcara card */
 .aturcaraCard {
   width: 100%;
-  max-width: 26rem;
+  max-width: 40rem;
   border-radius: 24px 24px 200px 200px;
   padding: 26px 22px;
   background: var(--t5-glass);
@@ -792,7 +823,7 @@
 
 .sectionContainer {
   width: 100%;
-  max-width: 32rem;
+  max-width: 40rem;
 }
 
 .sectionHeading {
@@ -1978,9 +2009,11 @@
   cursor: pointer;
   border-color: rgba(217, 123, 134, 0.35);
   transition: box-shadow 0.25s ease, border-color 0.25s ease, transform 0.2s ease;
+  animation: t5-hint-bounce 2.6s ease-in-out infinite;
 }
 
 .dateBlockClickable:hover {
+  animation-play-state: paused;
   transform: translateY(-2px);
   box-shadow:
     0 0 0 1px rgba(217, 123, 134, 0.3),
@@ -2113,6 +2146,7 @@
   ); */
   border-color: rgba(200, 160, 114, 0.35);
   transition: box-shadow 0.25s ease, transform 0.2s ease;
+  animation: t5-hint-bounce 2.6s ease-in-out 1.3s infinite;
 }
 
 .locationBlockClickable::before {
@@ -2130,6 +2164,7 @@
 }
 
 .locationBlockClickable:hover {
+  animation-play-state: paused;
   transform: translateY(-2px);
   box-shadow:
     0 0 0 1px rgba(200, 160, 114, 0.3),
@@ -2159,4 +2194,11 @@
   height: 240px;
   border: none;
   display: block;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dateBlockClickable,
+  .locationBlockClickable {
+    animation: none;
+  }
 }

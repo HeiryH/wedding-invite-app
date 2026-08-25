@@ -11,12 +11,6 @@ import styles from './slots.module.css';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL?.replace('/api', '') ?? '';
 
-const STEPS = [
-  { title: 'Snap a Photo', desc: 'Take as many photos as you like.' },
-  { title: 'Leave a Memory', desc: 'Stick it in our guestbook with a sweet note.' },
-  { title: 'Cherish Forever', desc: 'Your memory, our keepsake.' },
-];
-
 const stackVariants = {
   enter: (dir: number) => ({ x: dir > 0 ? 260 : -260, rotate: dir > 0 ? 10 : -10, opacity: 0, scale: 0.85 }),
   center: { x: 0, rotate: 0, opacity: 1, scale: 1 },
@@ -29,7 +23,7 @@ const stackVariants = {
  * versions) onto the shared slot so any authored template gets the same interaction, not just a
  * static grid.
  */
-export default function PhotoBoothSlot({ photos, onUploadPhoto, t, editing }: SlotProps) {
+function PhotoBoothBody({ photos, onUploadPhoto, t, editing, upload }: SlotProps & { upload: boolean }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [layout, setLayout] = useState<'stack' | 'grid'>(photos.length > 1 ? 'stack' : 'grid');
   const [index, setIndex] = useState(0);
@@ -39,10 +33,7 @@ export default function PhotoBoothSlot({ photos, onUploadPhoto, t, editing }: Sl
   const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !onUploadPhoto || editing) return;
-    const fd = new FormData();
-    fd.append('file', file);
-    fd.append('guestName', 'Guest');
-    await onUploadPhoto(fd);
+    await uploadPhotoFile(onUploadPhoto, file);
     e.target.value = '';
   };
 
@@ -52,17 +43,11 @@ export default function PhotoBoothSlot({ photos, onUploadPhoto, t, editing }: Sl
   return (
     <div className={styles.panel}>
       <h3 className={styles.panelTitle}>{t('photobooth.title', 'Photo Booth')}</h3>
+      <p className={styles.sectionLead}>
+        {t('photobooth.prompt', 'Snap a photo, leave it in our gallery, and cherish it with us forever.')}
+      </p>
 
-      <div className={styles.steps}>
-        {STEPS.map((s) => (
-          <div key={s.title} className={styles.step}>
-            <div className={styles.stepTitle}>{s.title}</div>
-            <p className={styles.stepDesc}>{s.desc}</p>
-          </div>
-        ))}
-      </div>
-
-      {onUploadPhoto && (
+      {upload && onUploadPhoto && (
         <div className={styles.uploadRow}>
           <input ref={inputRef} type="file" accept="image/*" className={styles.hiddenInput} onChange={handleFile} />
           <button
@@ -70,7 +55,7 @@ export default function PhotoBoothSlot({ photos, onUploadPhoto, t, editing }: Sl
             className={`${styles.plaque} ${styles.plaqueBtn}`}
             onClick={() => inputRef.current?.click()}
           >
-            Upload a Photo
+            {t('photobooth.upload_label', 'Upload a Photo')}
           </button>
         </div>
       )}
@@ -206,4 +191,38 @@ export default function PhotoBoothSlot({ photos, onUploadPhoto, t, editing }: Sl
       </AnimatePresence>
     </div>
   );
+}
+
+/**
+ * The one place that knows what an upload payload looks like.
+ *
+ * Every host handler reads plain-object properties — `app/[eventType]/[slug]/page.tsx` does
+ * `photoService.upload(eventId, data.guestName, data.caption, data.file)` — so the `FormData` this
+ * used to post arrived as three `undefined`s and silently uploaded nothing. `Template5.tsx` had it
+ * right all along; this matches it, and is shared so the wish sheet's photo step can't drift back.
+ */
+export async function uploadPhotoFile(
+  onUploadPhoto: NonNullable<SlotProps['onUploadPhoto']>,
+  file: File,
+  meta?: { guestName?: string; caption?: string },
+): Promise<void> {
+  await onUploadPhoto({
+    guestName: meta?.guestName?.trim() || 'Guest',
+    caption: meta?.caption?.trim() || '',
+    file,
+  });
+}
+
+/** Gallery + upload button — unchanged behaviour for authored templates already using this slot. */
+export default function PhotoBoothSlot(p: SlotProps) {
+  return <PhotoBoothBody {...p} upload />;
+}
+
+/**
+ * Gallery only. Template 7 uses this because its wish sheet's optional photo step is the single
+ * upload path there — two entry points to the same album would be redundant, and the booth stage
+ * reads as something to browse, not a form.
+ */
+export function PhotoGallerySlot(p: SlotProps) {
+  return <PhotoBoothBody {...p} upload={false} />;
 }

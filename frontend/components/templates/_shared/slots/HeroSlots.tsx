@@ -182,6 +182,30 @@ export function TimerSlot({ wedding }: SlotProps) {
   );
 }
 
+/**
+ * The theme badge and the date, split out of `CountdownSlot` as their own small standalone slots
+ * for the authoring catalog (an authored template can drop just one in, rather than the whole
+ * bundled hero). Theme label reads a schema field (`invite.theme_label`), not wedding data; date
+ * stays its own component because "show the Hijri date" is a conditional a plain text layer can't
+ * express.
+ */
+export function HeroThemeSlot({ t }: SlotProps) {
+  return <p className={styles.themeLabel}>{t('invite.theme_label', 'Roman Garden')}</p>;
+}
+
+export function HeroDateSlot({ wedding, t }: SlotProps) {
+  const date = new Date(wedding.weddingDate);
+  const showHijri = t('general.showIslamicDate', 'false') === 'true';
+  return (
+    <div className={styles.heroDate}>
+      <p className={styles.weddingDate}>
+        {date.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}
+      </p>
+      {showHijri && <p className={styles.hijriDate}>{toHijriString(date)}</p>}
+    </div>
+  );
+}
+
 export function ScrollCueSlot() {
   const next = () => {
     const stages = Array.from(document.querySelectorAll('[data-stage]'));

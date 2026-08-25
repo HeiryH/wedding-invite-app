@@ -77,14 +77,16 @@ export const T7_STAGES: Record<string, StageDef> = {
       L({ id: 'potL',    kind: 'img',  src: 'ceremony/left-plant-pot.webp',  x: 10, y: 76, w: 30,  z: 3, order: 2, depth: 1.4 }),
       L({ id: 'potR',    kind: 'img',  src: 'ceremony/right-plant-pot.webp', x: 90, y: 77, w: 25,  z: 3, order: 3, depth: 1.4 }),
       L({ id: 'bench',   kind: 'img',  src: 'ceremony/bench.webp',           x: 50, y: 86, w: 82,  z: 4, order: 4, depth: 0.9 }),
-      L({ id: 'body',    kind: 'slot', slot: 'walimahBody',                  x: 50, y: 44, w: 72, h: 52, z: 5, order: 1, chain: false, depth: 0.2 }),
+      L({ id: 'title',   kind: 'slot', slot: 'walimahTitle',                 x: 50, y: 20, w: 60, h: 8,  z: 6, order: 0, chain: false, depth: 0.3, label: 'Ceremony Title' }),
+      L({ id: 'body',    kind: 'slot', slot: 'walimahBody',                  x: 50, y: 52, w: 72, h: 42, z: 5, order: 1, chain: false, depth: 0.2, label: 'Ceremony Body' }),
     ],
     desktop: {
       pillars: { y: 49, w: 101, hidden: false },
       potL:    { x: 18, y: 72, w: 18 },
       potR:    { x: 83, y: 73, w: 14 },
       bench:   { y: 80, w: 44 },
-      body:    { y: 42, w: 36, h: 44 },
+      title:   { y: 18, w: 26, h: 8 },
+      body:    { y: 46, w: 36, h: 36 },
     },
   },
 
@@ -102,14 +104,16 @@ export const T7_STAGES: Record<string, StageDef> = {
       L({ id: 'potL',    kind: 'img',  src: 'ceremony/left-plant-pot.webp',  x: 10, y: 76, w: 30,  z: 3, order: 2, depth: 1.4 }),
       L({ id: 'potR',    kind: 'img',  src: 'ceremony/right-plant-pot.webp', x: 90, y: 77, w: 25,  z: 3, order: 3, depth: 1.4 }),
       L({ id: 'bench',   kind: 'img',  src: 'ceremony/bench.webp',           x: 50, y: 86, w: 82,  z: 4, order: 4, depth: 0.9 }),
-      L({ id: 'couple',  kind: 'slot', slot: 'coupleNames',                  x: 50, y: 44, w: 74, h: 52, z: 5, order: 1, chain: false, depth: 0.2 }),
+      L({ id: 'title',   kind: 'slot', slot: 'coupleTitle',                  x: 50, y: 20, w: 62, h: 8,  z: 6, order: 0, chain: false, depth: 0.3, label: 'Couple Title' }),
+      L({ id: 'couple',  kind: 'slot', slot: 'coupleNames',                  x: 50, y: 52, w: 74, h: 44, z: 5, order: 1, chain: false, depth: 0.2, label: 'Couple Names' }),
     ],
     desktop: {
       pillars: { y: 49, w: 101, hidden: false },
       potL:    { x: 18, y: 72, w: 18 },
       potR:    { x: 83, y: 73, w: 14 },
       bench:   { y: 80, w: 44 },
-      couple:  { y: 42, w: 38, h: 44 },
+      title:   { y: 18, w: 28, h: 8 },
+      couple:  { y: 46, w: 38, h: 36 },
     },
   },
 
@@ -127,14 +131,16 @@ export const T7_STAGES: Record<string, StageDef> = {
       L({ id: 'potL',    kind: 'img',  src: 'ceremony/left-plant-pot.webp',  x: 10, y: 76, w: 30,  z: 3, order: 2, depth: 1.4 }),
       L({ id: 'potR',    kind: 'img',  src: 'ceremony/right-plant-pot.webp', x: 90, y: 77, w: 25,  z: 3, order: 3, depth: 1.4 }),
       L({ id: 'bench',   kind: 'img',  src: 'ceremony/bench.webp',           x: 50, y: 86, w: 82,  z: 4, order: 4, depth: 0.9 }),
-      L({ id: 'details', kind: 'slot', slot: 'ceremonyDetails',              x: 50, y: 44, w: 76, h: 54, z: 5, order: 1, chain: false, depth: 0.2 }),
+      L({ id: 'title',   kind: 'slot', slot: 'detailsTitle',                 x: 50, y: 18, w: 64, h: 8,  z: 6, order: 0, chain: false, depth: 0.3, label: 'Details Title' }),
+      L({ id: 'details', kind: 'slot', slot: 'ceremonyDetails',              x: 50, y: 52, w: 76, h: 46, z: 5, order: 1, chain: false, depth: 0.2, label: 'Date, Venue & Buttons' }),
     ],
     desktop: {
       pillars: { y: 49, w: 101, hidden: false },
       potL:    { x: 18, y: 72, w: 18 },
       potR:    { x: 83, y: 73, w: 14 },
       bench:   { y: 80, w: 44 },
-      details: { y: 42, w: 40, h: 46 },
+      title:   { y: 16, w: 30, h: 8 },
+      details: { y: 46, w: 40, h: 38 },
     },
   },
 
@@ -149,13 +155,15 @@ export const T7_STAGES: Record<string, StageDef> = {
       L({ id: 'pillars',   kind: 'img',  src: 'ceremony/pillars.webp',         x: 50, y: 46, w: 145, z: 2, order: 0, depth: 0.4, hidden: true }),
       L({ id: 'potL',      kind: 'img',  src: 'ceremony/left-plant-pot.webp',  x: 10, y: 76, w: 30,  z: 3, order: 2, depth: 1.4 }),
       L({ id: 'potR',      kind: 'img',  src: 'ceremony/right-plant-pot.webp', x: 90, y: 77, w: 25,  z: 3, order: 3, depth: 1.4 }),
-      L({ id: 'programme', kind: 'slot', slot: 'itinerary',                    x: 50, y: 46, w: 78, h: 62, z: 5, order: 1, chain: false, depth: 0.2 }),
+      L({ id: 'title',     kind: 'slot', slot: 'itineraryTitle',                x: 50, y: 16, w: 64, h: 8,  z: 6, order: 0, chain: false, depth: 0.3, label: 'Schedule Title' }),
+      L({ id: 'programme', kind: 'slot', slot: 'itineraryList',                 x: 50, y: 54, w: 78, h: 54, z: 5, order: 1, chain: false, depth: 0.2, label: 'Schedule List' }),
     ],
     desktop: {
       pillars:   { y: 49, w: 101, hidden: false },
       potL:      { x: 18, y: 72, w: 18 },
       potR:      { x: 83, y: 73, w: 14 },
-      programme: { y: 46, w: 44, h: 56 },
+      title:     { y: 14, w: 30, h: 8 },
+      programme: { y: 50, w: 44, h: 48 },
     },
   },
 
@@ -194,15 +202,33 @@ export const T7_STAGES: Record<string, StageDef> = {
     bg: 'rsvp/background.webp',
     bgFit: 'cover',
     canvas: { mobile: { w: 390, h: 844 } },
+    // Split like `wishes` below (title / prompt / form) plus a fourth layer, `seating`, only
+    // reachable when the wedding's tier/feature includes it (SLOT_AVAILABLE.rsvpSeating gates on
+    // `seatingEnabled`, same flag every other seating-aware control already reads). `form` and
+    // `seating` share one guest flow (see `_shared/slots/rsvpFlow.tsx`) and by default occupy the
+    // same box, since only one is ever on screen for a real guest at a time — they're independently
+    // repositionable anyway, same as any other layer. `form` keeps its pre-split layer id so a
+    // wedding's already-saved override (a moved/resized step-1 box) keeps applying unchanged.
     layers: [
-      L({ id: 'frame', kind: 'img',  src: 'rsvp/frame.webp',      x: 50, y: 44, w: 148, z: 2, order: 0, depth: 0.3 }),
-      L({ id: 'pots',  kind: 'img',  src: 'rsvp/plant-pots.webp', x: 50, y: 90, w: 140, z: 3, order: 2, depth: 1.2 }),
-      L({ id: 'form',  kind: 'slot', slot: 'rsvpForm',            x: 50, y: 44, w: 74, h: 52, z: 5, order: 1, chain: false, depth: 0.15 }),
+      L({ id: 'frame',   kind: 'img',  src: 'rsvp/frame.webp',      x: 50, y: 44, w: 148, z: 2, order: 0, depth: 0.3 }),
+      L({ id: 'pots',    kind: 'img',  src: 'rsvp/plant-pots.webp', x: 50, y: 90, w: 140, z: 3, order: 2, depth: 1.2 }),
+      L({ id: 'title',   kind: 'slot', slot: 'rsvpTitle',           x: 50, y: 22, w: 70, h: 8,  z: 6, order: 0, chain: false, depth: 0.3, label: 'RSVP Title' }),
+      L({ id: 'prompt',  kind: 'slot', slot: 'rsvpPrompt',          x: 50, y: 31, w: 78, h: 6,  z: 5, order: 0, chain: false, depth: 0.3, label: 'RSVP Prompt' }),
+      L({ id: 'form',    kind: 'slot', slot: 'rsvpForm',    presentation: 'sheet', sheetId: 'rsvp', x: 50, y: 54, w: 74, h: 44, z: 5, order: 1, chain: false, depth: 0.15, label: 'RSVP Form (step 1) · in pop-up' }),
+      L({ id: 'seating', kind: 'slot', slot: 'rsvpSeating', presentation: 'sheet', sheetId: 'rsvp', x: 50, y: 54, w: 74, h: 44, z: 4, order: 1, chain: false, depth: 0.15, label: 'Seating (step 2) · in pop-up' }),
+      // No idle animation: this is a primary action in a quiet composition, and a button that
+      // never stops moving reads as noise (it also makes the control a moving tap target). The
+      // wishes trigger floats because it's decorative art the guest has to notice; this doesn't.
+      L({ id: 'rsvpOpen', kind: 'slot', slot: 'sheetTrigger', sheetId: 'rsvp', x: 50, y: 54, w: 46, h: 8, z: 6, order: 1, chain: false, depth: 0.15, label: 'RSVP Button' }),
     ],
     desktop: {
-      frame: { y: 40, w: 60 },
-      pots:  { y: 86, w: 97 },
-      form:  { y: 40, w: 42, h: 46 },
+      frame:   { y: 40, w: 60 },
+      pots:    { y: 86, w: 97 },
+      title:   { y: 20, w: 30, h: 8 },
+      prompt:  { y: 28, w: 34, h: 6 },
+      form:    { y: 48, w: 42, h: 38 },
+      seating: { y: 48, w: 42, h: 38 },
+      rsvpOpen: { y: 50, w: 22, h: 7 },
     },
   },
 
@@ -219,8 +245,15 @@ export const T7_STAGES: Record<string, StageDef> = {
       L({ id: 'prompt',    kind: 'slot', slot: 'wishPrompt',                 x: 50, y: 27, w: 80, h: 7, z: 5, order: 2, chain: false, depth: 0.3 }),
       L({ id: 'card',      kind: 'img',  src: 'wishes/msg.webp',             x: 50, y: 50, w: 108, z: 3, order: 2, depth: 0.3 }),
       L({ id: 'leaf',      kind: 'img',  src: 'wishes/leaf-deco.webp',       x: 50, y: 70, w: 96,  z: 4, order: 4, depth: 1 }),
-      L({ id: 'form',      kind: 'slot', slot: 'wishForm',                   x: 50, y: 52, w: 78, h: 26, z: 5, order: 3, chain: false, depth: 0.2 }),
-      L({ id: 'list',      kind: 'slot', slot: 'wishList',                   x: 50, y: 86, w: 88, h: 22, z: 5, order: 5, chain: false, depth: 0 }),
+      L({ id: 'form',      kind: 'slot', slot: 'wishForm',  presentation: 'sheet', sheetId: 'wish', x: 50, y: 52, w: 78, h: 26, z: 5, order: 3, chain: false, depth: 0.2, label: 'Wish Form (step 1) · in pop-up' }),
+      L({ id: 'wishPhoto', kind: 'slot', slot: 'wishPhoto', presentation: 'sheet', sheetId: 'wish', x: 50, y: 52, w: 78, h: 30, z: 4, order: 4, chain: false, depth: 0.2, label: 'Add a Photo (step 2) · in pop-up' }),
+      // The list takes over the space the form used to reserve, so it sits *on* the `card`
+      // parchment rather than below it — that plate was only ever there to back the form.
+      L({ id: 'list',      kind: 'slot', slot: 'wishList',                   x: 50, y: 56, w: 88, h: 44, z: 5, order: 5, chain: false, depth: 0 }),
+      // Floats via `animIdle: 'wave'` (reveal.css) — a continuous, reduced-motion-aware bob, not a
+      // bespoke keyframe. Artwork is dropped in later via `sheet.wish.image` or this layer's
+      // `src`; until then SheetTriggerSlot renders a labelled button in the same box.
+      L({ id: 'wishOpen',  kind: 'slot', slot: 'sheetTrigger', sheetId: 'wish', x: 50, y: 88, w: 34, h: 12, z: 7, order: 4, chain: false, depth: 0.2, label: 'Write a Wish Button', animIdle: 'wave', animIdleSpeed: 0.75, animIdleIntensity: 1 }),
     ],
     desktop: {
       title:     { y: 12, w: 40 },
@@ -230,7 +263,9 @@ export const T7_STAGES: Record<string, StageDef> = {
       card:      { y: 47, w: 54 },
       leaf:      { y: 66, w: 54 },
       form:      { y: 46, w: 40, h: 26 },
-      list:      { y: 84, w: 54, h: 22 },
+      wishPhoto: { y: 46, w: 40, h: 30 },
+      list:      { y: 54, w: 54, h: 40 },
+      wishOpen:  { y: 86, w: 16, h: 10 },
     },
   },
 
@@ -248,7 +283,8 @@ export const T7_STAGES: Record<string, StageDef> = {
       L({ id: 'square',    kind: 'img',  src: 'photobooth/square-frame.webp',    x: 90, y: 66, w: 22,  z: 4, order: 5, depth: 1.1 }),
       L({ id: 'iconMsg',   kind: 'img',  src: 'photobooth/icon-msg.webp',        x: 50, y: 80, w: 62,  z: 4, order: 6, depth: 0.8 }),
       L({ id: 'deco',      kind: 'img',  src: 'photobooth/bottom-deco.webp',     x: 50, y: 93, w: 28,  z: 3, order: 7, depth: 0.8 }),
-      L({ id: 'booth',     kind: 'slot', slot: 'photoBooth',                     x: 50, y: 46, w: 76, h: 46, z: 5, order: 2, chain: false, depth: 0.15 }),
+      // Gallery only — the wish sheet's optional photo step is T7's single upload path.
+      L({ id: 'booth',     kind: 'slot', slot: 'photoGallery',                   x: 50, y: 46, w: 76, h: 46, z: 5, order: 2, chain: false, depth: 0.15 }),
     ],
     desktop: {
       partition: { y: 15, w: 18 },

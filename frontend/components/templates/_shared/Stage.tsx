@@ -34,13 +34,11 @@ interface Props {
   transparent?: boolean;
   /** Forwarded to every layer; only a `kind:'scrollVideo'` layer ever calls it (tapped while
    *  fully open) — see Layer.tsx / DataTemplate.tsx. */
-  onScrollVideoOpen?: () => void;
 }
 
 export default function Stage({
   def, layers, bgFit, bgPosition, bgScale, bgSrc, seen, slotProps, eager, editing,
   revealOverflow, revealFrameW, revealFrameH, selectedLayer, suppressId, transparent,
-  onScrollVideoOpen,
 }: Props) {
   const { assetRoot, assetSizes } = useEngine();
   const bgSize = def.bg ? assetSizes[def.bg] : undefined;
@@ -92,7 +90,6 @@ export default function Stage({
       eager={eager}
       selected={editing && selectedLayer === l.id}
       editing={editing}
-      onScrollVideoOpen={onScrollVideoOpen}
     />
   );
   // Flow mode splits layers into two populations rendered in separate containers (see
@@ -162,7 +159,6 @@ export default function Stage({
                 eager={eager}
                 selected={editing && selectedLayer === l.id}
                 editing={editing}
-                onScrollVideoOpen={onScrollVideoOpen}
               />
             ))}
           </div>

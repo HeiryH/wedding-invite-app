@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState, type CSSProperties, type Poin
 import type { Layer as LayerModel, SlotProps } from './types';
 import { IDLE_BASE_DUR } from './idle';
 import { useEngine } from './engine';
+import { DEFAULT_SHEET, useSheets } from './slots/sheets';
 import { fontVar } from '@/lib/fonts/curated';
 import CurvedText from './CurvedText';
 import ScrollVideoLayer from './effects/ScrollVideoLayer';
@@ -33,11 +34,6 @@ interface Props {
    *  height rather than clipping to a fixed 100svh. The reveal/idle/exit chain is unchanged
    *  (data-attribute driven, doesn't care which element it's nested under). */
   flow?: boolean;
-  /** Only meaningful for `kind:'scrollVideo'` — fires when the guest taps the effect while it's
-   *  reporting itself fully open (mirrors Template5.tsx's own envelope-tap-to-RSVP gesture,
-   *  generalized so `DataTemplate` can pair any `scrollVideo` layer with any sheet-presented
-   *  slot). See `Layer.presentation` (types.ts) and DataTemplate.tsx. */
-  onScrollVideoOpen?: () => void;
 }
 
 /** One postMessage per animation frame while dragging, mirroring the parent's own rAF-coalesced
@@ -59,8 +55,9 @@ interface DragState {
   moved: boolean;
 }
 
-export default function Layer({ layer, slotProps, eager, selected, editing, flow, onScrollVideoOpen }: Props) {
+export default function Layer({ layer, slotProps, eager, selected, editing, flow }: Props) {
   const { assetRoot, assetSizes, slotRegistry } = useEngine();
+  const sheets = useSheets();
   const boxRef = useRef<HTMLDivElement>(null);
   const [scrollVideoOpen, setScrollVideoOpen] = useState(false);
   const dragRef = useRef<DragState | null>(null);
@@ -216,12 +213,18 @@ export default function Layer({ layer, slotProps, eager, selected, editing, flow
         // whatever real content happens to occupy that same spot. `.navRail`/`.musicBubble`
         // re-assert `pointer-events: auto` for themselves.
         const chromeFixed = layer.slot === 'nav' || layer.slot === 'music';
+        // Read by slots.module.css's form text (.field/.choice/.wishTextarea) — a direct manual
+        // multiplier on top of whatever the slot's own box-relative cqi sizing already gives them.
+        const slotStyle: CSSProperties & Record<string, string | number> = {
+          '--slot-text-scale': layer.textScale ?? 1,
+          ...(chromeFixed ? { pointerEvents: 'none' } : null),
+        };
         return (
           <div
             className={flow ? styles.flowSlotContent : styles.slot}
-            style={chromeFixed ? { pointerEvents: 'none' } : undefined}
+            style={slotStyle}
           >
-            <Slot {...slotProps} />
+            <Slot {...slotProps} layer={layer} />
           </div>
         );
       }
@@ -275,11 +278,12 @@ export default function Layer({ layer, slotProps, eager, selected, editing, flow
         // `boxRef` (this layer's own positioned box) doubles as the ScrollTrigger measurement
         // element — it's already the on-screen rect this layer occupies, so no extra wrapper is
         // needed the way Template5.tsx's bespoke envelopeWrapperRef was. Tapping while fully open
-        // fires `onScrollVideoOpen` — DataTemplate wires that to open a sheet-presented slot
-        // elsewhere on the page (mirrors Template5.tsx's own envelope-tap-to-RSVP gesture).
+        // opens the sheet this layer names (`Layer.sheetId`), mirroring Template5.tsx's own
+        // envelope-tap-to-RSVP gesture. This is the whole mp4-trigger story: to swap a button for
+        // an animated envelope, change the trigger layer's `kind` and keep its `sheetId`.
         return (
           <div
-            onClick={() => { if (scrollVideoOpen) onScrollVideoOpen?.(); }}
+            onClick={() => { if (scrollVideoOpen) sheets.open(layer.sheetId || DEFAULT_SHEET); }}
             role={scrollVideoOpen ? 'button' : undefined}
             style={{ width: '100%', height: '100%', cursor: scrollVideoOpen ? 'pointer' : undefined }}
           >

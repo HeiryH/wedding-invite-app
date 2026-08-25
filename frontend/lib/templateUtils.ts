@@ -103,17 +103,36 @@ export function resolveSectionOrder(
   hasItinerary: boolean,
   hasPhotobooth: boolean,
 ): SectionCode[] {
-  const base: SectionCode[] = raw
-    ? (raw.split(',').map((s) => s.trim()) as SectionCode[])
-    : [
-        'welcome',
-        ...(hasWalimah ? ['walimah' as SectionCode] : []),
-        'rsvp',
-        ...(hasItinerary ? ['itinerary' as SectionCode] : []),
-        'wishes',
-        ...(hasPhotobooth ? ['photobooth' as SectionCode] : []),
-      ];
-  return base.filter((code) => {
+  const canonical: SectionCode[] = [
+    'welcome',
+    ...(hasWalimah ? ['walimah' as SectionCode] : []),
+    'rsvp',
+    ...(hasItinerary ? ['itinerary' as SectionCode] : []),
+    'wishes',
+    ...(hasPhotobooth ? ['photobooth' as SectionCode] : []),
+  ];
+  if (!raw) return canonical;
+
+  const stored = raw.split(',').map((s) => s.trim()) as SectionCode[];
+  // A gated section (walimah/itinerary/photobooth) that becomes available *after* a couple last
+  // saved an explicit order — e.g. itinerary rows added once section reordering had already
+  // written a full list without it — would otherwise be missing forever: `stored` can only be
+  // filtered below, never grown, so a code absent from it never gets a chance to reappear even
+  // once its data shows up. Backfill any now-available code that's missing, right after its
+  // nearest already-present canonical neighbour, so it lands somewhere sensible rather than
+  // always at the very end.
+  const merged = [...stored];
+  for (const code of canonical) {
+    if (merged.includes(code)) continue;
+    let insertAt = merged.length;
+    for (let i = canonical.indexOf(code) - 1; i >= 0; i--) {
+      const idx = merged.indexOf(canonical[i]);
+      if (idx !== -1) { insertAt = idx + 1; break; }
+    }
+    merged.splice(insertAt, 0, code);
+  }
+
+  return merged.filter((code) => {
     if (code === 'walimah') return hasWalimah;
     if (code === 'itinerary') return hasItinerary;
     if (code === 'photobooth') return hasPhotobooth;
