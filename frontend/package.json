@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "generate-previews": "node scripts/generate-template-previews.mjs",
+    "visual-qa": "node scripts/visual-qa.mjs",
     "test": "vitest run",
     "test:watch": "vitest"
   },
