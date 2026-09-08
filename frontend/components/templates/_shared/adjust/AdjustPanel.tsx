@@ -6,7 +6,7 @@ import { ANIM_OPTIONS, ANIM_OUT_OPTIONS, ANIM_IDLE_OPTIONS } from '../types';
 import { resolveStage, serializeStage, baseStage, layoutKey, type StageBg } from '../layout';
 import { SLOT_CATALOG_GROUPS, type SlotCatalogEntry } from '../slots/catalog';
 import { BINDING_TOKENS } from '../bindings';
-import { CURATED_FONTS } from '@/lib/fonts/curated';
+import { CURATED_FONTS } from '@/lib/fonts/registry';
 import styles from './AdjustPanel.module.css';
 
 const ANIM_LABELS: Record<AnimType, string> = {

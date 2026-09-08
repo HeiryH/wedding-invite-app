@@ -519,6 +519,16 @@ ScrollTrigger.create({
 
 ## Known Issues
 - Admin-side guest creation: `guestService` posts to `/guest/rsvp`; re-verify the admin create path works end-to-end (historically broken; endpoint changed).
+- **Font-preload header took production down with 502s — FIXED (2026-09-08).** `app/layout.tsx`
+  used to apply every curated font's CSS variable app-wide, so `next/font` preloaded the entire
+  19-font catalog on every page regardless of which template/couple ever used them — until a
+  deploy that added 2 more fonts pushed the header (34 files, ~4.4KB) past nginx's proxy buffer.
+  Fixed by splitting `lib/fonts/curated.ts` into pure metadata (`lib/fonts/registry.ts`, no
+  `next/font` import) and the loader calls, and preloading only the 5 fonts shipped templates
+  default to (down to 12 files, ~1.8KB). See `docs/FIX_QUEUE.md` Issue 4 — also covers a second,
+  unrelated-looking symptom (a missing template preview PNG 404ing through the same header) that
+  turned out to be the same root cause. **The nginx buffer itself still has no explicit
+  `proxy_buffer_size` override** — recommended in Issue 4, not yet applied (needs the NPM admin UI).
 - **Device-shape drift on the fixed-stage compositor — FIXED on mobile (2026-08-20) and desktop
   (2026-09-08).** The cause was sharper than "independent percentages": a `chain: true` layer takes its
   height from stage **width** while its `y` is a percentage of stage **height**, so on a taller,

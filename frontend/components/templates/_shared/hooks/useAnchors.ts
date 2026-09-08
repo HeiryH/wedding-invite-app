@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import type { CSSProperties } from 'react';
 import type { AnimIdleType, Breakpoint, EditorHandle, Layer, StageDef } from '../types';
 import { resolveStage } from '../layout';
-import { fontVar } from '@/lib/fonts/curated';
+import { fontVar } from '@/lib/fonts/registry';
 import { IDLE_BASE_DUR } from '../idle';
 
 /**

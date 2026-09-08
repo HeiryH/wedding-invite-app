@@ -16,7 +16,9 @@ import { toHijriString, alignClass, headingStyle, headingAnimationProps, section
 // (app/layout.tsx: --font-cormorant, --font-jetbrains); Source Serif 4 is added here for body
 // legibility, which matters more on this itinerary/programme-forward template.
 
-const sourceSerif = Source_Serif_4({ subsets: ['latin'], weight: ['400', '500', '600'], style: ['normal', 'italic'], display: 'swap' });
+// preload: false — T9 is a prototype (see CLAUDE.md), not worth preloading on every visitor; also
+// keeps it off the invite route's font preload header (see lib/fonts/curated.ts's doc comment).
+const sourceSerif = Source_Serif_4({ subsets: ['latin'], weight: ['400', '500', '600'], style: ['normal', 'italic'], display: 'swap', preload: false });
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL?.replace('/api', '') ?? '';
 

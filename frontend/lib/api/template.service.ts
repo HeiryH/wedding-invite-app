@@ -64,7 +64,7 @@ export const templateService = {
   // Capture an existing invite's finished design as this template's starting design.
   setDefaultFromWedding: async (id: number, weddingId: number): Promise<TemplateDefaultConfigStatus> => {
     const response = await apiClient.put<TemplateDefaultConfigStatus>(
-      `/template/${id}/default-config/from-wedding/${weddingId}`,
+      `/template/${id}/default-config/from-event/${weddingId}`,
     );
     return response.data;
   },

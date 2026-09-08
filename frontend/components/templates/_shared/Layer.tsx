@@ -5,7 +5,7 @@ import type { Layer as LayerModel, SlotProps } from './types';
 import { IDLE_BASE_DUR } from './idle';
 import { useEngine } from './engine';
 import { DEFAULT_SHEET, useSheets } from './slots/sheets';
-import { fontVar } from '@/lib/fonts/curated';
+import { fontVar } from '@/lib/fonts/registry';
 import CurvedText from './CurvedText';
 import ScrollVideoLayer from './effects/ScrollVideoLayer';
 import PlayOnceVideoLayer from './effects/PlayOnceVideoLayer';

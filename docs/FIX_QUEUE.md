@@ -558,3 +558,92 @@ verification, not test coverage.
   `ScrollTrigger.create()` with no `animation` for GSAP to smooth. Wiring it up for real or removing
   the field/control outright is a 4-file design decision (`types.ts`, `layout.ts`,
   `AdjustPanel.tsx`, both stage-data files), not something to fold into a lifecycle bugfix.
+
+## Issue 4 — Font-preload header outgrew nginx's proxy buffer, took prod down with 502s
+
+**Branch:** `ae-unified` · **Status:** DONE · **Raised:** 2026-09-08 · **Fixed:** 2026-09-08
+
+The `4dafef1` deploy (Template10 + stage-engine desktop fix + BASIC tier rename) caused every
+invitation page on production to 502, plus `/template-previews/sunny-safari.png`. Confirmed via
+nginx's own error log (Nginx Proxy Manager, `openresty`):
+
+```
+upstream sent too big header while reading response header from upstream,
+request: "GET /wedding/dk-abdul", upstream: "http://172.19.0.3:3000/wedding/dk-abdul"
+```
+
+**Root cause.** `app/layout.tsx` (root layout, wraps every page) applied `CURATED_FONT_VARIABLES`
+from `lib/fonts/curated.ts` — the joined class names of **all 19** curated Google fonts — to the
+`<body>` className. Every invitation page therefore preloaded the entire curated catalog regardless
+of which of the 10 templates it actually used, or how many of those fonts the couple had ever
+selected. Measured directly against the container: the invite route's response headers totalled
+**4,388 bytes**, driven almost entirely by one `Link: rel=preload` header listing **34 `.woff2`
+files** (24 from the curated registry, 5 chrome/marketing fonts declared directly in the root
+layout, and 5 more leaking in from Template 8/9's own `next/font` calls via CSS-chunk merging — see
+below). Root's own headers, for comparison, were 443 bytes. `4dafef1` added Baloo 2 and Nunito (5
+weights each) to the curated registry for Template 10; the header was apparently already close to
+nginx's buffer ceiling, and those two families tipped it over.
+
+**Why the missing PNG hit the same error.** `4dafef1` added `'sunny-safari'` to
+`scripts/generate-template-previews.mjs`'s hardcoded `CODES` list, but the script — a manual,
+Playwright-driven step, not part of `build` or the deploy pipeline — was never re-run, so
+`public/template-previews/sunny-safari.png` never existed. A missing two-segment static path falls
+through Next's router to the two-segment catch-all `app/[eventType]/[slug]`, whose layout calls
+`notFound()` on the bogus `eventType` segment (`"template-previews"`) — and that 404 renders through
+the same root layout, carrying the identical oversized header. There is no `app/not-found.tsx`
+override in this app, so this is Next's own default not-found component, not a custom one.
+
+**Two things ruled out while investigating, worth remembering for next time:**
+- **Removing the className from the root layout alone would not have fixed it.** `next/font`'s
+  preload-header generation is driven by *module-graph membership*, not by whether the class is
+  applied — the invite page reaches `curated.ts` transitively via
+  `page.tsx → DataTemplate.tsx → fontVar`, so the fonts stay in its manifest regardless of where the
+  className sits. The lever that actually shrinks the header is each font's own `preload` option.
+- **Template 8/9 were contributing fonts to the invite page's header despite no static import path
+  from `page.tsx` to either component** — `TemplateWrapper.tsx` (which does import them) is only
+  reachable from `(standalone)/organizer-admin/preview`. This was CSS-chunk merging, not a real
+  runtime dependency; fixed anyway since T8/T9 are prototypes, not production templates (see
+  `CLAUDE.md`'s registry section) and their fonts had no business preloading on every guest view.
+
+**The fix:**
+1. **Split `lib/fonts/curated.ts`** into a new `lib/fonts/registry.ts` (pure `{key, label}` metadata
+   + the `fontVar()` helper — confirmed to never read `.variable`, so it has zero dependency on
+   `next/font/google`) and a slimmed `curated.ts` (only the 19 loader calls + `CURATED_FONT_VARIABLES`,
+   imported solely by `app/layout.tsx`). The 7 component call sites that only needed `fontVar`/
+   `CURATED_FONTS` (`_shared/Layer.tsx`, `_shared/CurvedText.tsx`, `_shared/DataTemplate.tsx`,
+   `_shared/hooks/useAnchors.ts`, `_shared/adjust/AdjustPanel.tsx`, `Template7-romangarden/index.tsx`,
+   `Template10-sunnysafari/index.tsx`) now import `registry.ts` instead — this alone stops them
+   dragging the font loaders into their importers' module graphs.
+2. **Selective `preload`** in `curated.ts`: `preload: true` only on the fonts a shipped template
+   defaults to (`cinzel`/`cormorant`/`eb-garamond` for T7, `baloo-2`/`nunito` for T10); `preload:
+   false` on the other 14. All already have `display: 'swap'`, so a couple-picked non-default font
+   still applies, just via a brief swap instead of an eager download. A `Record<CuratedFontKey,
+   {variable}>` map in `curated.ts` makes the registry/loader pairing exhaustive at compile time —
+   TypeScript fails the build if either file adds a key the other doesn't have.
+3. **`preload: false`** on Template 8's (Fraunces/Work Sans/Caveat) and Template 9's (Source Serif 4)
+   own `next/font` calls.
+4. **Generated the missing `sunny-safari.png`** and completed `CODES` (`gilded-arch` and
+   `engraved-certificate` had PNGs on disk already but were never in the list either).
+
+**Result, measured against a real local production build** (`next build && next start`, `curl -sD -`
+against the invite route): **4,388 bytes → 1,792 bytes, 34 files → 12.** `tsc --noEmit` and
+`next build` both clean, 30/30 pages.
+
+**Deliberately not done — full server-side per-template font scoping.** Considered and rejected:
+`[eventType]/[slug]` is one route serving all 10 templates, and preload is module-graph-driven, so
+scoping further would need per-template dynamic imports for marginal gain over the `preload` flag
+approach above. Also surfaced while investigating: the authored-template path (`ta*` templates,
+`Template.StagesJson`) is currently dead on the public invite route —
+`EventDto.TemplateStagesJson` is never assigned by `EventService.MapToDto` — so it needs no handling
+here, but is worth knowing if that path is ever wired up.
+
+**Also still open — the nginx buffer itself.** Even with the header now well under any reasonable
+limit, Nginx Proxy Manager's proxy host for `theinvit-e.oddstudio.app` has no explicit
+`proxy_buffer_size`/`proxy_buffers` override, meaning the platform default is still the only margin
+against a future regression. Recommended, not yet applied (requires the NPM admin UI, which isn't
+reachable from this environment): Proxy Host → Edit → Advanced → Custom Nginx Configuration —
+```
+proxy_buffer_size 16k;
+proxy_buffers 4 16k;
+proxy_busy_buffers_size 32k;
+```

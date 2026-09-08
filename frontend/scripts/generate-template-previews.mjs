@@ -20,6 +20,8 @@ const CODES = [
   'dreaming-floral-sky',
   'fairy-garden',
   'roman-garden',
+  'gilded-arch',
+  'engraved-certificate',
   'sunny-safari',
 ];
 

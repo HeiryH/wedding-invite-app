@@ -1,6 +1,6 @@
 import { useId } from 'react';
 import type { Layer } from './types';
-import { fontVar } from '@/lib/fonts/curated';
+import { fontVar } from '@/lib/fonts/registry';
 
 interface Props {
   layer: Layer;

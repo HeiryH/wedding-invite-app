@@ -9,7 +9,7 @@ import Stage from './Stage';
 import { SLOT_REGISTRY, sheetLayerGroups, stageHasContent, visibleSlotLayers } from './slots';
 import { SlotFlowProviders } from './slots/FlowProviders';
 import SheetHost from './SheetHost';
-import { fontVar } from '@/lib/fonts/curated';
+import { fontVar } from '@/lib/fonts/registry';
 import type { StageDef, SlotProps, Breakpoint, EditorHandle } from './types';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL?.replace('/api', '') ?? '';

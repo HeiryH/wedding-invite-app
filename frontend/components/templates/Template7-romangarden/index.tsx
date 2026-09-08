@@ -20,7 +20,7 @@ import HorizontalRail, { type RailPanel } from '@/components/templates/_shared/H
 import { SLOT_REGISTRY, sheetLayerGroups, stageHasContent, visibleSlotLayers } from '@/components/templates/_shared/slots';
 import { SlotFlowProviders } from '@/components/templates/_shared/slots/FlowProviders';
 import SheetHost from '@/components/templates/_shared/SheetHost';
-import { fontVar } from '@/lib/fonts/curated';
+import { fontVar } from '@/lib/fonts/registry';
 import NavBar from './components/NavBar';
 import styles from './Template7.module.css';
 
