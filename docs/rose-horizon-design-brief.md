@@ -57,3 +57,46 @@ the fly rather than followed literally — worth tracking as a real finding for
 - Working slug: `rose-horizon`
 - Next available template ID: **Template11** (T1–T10 taken; T8/T9 are prototypes, not
   production, per `CLAUDE.md`'s Templates section)
+
+## Resolved intake fields (for scene-research to read)
+- `event_types`: WEDDING
+- `implementation_family`: **A** — single shared background for the whole template, not one
+  per section. This falls out of the "flow background" decision below, not a separate choice:
+  a background meant to be one continuous tileable panel scrolled behind every section is by
+  definition one background for the whole template, which is exactly what family A means in
+  `assets.schema.json`/`scene.schema.json` — it just happens to be a Classic-family template
+  choosing family A's *background* semantics (T5, also Classic, does the same).
+- `sections`: welcome, walimah, itinerary, rsvp, wishes, photobooth (all six — no reason to
+  drop any for a standard wedding brief)
+- `scale_anchor` candidate: a single fully-open rose bloom (recurs across sections, natural
+  recognizable size, unlike "clasped hands" or other one-off motifs)
+
+## Two decorative systems beyond section content — schema adaptation notes
+
+Both agreed with the human before any generation. Neither maps cleanly onto the Stage-family
+`scene.json` vocabulary this pipeline was built around, so here's how each adapts:
+
+1. **Flow background** — one continuous vertically-tileable illustration, `background-repeat:
+   repeat-y` behind the whole page, `background-position-y` driven by scroll at a slower rate
+   than the page (parallax). **Does not use `empty_band_pct`.** That field assumes one
+   background image composed against one known screen size with a specific reserved zone —
+   doesn't transfer to a tile tiling indefinitely behind content whose scroll position isn't
+   fixed. Instead: real content renders on a translucent content card/panel *above* the tile
+   (standard "scrim behind text" pattern), so legibility doesn't depend on which part of the
+   tile happens to be behind it. The tile's own job is just to stay low-contrast/pastel
+   throughout (already true of this brief's palette) so it reads well behind a translucent
+   panel at any scroll offset. **Learned live, before this was written down**: a prose
+   instruction alone ("must be seamless") does not reliably make a model produce a matching
+   seam — two live probes confirmed this. The fix that actually works: the *spec* must
+   require the top and bottom ~15% of the tile to be plain, near-identical flat sky gradient
+   with zero decorative content (roses/birds/etc. confined to the middle), so the only thing
+   that has to match at the seam is a flat colour, not a composed illustration. This is the
+   same shape of fix as `empty_band_pct` — reserve a zone and require it stay quiet — just
+   applied to solve tiling instead of leaving room for real text.
+2. **Rose-border frame** — the reference's soft out-of-focus rose vignette framing the couple,
+   as separate per-section decorative assets (not baked into the flow background) positioned
+   via `SectionOverlay` as a percentage of each section's own box, parallaxing at its own rate
+   (faster than the flow background, slower than foreground text) for depth. These map onto
+   the normal `props` schema fine (`kind: "prop"`, a `band`, `size_in_anchor_units`) — the
+   only adaptation is that `assemble`'s output target is `SectionOverlay` layer config, not
+   Stage's `data/stages.ts`, since this is a Classic not Stage template.
