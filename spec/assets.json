@@ -1,0 +1,58 @@
+{
+  "spec_version": 1,
+  "slug": "rose-horizon",
+  "event_type": "WEDDING",
+  "implementation_family": "A",
+  "sections": ["welcome", "walimah", "rsvp", "itinerary", "wishes", "photobooth"],
+  "sectionPlan": {
+    "welcome": {
+      "background": "Abstract vertical flowing wash of pale powder-blue and cornflower-blue, undulating soft bands running along the scroll axis, low contrast throughout, no objects, no horizon, no figures",
+      "props": [
+        { "name": "Cream rose bloom", "kind": "prop", "band": "foreground-frame", "size_in_anchor_units": 1.0 },
+        { "name": "Blush-pink rose bloom", "kind": "prop", "band": "foreground-frame", "size_in_anchor_units": 0.9 },
+        { "name": "Baby's breath sprig", "kind": "prop", "band": "foreground-frame", "size_in_anchor_units": 0.3 },
+        { "name": "Floral arch silhouette", "kind": "scenery", "band": "background", "size_in_anchor_units": 1.8 }
+      ]
+    },
+    "walimah": {
+      "background": "Abstract vertical flowing wash of pale powder-blue and cornflower-blue, undulating soft bands running along the scroll axis, low contrast throughout, no objects, no horizon, no figures",
+      "props": [
+        { "name": "Cream rose bloom", "kind": "prop", "band": "foreground-frame", "size_in_anchor_units": 1.0 },
+        { "name": "Dusty blue-grey rose bloom", "kind": "prop", "band": "foreground-frame", "size_in_anchor_units": 0.8 },
+        { "name": "Rose-wreathed crescent moon and star", "kind": "icon", "band": "midground", "size_in_anchor_units": 0.7 }
+      ]
+    },
+    "rsvp": {
+      "background": "Abstract vertical flowing wash of pale powder-blue and cornflower-blue, undulating soft bands running along the scroll axis, low contrast throughout, no objects, no horizon, no figures",
+      "props": [
+        { "name": "Cream rose bloom", "kind": "prop", "band": "foreground-frame", "size_in_anchor_units": 1.0 },
+        { "name": "Blush-pink rose bloom", "kind": "prop", "band": "foreground-frame", "size_in_anchor_units": 0.9 },
+        { "name": "Envelope with a rose wax seal", "kind": "icon", "band": "midground", "size_in_anchor_units": 0.6 }
+      ]
+    },
+    "itinerary": {
+      "background": "Abstract vertical flowing wash of pale powder-blue and cornflower-blue, undulating soft bands running along the scroll axis, low contrast throughout, no objects, no horizon, no figures",
+      "props": [
+        { "name": "Blush-pink rose bloom", "kind": "prop", "band": "foreground-frame", "size_in_anchor_units": 0.9 },
+        { "name": "Baby's breath sprig", "kind": "prop", "band": "foreground-frame", "size_in_anchor_units": 0.3 },
+        { "name": "Rose-ringed hourglass", "kind": "icon", "band": "midground", "size_in_anchor_units": 0.6 }
+      ]
+    },
+    "wishes": {
+      "background": "Abstract vertical flowing wash of pale powder-blue and cornflower-blue, undulating soft bands running along the scroll axis, low contrast throughout, no objects, no horizon, no figures",
+      "props": [
+        { "name": "Dusty blue-grey rose bloom", "kind": "prop", "band": "foreground-frame", "size_in_anchor_units": 0.8 },
+        { "name": "Baby's breath sprig", "kind": "prop", "band": "foreground-frame", "size_in_anchor_units": 0.3 },
+        { "name": "Open scroll with a feather quill", "kind": "icon", "band": "midground", "size_in_anchor_units": 0.6 }
+      ]
+    },
+    "photobooth": {
+      "background": "Abstract vertical flowing wash of pale powder-blue and cornflower-blue, undulating soft bands running along the scroll axis, low contrast throughout, no objects, no horizon, no figures",
+      "props": [
+        { "name": "Cream rose bloom", "kind": "prop", "band": "foreground-frame", "size_in_anchor_units": 1.0 },
+        { "name": "Small bird silhouette", "kind": "prop", "band": "midground", "size_in_anchor_units": 0.25 },
+        { "name": "Floral-corner picture frame", "kind": "icon", "band": "midground", "size_in_anchor_units": 0.7 }
+      ]
+    }
+  }
+}

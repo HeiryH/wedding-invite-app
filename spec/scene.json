@@ -1,0 +1,44 @@
+{
+  "spec_version": 1,
+  "slug": "rose-horizon",
+  "grain_parity": true,
+  "scale_anchor": { "name": "a fully-open rose bloom", "height_pct": 18 },
+  "sections": {
+    "welcome": {
+      "background": "Abstract vertical flowing wash of pale powder-blue and cornflower-blue, undulating soft bands running along the scroll axis, low contrast throughout, no objects, no horizon, no figures",
+      "horizon_pct": 45,
+      "empty_band_pct": [19, 61],
+      "bands": { "background": 2.2, "midground": 1.0, "foreground-frame": 1.4 }
+    },
+    "walimah": {
+      "background": "Abstract vertical flowing wash of pale powder-blue and cornflower-blue, undulating soft bands running along the scroll axis, low contrast throughout, no objects, no horizon, no figures",
+      "horizon_pct": 45,
+      "empty_band_pct": [30, 70],
+      "bands": { "background": 2.2, "midground": 1.0, "foreground-frame": 1.4 }
+    },
+    "rsvp": {
+      "background": "Abstract vertical flowing wash of pale powder-blue and cornflower-blue, undulating soft bands running along the scroll axis, low contrast throughout, no objects, no horizon, no figures",
+      "horizon_pct": 45,
+      "empty_band_pct": [32, 76],
+      "bands": { "background": 2.2, "midground": 1.0, "foreground-frame": 1.4 }
+    },
+    "itinerary": {
+      "background": "Abstract vertical flowing wash of pale powder-blue and cornflower-blue, undulating soft bands running along the scroll axis, low contrast throughout, no objects, no horizon, no figures",
+      "horizon_pct": 45,
+      "empty_band_pct": [33, 78],
+      "bands": { "background": 2.2, "midground": 1.0, "foreground-frame": 1.4 }
+    },
+    "wishes": {
+      "background": "Abstract vertical flowing wash of pale powder-blue and cornflower-blue, undulating soft bands running along the scroll axis, low contrast throughout, no objects, no horizon, no figures",
+      "horizon_pct": 45,
+      "empty_band_pct": [34, 78],
+      "bands": { "background": 2.2, "midground": 1.0, "foreground-frame": 1.4 }
+    },
+    "photobooth": {
+      "background": "Abstract vertical flowing wash of pale powder-blue and cornflower-blue, undulating soft bands running along the scroll axis, low contrast throughout, no objects, no horizon, no figures",
+      "horizon_pct": 45,
+      "empty_band_pct": [23, 69],
+      "bands": { "background": 2.2, "midground": 1.0, "foreground-frame": 1.4 }
+    }
+  }
+}
