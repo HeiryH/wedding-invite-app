@@ -6,7 +6,7 @@
 
 set -e
 
-BRANCH="frontend-design-fix"
+BRANCH="ae-unified"
 VPS_HOST="139.180.154.175"
 VPS_USER="root"
 VPS_PATH="/opt/wedding-app"
@@ -25,7 +25,7 @@ if git diff --cached --quiet; then
 else
   git commit -m "$MSG
 
-Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>"
+Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>"
 fi
 git push origin "$BRANCH"
 
@@ -37,9 +37,9 @@ spawn ssh -o StrictHostKeyChecking=no -o ConnectTimeout=60 $env(VPS_USER)@$env(V
 expect "password:"
 send "$env(VPS_PASS)\r"
 expect "# "
-send "cd $env(VPS_PATH) && git pull origin $env(BRANCH) 2>&1\r"
+send "cd $env(VPS_PATH) && OLD_SHA=\$(git rev-parse HEAD) && git fetch origin && git checkout $env(BRANCH) && git pull origin $env(BRANCH) 2>&1\r"
 expect "# "
-send "if git diff HEAD~1 HEAD --name-only 2>/dev/null | grep -q '^backend/'; then docker compose build backend 2>&1 | tail -3 && docker compose up -d backend 2>&1; fi\r"
+send "if git diff \$OLD_SHA HEAD --name-only 2>/dev/null | grep -q '^backend/'; then docker compose build backend 2>&1 | tail -3 && docker compose up -d backend 2>&1; fi\r"
 expect -timeout 120 "# "
 send "docker compose build frontend 2>&1 | tail -5\r"
 expect -timeout 200 "# "

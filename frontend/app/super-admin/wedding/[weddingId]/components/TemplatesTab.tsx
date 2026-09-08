@@ -5,9 +5,9 @@ import { Template } from '@/lib/api';
 import { TemplatePreview } from '@/components/templates/TemplatePreview';
 import { tierRank, tierLabel } from '@/lib/tierRank';
 
-type Tier = 'FREE' | 'PREMIUM' | 'PRO';
+type Tier = 'BASIC' | 'PREMIUM' | 'PRO';
 const tierBadge: Record<Tier, { bg: string; text: string; label: string }> = {
-  FREE:    { bg: 'bg-gray-100',   text: 'text-gray-600',  label: 'Free' },
+  BASIC:    { bg: 'bg-gray-100',   text: 'text-gray-600',  label: 'Basic' },
   PREMIUM: { bg: 'bg-yellow-100', text: 'text-yellow-700', label: 'Premium' },
   PRO:     { bg: 'bg-indigo-100', text: 'text-indigo-700', label: 'Pro' },
 };
@@ -60,8 +60,8 @@ export default function TemplatesTab({
             {templates
               .sort((a, b) => a.sortOrder - b.sortOrder)
               .map((template) => {
-                const t = (template.tier ?? (template.isPremium ? 'PREMIUM' : 'FREE')) as Tier;
-                const tb = tierBadge[t] ?? tierBadge.FREE;
+                const t = (template.tier ?? (template.isPremium ? 'PREMIUM' : 'BASIC')) as Tier;
+                const tb = tierBadge[t] ?? tierBadge.BASIC;
                 const locked = tierRank(t) > weddingRank;
                 return (
                 <div
@@ -113,7 +113,7 @@ export default function TemplatesTab({
 
                       {currentTemplateId !== template.templateId && locked && (
                         <div
-                          title={`This wedding is on the ${tierLabel[weddingTier?.toUpperCase() ?? 'FREE'] ?? weddingTier} tier — upgrade to ${tb.label} to use this template.`}
+                          title={`This wedding is on the ${tierLabel[weddingTier?.toUpperCase() ?? 'BASIC'] ?? weddingTier} tier — upgrade to ${tb.label} to use this template.`}
                           className="w-full px-4 py-2 bg-gray-100 text-gray-400 rounded-lg text-center font-medium text-sm cursor-not-allowed"
                         >
                           🔒 Requires {tb.label} tier

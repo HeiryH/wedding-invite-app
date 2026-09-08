@@ -13,7 +13,7 @@ export const layoutKey = (prefix: string, bp: Breakpoint, stage: StageId) =>
  *  resolved layers against each other. */
 export const OVERRIDABLE: (keyof Layer)[] = [
   'x', 'y', 'w', 'h', 's', 'z', 'order', 'chain', 'hidden', 'opacity', 'depth', 'textScale',
-  'color', 'fill', 'fontSize', 'fontWeight', 'radius', 'text', 'src', 'shape', 'label',
+  'color', 'fill', 'fontSize', 'fontWeight', 'lineHeight', 'radius', 'text', 'src', 'shape', 'label',
   'anim', 'animDur', 'animOut',
   // text styling (types.ts) — usable by kind 'text', and by kind 'anchor' when `styleable`.
   'fontFamily', 'letterSpacing', 'wordSpacing', 'borderWidth', 'borderColor',
@@ -25,6 +25,8 @@ export const OVERRIDABLE: (keyof Layer)[] = [
   // kind 'scrollVideo' effect params (types.ts) — same delta mechanism, no geometry involved.
   'videoSrc', 'triggerStart', 'triggerEnd', 'scrub', 'pivot', 'holdWidth', 'videoStartSec',
   'openThreshold', 'resetSec', 'chromaThreshold', 'chromaFade',
+  // kind 'video' (play-once) — see PlayOnceVideoLayer.tsx.
+  'playDelaySec',
   // kind 'slot' presentation mode ('inline' | 'sheet') and which named sheet it belongs to /
   // opens — see _shared/SheetHost.tsx and _shared/slots/sheets.tsx.
   'presentation', 'sheetId',

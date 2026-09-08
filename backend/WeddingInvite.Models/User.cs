@@ -8,7 +8,7 @@ namespace WeddingInvite.Models
         public string Role { get; set; } = string.Empty; // "SUPER_ADMIN" or "ORGANIZER_ADMIN"
         public int? EventId { get; set; } // NULL for super admin
         public bool IsActive { get; set; } = true;
-        public string Tier { get; set; } = "FREE"; // FREE | PREMIUM | PRO
+        public string Tier { get; set; } = "BASIC"; // BASIC | PREMIUM | PRO
         public DateTime CreatedDate { get; set; } = DateTime.UtcNow;
 
         // Navigation

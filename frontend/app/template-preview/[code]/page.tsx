@@ -13,6 +13,7 @@ import Template6 from '@/components/templates/Template6';
 import Template7 from '@/components/templates/Template7';
 import Template8 from '@/components/templates/Template8';
 import Template9 from '@/components/templates/Template9';
+import Template10 from '@/components/templates/Template10';
 
 const DUMMY: Wedding = {
   weddingId: 0,
@@ -59,6 +60,20 @@ const DUMMY_CEREMONY: Wedding = {
   displayName: "Ali's Aqiqah",
   venue: 'Dewan Seri Warisan',
   venueAddress: 'Bandar Seri Begawan, Brunei',
+};
+
+// PARTY (Template10) sample — the welcome hero reads both eventTitle (the big headline) and
+// name1/name2 (the line beneath), matching the delivered "Zara's Sunny Safari" reference art.
+const DUMMY_SUNNY_SAFARI: Wedding = {
+  ...DUMMY,
+  brideName: 'Zara',
+  groomName: '',
+  name1: 'James',
+  name2: 'Zara',
+  eventTitle: "Zara's Sunny Safari",
+  eventType: 'PARTY',
+  displayName: "Zara's Sunny Safari",
+  venue: 'The Treehouse Garden, Nairobi',
 };
 
 const noOp = () => Promise.resolve();
@@ -110,6 +125,7 @@ export default function TemplatePreviewPage() {
   const props = { ...BASE_PROPS, customConfig };
   const partyProps = { ...props, wedding: DUMMY_PARTY };
   const ceremonyProps = { ...props, wedding: DUMMY_CEREMONY };
+  const sunnySafariProps = { ...props, wedding: DUMMY_SUNNY_SAFARI };
 
   return (
     <div
@@ -126,6 +142,7 @@ export default function TemplatePreviewPage() {
       {code === 'roman-garden'          && <Template7 {...props} />}
       {code === 'gilded-arch'           && <Template8 {...partyProps} />}
       {code === 'engraved-certificate'  && <Template9 {...ceremonyProps} />}
+      {code === 'sunny-safari'          && <Template10 {...sunnySafariProps} />}
     </div>
   );
 }

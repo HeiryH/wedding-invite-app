@@ -14,16 +14,16 @@ import { Card } from '@/components/ui/Card';
 import { Checkbox } from '@/components/ui/Checkbox';
 import { EVENT_TYPES, parseEventTypes } from '@/lib/eventTypes';
 
-type Tier = 'FREE' | 'PREMIUM' | 'PRO';
+type Tier = 'BASIC' | 'PREMIUM' | 'PRO';
 
 const TIERS: { value: Tier; label: string }[] = [
-  { value: 'FREE', label: 'Free' },
+  { value: 'BASIC', label: 'Basic' },
   { value: 'PREMIUM', label: 'Premium' },
   { value: 'PRO', label: 'Pro' },
 ];
 
 const tierBadge: Record<Tier, { tone: 'neutral' | 'gold' | 'brand'; label: string }> = {
-  FREE: { tone: 'neutral', label: 'Free' },
+  BASIC: { tone: 'neutral', label: 'Basic' },
   PREMIUM: { tone: 'gold', label: 'Premium' },
   PRO: { tone: 'brand', label: 'Pro' },
 };
@@ -41,7 +41,7 @@ export default function ThemesPage() {
   const [error, setError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<number | null>(null);
   const [editingId, setEditingId] = useState<number | null>(null);
-  const [form, setForm] = useState<EditForm>({ templateName: '', description: '', tier: 'FREE', eventTypes: ['WEDDING'] });
+  const [form, setForm] = useState<EditForm>({ templateName: '', description: '', tier: 'BASIC', eventTypes: ['WEDDING'] });
   const [saving, setSaving] = useState(false);
 
   // Per-template "starting design" state.
@@ -204,7 +204,7 @@ export default function ThemesPage() {
       <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
         {themes.map((theme, index) => {
           const isEditing = editingId === theme.templateId;
-          const tb = tierBadge[theme.tier] ?? tierBadge.FREE;
+          const tb = tierBadge[theme.tier] ?? tierBadge.BASIC;
           return (
             <motion.div
               key={theme.templateId}

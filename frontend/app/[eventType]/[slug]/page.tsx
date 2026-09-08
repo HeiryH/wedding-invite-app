@@ -22,6 +22,7 @@ import { urlSegmentForEventType } from '@/lib/eventTypes';
 import DataTemplate from '@/components/templates/_shared/DataTemplate';
 import { useBreakpoint } from '@/components/templates/_shared/hooks/useBreakpoint';
 import type { StageDef, SlotProps } from '@/components/templates/_shared/types';
+import ViewportProbe from '@/components/dev/ViewportProbe';
 
 export default function WeddingInvitationPage() {
   const params = useParams();
@@ -30,6 +31,9 @@ export default function WeddingInvitationPage() {
   const urlEventType = params.eventType as string;
   const slug = params.slug as string;
   const previewTemplateId = searchParams.get('preview');
+  // Dev-only measurement overlay (docs/FIX_QUEUE.md Issue 2) — never renders without the query
+  // param, and ViewportProbe itself has no effect on layout (fixed-position, zero-content probes).
+  const probe = searchParams.get('probe') === '1';
 
   const [event, setEvent] = useState<Event | null>(null);
   // ❌ REMOVED: const [guests, setGuests] = useState<Guest[]>([]);
@@ -268,6 +272,7 @@ export default function WeddingInvitationPage() {
 
   return (
     <>
+      {probe && <ViewportProbe />}
       {/* Preview Mode Banner */}
       {previewTemplateId && (
         <div className="fixed top-0 left-0 right-0 z-50 bg-yellow-500 text-white px-4 py-3 text-center font-semibold shadow-lg">

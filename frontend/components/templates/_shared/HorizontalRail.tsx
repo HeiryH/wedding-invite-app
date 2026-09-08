@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { EditorHandle, Layer as LayerModel, ObjectFit, SlotProps, StageDef } from './types';
 import { useEngine } from './engine';
+import { frameSvh, frameW } from './frameViewport';
 import Stage from './Stage';
 import Layer from './Layer';
 import styles from './HorizontalRail.module.css';
@@ -102,15 +103,23 @@ export default function HorizontalRail({
     const update = () => {
       frame = 0;
       const rect = rail.getBoundingClientRect();
-      const vh = window.innerHeight;
-      const vw = window.innerWidth;
+      // `frameSvh()`/`frameW()` read the Adjust Editor's pinned preview frame when set, falling
+      // back to `window.inner*` otherwise (see `_shared/frameViewport.ts`). Matters specifically
+      // under "Reveal off-screen": the ambient iframe viewport is widened well past the rail's own
+      // `.sticky`/`.panel` boxes, so reading raw `window.inner*` here would pan/parallax against
+      // the wrong scale (docs/FIX_QUEUE.md Issue 2).
+      const vh = frameSvh();
+      const vw = frameW();
       const denom = rect.height - vh;
       const p = denom > 0 ? clamp(-rect.top / denom, 0, 1) : 0; // 0 = start, 1 = last panel centred
 
-      const railX = `${(-p * panMax * 100).toFixed(3)}vw`;
+      // Emitted in px, not `vw` strings — `--rail-x`/`--rail-bg-x` no longer need to agree with
+      // whatever `.panel`'s own CSS `vw` happens to resolve to (see HorizontalRail.module.css,
+      // itself migrated to `var(--fvw, 100vw)`); both now derive from the same `vw` read above.
+      const railX = `${(-p * panMax * vw).toFixed(2)}px`;
       track.style.setProperty('--rail-x', railX);
       if (planeRef.current) planeRef.current.style.setProperty('--rail-x', railX);
-      if (bgRef.current) bgRef.current.style.setProperty('--rail-bg-x', `${(-p * 40).toFixed(3)}vw`);
+      if (bgRef.current) bgRef.current.style.setProperty('--rail-bg-x', `${(-p * 0.4 * vw).toFixed(2)}px`);
 
       let next: Set<number> | null = null;
       const panelEls = track.children;
@@ -167,7 +176,7 @@ export default function HorizontalRail({
   }, [n, panMax, parallaxOn, shared.length]);
 
   return (
-    <div ref={railRef} className={styles.rail} data-rail style={{ height: `${n * 100}svh` }}>
+    <div ref={railRef} className={styles.rail} data-rail style={{ height: `calc(var(--fsvh, 100svh) * ${n})` }}>
       {/* Per-panel scroll anchors: `getElementById(stageId).scrollIntoView()` lands the vertical
           scroll at the offset that pans the pin to that panel (editor "scroll to stage"). */}
       {/* Selecting the "Ceremony Backdrop" tab pans the preview to the room's start. */}
@@ -200,7 +209,7 @@ export default function HorizontalRail({
         )}
 
         {/* Shared frame art — rendered once across the full row so a wide piece spans the beats. */}
-        <div ref={planeRef} className={styles.plane} style={{ width: `${n * 100}vw` }}>
+        <div ref={planeRef} className={styles.plane} style={{ width: `calc(var(--fvw, 100vw) * ${n})` }}>
           {shared.map((l, i) => (
             <Layer
               key={l.id}
@@ -213,7 +222,7 @@ export default function HorizontalRail({
           ))}
         </div>
 
-        <div ref={trackRef} className={styles.track} style={{ width: `${n * 100}vw` }}>
+        <div ref={trackRef} className={styles.track} style={{ width: `calc(var(--fvw, 100vw) * ${n})` }}>
           {panels.map((p, i) => (
             <div key={p.def.id} className={styles.panel}>
               <Stage

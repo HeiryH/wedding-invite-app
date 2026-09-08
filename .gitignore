@@ -43,3 +43,9 @@ backend/**/bin\
 # macOS
 ############################
 .DS_Store
+
+############################
+# Hermes pipeline planning docs (invite-authoring board's own scratch
+# notes — not application code, see docs/invite-pipeline.md instead)
+############################
+.hermes/

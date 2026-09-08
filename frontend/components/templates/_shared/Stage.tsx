@@ -57,8 +57,16 @@ export default function Stage({
   // to the actual screen — except a slot explicitly flagged `canvasAnchor`, which is composed
   // against the art and has to crop with it.
   const inCanvas = (l: LayerModel) =>
-    l.canvasAnchor || l.kind === 'img' || l.kind === 'shape' || l.kind === 'text';
-  const declared = def.flow ? undefined : def.canvas?.[slotProps.breakpoint ?? 'mobile'];
+    l.canvasAnchor || l.kind === 'img' || l.kind === 'shape' || l.kind === 'text' || l.kind === 'video';
+  // A stage that declares `canvas.mobile` but not `canvas.desktop` falls back to the mobile
+  // aspect rather than getting no desktop canvas at all — the drift bug this whole mechanism
+  // exists to prevent otherwise silently comes back for any template whose author didn't think
+  // to add a desktop entry (see docs/FIX_QUEUE.md Issue 1 — this is exactly what happened to
+  // Template10). A template only needs an explicit `canvas.desktop` when its desktop composition
+  // is deliberately different from mobile's (T7's landscape-only pillars art, say) — that's a
+  // design choice, not a step every new template has to remember.
+  const bp = slotProps.breakpoint ?? 'mobile';
+  const declared = def.flow ? undefined : (def.canvas?.[bp] ?? (bp === 'desktop' ? def.canvas?.mobile : undefined));
   const declaredLayers = declared ? visible.filter(inCanvas) : [];
   // A stage can declare a canvas and still have nothing to put in it — the compiled ceremony row
   // strips each beat's art (registry.ts) and leaves only its slot. Fall back to the plain path

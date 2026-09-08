@@ -7,10 +7,10 @@ import { UpgradeDialog } from './UpgradeDialog';
 import { tierRank, tierLabel } from '@/lib/tierRank';
 import { Icon } from '@/components/ui/Icon';
 
-type Tier = 'FREE' | 'PREMIUM' | 'PRO';
+type Tier = 'BASIC' | 'PREMIUM' | 'PRO';
 
 const tierBadge: Record<string, { bg: string; color: string }> = {
-  FREE:    { bg: 'var(--surface-sunken)',                                              color: 'var(--text-muted)' },
+  BASIC:    { bg: 'var(--surface-sunken)',                                              color: 'var(--text-muted)' },
   PREMIUM: { bg: 'color-mix(in srgb, var(--accent) 14%, transparent)',               color: 'var(--accent-deep)' },
   PRO:     { bg: 'color-mix(in srgb, var(--brand) 10%, transparent)',                color: 'var(--brand)' },
 };
@@ -26,7 +26,7 @@ interface TemplateLibraryProps {
 
 export function TemplateLibrary({
   templates,
-  userTier = 'FREE',
+  userTier = 'BASIC',
   currentTemplateId,
   onSelect,
   compact = false,
@@ -50,7 +50,7 @@ export function TemplateLibrary({
           {templates.map(t => {
             const locked = tierRank(t.tier) > userRank;
             const active = t.templateId === currentTemplateId;
-            const tb = tierBadge[t.tier?.toUpperCase() ?? 'FREE'] ?? tierBadge.FREE;
+            const tb = tierBadge[t.tier?.toUpperCase() ?? 'BASIC'] ?? tierBadge.BASIC;
             return (
               <div
                 key={t.templateId}
@@ -98,7 +98,7 @@ export function TemplateLibrary({
                     {t.templateName}
                   </span>
                   <span style={{ fontSize: 10, fontFamily: 'var(--font-ui)', fontWeight: 600, padding: '2px 7px', borderRadius: 'var(--radius-full)', background: tb.bg, color: tb.color, flexShrink: 0 }}>
-                    {tierLabel[t.tier?.toUpperCase() ?? 'FREE'] ?? t.tier}
+                    {tierLabel[t.tier?.toUpperCase() ?? 'BASIC'] ?? t.tier}
                   </span>
                 </div>
               </div>
@@ -122,7 +122,7 @@ export function TemplateLibrary({
         {templates.map(t => {
           const locked = tierRank(t.tier) > userRank;
           const active = t.templateId === currentTemplateId;
-          const tb = tierBadge[t.tier?.toUpperCase() ?? 'FREE'] ?? tierBadge.FREE;
+          const tb = tierBadge[t.tier?.toUpperCase() ?? 'BASIC'] ?? tierBadge.BASIC;
           return (
             <div
               key={t.templateId}
@@ -174,7 +174,7 @@ export function TemplateLibrary({
                   )}
                 </div>
                 <span style={{ fontSize: 11, fontFamily: 'var(--font-ui)', fontWeight: 600, padding: '3px 9px', borderRadius: 'var(--radius-full)', background: tb.bg, color: tb.color, flexShrink: 0, border: '1px solid transparent' }}>
-                  {tierLabel[t.tier?.toUpperCase() ?? 'FREE'] ?? t.tier}
+                  {tierLabel[t.tier?.toUpperCase() ?? 'BASIC'] ?? t.tier}
                 </span>
               </div>
             </div>

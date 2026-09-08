@@ -21,6 +21,10 @@ export const T7_ASSET_SIZES: Record<string, [number, number]> = {
   'rsvp/plant-pots.webp': [1600, 662],
   'rsvp/table-icon.webp': [200, 198],
   'welcome/arch.webp': [1000, 1267],
+  // Play-once video (kind 'video'). Listed for the same reason as the images: it reserves the
+  // layer's box before the first frame decodes, so a `chain: true` height:auto box doesn't jump
+  // from the canvas element's default 300x150 aspect to the real one on first paint.
+  'welcome/arch_keyed.mp4': [1076, 1380],
   'welcome/background.webp': [1920, 1666],
   'welcome/barrier.webp': [1920, 433],
   'welcome/plant-column.webp': [460, 947],

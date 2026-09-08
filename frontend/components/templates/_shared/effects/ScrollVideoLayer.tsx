@@ -54,8 +54,17 @@ export default function ScrollVideoLayer({ src, triggerRef, layer, onOpenChange,
     if (!video || !canvas || !trigger) return;
 
     // iOS Safari blocks video decode until a user gesture — unlock on first touch/scroll.
+    // `{once:true}` only deregisters a listener from its own event type, so touchstart and
+    // scroll can otherwise both fire — the `unlocked` guard plus explicit removal of both
+    // listeners on first fire is what actually prevents a double-unlock. No `video.load()`
+    // here: it resets readyState and re-fires `loadedmetadata`, which is a destructive
+    // side effect play()+pause() doesn't need to unlock decode.
+    let unlocked = false;
     const unlockiOS = () => {
-      video.load();
+      if (unlocked) return;
+      unlocked = true;
+      document.removeEventListener('touchstart', unlockiOS);
+      document.removeEventListener('scroll', unlockiOS);
       video.play().then(() => {
         video.pause();
         video.currentTime = videoStartSec;
@@ -116,6 +125,9 @@ export default function ScrollVideoLayer({ src, triggerRef, layer, onOpenChange,
 
       const lo = pivot - holdWidth;
       const hi = pivot + holdWidth;
+      // Seek a hair short of the true end rather than to `video.duration` itself — seeking to
+      // exactly the end can tip the element into its `ended` state on some browsers.
+      const maxSeek = Math.max(videoStartSec, video.duration - 0.04);
 
       const st = ScrollTrigger.create({
         trigger,
@@ -123,12 +135,17 @@ export default function ScrollVideoLayer({ src, triggerRef, layer, onOpenChange,
         end: `center ${triggerEnd}%`,
         scrub,
         onUpdate: (self) => {
+          // `tri` ramps 0->1 over [0, lo], holds at 1 across the [lo, hi] plateau, then falls
+          // 1->0 over [hi, 1]. That IS "opens on approach, stays open around the pivot, closes on
+          // the way out", and because it's a pure function of scroll position it rewinds exactly
+          // in reverse when you scroll back up — which is the desired behaviour. Deliberately no
+          // hysteresis/latching here: a latch would pin the open state and refuse to rewind.
           const p = self.progress;
           const tri =
             p < lo ? p / lo :
               p < hi ? 1 :
                 (1 - p) / (1 - hi);
-          video.currentTime = videoStartSec + tri * (video.duration - videoStartSec);
+          video.currentTime = Math.min(maxSeek, videoStartSec + tri * (video.duration - videoStartSec));
           onOpenChangeRef.current?.(tri > openThreshold);
           scheduleDraw();
         },
@@ -147,15 +164,17 @@ export default function ScrollVideoLayer({ src, triggerRef, layer, onOpenChange,
     };
 
     let cleanup: (() => void) | undefined;
+    const onLoadedMetadata = () => { cleanup = setupScrollTrigger(); };
     if (video.readyState >= 1) {
       cleanup = setupScrollTrigger();
     } else {
-      video.addEventListener('loadedmetadata', () => { cleanup = setupScrollTrigger(); }, { once: true });
+      video.addEventListener('loadedmetadata', onLoadedMetadata, { once: true });
     }
 
     return () => {
       document.removeEventListener('touchstart', unlockiOS);
       document.removeEventListener('scroll', unlockiOS);
+      video.removeEventListener('loadedmetadata', onLoadedMetadata);
       cleanup?.();
       video.removeEventListener('seeked', onSeeked);
       if (rafRef.current) cancelAnimationFrame(rafRef.current);

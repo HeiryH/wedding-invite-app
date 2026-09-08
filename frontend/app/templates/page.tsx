@@ -13,7 +13,7 @@ export default function TemplatesPage() {
   const [loading, setLoading] = useState(true);
 
   const user = typeof window !== 'undefined' ? getUser() : null;
-  const userTier = user?.tier ?? 'FREE';
+  const userTier = user?.tier ?? 'BASIC';
 
   useEffect(() => {
     templateService.getActive()

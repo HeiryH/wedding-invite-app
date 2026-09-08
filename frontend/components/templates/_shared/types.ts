@@ -28,8 +28,14 @@ export const REVEAL_VPAD = 0.25;
  * chromakey video effect (Template 5's envelope) — it ignores the geometry fields entirely and
  * uses the `videoSrc`/`trigger*`/`pivot`/`holdWidth`/`videoStartSec`/`openThreshold`/`resetSec`/
  * `chroma*` fields instead. See `_shared/effects/ScrollVideoLayer.tsx`.
+ *
+ * `video` is a **play-once** chromakey video — it holds its first frame until the scene has
+ * settled, plays through exactly once, then holds the last frame. No scroll coupling and no
+ * reverse: the opposite of `scrollVideo`. Unlike `scrollVideo` it *does* use the geometry fields
+ * and positions/scales exactly like an `img` (it's scenery, so it also joins the stage's art
+ * canvas). Uses `videoSrc`, `chroma*` and `playDelaySec`. See `_shared/effects/PlayOnceVideoLayer.tsx`.
  */
-export type LayerKind = 'img' | 'text' | 'shape' | 'slot' | 'anchor' | 'scrollVideo';
+export type LayerKind = 'img' | 'text' | 'shape' | 'slot' | 'anchor' | 'scrollVideo' | 'video';
 
 export type ObjectFit = 'cover' | 'contain' | 'fill';
 
@@ -166,6 +172,9 @@ export interface Layer {
   fill?: string;
   fontSize?: number;
   fontWeight?: number;
+  /** kind 'text' — unitless multiplier (CSS `line-height`, e.g. 1.25). `undefined` inherits
+   *  Stage.module.css's own default (1.25). */
+  lineHeight?: number;
   /** Corner rounding. Shape kind: the box radius. Text kind: only applied when `borderWidth` is
    *  set (a bare text layer has no visible box to round), reusing this field rather than adding a
    *  redundant one. */
@@ -219,6 +228,11 @@ export interface Layer {
   chromaThreshold?: number;
   /** Luminance band above `chromaThreshold` over which alpha ramps 0→255. */
   chromaFade?: number;
+
+  /** kind 'video' — seconds to wait after the layer is first seen (and the document has loaded)
+   *  before playing. Defaults to this layer's own entrance timing, `0.35 + order * 0.22 + animDur`,
+   *  so the piece finishes arriving before it comes alive. Set explicitly to override. */
+  playDelaySec?: number;
 
   /** Set by a persisted override to suppress a layer that ships in the defaults. */
   deleted?: boolean;
@@ -276,11 +290,15 @@ export interface StageDef {
    * the actual screen, because cropping an RSVP form is never acceptable while cropping a
    * decorative pot is the whole point. Leave unset for today's behaviour, byte for byte.
    *
-   * **Per breakpoint**, because a stage's mobile and desktop compositions are different pictures
-   * with different reference shapes — forcing the mobile aspect on a desktop layout spreads the art
-   * across a canvas several times the viewport's height and crops it. A breakpoint left out simply
-   * has no canvas and renders exactly as before, so a stage can opt in for `mobile` only (which is
-   * where aspect ratios actually vary wildly — fold covers, tall Androids) and leave desktop alone.
+   * **Per breakpoint**, since a stage's mobile and desktop compositions can be genuinely different
+   * pictures with different reference shapes (T7's desktop-only landscape pillars art is why this
+   * exists) — set `desktop` explicitly whenever that's true for a template. Leaving `mobile` unset
+   * means no canvas at all on mobile, exactly as before. Leaving `desktop` unset while `mobile` is
+   * set does **not** mean "no canvas on desktop" — `Stage.tsx` falls back to reusing the `mobile`
+   * aspect, since a template that never designed a distinct desktop composition (nothing on this
+   * engine gets one by default — see Template10) still needs *some* protection against the same
+   * drift bug this field exists to fix. Only add a `desktop` entry when the desktop composition is
+   * deliberately different.
    *
    * Only valid on a fixed (non-`flow`) stage — a flow stage has no definite height to fit against.
    */
@@ -342,6 +360,23 @@ export interface SlotProps {
 }
 
 /**
+ * The device box the Adjust Editor is previewing against, in *layout* CSS px — i.e. already
+ * divided by the previewed device's own `DevicePreset.scale` (see `lib/devicePresets.ts` — this is
+ * per-device, not one global constant; a real iPad measures scale 1, an iPhone measures 0.765), so
+ * these numbers live in the same coordinate space as the preview iframe's own CSS pixels and as
+ * `100vw`/`100svh` inside it. See `docs/FIX_QUEUE.md` Issue 2.
+ */
+export interface FrameViewport {
+  /** 100vw */
+  w: number;
+  /** 100lvh / bare 100vh — browser chrome minimised. */
+  h: number;
+  /** 100svh — browser chrome fully shown. What a `.stage` actually is; what Reveal pins to. */
+  svh: number;
+  safe: { top: number; right: number; bottom: number; left: number };
+}
+
+/**
  * Set by the customize preview iframe so a template can highlight the layer being edited. Never
  * set on the public invitation. The Adjust panel lives in the parent customize page, so there is
  * no callback here — config flows in one-way through `customConfig`.
@@ -353,8 +388,14 @@ export interface EditorHandle {
   selectedLayer?: string;
   /** Editor-only: relax the stage's overflow clip so layers nudged off-screen stay visible. */
   revealOverflow?: boolean;
-  /** Editor-only: the previewed device box (px) each stage pins itself to while revealing, so
-   *  bleed spills around it. Falls back to the template's own constants when absent. */
+  /** @deprecated superseded by `frame.w`/`frame.svh`. Kept for one release so a stale cached
+   *  payload degrades gracefully instead of silently falling back to the template's own 390×844
+   *  constants — see `app/(standalone)/organizer-admin/preview/page.tsx`'s derivation. */
   frameW?: number;
+  /** @deprecated superseded by `frame.svh`. Note this used to mean the *screen* height; `frame.svh`
+   *  means the Safari-*visible* height, which is ~20% shorter — see docs/FIX_QUEUE.md Issue 2. */
   frameH?: number;
+  /** Editor-only: the previewed device box each stage pins itself to while revealing, so bleed
+   *  spills around it. Falls back to the template's own constants when absent. */
+  frame?: FrameViewport;
 }

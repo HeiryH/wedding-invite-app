@@ -53,7 +53,7 @@
 }
 .amp {
   font-family: var(--slot-font-serif, Georgia, serif);
-  font-style: italic;
+  font-style: var(--slot-body-style, italic);
   font-weight: 400;
   font-size: calc(0.5em * var(--slot-text-scale, 1));
   letter-spacing: 0.1em;
@@ -70,7 +70,7 @@
 }
 .hijriDate {
   font-family: var(--slot-font-serif, Georgia, serif);
-  font-style: italic;
+  font-style: var(--slot-body-style, italic);
   font-size: calc(clamp(0.75rem, 1.7cqi, 0.9rem) * var(--slot-text-scale, 1));
   color: var(--slot-ink-soft, #6b6863);
   margin: 0.25rem 0 0;
@@ -133,10 +133,15 @@
 }
 
 /* ── The tablet/pill button used across Ceremony, RSVP, and Photo Booth ─────────────────── */
+/* `--slot-accent` (new) is the interactive/button/highlight color — separate from `--slot-ink`
+   (headings/body text) because a design can easily want dark text with a differently-coloured
+   button (Template 10's near-black headings + terracotta buttons is exactly this case). Falls
+   back to `--slot-ink` so every template that never sets it (T7, any authored template) renders
+   byte-for-byte as before — before this variable existed, buttons were always ink-coloured. */
 .plaque {
   display: inline-block;
   padding: 0.6rem 1.6rem;
-  background: var(--slot-ink, #2b2a28);
+  background: var(--slot-accent, var(--slot-ink, #2b2a28));
   color: var(--slot-accent-ink, #f5f4f2);
   font-family: var(--slot-font-display, system-ui, sans-serif);
   /* `--slot-text-scale` is set per-layer on the slot wrapper (Layer.tsx) and inherits down to
@@ -145,7 +150,7 @@
   font-weight: 600;
   letter-spacing: 0.14em;
   text-transform: uppercase;
-  border: 1px solid var(--slot-ink, #2b2a28);
+  border: 1px solid var(--slot-accent, var(--slot-ink, #2b2a28));
   border-radius: var(--slot-radius, 8px);
   white-space: nowrap;
   text-decoration: none;
@@ -156,12 +161,17 @@
 }
 .plaqueBtn:hover:not(:disabled) {
   background: var(--slot-accent-ink, #f5f4f2);
-  color: var(--slot-ink, #2b2a28);
+  color: var(--slot-accent, var(--slot-ink, #2b2a28));
 }
 .plaqueBtn:disabled { opacity: 0.55; cursor: default; }
 
+/* Roman-garden-specific flourish (T7's "❦" hedera + rule pair), but baked unconditionally into
+   several shared title slots (makeTitleSlot's Walimah/Details/Itinerary titles, RsvpTitleSlot) —
+   a template-specific decoration that leaked into template-neutral components. `--slot-fleuron`
+   is the escape hatch: defaults to `flex` (T7, and anything else that's never touched this,
+   render byte-for-byte as before); a template with a different visual identity sets it to `none`. */
 .fleuron {
-  display: flex;
+  display: var(--slot-fleuron, flex);
   align-items: center;
   justify-content: center;
   gap: 0.85rem;
@@ -180,7 +190,7 @@
 .sectionLead {
   font-family: var(--slot-font-serif, Georgia, serif);
   font-size: calc(clamp(0.9rem, 1.8cqi, 1.1rem) * var(--slot-text-scale, 1));
-  font-style: italic;
+  font-style: var(--slot-body-style, italic);
   color: var(--slot-ink-soft, #6b6863);
   text-align: center;
   margin: 0 0 0.75rem;
@@ -260,7 +270,7 @@
 }
 .coupleAmp {
   font-family: var(--slot-font-serif, Georgia, serif);
-  font-style: italic;
+  font-style: var(--slot-body-style, italic);
   font-size: calc(1.1rem * var(--slot-text-scale, 1));
   color: var(--slot-ink-faint, #9a9690);
 }
@@ -362,7 +372,7 @@
   width: 7px;
   height: 7px;
   border-radius: 50%;
-  background: var(--slot-ink, #2b2a28);
+  background: var(--slot-accent, var(--slot-ink, #2b2a28));
 }
 .itineraryTime {
   display: block;
@@ -406,8 +416,8 @@
   outline: none;
   box-sizing: border-box;
 }
-.field:focus { border-color: var(--slot-ink, #2b2a28); }
-.field::placeholder { color: var(--slot-ink-faint, #9a9690); font-style: italic; }
+.field:focus { border-color: var(--slot-accent, var(--slot-ink, #2b2a28)); }
+.field::placeholder { color: var(--slot-ink-faint, #9a9690); font-style: var(--slot-body-style, italic); }
 
 .fieldRow { display: flex; gap: 0.55rem; }
 .fieldRow > * { flex: 1; min-width: 0; }
@@ -427,8 +437,8 @@
   transition: background 0.2s ease, color 0.2s ease;
 }
 .choiceActive {
-  background: var(--slot-ink, #2b2a28);
-  border-color: var(--slot-ink, #2b2a28);
+  background: var(--slot-accent, var(--slot-ink, #2b2a28));
+  border-color: var(--slot-accent, var(--slot-ink, #2b2a28));
   color: var(--slot-accent-ink, #f5f4f2);
 }
 
@@ -444,14 +454,14 @@
   border: none;
   cursor: pointer;
   font-family: var(--slot-font-serif, Georgia, serif);
-  font-style: italic;
+  font-style: var(--slot-body-style, italic);
   font-size: calc(0.9rem * var(--slot-text-scale, 1));
   color: var(--slot-ink-soft, #6b6863);
   text-decoration: underline;
 }
 .notice {
   font-family: var(--slot-font-serif, Georgia, serif);
-  font-style: italic;
+  font-style: var(--slot-body-style, italic);
   font-size: calc(1rem * var(--slot-text-scale, 1));
   color: var(--slot-ink-soft, #6b6863);
   margin: 1.2rem 0;
@@ -528,7 +538,7 @@
   position: absolute;
   inset: -3px;
   border-radius: 50%;
-  border: 1px solid var(--slot-ink, #2b2a28);
+  border: 1px solid var(--slot-accent, var(--slot-ink, #2b2a28));
 }
 
 /* ── Wishes ───────────────────────────────────────────────────────────────────────────────── */
@@ -571,7 +581,7 @@
   outline: none;
   box-sizing: border-box;
 }
-.wishTextarea::placeholder { color: var(--slot-ink-faint, #9a9690); font-style: italic; }
+.wishTextarea::placeholder { color: var(--slot-ink-faint, #9a9690); font-style: var(--slot-body-style, italic); }
 
 .wishList {
   display: flex;
@@ -582,9 +592,9 @@
   margin: 0;
   padding: 0.6rem 0.9rem;
   background: var(--slot-panel-scrim-1, rgba(246, 245, 243, 0.82));
-  border-left: 2px solid var(--slot-ink, #2b2a28);
+  border-left: var(--slot-wishitem-border, 2px solid var(--slot-accent, var(--slot-ink, #2b2a28)));
   border-radius: var(--slot-radius, 8px);
-  text-align: left;
+  text-align: var(--slot-wishitem-align, left);
 }
 .wishFrom {
   font-family: var(--slot-font-display, system-ui, sans-serif);
@@ -596,14 +606,14 @@
 }
 .wishMsg {
   font-family: var(--slot-font-serif, Georgia, serif);
-  font-style: italic;
+  font-style: var(--slot-body-style, italic);
   font-size: calc(0.92rem * var(--slot-text-scale, 1));
   color: var(--slot-ink, #2b2a28);
   margin: 0.2rem 0 0;
 }
 .empty {
   font-family: var(--slot-font-serif, Georgia, serif);
-  font-style: italic;
+  font-style: var(--slot-body-style, italic);
   font-size: calc(0.9rem * var(--slot-text-scale, 1));
   color: var(--slot-ink-faint, #9a9690);
   text-align: center;
@@ -629,9 +639,26 @@
      which leaves a form's fields absurdly wide. Centred once it stops filling the width. */
   max-width: 560px;
   margin-inline: auto;
-  max-height: 88vh;
+  /* `var(--fvh, 100vh)`, not `--fsvh` — this sheet is `position: fixed`, so it always sat on the
+     ambient ("chrome-collapsed") viewport, same as `.lightboxCard` below. Falls back to the plain
+     `88vh` literal on a guest's browser, where `--fvh` is never set. See docs/FIX_QUEUE.md Issue 2:
+     under "Reveal off-screen" the ambient iframe viewport is 2.2x wider than the pinned stage, so
+     an un-migrated `vh` here sized the sheet against the wrong box entirely. */
+  max-height: calc(var(--fvh, 100vh) * 0.88);
+  /* Nothing above this in the DOM (SheetHost mounts as a sibling of every <Stage>) declares a
+     query container, so without this every `cqi` inside a sheet — .field/.choice/.wishTextarea in
+     slots.module.css — silently falls back to resolving against the small viewport instead of the
+     card. Harmless at normal sizes (the card fills the viewport width below its 560px cap), but
+     under "Reveal off-screen" the iframe's viewport is 2.2x wider than the pinned stage, so sheet
+     text rendered 2.2x off from what a guest actually sees — the single largest preview/real
+     divergence found investigating the text-size mismatch. */
+  container-type: inline-size;
   overflow-y: auto;
-  padding: 1.6rem 1.2rem calc(1.6rem + env(safe-area-inset-bottom));
+  /* `env(safe-area-inset-bottom)` is always 0 inside an iframe — there's no real device notch to
+     query — so the preview always understated this padding, on top of the sheet's height itself
+     being wrong (see max-height above). `--fsab` carries the *emulated* inset from the previewed
+     device preset (docs/FIX_QUEUE.md Issue 2 / lib/devicePresets.ts) when set. */
+  padding: 1.6rem 1.2rem calc(1.6rem + var(--fsab, env(safe-area-inset-bottom, 0px)));
   border-radius: 24px 24px 0 0;
   background: var(--slot-panel-bg, #fdfaf5);
 }
@@ -750,7 +777,7 @@
   margin-bottom: 0.4rem;
   padding: 0.2rem 0.5rem;
   border-radius: 6px;
-  background: var(--slot-ink, #2b2a28);
+  background: var(--slot-accent, var(--slot-ink, #2b2a28));
   color: var(--slot-accent-ink, #f5f4f2);
   font-family: var(--slot-font-display, system-ui, sans-serif);
   font-size: 0.62rem;
@@ -859,8 +886,8 @@
   cursor: pointer;
 }
 .layoutBtnActive {
-  background: var(--slot-ink, #2b2a28);
-  border-color: var(--slot-ink, #2b2a28);
+  background: var(--slot-accent, var(--slot-ink, #2b2a28));
+  border-color: var(--slot-accent, var(--slot-ink, #2b2a28));
   color: var(--slot-accent-ink, #f5f4f2);
 }
 
@@ -910,7 +937,7 @@
   display: block;
   font-family: var(--slot-font-serif, Georgia, serif);
   font-size: 0.65rem;
-  font-style: italic;
+  font-style: var(--slot-body-style, italic);
   color: var(--slot-ink-faint, #9a9690);
   text-align: center;
 }
@@ -945,7 +972,7 @@
   background: var(--slot-ink-faint, #9a9690);
   cursor: pointer;
 }
-.stackDotActive { background: var(--slot-ink, #2b2a28); }
+.stackDotActive { background: var(--slot-accent, var(--slot-ink, #2b2a28)); }
 
 .lightboxOverlay {
   position: fixed;
@@ -958,13 +985,15 @@
 }
 .lightboxCard {
   position: relative;
-  max-width: 90vw;
-  max-height: 85vh;
+  /* `position: fixed`, same reasoning as `.sheetCard` above — resolves against the ambient
+     viewport, so it needs the frame-scoped fallback too under "Reveal off-screen". */
+  max-width: calc(var(--fvw, 100vw) * 0.9);
+  max-height: calc(var(--fvh, 100vh) * 0.85);
   text-align: center;
 }
 .lightboxPhoto {
   max-width: 100%;
-  max-height: 75vh;
+  max-height: calc(var(--fvh, 100vh) * 0.75);
   border-radius: var(--slot-radius, 8px);
   object-fit: contain;
 }
@@ -972,7 +1001,7 @@
   margin-top: 0.6rem;
   color: #fff;
   font-family: var(--slot-font-serif, Georgia, serif);
-  font-style: italic;
+  font-style: var(--slot-body-style, italic);
 }
 .lightboxClose {
   position: absolute;

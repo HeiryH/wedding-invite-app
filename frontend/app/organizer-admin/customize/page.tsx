@@ -36,7 +36,8 @@ import { Icon } from '@/components/ui/Icon';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import CharacterCount from '@tiptap/extension-character-count';
-import { PreviewPanel, DEVICE_DEFAULT_DIMS, type Device, type EditorMode } from './_components/PreviewPanel';
+import { PreviewPanel, frameFromPreset, type Device, type EditorMode, type PreviewFrame } from './_components/PreviewPanel';
+import { defaultPresetFor } from '@/lib/devicePresets';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL?.replace('/api', '') ?? '';
 
@@ -782,11 +783,23 @@ export default function CustomizePage() {
   const [editorMode, setEditorMode] = useState<EditorMode>('expanded');
   const [device, setDevice] = useState<Device>('mobile');
   const [manualZoom, setManualZoom] = useState<number | null>(null);
-  // Lifted out of PreviewPanel: "Reveal off-screen" pins each stage to the previewed device size
-  // *inside* the iframe, so the template needs these too — they ride the PREVIEW_UPDATE editor
-  // payload below. Kept here (like `device`/`manualZoom`) so both consumers read one source.
-  const [customW, setCustomW] = useState(DEVICE_DEFAULT_DIMS.mobile.w);
-  const [customH, setCustomH] = useState(DEVICE_DEFAULT_DIMS.mobile.h);
+  // Lifted out of PreviewPanel: "Reveal off-screen" pins each stage to the previewed device's
+  // visible (svh) box *inside* the iframe, so the template needs this too — it rides the
+  // PREVIEW_UPDATE editor payload below. Kept here (like `device`/`manualZoom`) so both consumers
+  // read one source. See docs/FIX_QUEUE.md Issue 2 / lib/devicePresets.ts.
+  const [frame, setFrame] = useState<PreviewFrame>(() => frameFromPreset(defaultPresetFor('mobile')));
+  // Which stored layout (`t7.layout.mobile.*` vs `.desktop.*`) the preview is actually resolving —
+  // derived from the *emulated* layout viewport (frame.w / frame.scale), matching useBreakpoint's
+  // own `(min-width: 900px)` query, rather than from the device preset name. A literal
+  // `device === 'mobile'` check would get a tablet-shaped preset wrong if its emulated width
+  // crosses 900 while its device width doesn't (or vice versa) — the exact scale factor matters
+  // here. Resolved 2026-09-08: a real iPad measured `visualViewport.scale` of exactly **1**, not
+  // the iPhone's 0.765 — confirming the anomaly is iPhone-specific, not universal. `frame.scale`
+  // (from `DevicePreset.scale`, lib/devicePresets.ts) carries the right per-device value instead of
+  // a single global constant, so the `ipad` preset (820/1 = 820) now correctly stays under the 900
+  // line into 'mobile', matching what a real iPad guest's `useBreakpoint` actually resolves to.
+  const previewBreakpoint: Breakpoint =
+    frame.w / frame.scale >= 900 ? 'desktop' : 'mobile';
   const [subSection, setSubSection] = useState('');
   // Adjust (stage-layout) dock: open state + which layer is selected, so the preview can outline it.
   const [adjusting, setAdjusting] = useState(false);
@@ -884,14 +897,14 @@ export default function CustomizePage() {
     if (!layout) return;
     const def = layout.stages[activeStage];
     if (!def) return;
-    const breakpoint: Breakpoint = device === 'mobile' ? 'mobile' : 'desktop';
+    const breakpoint: Breakpoint = previewBreakpoint;
     const { layers, bgFit, bgPosition, bgScale, bgSrc } = resolveStage(layout.keyPrefix, def, breakpoint, draftConfig);
     const nextLayers = layers.map((l) => (l.id === layerId ? { ...l, ...patch } : l));
     handleLayoutChange(
       layoutKey(layout.keyPrefix, breakpoint, def.id),
       serializeStage(def, breakpoint, nextLayers, { bgFit, bgPosition, bgScale, bgSrc }),
     );
-  }, [layout, activeStage, device, draftConfig, handleLayoutChange]);
+  }, [layout, activeStage, previewBreakpoint, draftConfig, handleLayoutChange]);
 
   // Opening the dock collapses the left inspector to its icon rail so the centred preview keeps room.
   const toggleAdjust = useCallback(() => {
@@ -951,18 +964,35 @@ export default function CustomizePage() {
       // itself flows through customConfig, one-way — the panel no longer lives in the iframe.
       editor: {
         enabled: adjusting,
-        breakpoint: device === 'mobile' ? 'mobile' : 'desktop',
+        breakpoint: previewBreakpoint,
         selectedStage: activeStage,
         selectedLayer,
         revealOverflow: revealOverflow && canReveal,
-        // The device box the stage pins itself to while revealing. Without these the template
-        // falls back to its own hardcoded 390x844 and reveal ignores the size you're previewing.
-        frameW: customW,
-        frameH: customH,
+        // The device box the stage pins itself to while revealing — the *emulated* layout size
+        // (see previewBreakpoint above / lib/inviteViewport.ts), not the raw device box, so a
+        // sheet or any other cqi/%-sized content pinned against this frame matches what a guest's
+        // browser actually lays out, not a narrower box with no viewport-meta emulation applied.
+        // frameW/frameH are kept for one release as a fallback for a stale cached payload; `frame`
+        // is authoritative and additionally carries `svh` (what Reveal actually pins to — see
+        // PreviewPanel's `visibleH`) and safe-area insets. Divides by `frame.scale`, this device's
+        // own requested→effective ratio (lib/devicePresets.ts), not a single hardcoded constant.
+        frameW: Math.round(frame.w / frame.scale),
+        frameH: Math.round(frame.svh / frame.scale),
+        frame: {
+          w: Math.round(frame.w / frame.scale),
+          h: Math.round(frame.lvh / frame.scale),
+          svh: Math.round(frame.svh / frame.scale),
+          safe: {
+            top: Math.round(frame.safe.top / frame.scale),
+            right: Math.round(frame.safe.right / frame.scale),
+            bottom: Math.round(frame.safe.bottom / frame.scale),
+            left: Math.round(frame.safe.left / frame.scale),
+          },
+        },
       },
     };
     payloadRef.current = payload;
-    try { localStorage.setItem('preview_draft', JSON.stringify(payload)); } catch {}
+    try { localStorage.setItem('preview_draft_v2', JSON.stringify(payload)); } catch {}
     if (postFrameRef.current) return;
     postFrameRef.current = requestAnimationFrame(() => {
       postFrameRef.current = 0;
@@ -970,7 +1000,7 @@ export default function CustomizePage() {
         { type: 'PREVIEW_UPDATE', payload: payloadRef.current }, window.location.origin,
       );
     });
-  }, [draftConfig, weddingDraft, coupleMedia, photoBoothEnabled, itinerary, wedding, adjusting, device, activeStage, selectedLayer, revealOverflow, canReveal, customW, customH]);
+  }, [draftConfig, weddingDraft, coupleMedia, photoBoothEnabled, itinerary, wedding, adjusting, previewBreakpoint, activeStage, selectedLayer, revealOverflow, canReveal, frame]);
 
   // Replay the latest payload when the iframe (re)mounts, and handle canvas-originated selection
   // + drag/resize. Layer.tsx posts these directly (it has no callback prop into this tree — it's
@@ -1407,7 +1437,7 @@ export default function CustomizePage() {
         before: (
           <>
             {switchingTemplate && <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-muted)', fontFamily: 'var(--font-ui)' }}>Switching template…</p>}
-            <TemplateLibrary templates={switchableTemplates} userTier={user?.tier ?? 'FREE'} currentTemplateId={wedding.templateId} onSelect={handleSwitchTemplate} compact />
+            <TemplateLibrary templates={switchableTemplates} userTier={user?.tier ?? 'BASIC'} currentTemplateId={wedding.templateId} onSelect={handleSwitchTemplate} compact />
           </>
         ),
       };
@@ -1699,10 +1729,8 @@ export default function CustomizePage() {
           editorMode={editorMode}
           onShowEditor={() => setEditorMode('expanded')}
           wedding={wedding}
-          customW={customW}
-          customH={customH}
-          setCustomW={setCustomW}
-          setCustomH={setCustomH}
+          frame={frame}
+          setFrame={setFrame}
           revealOverflow={canAdjust && adjusting && revealOverflow && canReveal}
         />
 
@@ -1719,7 +1747,7 @@ export default function CustomizePage() {
               stages={layout!.stages}
               keyPrefix={layout!.keyPrefix}
               stageIds={stageIds}
-              breakpoint={device === 'mobile' ? 'mobile' : 'desktop'}
+              breakpoint={previewBreakpoint}
               config={draftConfig}
               onLayoutChange={handleLayoutChange}
               selectedStage={activeStage}
@@ -1739,7 +1767,7 @@ export default function CustomizePage() {
               onToggleReveal={() => setRevealOverflow((r) => !r)}
               onUploadImage={handleAdjustUpload}
               slotTheme={Boolean(layout?.slotTheme)}
-              slotThemeAccentDefault={wedding.templateId === 7 ? '#3d3833' : '#2b2a28'}
+              slotThemeAccentDefault={wedding.templateId === 7 ? '#3d3833' : wedding.templateId === 10 ? '#D9481B' : '#2b2a28'}
             />
           </aside>
         )}

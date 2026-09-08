@@ -98,7 +98,7 @@ export default function AdjustPanel({
   slotTheme, slotThemeAccentDefault,
 }: Props) {
   // Namespaced under `.layout.` purely to inherit the existing PRO-gate regex — not a stage layer.
-  const themeKey = (field: 'accentColor' | 'headingFont' | 'cardBlur' | 'cardTint' | 'cardTintOpacity' | 'cardRadius') =>
+  const themeKey = (field: 'accentColor' | 'headingFont' | 'bodyFont' | 'cardStyle' | 'cardBlur' | 'cardTint' | 'cardTintOpacity' | 'cardRadius') =>
     `${keyPrefix}.layout.slotTheme.${field}`;
   const themeDefaults = { accentColor: slotThemeAccentDefault ?? '#2b2a28' };
   const [note, setNote] = useState('');
@@ -289,10 +289,16 @@ export default function AdjustPanel({
   // Anchors are existing DOM elements, not overlay art: they can't be resized (only nudged), so
   // the panel shows a reduced, transform-only control set for them.
   const isAnchor = current?.kind === 'anchor';
-  // scrollVideo (Template 5's envelope) has no geometry at all — it's an effect, not a
-  // positioned rectangle — so it gets its own control set in place of X/Y/Width/etc, and no
-  // Animation tab (the enter/exit vocabulary doesn't apply to a scroll-scrubbed effect).
+  // scrollVideo layers still get ordinary X/Y/Width/Height/Opacity/Depth (see the geometry block
+  // below) plus their own effect-tuning sliders in addition — but no Style/Animation tab, since
+  // the enter/exit/style vocabulary doesn't apply to a scroll-scrubbed effect. (Template 5's own
+  // envelope is hardcoded JSX outside this engine entirely and never reaches this panel — Template
+  // 7's mp4 RSVP trigger is the first layer that actually exercises this flag.)
   const isScrollVideo = current?.kind === 'scrollVideo';
+  // Play-once video (kind 'video') is scenery: it keeps the full geometry control set an `img`
+  // gets, and only adds the two chromakey knobs plus its start delay. Unlike scrollVideo it DOES
+  // get the Animation tab — its entrance animation is what the play delay waits on.
+  const isPlayOnceVideo = current?.kind === 'video';
   // A slot holds real content (a form, a list) that reflows to fill its box — unlike art, it
   // can't be safely cropped. `s` (Scale) is a paint-only `transform: scale()`, so it grows the
   // rendered box without growing what the stage reserves for it: past a certain Scale/Height
@@ -421,19 +427,49 @@ export default function AdjustPanel({
                 ))}
               </select>
             </div>
+            {/* Body falls back to Heading when unset (see each template's own index.tsx), so
+                picking just Heading already re-fonts the whole template; this is only for
+                differentiating headings from body/field/button copy. */}
+            <div className={styles.control} style={{ gridTemplateColumns: '54px 1fr' }}>
+              <span>Body</span>
+              <select
+                className={styles.select}
+                value={config[themeKey('bodyFont')] ?? ''}
+                onChange={(e) => onLayoutChange(themeKey('bodyFont'), e.target.value)}
+              >
+                <option value="">Match Heading</option>
+                {CURATED_FONTS.map((f) => (
+                  <option key={f.key} value={f.key}>{f.label}</option>
+                ))}
+              </select>
+            </div>
 
-            {/* Glassmorphism — off (Blur 0) leaves every slot's own neutral scrim untouched.
-                On, it reproduces Template 5's frosted-glass card for every `.panel`-based slot
-                (walimah/couple names/ceremony details/RSVP) at once. */}
+            {/* Card style — None leaves every slot's own template-authored look untouched (no
+                scrim, no blur); Radial reproduces the soft off-white vignette some templates
+                shipped with by default before this control existed; Glass is Template 5's
+                frosted-glass card recipe. Each template's index.tsx decides its own "None"
+                baseline — this control only ever ADDS a look on top, it never forces one. */}
             <div className={styles.label}>Card</div>
-            <Slider
-              label="Blur"
-              value={Number(config[themeKey('cardBlur')] ?? 0)}
-              min={0} max={30} step={1}
-              onChange={(v) => onLayoutChange(themeKey('cardBlur'), v ? String(v) : '')}
-            />
-            {Number(config[themeKey('cardBlur')] ?? 0) > 0 && (
+            <div className={styles.control} style={{ gridTemplateColumns: '54px 1fr' }}>
+              <span>Style</span>
+              <select
+                className={styles.select}
+                value={config[themeKey('cardStyle')] ?? 'none'}
+                onChange={(e) => onLayoutChange(themeKey('cardStyle'), e.target.value === 'none' ? '' : e.target.value)}
+              >
+                <option value="none">None</option>
+                <option value="radial">Radial</option>
+                <option value="glass">Glass</option>
+              </select>
+            </div>
+            {config[themeKey('cardStyle')] === 'glass' && (
               <>
+                <Slider
+                  label="Blur"
+                  value={Number(config[themeKey('cardBlur')] ?? 16)}
+                  min={1} max={30} step={1}
+                  onChange={(v) => onLayoutChange(themeKey('cardBlur'), String(v || 1))}
+                />
                 <div className={styles.control} style={{ gridTemplateColumns: '54px 1fr' }}>
                   <span>Tint</span>
                   <input
@@ -626,7 +662,7 @@ export default function AdjustPanel({
                   />
                 </div>
 
-                {(current.kind === 'text' || current.hasText) && (
+                {(current.kind === 'text' || current.hasText || current.kind === 'scrollVideo') && (
                   <>
                     <input
                       className={styles.select}
@@ -656,93 +692,113 @@ export default function AdjustPanel({
                   </>
                 )}
 
-                {isScrollVideo ? (
-                  <>
-                    {/* No video-replace upload yet — PhotoService (backend) only accepts image
-                        extensions/content-types today; wiring this up needs that widened first. */}
-                    <Slider label="Trigger Start %" value={current.triggerStart ?? 85} min={0} max={100} step={1} onChange={set('triggerStart')} />
-                    <Slider label="Trigger End %" value={current.triggerEnd ?? 15} min={0} max={100} step={1} onChange={set('triggerEnd')} />
-                    <Slider label="Scrub" value={current.scrub ?? 0.5} min={0} max={2} step={0.1} onChange={set('scrub')} />
-                    <Slider label="Pivot" value={current.pivot ?? 0.5} min={0.1} max={0.9} step={0.01} onChange={set('pivot')} />
-                    <Slider label="Hold Width" value={current.holdWidth ?? 0.04} min={0} max={0.3} step={0.01} onChange={set('holdWidth')} />
-                    <Slider label="Video Start (s)" value={current.videoStartSec ?? 0.5} min={0} max={3} step={0.1} onChange={set('videoStartSec')} />
-                    <Slider label="Open Threshold" value={current.openThreshold ?? 0.85} min={0.5} max={0.99} step={0.01} onChange={set('openThreshold')} />
-                    <Slider label="Reset Time (s)" value={current.resetSec ?? 0.2} min={0} max={2} step={0.1} onChange={set('resetSec')} />
-                    <Slider label="Chroma Threshold" value={current.chromaThreshold ?? 30} min={0} max={100} step={1} onChange={set('chromaThreshold')} />
-                    <Slider label="Chroma Fade" value={current.chromaFade ?? 20} min={0} max={100} step={1} onChange={set('chromaFade')} />
-                  </>
-                ) : (
-                  <>
-                    {isSheet && (
-                      <p style={{ fontSize: 12, lineHeight: 1.5, color: 'var(--text-muted)', margin: '4px 0 10px' }}>
-                        Shown in a pop-up, which sets its own size and position. To change the order
-                        steps appear in, drag this row in the list above.
-                      </p>
-                    )}
-                    {/* Anchors nudge an existing element by an offset — X/Y here is a translate, not
-                        an absolute position. 50 = no offset. */}
-                    {!isSheet && (
-                      <>
-                        <Slider label={isAnchor ? 'Nudge X' : 'X'} value={current.x} min={-20} max={120} step={0.5} onChange={set('x')} />
-                        <Slider label={isAnchor ? 'Nudge Y' : 'Y'} value={current.y} min={-20} max={120} step={0.5} onChange={set('y')} />
-                      </>
-                    )}
+                {/* Geometry: shown for every kind, scrollVideo included — this layer renders
+                    through the ordinary positioned `.layerBox` (Layer.tsx applies x/y/w/h/z
+                    uniformly regardless of kind), so unlike Template 5's bespoke inline envelope
+                    (which never reaches this panel), a scrollVideo layer here genuinely has a box
+                    that needs to stay tunable after shipping, exactly like any other layer. None
+                    of isImage/isAnchor/isSheet/isSlot are ever true for it, so every condition
+                    below already produces the right subset (X/Y/Width/Height/Opacity/Depth, no
+                    Scale, no slot-only controls) with no extra gating needed. */}
+                <>
+                  {isSheet && (
+                    <p style={{ fontSize: 12, lineHeight: 1.5, color: 'var(--text-muted)', margin: '4px 0 10px' }}>
+                      Shown in a pop-up, which sets its own size and position. To change the order
+                      steps appear in, drag this row in the list above.
+                    </p>
+                  )}
+                  {/* Anchors nudge an existing element by an offset — X/Y here is a translate, not
+                      an absolute position. 50 = no offset. */}
+                  {!isSheet && (
+                    <>
+                      <Slider label={isAnchor ? 'Nudge X' : 'X'} value={current.x} min={-20} max={120} step={0.5} onChange={set('x')} />
+                      <Slider label={isAnchor ? 'Nudge Y' : 'Y'} value={current.y} min={-20} max={120} step={0.5} onChange={set('y')} />
+                    </>
+                  )}
 
-                    {!isAnchor && !isSheet && (
-                      <>
-                        <Slider label="Width" value={current.w} min={3} max={200} step={0.5} onChange={set('w')} />
-                        {!current.chain && (
-                          <Slider label="Height" value={current.h} min={3} max={200} step={0.5} onChange={set('h')} />
-                        )}
-                        {isImage && (
-                          <button
-                            className={`${styles.chain} ${current.chain ? '' : styles.chainOff}`}
-                            onClick={() => patchLayer(current.id, { chain: !current.chain })}
-                          >
-                            {current.chain ? '— Linked: height follows width —' : '— Free: height set separately —'}
-                          </button>
-                        )}
-                      </>
-                    )}
+                  {!isAnchor && !isSheet && (
+                    <>
+                      <Slider label="Width" value={current.w} min={3} max={200} step={0.5} onChange={set('w')} />
+                      {!current.chain && (
+                        <Slider label="Height" value={current.h} min={3} max={200} step={0.5} onChange={set('h')} />
+                      )}
+                      {isImage && (
+                        <button
+                          className={`${styles.chain} ${current.chain ? '' : styles.chainOff}`}
+                          onClick={() => patchLayer(current.id, { chain: !current.chain })}
+                        >
+                          {current.chain ? '— Linked: height follows width —' : '— Free: height set separately —'}
+                        </button>
+                      )}
+                    </>
+                  )}
 
-                    {/* Scale is a paint-only transform — fine for art (nothing inside an image
-                        needs to reflow), wrong for anything with real content, which is why it's
-                        no longer offered for text/slot/shape layers. Those size themselves via
-                        Width/Height (which reflows correctly) and, for slot layers with form
-                        text, the Text Size control below (a real font-size, not a paint scale).
-                        Anchors are the one non-image exception: they wrap an already-rendered DOM
-                        element by nudge/transform (see types.ts), have no box of their own to
-                        offer Width/Height on, so Scale is their only sizing control. */}
-                    {(isImage || isAnchor) && !isSheet && (
-                      <Slider label="Scale" value={current.s} min={0.2} max={3} step={0.02} onChange={set('s')} />
-                    )}
-                    {slotVOverflow && (
-                      <div style={{
-                        fontSize: 11.5, lineHeight: 1.4, color: 'var(--warning)',
-                        background: 'var(--warning-subtle)', border: '1px solid var(--warning-border)',
-                        borderRadius: 8, padding: '6px 8px', margin: '-2px 0 8px',
-                      }}>
-                        ⚠ This panel {slotVOverflow}. Lower Height (or move Y toward centre) so
-                        content can&apos;t be cut off.
-                      </div>
-                    )}
-                    {hasSlotText && (
-                      <Slider
-                        label="Text Size"
-                        value={current.textScale ?? 1}
-                        min={0.7} max={1.8} step={0.05}
-                        onChange={set('textScale')}
-                      />
-                    )}
-                    {!isSheet && (
-                      <Slider label="Opacity" value={current.opacity} min={0} max={1} step={0.05} onChange={set('opacity')} />
-                    )}
+                  {/* Scale is a paint-only transform — fine for art (nothing inside an image
+                      needs to reflow), wrong for anything with real content, which is why it's
+                      no longer offered for text/slot/shape/scrollVideo layers. Those size
+                      themselves via Width/Height (which reflows correctly) and, for slot layers
+                      with form text, the Text Size control below (a real font-size, not a paint
+                      scale). Anchors are the one non-image exception: they wrap an already-
+                      rendered DOM element by nudge/transform (see types.ts), have no box of their
+                      own to offer Width/Height on, so Scale is their only sizing control. */}
+                  {(isImage || isAnchor) && !isSheet && (
+                    <Slider label="Scale" value={current.s} min={0.2} max={3} step={0.02} onChange={set('s')} />
+                  )}
+                  {slotVOverflow && (
+                    <div style={{
+                      fontSize: 11.5, lineHeight: 1.4, color: 'var(--warning)',
+                      background: 'var(--warning-subtle)', border: '1px solid var(--warning-border)',
+                      borderRadius: 8, padding: '6px 8px', margin: '-2px 0 8px',
+                    }}>
+                      ⚠ This panel {slotVOverflow}. Lower Height (or move Y toward centre) so
+                      content can&apos;t be cut off.
+                    </div>
+                  )}
+                  {hasSlotText && (
+                    <Slider
+                      label="Text Size"
+                      value={current.textScale ?? 1}
+                      min={0.7} max={1.8} step={0.05}
+                      onChange={set('textScale')}
+                    />
+                  )}
+                  {!isSheet && (
+                    <Slider label="Opacity" value={current.opacity} min={0} max={1} step={0.05} onChange={set('opacity')} />
+                  )}
 
-                    {!isAnchor && !isSheet && (
-                      <Slider label="Depth" value={current.depth ?? current.z / 10} min={0} max={3} step={0.1} onChange={set('depth')} />
-                    )}
-                  </>
-                )}
+                  {!isAnchor && !isSheet && (
+                    <Slider label="Depth" value={current.depth ?? current.z / 10} min={0} max={3} step={0.1} onChange={set('depth')} />
+                  )}
+
+                  {/* Effect tuning, additional to (not instead of) the geometry above — see the
+                      comment on the geometry block. */}
+                  {isScrollVideo && (
+                    <>
+                      {/* No video-replace upload yet — PhotoService (backend) only accepts image
+                          extensions/content-types today; wiring this up needs that widened first. */}
+                      <Slider label="Trigger Start %" value={current.triggerStart ?? 85} min={0} max={100} step={1} onChange={set('triggerStart')} />
+                      <Slider label="Trigger End %" value={current.triggerEnd ?? 15} min={0} max={100} step={1} onChange={set('triggerEnd')} />
+                      <Slider label="Scrub" value={current.scrub ?? 0.5} min={0} max={2} step={0.1} onChange={set('scrub')} />
+                      <Slider label="Pivot" value={current.pivot ?? 0.5} min={0.1} max={0.9} step={0.01} onChange={set('pivot')} />
+                      <Slider label="Hold Width" value={current.holdWidth ?? 0.04} min={0} max={0.3} step={0.01} onChange={set('holdWidth')} />
+                      <Slider label="Video Start (s)" value={current.videoStartSec ?? 0.5} min={0} max={3} step={0.1} onChange={set('videoStartSec')} />
+                      <Slider label="Open Threshold" value={current.openThreshold ?? 0.85} min={0.5} max={0.99} step={0.01} onChange={set('openThreshold')} />
+                      <Slider label="Reset Time (s)" value={current.resetSec ?? 0.2} min={0} max={2} step={0.1} onChange={set('resetSec')} />
+                      <Slider label="Chroma Threshold" value={current.chromaThreshold ?? 30} min={0} max={100} step={1} onChange={set('chromaThreshold')} />
+                      <Slider label="Chroma Fade" value={current.chromaFade ?? 20} min={0} max={100} step={1} onChange={set('chromaFade')} />
+                    </>
+                  )}
+
+                  {isPlayOnceVideo && (
+                    <>
+                      {/* Plays once after the scene settles, then holds the last frame. The delay
+                          defaults to this layer's own entrance timing (0.35 + order*0.22 + dur). */}
+                      <Slider label="Play Delay (s)" value={current.playDelaySec ?? Number((0.35 + current.order * 0.22 + (current.animDur ?? 1)).toFixed(2))} min={0} max={8} step={0.1} onChange={set('playDelaySec')} />
+                      <Slider label="Chroma Threshold" value={current.chromaThreshold ?? 18} min={0} max={100} step={1} onChange={set('chromaThreshold')} />
+                      <Slider label="Chroma Fade" value={current.chromaFade ?? 10} min={0} max={100} step={1} onChange={set('chromaFade')} />
+                    </>
+                  )}
+                </>
               </>
             ) : detailTab === 'style' && canStyle ? (
               <>
@@ -760,6 +816,7 @@ export default function AdjustPanel({
                   </select>
                 </div>
                 <Slider label="Text Size" value={current.fontSize ?? 4} min={1.5} max={12} step={0.25} onChange={set('fontSize')} />
+                <Slider label="Line Height" value={current.lineHeight ?? 1.25} min={0.8} max={2.2} step={0.05} onChange={set('lineHeight')} />
                 <div className={styles.control} style={{ gridTemplateColumns: '54px 1fr' }}>
                   <span>Weight</span>
                   <select

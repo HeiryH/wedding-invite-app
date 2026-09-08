@@ -341,7 +341,7 @@ namespace WeddingInvite.Data
                     ComponentPath = "Template1",
                     IsActive = true,
                     IsPremium = false,
-                    Tier = "FREE",
+                    Tier = "BASIC",
                     SortOrder = 1,
                     CreatedDate = DateTime.UtcNow
                 },
@@ -504,15 +504,15 @@ namespace WeddingInvite.Data
                     .OnDelete(DeleteBehavior.Cascade);
             });
 
-            // Packages ARE the tier definitions (FREE / PREMIUM / PRO) — see TierEntitlements and
+            // Packages ARE the tier definitions (BASIC / PREMIUM / PRO) — see TierEntitlements and
             // IPackageRepository.TierIncludesFeatureAsync. Exactly these 3 rows; PackageService
             // rejects creating/deleting any others. Edited at /super-admin/packages.
             modelBuilder.Entity<Package>().HasData(
                 new Package
                 {
                     PackageId = 1,
-                    PackageName = "Free",
-                    PackageCode = "FREE",
+                    PackageName = "Basic",
+                    PackageCode = "BASIC",
                     Description = "Basic wedding invitation with RSVP and guestbook",
                     Price = 0,
                     IsActive = true,
@@ -671,7 +671,7 @@ namespace WeddingInvite.Data
                     PasswordHash = BCrypt.Net.BCrypt.HashPassword("Admin123!"),
                     Role = UserRoles.SuperAdmin,
                     EventId = null,
-                    Tier = "FREE",
+                    Tier = "BASIC",
                     CreatedDate = DateTime.UtcNow
                 }
             );

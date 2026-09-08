@@ -16,11 +16,11 @@ public class TierEnforcementTests
 {
     // ── Package-driven entitlement lookup (replaces the old hardcoded FeatureMinRank dict) ────
     [Theory]
-    [InlineData("FREE", "RSVP", true)]
-    [InlineData("FREE", "WISHES", true)]
-    [InlineData("FREE", "PHOTO_BOOTH", false)]
-    [InlineData("FREE", "SEATING", false)]
-    [InlineData("FREE", "CUSTOM_DOMAIN", false)]
+    [InlineData("BASIC", "RSVP", true)]
+    [InlineData("BASIC", "WISHES", true)]
+    [InlineData("BASIC", "PHOTO_BOOTH", false)]
+    [InlineData("BASIC", "SEATING", false)]
+    [InlineData("BASIC", "CUSTOM_DOMAIN", false)]
     [InlineData("PREMIUM", "PHOTO_BOOTH", true)]
     [InlineData("PREMIUM", "SEATING", true)]
     [InlineData("PREMIUM", "CUSTOM_DOMAIN", false)]
@@ -34,9 +34,9 @@ public class TierEnforcementTests
     }
 
     [Theory]
-    [InlineData("FREE", "PREMIUM", false)]
+    [InlineData("BASIC", "PREMIUM", false)]
     [InlineData("PREMIUM", "PREMIUM", true)]
-    [InlineData("PREMIUM", "FREE", true)]
+    [InlineData("PREMIUM", "BASIC", true)]
     [InlineData("PRO", "PREMIUM", true)]
     public void AllowsTemplateTier_RespectsRank(string userTier, string templateTier, bool expected)
     {
@@ -75,25 +75,25 @@ public class TierEnforcementTests
 
     private const int PhotoBoothFeatureId = 1;  // seeded PHOTO_BOOTH
     private const int CustomDomainFeatureId = 3; // seeded CUSTOM_DOMAIN
-    private const int RsvpFeatureId = 4;        // seeded RSVP (FREE)
+    private const int RsvpFeatureId = 4;        // seeded RSVP (BASIC)
 
     [Fact]
-    public async Task FreeWedding_CannotEnable_PremiumFeature()
+    public async Task BasicWedding_CannotEnable_PremiumFeature()
     {
         using var db = new TestDb();
-        SeedCouple(db, 100, TierEntitlements.Free);
+        SeedCouple(db, 100, TierEntitlements.Basic);
         var svc = BuildService(db);
 
         var ex = await Assert.ThrowsAsync<InvalidOperationException>(() =>
             svc.ToggleFeatureAsync(100, new ToggleFeatureDto { FeatureId = PhotoBoothFeatureId, IsEnabled = true }));
-        Assert.Contains("FREE", ex.Message);
+        Assert.Contains("BASIC", ex.Message);
     }
 
     [Fact]
-    public async Task FreeWedding_CanEnable_FreeFeature()
+    public async Task BasicWedding_CanEnable_BasicFeature()
     {
         using var db = new TestDb();
-        SeedCouple(db, 101, TierEntitlements.Free);
+        SeedCouple(db, 101, TierEntitlements.Basic);
         var svc = BuildService(db);
 
         var result = await svc.ToggleFeatureAsync(101, new ToggleFeatureDto { FeatureId = RsvpFeatureId, IsEnabled = true });
@@ -115,7 +115,7 @@ public class TierEnforcementTests
     public async Task Disabling_IsAlwaysAllowed_RegardlessOfTier()
     {
         using var db = new TestDb();
-        SeedCouple(db, 103, TierEntitlements.Free);
+        SeedCouple(db, 103, TierEntitlements.Basic);
         var svc = BuildService(db);
 
         // Disabling a premium feature must never be blocked by the ceiling.

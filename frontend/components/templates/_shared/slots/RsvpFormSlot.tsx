@@ -53,6 +53,10 @@ function isActiveStep(
 
 export function RsvpFormSlot({ wedding, onRSVP, seatingEnabled, editing, editor }: SlotProps) {
   const paxLimit = (wedding.maxPax ?? 0) > 0 ? Math.min(10, wedding.maxPax!) : 10;
+  // WEDDING is the only event type with two "sides" to ask about — a PARTY/CEREMONY guest has one
+  // honoree or none at all. Template 8 already posts `brideOrGroomSide: null` for PARTY; mirrored
+  // here so any compositor template gets the same behaviour for free.
+  const isWedding = (wedding.eventType ?? 'WEDDING') === 'WEDDING';
   const {
     step, setStep, form, setForm, selectedTableId, submitting, setSubmitting, done, setDone,
   } = useRsvpFlow();
@@ -62,7 +66,7 @@ export function RsvpFormSlot({ wedding, onRSVP, seatingEnabled, editing, editor 
   const send = async () => {
     setSubmitting(true);
     try {
-      await onRSVP({ ...form, tableId: selectedTableId });
+      await onRSVP({ ...form, brideOrGroomSide: isWedding ? form.brideOrGroomSide : null, tableId: selectedTableId });
       setDone(true);
     } catch {
       alert('Failed to submit RSVP');
@@ -116,14 +120,16 @@ export function RsvpFormSlot({ wedding, onRSVP, seatingEnabled, editing, editor 
           </div>
 
           <div className={styles.fieldRow}>
-            <select
-              className={styles.field}
-              value={form.brideOrGroomSide}
-              onChange={(e) => setForm((f) => ({ ...f, brideOrGroomSide: e.target.value as 'Bride' | 'Groom' }))}
-            >
-              <option value="Bride">Bride&apos;s side</option>
-              <option value="Groom">Groom&apos;s side</option>
-            </select>
+            {isWedding && (
+              <select
+                className={styles.field}
+                value={form.brideOrGroomSide}
+                onChange={(e) => setForm((f) => ({ ...f, brideOrGroomSide: e.target.value as 'Bride' | 'Groom' }))}
+              >
+                <option value="Bride">Bride&apos;s side</option>
+                <option value="Groom">Groom&apos;s side</option>
+              </select>
+            )}
             <input
               className={styles.field}
               type="number"
@@ -172,7 +178,8 @@ export function RsvpFormSlot({ wedding, onRSVP, seatingEnabled, editing, editor 
   );
 }
 
-export function RsvpSeatingSlot({ onRSVP, tables, editing, editor, t }: SlotProps) {
+export function RsvpSeatingSlot({ wedding, onRSVP, tables, editing, editor, t }: SlotProps) {
+  const isWedding = (wedding.eventType ?? 'WEDDING') === 'WEDDING';
   const {
     step, setStep, form, selectedTableId, setSelectedTableId, submitting, setSubmitting, done, setDone,
   } = useRsvpFlow();
@@ -183,7 +190,7 @@ export function RsvpSeatingSlot({ onRSVP, tables, editing, editor, t }: SlotProp
     if (editing) return; // laying out the stage must never post a real RSVP
     setSubmitting(true);
     try {
-      await onRSVP({ ...form, tableId: selectedTableId });
+      await onRSVP({ ...form, brideOrGroomSide: isWedding ? form.brideOrGroomSide : null, tableId: selectedTableId });
       setDone(true);
     } catch {
       alert('Failed to submit RSVP');

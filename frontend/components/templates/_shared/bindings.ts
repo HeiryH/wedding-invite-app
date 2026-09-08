@@ -52,6 +52,13 @@ function resolveToken(token: string, slotProps: SlotProps): string | undefined {
     case 'venue': return wedding.venue;
     case 'venueAddress': return wedding.venueAddress ?? '';
     case 'date': return formatDate(new Date(wedding.weddingDate), arg);
+    // Native Event fields (see Wedding's own comment) — a PARTY has one honoree and no "sides",
+    // a CEREMONY has no individual names at all. `honoree` mirrors Template8's proven fallback
+    // chain so a text layer reading it behaves the same as that hand-coded template.
+    case 'eventTitle': return wedding.eventTitle ?? '';
+    case 'name1': return wedding.name1 ?? '';
+    case 'name2': return wedding.name2 ?? '';
+    case 'honoree': return wedding.name1 || wedding.brideName || '';
     default: return undefined;
   }
 }
@@ -70,6 +77,10 @@ export const BINDING_TOKENS = [
   { token: 'date:ordinal', label: 'Date — ordinal (12th December 2026)' },
   { token: 'date:weekday', label: 'Date — weekday (Saturday)' },
   { token: 'date:hijri', label: 'Date — Hijri' },
+  { token: 'eventTitle', label: 'Event title (CEREMONY)' },
+  { token: 'name1', label: 'Name 1' },
+  { token: 'name2', label: 'Name 2' },
+  { token: 'honoree', label: 'Honoree (PARTY, falls back to bride name)' },
 ] as const;
 
 export function resolveBindings(text: string | undefined, slotProps?: SlotProps): string {

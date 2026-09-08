@@ -12,7 +12,7 @@ namespace WeddingInvite.Core.Services
         // locked to exactly these three codes — no ad-hoc extra bundles.
         private static readonly HashSet<string> TierCodes = new(StringComparer.OrdinalIgnoreCase)
         {
-            TierEntitlements.Free, TierEntitlements.Premium, TierEntitlements.Pro,
+            TierEntitlements.Basic, TierEntitlements.Premium, TierEntitlements.Pro,
         };
 
         private readonly IPackageRepository _packageRepo;
@@ -57,7 +57,7 @@ namespace WeddingInvite.Core.Services
                 throw new ArgumentException("Package code is required");
 
             if (!TierCodes.Contains(createDto.PackageCode.Trim()))
-                throw new ArgumentException("Package code must be one of FREE, PREMIUM, or PRO — these are the platform's tiers.");
+                throw new ArgumentException("Package code must be one of BASIC, PREMIUM, or PRO — these are the platform's tiers.");
 
             if (await _packageRepo.NameExistsAsync(createDto.PackageName))
                 throw new ArgumentException($"Package name '{createDto.PackageName}' already exists");

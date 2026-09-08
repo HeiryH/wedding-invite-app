@@ -6,6 +6,7 @@ import { T4_STAGES, t4StageIds } from '../Template4-minimalnoir/data/t4Stages';
 import { T5_STAGES, t5StageIds } from '../Template5-dreamingfloral/data/t5Stages';
 import { T6_STAGES, t6StageIds } from '../Template6-fairygarden/data/t6Stages';
 import { T7_STAGES, STAGE_GROUPS } from '../Template7-romangarden/data/stages';
+import { T10_STAGES, STAGE_GROUPS as T10_STAGE_GROUPS } from '../Template10-sunnysafari/data/stages';
 
 /**
  * Everything a template's `layout` resolution needs, computed once per render in the customize
@@ -71,5 +72,14 @@ export const TEMPLATE_ENGINES: Record<number, TemplateEngine> = {
       const wi = flat.indexOf('ceremony-walimah');
       return wi >= 0 ? [...flat.slice(0, wi), 'ceremony-rail', ...flat.slice(wi)] : flat;
     },
+  },
+  // Same full-screen Stage compositor as T7 (reveal: true), but one stage per section with no
+  // ceremony-row feature — the simple branch shape.
+  10: {
+    keyPrefix: 't10',
+    reveal: true,
+    slotTheme: true,
+    resolveStages: () => T10_STAGES,
+    stageIds: (ctx) => ctx.codes.flatMap((c) => T10_STAGE_GROUPS[c] ?? []),
   },
 };

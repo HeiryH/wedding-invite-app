@@ -34,7 +34,7 @@ export interface Event {
   createdByUserId?: number;
   createdByEmail?: string;
   domain?: string | null;
-  ownerTier: 'FREE' | 'PREMIUM' | 'PRO';
+  ownerTier: 'BASIC' | 'PREMIUM' | 'PRO';
 }
 
 export interface CreateEvent {
@@ -270,7 +270,7 @@ export interface Template {
   componentPath: string;
   isActive: boolean;
   isPremium: boolean;
-  tier: 'FREE' | 'PREMIUM' | 'PRO';
+  tier: 'BASIC' | 'PREMIUM' | 'PRO';
   sortOrder: number;
   isAuthored: boolean;
   /** Only meaningful when isAuthored — the Record<StageId,StageDef> JSON the authoring editor
@@ -286,7 +286,7 @@ export interface TemplateWithUsage extends Template {
 export interface UpdateTemplate {
   templateName: string;
   description: string;
-  tier: 'FREE' | 'PREMIUM' | 'PRO';
+  tier: 'BASIC' | 'PREMIUM' | 'PRO';
   isActive: boolean;
   sortOrder: number;
   eventTypes: string;
@@ -298,7 +298,7 @@ export interface CreateTemplate {
   templateName: string;
   templateCode: string;
   description: string;
-  tier: 'FREE' | 'PREMIUM' | 'PRO';
+  tier: 'BASIC' | 'PREMIUM' | 'PRO';
 }
 
 // ========== Package Types ==========
@@ -408,11 +408,11 @@ export interface TemplateConfigField {
    */
   templateIds?: number[];
   /**
-   * Minimum user tier to see/edit this field. Omitted ⇒ FREE (everyone). The stage-layout
+   * Minimum user tier to see/edit this field. Omitted ⇒ BASIC (everyone). The stage-layout
    * launcher is PRO. Enforced client-side by getConfigFields and server-side by
    * TemplateConfigPolicy — keep the two in step.
    */
-  minTier?: 'FREE' | 'PREMIUM' | 'PRO';
+  minTier?: 'BASIC' | 'PREMIUM' | 'PRO';
   /**
    * Overrides whether the field appears in the guest self-serve Personalise page
    * (getGuestFields). Omitted ⇒ the default content heuristic decides. Set `true`

@@ -96,9 +96,9 @@ All repos/services are registered as **scoped** in `Program.cs`. When adding new
 - Roles: `SUPER_ADMIN`, `HOST_ADMIN` (reseller/agency — owns weddings via `Wedding.CreatedByUserId`), `COUPLE_ADMIN` (see `UserRoles` in `User.cs`)
 - Token is read from cookies in `Program.cs` via `OnMessageReceived` event
 - `IWeddingAuthorizationService` / `CanAccessWeddingAsync` enforces couple/host admin can only access their own wedding(s)
-- Tiers: `User.Tier` and `Template.Tier` are `FREE | PREMIUM | PRO` — templates are tier-gated. **No billing/payment integration exists yet** (tier changes are manual)
+- Tiers: `User.Tier` and `Template.Tier` are `BASIC | PREMIUM | PRO` — templates are tier-gated. **No billing/payment integration exists yet** (tier changes are manual)
 - `Template.EventTypes` is a separate CSV field (`WEDDING`/`CEREMONY`/`PARTY`, e.g. `"WEDDING,CEREMONY"`) — which event the public `/personalise/picker` funnel shows a template under. Not tier-related; edited via a checkbox group on `/super-admin/themes`. `TemplateService.NormalizeEventTypes` upper-cases/validates on save and falls back to `WEDDING` if nothing recognised survives. `frontend/lib/eventTypes.ts` (`EVENT_TYPES`, `parseEventTypes`, `matchesEvent`) is the shared frontend vocabulary.
-- **Package rows ARE the tier definitions** (`Package`/`PackageFeature`, exactly `FREE`/`PREMIUM`/`PRO` — `PackageService` rejects creating or deleting any other code). `IPackageRepository.TierIncludesFeatureAsync` is the single source of truth for "does this tier include this feature," replacing the old hardcoded `TierEntitlements.AllowsFeature` map. Edited at `/super-admin/packages`. `Wedding.PackageId` no longer exists — a wedding's feature set comes from its owner's `User.Tier` alone, resolved through this lookup (see `WeddingFeatureService`/`WeddingService.SetDomainAsync`). Custom Domain needs both the PRO tier ceiling *and* an explicit per-wedding `WeddingFeature` toggle (same two-step gate as `PHOTO_BOOTH`/`SEATING`).
+- **Package rows ARE the tier definitions** (`Package`/`PackageFeature`, exactly `BASIC`/`PREMIUM`/`PRO` — `PackageService` rejects creating or deleting any other code). `IPackageRepository.TierIncludesFeatureAsync` is the single source of truth for "does this tier include this feature," replacing the old hardcoded `TierEntitlements.AllowsFeature` map. Edited at `/super-admin/packages`. `Wedding.PackageId` no longer exists — a wedding's feature set comes from its owner's `User.Tier` alone, resolved through this lookup (see `WeddingFeatureService`/`WeddingService.SetDomainAsync`). Custom Domain needs both the PRO tier ceiling *and* an explicit per-wedding `WeddingFeature` toggle (same two-step gate as `PHOTO_BOOTH`/`SEATING`).
 
 ### Wedding lifecycle: delete vs. deactivate
 `DELETE /api/wedding/{id}` (`WeddingService.DeleteAsync`) is a **real, permanent delete** — it removes
@@ -183,18 +183,69 @@ The stage/layer compositor is a **shared, template-neutral engine**: `types.ts`,
 map. Layouts persist per-template as `t<N>.layout.<bp>.<stageId>`. When adding a
 template, see `~/.claude/plans/t5-adjust-rollout.md`.
 
+### Preview fidelity — frame-scoped units, not raw viewport units
+See `docs/FIX_QUEUE.md` Issue 2. Two facts every new stage/template should build against:
+
+- **The invitation *requests* `initial-scale: 0.9`, but doesn't get it** — `INVITE_REQUESTED_SCALE`
+  (the literal meta-tag value the real page ships, `app/[eventType]/layout.tsx`) and
+  `INVITE_EFFECTIVE_SCALE` (what the browser actually renders at) are **separate constants in
+  `lib/inviteViewport.ts` and must stay separate.** A real-device measurement (`ViewportProbe` on an
+  iPhone 17 Pro, iOS 18.7 Safari) read `visualViewport.scale` back as **0.765**, not 0.9. `rem`/`%`/
+  `cqi` all cancel through whatever the effective scale actually is (both the value and the
+  paint-scale carry the same factor), so this needs no per-template handling — but never assume the
+  effective scale equals the requested one, and never "correct" `INVITE_REQUESTED_SCALE` from a
+  measurement of the effective scale — that changes what a guest's browser is asked to do, which is
+  a different, unverified experiment. See `docs/FIX_QUEUE.md` Issue 2 for how this was discovered.
+- **Type is `cqi`; box geometry that isn't already inside a `container-type` box is
+  `var(--f*, <unit>)`, never a raw `vw`/`vh`/`svh`.** `--fvw`/`--fvh`/`--fsvh`/`--fsat../--fsal` are
+  defined only inside the Adjust Editor's standalone preview (`_shared/FrameViewportVars.tsx`) and
+  every use site falls back to the literal unit (`var(--fsvh, 100svh)`), so this costs a guest's
+  browser nothing. It matters because the editor's preview iframe deliberately widens beyond the
+  device box it's simulating under "Reveal off-screen" (2.2x/1.5x) — a raw viewport unit inside that
+  iframe reads the *ambient* iframe size, not the device box being previewed. `.stage`/`.slot`/
+  `.artCanvas`/`.sheetCard` are already `container-type` boxes, so `cqi` inside them is safe as-is;
+  it's specifically `position: fixed` content (sheets, lightboxes, `HorizontalRail`) and section
+  gaps/padding that need the `--f*` form. `_shared/frameViewport.ts`'s `frameW()`/`frameSvh()` are
+  the JS-side equivalent, for anything computing off `window.inner*` inside a rAF loop.
+
 ### Every template now runs through this engine (`_shared/registry.ts`)
 `TEMPLATE_ENGINES` maps each `templateId` → `{keyPrefix, reveal, slotTheme?, resolveStages, stageIds}`.
 There are **no `templateId === N` branches** in `customize/page.tsx` any more — don't reintroduce
 them; add a registry entry. Two deliberately different geometry families live behind it:
 
-- **Fixed-stage compositor** (`reveal: true`) — full-screen `100svh` stages, absolute layer
-  positions. Template 7 today. `"Reveal off-screen"` only applies here.
+- **Fixed-stage compositor** (`reveal: true`, `slotTheme: true`) — full-screen `100svh` stages,
+  absolute layer positions as data (`{x,y,w,h,z}`, not CSS). Templates 7 and 10.
+  `"Reveal off-screen"` only applies here.
 - **Flow + overlay** (`reveal: false`) — Templates 1–6: real DOM flow with a `SectionOverlay` per
   section plus `anchor` pseudo-layers (`useAnchors`) that nudge existing elements by transform.
 
 This split is intentional, not an incomplete migration: content-heavy templates need real reflow,
-so forcing them onto fixed stages would be a regression.
+so forcing them onto fixed stages would be a regression. (T8/T9 sit outside both families entirely
+— no `registry.ts` entry, no Adjust dock at all; they're prototypes built to visualize the
+PARTY/CEREMONY event-type categories, not templates meant to ship to real couples — don't invest in
+engine parity for them without an explicit decision to productionize first.)
+
+**Product-facing family names — locked 2026-09-08** (shown alongside tier, e.g. "Pro · Stage"):
+- **Classic** = the flow + overlay family above (T1–T6).
+- **Stage** = the fixed-stage compositor family above (T7, T10) — named for the code's own
+  `Stage.tsx`/`StageDef` vocabulary already in place, not a new coinage.
+- **Cinematic** = a **third family that does not exist in the engine yet**. Do not apply
+  "Cinematic" to T7/T10 — Stage is discrete full-screen scenes you scroll between (theater set
+  changes); Cinematic is a moving virtual camera through one continuous scene, which is a different
+  thing. Planned as the next big selling-feature differentiator versus competitors' passive
+  autoplaying video backgrounds: a layered foreground peels away to reveal a scene, a camera pans
+  onto a dais and zooms into each subject in turn, then the scene transitions into a conventional
+  detail-heavy layout — **interactive** (scroll- *and* click-triggered), with camera motion on
+  **X/Y/Z**, not just a 2D pan. No engine work has started. Closest existing primitives to build
+  from: `useParallax.ts` (scroll-driven CSS custom properties), `HorizontalRail.tsx`
+  (pinned-scroll pan across one continuous background), `_shared/effects/ScrollVideoLayer.tsx`
+  (ScrollTrigger scrubbing mapped to a timeline) — none of these have a "virtual camera through a
+  scene" concept yet; that's a genuinely new primitive, not an extension of Stage's
+  discrete-stage-per-section model. Open question: whether CSS 3D transforms
+  (`perspective`/`translateZ`/`rotateX/Y`) are enough for true Z-depth with correct occlusion, or
+  whether this eventually needs a WebGL/three.js renderer — worth deciding before investing heavily
+  in the CSS-transform approach. Treat as its own scoped project when work starts, not a quick
+  fourth stage variant.
 
 **Known gap — the anchor vocabulary can't reach generated visuals.** An `anchor` grabs an
 already-rendered *plain DOM element* and transforms it. That covers T5's ceremony card, but not
@@ -468,8 +519,8 @@ ScrollTrigger.create({
 
 ## Known Issues
 - Admin-side guest creation: `guestService` posts to `/guest/rsvp`; re-verify the admin create path works end-to-end (historically broken; endpoint changed).
-- **Device-shape drift on the fixed-stage compositor — FIXED on mobile (2026-08-20), open on
-  desktop.** The cause was sharper than "independent percentages": a `chain: true` layer takes its
+- **Device-shape drift on the fixed-stage compositor — FIXED on mobile (2026-08-20) and desktop
+  (2026-09-08).** The cause was sharper than "independent percentages": a `chain: true` layer takes its
   height from stage **width** while its `y` is a percentage of stage **height**, so on a taller,
   narrower screen the art *shrinks* while the gaps between pieces *grow* and the scene pulls apart
   — measured on T7 `welcome` at 344×882: art −11.7%, gaps +4.5%, a **+18.4%** drift in separation
@@ -491,8 +542,20 @@ ScrollTrigger.create({
     canvas stage is never `flow`, which `Stage.tsx` enforces rather than trusting the caller.
   - **Per breakpoint** (`Partial<Record<Breakpoint, {w,h}>>`). Applying one reference to both
     **regresses desktop**: the mobile 390×844 aspect on a 1440×900 viewport builds a canvas 3116px
-    tall and crops it. A breakpoint left out has no canvas and renders exactly as before. **T7 ships
-    `mobile` only.**
+    tall and crops it — which is exactly why a bare fallback to `mobile`'s numbers can't be the
+    *only* mechanism (see below): a stage sometimes genuinely needs a different desktop reference.
+    **`Stage.tsx` falls back to the `mobile` aspect when `desktop` is left unset** (added
+    2026-09-08, after Template10 shipped with `canvas.mobile` only and no fallback existed yet: its
+    hero text visibly collided with foreground art on any real desktop window, since nothing
+    protected desktop at all). This is a template-neutral engine default, not a per-template
+    convention — a new template gets desktop drift protection for free the moment it declares
+    `canvas.mobile`, with **no extra step required**. **T7 ships an explicit
+    `desktop: { w: 1440, h: 900 }`** instead of relying on the fallback, because it *does* have a
+    genuinely different desktop composition (the desktop-only landscape `pillars.webp` architrave,
+    with hand-tuned `desktop:` per-layer overrides) — the fallback would be wrong for T7 specifically,
+    which is exactly the case an explicit override exists for. Only declare `canvas.desktop`
+    yourself when your desktop picture is deliberately different from mobile's; otherwise leave it
+    out and trust the fallback.
   - **The wrapper establishes a stacking context**, so canvas members can't interleave with layers
     outside it. All nine T7 stages already keep art strictly below content, so nothing repaints; a
     dev-only `console.warn` guards any future stage that breaks the invariant.
@@ -503,15 +566,21 @@ ScrollTrigger.create({
   - Verified across seven shapes: phones uniform; iPad uniform but heavily cropped (38% vertical —
     proportionally faithful, stairs fall below the fold); landscape unchanged (art identical in
     size, cropped rather than squashed — a portrait invitation is degenerate there regardless).
-  - **Still open — desktop.** Measured at 1440×900 → 1280×1024 with no canvas active (today's
-    behaviour): art scales 0.875–0.889 while content scales 1.138. Same root cause, unaddressed.
-    Fixing it means adding a `desktop` reference per stage and retuning each desktop composition.
-    Lower value than mobile — desktop aspect ratios vary far less. See `docs/FIX_QUEUE.md` Issue 1.
+  - **Desktop — fixed 2026-09-08.** Before assuming a redesign was needed (the raw measured drift —
+    art scaling 0.875–0.889 vs content 1.138 — looked as severe as the mobile case), live
+    screenshot testing showed T7's existing hand-tuned desktop layer positions already render
+    coherently across real desktop shapes; only Template10 (no desktop tuning at all) had a
+    genuinely visible break. See `docs/FIX_QUEUE.md` Issue 1 for the full before/after evidence —
+    the lesson (measure by rendering, not by trusting a percentage delta) is worth remembering
+    before scoping the next one of these.
 - The Adjust preview (`PreviewPanel.tsx`) has **custom width/height sliders** (280–1600 × 400–1200)
-  plus presets including **Fold cover 344×882** and **Landscape 844×390**, so odd shapes are
-  testable without hardware. "Reveal off-screen" honours those custom dimensions: the frame size
-  rides `EditorHandle.frameW/frameH` through `PREVIEW_UPDATE` (and the standalone preview page's
-  field-by-field rebuild) to the template, which previously pinned its own hardcoded 390×844.
+  plus device presets (`lib/devicePresets.ts`) including **Fold cover 344×882** and **Landscape
+  844×390**, so odd shapes are testable without hardware. The H slider edits the *visible* (`svh`)
+  box, not the whole screen — see `docs/FIX_QUEUE.md` Issue 2, which also covers why the iframe is
+  now sized to `svh` in normal mode, not just under Reveal. "Reveal off-screen" honours those
+  dimensions: the frame rides `EditorHandle.frame` (`{w, h, svh, safe}`, `frameW/frameH` kept as a
+  deprecated fallback) through `PREVIEW_UPDATE` (and the standalone preview page's field-by-field
+  rebuild) to the template, which previously pinned its own hardcoded 390×844.
 
 ## Content Roadmap — SHIPPED (approved Apr 2026, delivered)
 Phases 1–4 are done and in production:

@@ -5,18 +5,42 @@ import { Icon } from '@/components/ui/Icon';
 import type { Wedding } from '@/lib/api';
 import { urlSegmentForEventType } from '@/lib/eventTypes';
 import { REVEAL_VPAD } from '@/components/templates/_shared/types';
+import {
+  DEVICE_PRESETS, defaultPresetFor, type Device, type DevicePreset, type SafeAreaInsets,
+} from '@/lib/devicePresets';
 
-export type Device = 'mobile' | 'tablet' | 'desktop';
+export type { Device };
 export type EditorMode = 'expanded' | 'collapsed' | 'hidden';
+
+/**
+ * The previewed device box. `w`/`svh` are what actually size the iframe (svh is what a `.stage`
+ * is — see docs/FIX_QUEUE.md Issue 2); `screenH`/`lvh`/`safe` ride along for a future "draw the
+ * browser chrome" pass and for `--f*` safe-area emulation, but draw nothing today.
+ */
+export interface PreviewFrame {
+  w: number;
+  screenH: number;
+  lvh: number;
+  svh: number;
+  safe: SafeAreaInsets;
+  /** This device's `INVITE_REQUESTED_SCALE` → actual-render ratio — see `DevicePreset.scale`.
+   *  Carried on the frame (not re-looked-up per use) so a custom-sized frame (`presetId: null`)
+   *  still has a scale to divide by, inherited from whichever preset was active before a slider
+   *  was touched. */
+  scale: number;
+  /** Which preset this came from, if any — cleared the moment a slider is touched. */
+  presetId: string | null;
+}
+
+export function frameFromPreset(preset: DevicePreset): PreviewFrame {
+  return {
+    w: preset.w, screenH: preset.screenH, lvh: preset.lvh, svh: preset.svh, safe: preset.safe,
+    scale: preset.scale, presetId: preset.id,
+  };
+}
 
 // Clip-box corner radius per device (cosmetic only — no bezel, no padding)
 const DEVICE_RADIUS: Record<Device, number> = { mobile: 26, tablet: 16, desktop: 10 };
-
-export const DEVICE_DEFAULT_DIMS: Record<Device, { w: number; h: number }> = {
-  mobile:  { w: 390,  h: 844 },
-  tablet:  { w: 768,  h: 900 },
-  desktop: { w: 1280, h: 720 },
-};
 
 const SECTION_ICONS: Record<string, string> = {
   welcome: 'image', walimah: 'calendar', rsvp: 'star',
@@ -39,12 +63,10 @@ interface PreviewPanelProps {
   editorMode: EditorMode;
   onShowEditor: () => void;
   wedding: Wedding | null;
-  /** Previewed viewport size. Lifted to the customize page because the template needs it too —
-   *  "Reveal off-screen" pins each stage to this size inside the iframe. */
-  customW: number;
-  customH: number;
-  setCustomW: (w: number) => void;
-  setCustomH: (h: number) => void;
+  /** Previewed device box. Lifted to the customize page because the template needs it too —
+   *  "Reveal off-screen" pins each stage to `frame.svh`, not the raw device box. */
+  frame: PreviewFrame;
+  setFrame: (f: PreviewFrame) => void;
   /** "Reveal off-screen" (PRO Adjust): widen the canvas so art cropped by the device edge spills
    *  into view around the (dashed-framed) device column instead of being clipped. */
   revealOverflow?: boolean;
@@ -67,7 +89,7 @@ const numInputStyle: React.CSSProperties = {
 export function PreviewPanel({
   iframeRef, device, setDevice, manualZoom, setManualZoom,
   activeBlock, onSelectBlock, sectionOrder, editorMode, onShowEditor, wedding,
-  customW, customH, setCustomW, setCustomH,
+  frame, setFrame,
   revealOverflow = false,
 }: PreviewPanelProps) {
   const stageRef = useRef<HTMLDivElement>(null);
@@ -75,23 +97,42 @@ export function PreviewPanel({
   const [showSizePanel, setShowSizePanel] = useState(false);
 
   const zoom = manualZoom ?? autoZoom;
-  const defaultW = DEVICE_DEFAULT_DIMS[device].w;
-  const defaultH = DEVICE_DEFAULT_DIMS[device].h;
+  const defaultPreset = defaultPresetFor(device);
+
+  // The VISIBLE guest box. Height is `svh` — what Safari's chrome leaves visible, and what
+  // `.stage { height: 100svh }` actually is — not the whole screen, which every preset used to
+  // report and which is why the preview rendered ~25% taller/roomier than any guest ever sees
+  // (docs/FIX_QUEUE.md Issue 2). No chrome bars are drawn; this is a height-fidelity-only fix.
+  const visibleW = frame.w;
+  const visibleH = frame.svh;
 
   // Reveal mode enlarges the canvas around a pinned device-sized stage so cropped art spills into
   // the extra room on all four sides. Width uses REVEAL_FACTOR; height adds REVEAL_VPAD top+bottom
-  // (kept in sync with Stage's margin-block).
-  const iframeW = revealOverflow ? Math.round(customW * REVEAL_FACTOR) : customW;
-  const iframeH = revealOverflow ? Math.round(customH * (1 + 2 * REVEAL_VPAD)) : customH;
+  // (kept in sync with Stage's margin-block). This is the *visual* device box: what the clip box
+  // and auto-fit math size themselves to, and what should appear on screen at 100% zoom.
+  const iframeW = revealOverflow ? Math.round(visibleW * REVEAL_FACTOR) : visibleW;
+  const iframeH = revealOverflow ? Math.round(visibleH * (1 + 2 * REVEAL_VPAD)) : visibleH;
 
-  // When device preset changes, reset custom dims to device defaults
+  // The real invitation *requests* `initial-scale: 0.9`, but a real-device measurement showed an
+  // iPhone actually renders at `frame.scale` (0.765, not 0.9 — see the long comment in
+  // lib/inviteViewport.ts for why these differ). This is **not** a universal constant — a real iPad
+  // measured scale 1 (see `DevicePreset.scale` in lib/devicePresets.ts) — so it rides on the frame
+  // itself, per device, rather than one global `INVITE_EFFECTIVE_SCALE` applied everywhere. Viewport
+  // meta is ignored inside an iframe, so there is no way to get this widened layout viewport for
+  // free; it has to be reproduced explicitly, or every `cqi`/`%`-based size (which is most of T7's
+  // typography) renders at the wrong size here relative to a guest. The iframe's own CSS size
+  // becomes this wider "layout" box; painting it back down by the same factor (folded into the
+  // existing zoom transform below) keeps it occupying exactly `iframeW × iframeH` on screen.
+  const layoutW = Math.round(iframeW / frame.scale);
+  const layoutH = Math.round(iframeH / frame.scale);
+
+  // When device preset changes, reset the frame to that device's default preset
   useEffect(() => {
-    setCustomW(DEVICE_DEFAULT_DIMS[device].w);
-    setCustomH(DEVICE_DEFAULT_DIMS[device].h);
+    setFrame(frameFromPreset(defaultPresetFor(device)));
     setManualZoom(null);
   }, [device]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Auto-fit zoom based on custom dims
+  // Auto-fit zoom based on the visible box
   useEffect(() => {
     const el = stageRef.current;
     if (!el) return;
@@ -116,7 +157,14 @@ export function PreviewPanel({
 
   const clampW = (v: number) => Math.max(280, Math.min(1600, v));
   const clampH = (v: number) => Math.max(400, Math.min(1200, v));
-  const isDimCustom = customW !== defaultW || customH !== defaultH;
+  const isDimCustom = frame.w !== defaultPreset.w || frame.svh !== defaultPreset.svh;
+
+  // Editing W keeps whatever chrome numbers the current frame has (a preset's, or none). Editing
+  // H means "how tall is the visible box" — the honest answer for a hand-typed size is a bare
+  // frame with no chrome, rather than inventing screen/safe-area numbers nobody asked for.
+  const setW = (w: number) => setFrame({ ...frame, w, presetId: null });
+  const setSvh = (svh: number) =>
+    setFrame({ w: frame.w, screenH: svh, lvh: svh, svh, safe: { top: 0, right: 0, bottom: 0, left: 0 }, scale: frame.scale, presetId: null });
 
   const toolbarBtn: React.CSSProperties = {
     width: 28, height: 28, display: 'grid', placeItems: 'center',
@@ -292,11 +340,16 @@ export function PreviewPanel({
             src="/organizer-admin/preview"
             title="Invitation Preview"
             style={{
-              width: iframeW,
-              height: iframeH,
+              // Laid out at the wider `layoutW/H` (see above) so every relative unit inside — cqi,
+              // %, the invitation's own vw/svh — resolves exactly as it will for a guest, then
+              // scaled back down by this device's own `frame.scale` (folded into the zoom
+              // transform) so the visible size on screen is unchanged: layoutW * frame.scale ===
+              // iframeW * zoom/100, which is what the clip box below is sized to.
+              width: layoutW,
+              height: layoutH,
               border: 'none',
               display: 'block',
-              transform: `scale(${zoom / 100})`,
+              transform: `scale(${(zoom / 100) * frame.scale})`,
               transformOrigin: 'top left',
             }}
           />
@@ -317,7 +370,7 @@ export function PreviewPanel({
             </span>
             {isDimCustom && (
               <button
-                onClick={() => { setCustomW(defaultW); setCustomH(defaultH); }}
+                onClick={() => setFrame(frameFromPreset(defaultPreset))}
                 style={{ fontSize: 11, color: 'var(--brand)', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'var(--font-ui)', fontWeight: 500 }}>
                 Reset to {device}
               </button>
@@ -328,13 +381,13 @@ export function PreviewPanel({
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
             <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', width: 14, fontFamily: 'var(--font-ui)' }}>W</span>
             <input
-              type="range" min={280} max={1600} step={2} value={customW}
-              onChange={e => { setCustomW(Number(e.target.value)); setManualZoom(null); }}
+              type="range" min={280} max={1600} step={2} value={frame.w}
+              onChange={e => { setW(Number(e.target.value)); setManualZoom(null); }}
               style={{ flex: 1, cursor: 'pointer', accentColor: 'var(--brand)' }}
             />
             <input
-              type="number" min={280} max={1600} value={customW}
-              onChange={e => { setCustomW(clampW(Number(e.target.value))); setManualZoom(null); }}
+              type="number" min={280} max={1600} value={frame.w}
+              onChange={e => { setW(clampW(Number(e.target.value))); setManualZoom(null); }}
               style={numInputStyle}
               onFocus={e => { e.currentTarget.style.borderColor = 'var(--brand)'; }}
               onBlur={e => { e.currentTarget.style.borderColor = 'var(--border-default)'; }}
@@ -342,17 +395,17 @@ export function PreviewPanel({
             <span style={{ fontSize: 11, color: 'var(--text-subtle)', fontFamily: 'var(--font-ui)' }}>px</span>
           </div>
 
-          {/* Height */}
+          {/* Height — the visible (svh) box; see setSvh's doc comment above. */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', width: 14, fontFamily: 'var(--font-ui)' }}>H</span>
             <input
-              type="range" min={400} max={1200} step={2} value={customH}
-              onChange={e => { setCustomH(Number(e.target.value)); setManualZoom(null); }}
+              type="range" min={400} max={1200} step={2} value={frame.svh}
+              onChange={e => { setSvh(Number(e.target.value)); setManualZoom(null); }}
               style={{ flex: 1, cursor: 'pointer', accentColor: 'var(--brand)' }}
             />
             <input
-              type="number" min={400} max={1200} value={customH}
-              onChange={e => { setCustomH(clampH(Number(e.target.value))); setManualZoom(null); }}
+              type="number" min={400} max={1200} value={frame.svh}
+              onChange={e => { setSvh(clampH(Number(e.target.value))); setManualZoom(null); }}
               style={numInputStyle}
               onFocus={e => { e.currentTarget.style.borderColor = 'var(--brand)'; }}
               onBlur={e => { e.currentTarget.style.borderColor = 'var(--border-default)'; }}
@@ -360,27 +413,19 @@ export function PreviewPanel({
             <span style={{ fontSize: 11, color: 'var(--text-subtle)', fontFamily: 'var(--font-ui)' }}>px</span>
           </div>
 
-          {/* Common presets */}
+          {/* Device presets — svh, the Safari-visible height, not the whole screen. */}
           <div style={{ marginTop: 12, paddingTop: 10, borderTop: '1px solid var(--border-subtle)', display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-            {([
-              { label: 'iPhone SE', w: 375, h: 667 },
-              { label: 'iPhone 15', w: 390, h: 844 },
-              { label: 'iPhone 15 Pro Max', w: 430, h: 932 },
-              { label: 'Galaxy S24', w: 360, h: 780 },
-              { label: 'iPad', w: 768, h: 1024 },
-              // Aspect-ratio outliers — these are where the fixed-stage compositor visibly drifts.
-              { label: 'Fold cover', w: 344, h: 882 },
-              { label: 'Landscape', w: 844, h: 390 },
-            ] as { label: string; w: number; h: number }[]).map(p => (
+            {DEVICE_PRESETS.map(p => (
               <button
-                key={p.label}
-                onClick={() => { setCustomW(p.w); setCustomH(p.h); setManualZoom(null); }}
+                key={p.id}
+                onClick={() => { setFrame(frameFromPreset(p)); setManualZoom(null); }}
+                title={`${p.w}×${p.svh} visible (${p.screenH} screen)`}
                 style={{
                   fontSize: 10.5, padding: '4px 9px',
                   borderRadius: 999,
                   border: '1px solid var(--border-default)',
-                  background: customW === p.w && customH === p.h ? 'var(--brand)' : 'var(--surface-sunken)',
-                  color: customW === p.w && customH === p.h ? '#fff' : 'var(--text-muted)',
+                  background: frame.presetId === p.id ? 'var(--brand)' : 'var(--surface-sunken)',
+                  color: frame.presetId === p.id ? '#fff' : 'var(--text-muted)',
                   cursor: 'pointer', fontFamily: 'var(--font-ui)', fontWeight: 500,
                   transition: 'all 120ms',
                 }}>
@@ -409,7 +454,8 @@ export function PreviewPanel({
 
         <div style={{ width: 1, height: 12, background: 'var(--border-subtle)' }} />
 
-        {/* Clickable W×H — opens size panel */}
+        {/* Clickable W×H — opens size panel. Shows the *visible* box; a preset's whole-screen size
+            trails as a hint so the ~20% chrome difference stays legible instead of silent. */}
         <button
           onClick={() => setShowSizePanel(p => !p)}
           title="Adjust frame dimensions"
@@ -423,9 +469,12 @@ export function PreviewPanel({
           onMouseEnter={e => { if (!showSizePanel) (e.currentTarget as HTMLElement).style.background = 'var(--surface-sunken)'; }}
           onMouseLeave={e => { if (!showSizePanel) (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
         >
-          <b style={{ fontWeight: 600, color: isDimCustom ? 'var(--brand)' : 'var(--text-strong)' }}>{customW}</b>
+          <b style={{ fontWeight: 600, color: isDimCustom ? 'var(--brand)' : 'var(--text-strong)' }}>{frame.w}</b>
           <span style={{ color: 'var(--text-subtle)' }}>×</span>
-          <b style={{ fontWeight: 600, color: isDimCustom ? 'var(--brand)' : 'var(--text-strong)' }}>{customH}</b>
+          <b style={{ fontWeight: 600, color: isDimCustom ? 'var(--brand)' : 'var(--text-strong)' }}>{frame.svh}</b>
+          {frame.presetId && frame.screenH !== frame.svh && (
+            <span style={{ color: 'var(--text-subtle)', fontSize: 10 }}>· {frame.screenH} screen</span>
+          )}
           <Icon name="chevron-up" size={10} color="var(--text-subtle)" />
         </button>
 

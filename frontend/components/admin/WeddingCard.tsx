@@ -53,7 +53,7 @@ const STATUS_COLOR: Record<string, { bg: string; color: string }> = {
 const STATUS_LABEL: Record<string, string> = { upcoming: 'Upcoming', live: 'Live', draft: 'Draft' };
 
 const TIER_COLOR: Record<string, { bg: string; color: string }> = {
-  FREE:    { bg: 'var(--surface-sunken)',                                 color: 'var(--text-muted)' },
+  BASIC:    { bg: 'var(--surface-sunken)',                                 color: 'var(--text-muted)' },
   PREMIUM: { bg: 'color-mix(in srgb, var(--accent) 14%, transparent)',    color: 'var(--accent-deep)' },
   PRO:     { bg: 'color-mix(in srgb, var(--brand) 10%, transparent)',     color: 'var(--brand)' },
 };
@@ -63,8 +63,8 @@ export default function WeddingCard({ wedding, onManage, onPreview, onToggleActi
   const days = daysTo(wedding.eventDate);
   const date = new Date(wedding.eventDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
   const sc = STATUS_COLOR[status];
-  const tier = (wedding.ownerTier ?? 'FREE').toUpperCase();
-  const tc = TIER_COLOR[tier] ?? TIER_COLOR.FREE;
+  const tier = (wedding.ownerTier ?? 'BASIC').toUpperCase();
+  const tc = TIER_COLOR[tier] ?? TIER_COLOR.BASIC;
 
   return (
     <article

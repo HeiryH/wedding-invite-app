@@ -92,7 +92,7 @@ export interface HostAdminUser {
   email: string;
   role: string;
   isActive: boolean;
-  tier: 'FREE' | 'PREMIUM' | 'PRO';
+  tier: 'BASIC' | 'PREMIUM' | 'PRO';
   createdDate: string;
 }
 

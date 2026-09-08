@@ -143,6 +143,15 @@ namespace WeddingInvite.Core.Services
 
             var created = await _eventRepo.CreateAsync(evt);
 
+            // A new wedding started with every EventFeature off regardless of the owner's tier —
+            // the couple/host had to manually re-toggle RSVP/Wishes/Photo Booth/etc every time.
+            // Seed everything the owner's tier already entitles them to (falls back to BASIC for a
+            // super-admin-created event with no owner, or one whose owner's tier lookup fails).
+            var ownerTier = createdByUserId.HasValue
+                ? (await _userRepo.GetByIdAsync(createdByUserId.Value))?.Tier
+                : null;
+            await TierFeatureSync.SyncEnabledFeaturesAsync(created.EventId, ownerTier, _packageRepo, _eventFeatureRepo);
+
             return await MapToDto(created);
         }
 
@@ -232,7 +241,7 @@ namespace WeddingInvite.Core.Services
 
             // Tier ceiling: an event can only adopt a template within its tier.
             var owner = await _userRepo.GetByEventIdAsync(id);
-            var tier = owner?.Tier ?? TierEntitlements.Free;
+            var tier = owner?.Tier ?? TierEntitlements.Basic;
             if (!TierEntitlements.AllowsTemplateTier(tier, template.Tier))
                 throw new InvalidOperationException(
                     $"The '{template.TemplateName}' template isn't available on the {tier} tier. Upgrade the event to use it.");
@@ -292,7 +301,7 @@ namespace WeddingInvite.Core.Services
             // Custom domain is a PRO-tier entitlement AND must be explicitly enabled for this
             // event (same two-step gate as PHOTO_BOOTH/SEATING) — see EventFeatureService.
             var owner = await _userRepo.GetByEventIdAsync(id);
-            var tier = owner?.Tier ?? TierEntitlements.Free;
+            var tier = owner?.Tier ?? TierEntitlements.Basic;
             if (!await _packageRepo.TierIncludesFeatureAsync(tier, FeatureCodes.CustomDomain))
                 throw new InvalidOperationException(
                     $"Custom domains are a PRO feature. This event is on the {tier} tier.");
@@ -373,7 +382,7 @@ namespace WeddingInvite.Core.Services
                 CreatedByUserId = evt.CreatedByUserId,
                 CreatedByEmail = evt.CreatedBy?.Email,
                 Domain = evt.Domain,
-                OwnerTier = owner?.Tier ?? TierEntitlements.Free
+                OwnerTier = owner?.Tier ?? TierEntitlements.Basic
             };
         }
 

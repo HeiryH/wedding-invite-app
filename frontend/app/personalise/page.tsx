@@ -309,7 +309,7 @@ function PersonaliseEditor() {
       customConfig: config,
       itinerary: itinerary.map((r, i) => ({ itineraryItemId: i + 1, weddingId: 0, label: r.label, detail: r.detail, sortOrder: r.sortOrder })),
     };
-    localStorage.setItem('preview_draft', JSON.stringify(payload));
+    localStorage.setItem('preview_draft_v2', JSON.stringify(payload));
     iframe.contentWindow.postMessage({ type: 'PREVIEW_UPDATE', payload }, window.location.origin);
   }, [wedding, config, itinerary, templateId, templates, eventType]);
 

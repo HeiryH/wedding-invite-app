@@ -86,7 +86,7 @@ namespace WeddingInvite.Core.Services
             template.TemplateName = updateDto.TemplateName.Trim();
             template.Description = updateDto.Description.Trim();
             template.Tier = updateDto.Tier.ToUpper().Trim();
-            template.IsPremium = template.Tier != "FREE"; // keep boolean in sync with tier
+            template.IsPremium = template.Tier != "BASIC"; // keep boolean in sync with tier
             template.IsActive = updateDto.IsActive;
             template.SortOrder = updateDto.SortOrder;
             template.EventTypes = NormalizeEventTypes(updateDto.EventTypes);
@@ -112,8 +112,8 @@ namespace WeddingInvite.Core.Services
                 throw new ArgumentException($"Template code '{code}' is already in use");
 
             var tier = createDto.Tier.ToUpper().Trim();
-            if (tier != "FREE" && tier != "PREMIUM" && tier != "PRO")
-                throw new ArgumentException("Tier must be FREE, PREMIUM, or PRO");
+            if (tier != "BASIC" && tier != "PREMIUM" && tier != "PRO")
+                throw new ArgumentException("Tier must be BASIC, PREMIUM, or PRO");
 
             var template = new Template
             {
@@ -121,7 +121,7 @@ namespace WeddingInvite.Core.Services
                 TemplateCode = code,
                 Description = createDto.Description.Trim(),
                 Tier = tier,
-                IsPremium = tier != "FREE",
+                IsPremium = tier != "BASIC",
                 IsActive = false, // draft until the author publishes it via the existing Update endpoint
                 IsAuthored = true,
                 StagesJson = DefaultStagesJson,

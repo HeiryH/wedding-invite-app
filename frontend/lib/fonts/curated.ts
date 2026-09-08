@@ -16,6 +16,8 @@ import {
   Crimson_Text,
   Italiana,
   Bodoni_Moda,
+  Baloo_2,
+  Nunito,
 } from 'next/font/google';
 
 /**
@@ -42,6 +44,10 @@ const libreBaskerville = Libre_Baskerville({ subsets: ['latin'], weight: ['400',
 const crimsonText = Crimson_Text({ subsets: ['latin'], weight: ['400', '600', '700'], variable: '--font-ae-crimson-text', display: 'swap' });
 const italiana = Italiana({ subsets: ['latin'], weight: ['400'], variable: '--font-ae-italiana', display: 'swap' });
 const bodoniModa = Bodoni_Moda({ subsets: ['latin'], weight: ['400', '500', '600', '700'], variable: '--font-ae-bodoni-moda', display: 'swap' });
+// Chunky, hand-drawn-feeling rounded faces for Template 10 (Sunny Safari) — the registry was
+// entirely wedding-elegant serifs/scripts before this, nothing close to a crayon-marker headline.
+const baloo2 = Baloo_2({ subsets: ['latin'], weight: ['400', '500', '600', '700', '800'], variable: '--font-ae-baloo-2', display: 'swap' });
+const nunito = Nunito({ subsets: ['latin'], weight: ['400', '500', '600', '700', '800'], variable: '--font-ae-nunito', display: 'swap' });
 
 export interface CuratedFont {
   key: string;
@@ -67,6 +73,8 @@ export const CURATED_FONTS: CuratedFont[] = [
   { key: 'crimson-text', label: 'Crimson Text', variable: crimsonText.variable },
   { key: 'italiana', label: 'Italiana', variable: italiana.variable },
   { key: 'bodoni-moda', label: 'Bodoni Moda', variable: bodoniModa.variable },
+  { key: 'baloo-2', label: 'Baloo 2', variable: baloo2.variable },
+  { key: 'nunito', label: 'Nunito', variable: nunito.variable },
 ];
 
 export type CuratedFontKey = (typeof CURATED_FONTS)[number]['key'];

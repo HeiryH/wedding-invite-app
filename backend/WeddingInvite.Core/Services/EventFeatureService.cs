@@ -123,7 +123,7 @@ namespace WeddingInvite.Core.Services
                 // Tier ceiling: an event can only enable features its tier permits.
                 // The governing tier is the couple admin's tier (manual, admin-set).
                 var owner = await _userRepo.GetByEventIdAsync(eventId);
-                var tier = owner?.Tier ?? TierEntitlements.Free;
+                var tier = owner?.Tier ?? TierEntitlements.Basic;
                 if (!await _packageRepo.TierIncludesFeatureAsync(tier, feature.FeatureCode))
                     throw new InvalidOperationException(
                         $"'{feature.FeatureName}' isn't available on the {tier} tier. Upgrade the event to enable it.");

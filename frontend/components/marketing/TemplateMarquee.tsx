@@ -4,7 +4,7 @@ import { useEffect, useRef } from 'react';
 import { TemplatePreview } from '@/components/templates/TemplatePreview';
 import type { Template } from '@/lib/api';
 
-const TIER_LABEL: Record<string, string> = { FREE: 'Free', PREMIUM: 'Premium', PRO: 'Pro' };
+const TIER_LABEL: Record<string, string> = { BASIC: 'Basic', PREMIUM: 'Premium', PRO: 'Pro' };
 
 // Auto-scrolling, drag-scrubbable marquee of the real template previews.
 // Ported from the comp's rAF marquee; the card list is duplicated so the
@@ -64,7 +64,7 @@ export function TemplateMarquee({ templates }: { templates: Template[] }) {
             <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'center', gap: 8, marginTop: 12, minHeight: 46 }}>
               <span style={{ fontFamily: 'var(--mkt-serif)', fontWeight: 600, fontSize: 16, color: 'var(--mkt-ink)', textAlign: 'center' }}>{t.templateName}</span>
               <span style={{ flexShrink: 0, fontFamily: 'var(--mkt-sans)', fontWeight: 600, fontSize: 11, letterSpacing: '.04em', textTransform: 'uppercase', color: 'var(--mkt-gold-ink)', border: '1.5px solid var(--mkt-gold)', borderRadius: 999, padding: '2px 8px' }}>
-                {TIER_LABEL[t.tier?.toUpperCase() ?? 'FREE'] ?? t.tier}
+                {TIER_LABEL[t.tier?.toUpperCase() ?? 'BASIC'] ?? t.tier}
               </span>
             </div>
           </div>

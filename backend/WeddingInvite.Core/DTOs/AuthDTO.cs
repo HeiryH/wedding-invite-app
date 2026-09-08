@@ -12,7 +12,7 @@ namespace WeddingInvite.Core.DTOs
         public string Email { get; set; } = string.Empty;
         public string Role { get; set; } = string.Empty;
         public int? EventId { get; set; }
-        public string Tier { get; set; } = "FREE";
+        public string Tier { get; set; } = "BASIC";
     }
 
     public class SetTierDto

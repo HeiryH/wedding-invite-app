@@ -5,8 +5,8 @@ import { authService, OrganizerAdminUser } from '@/lib/api';
 import { getUser } from '@/lib/auth';
 import { tierLabel } from '@/lib/tierRank';
 
-type Tier = 'FREE' | 'PREMIUM' | 'PRO';
-const TIERS: Tier[] = ['FREE', 'PREMIUM', 'PRO'];
+type Tier = 'BASIC' | 'PREMIUM' | 'PRO';
+const TIERS: Tier[] = ['BASIC', 'PREMIUM', 'PRO'];
 
 interface AccessTabProps {
   organizerAdmin: OrganizerAdminUser | null;
@@ -193,9 +193,9 @@ export default function AccessTab({ organizerAdmin, weddingId, onRefresh }: Acce
             <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Account Tier</p>
             <div className="flex gap-2">
               {TIERS.map(t => {
-                const current = (organizerAdmin.tier ?? 'FREE').toUpperCase() === t;
+                const current = (organizerAdmin.tier ?? 'BASIC').toUpperCase() === t;
                 const colors: Record<Tier, string> = {
-                  FREE:    current ? 'bg-gray-200 text-gray-800 border-gray-400' : 'bg-white text-gray-500 border-gray-200 hover:border-gray-400',
+                  BASIC:    current ? 'bg-gray-200 text-gray-800 border-gray-400' : 'bg-white text-gray-500 border-gray-200 hover:border-gray-400',
                   PREMIUM: current ? 'bg-yellow-100 text-yellow-800 border-yellow-400' : 'bg-white text-gray-500 border-gray-200 hover:border-yellow-300',
                   PRO:     current ? 'bg-indigo-100 text-indigo-800 border-indigo-400' : 'bg-white text-gray-500 border-gray-200 hover:border-indigo-300',
                 };

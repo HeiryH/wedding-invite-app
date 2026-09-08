@@ -327,14 +327,14 @@ namespace WeddingInvite.API.Controllers
 
                 // Carry through any guest-personalised content. Best-effort: a bad
                 // config or itinerary row must never block account creation. The
-                // config service applies the same FREE-tier write policy as the
+                // config service applies the same BASIC-tier write policy as the
                 // customize page, so PRO/adminOnly keys are silently dropped.
                 if (dto.Config is { Count: > 0 })
                 {
                     try
                     {
                         await _configService.SaveConfigAsync(
-                            createdEvent.EventId, dto.Config, UserRoles.OrganizerAdmin, "FREE");
+                            createdEvent.EventId, dto.Config, UserRoles.OrganizerAdmin, "BASIC");
                     }
                     catch (Exception ex)
                     {

@@ -1,10 +1,13 @@
 /* One stage = one screen. `svh` (not `dvh`) on purpose: dvh re-sizes every stage as the mobile
-   URL bar animates, which re-fires the IntersectionObserver and makes the reveal flicker. */
+   URL bar animates, which re-fires the IntersectionObserver and makes the reveal flicker.
+   `var(--fsvh, 100svh)` reads the Adjust Editor's pinned preview frame when set (see
+   `_shared/FrameViewportVars.tsx` / docs/FIX_QUEUE.md Issue 2) and falls back to the literal
+   `100svh` everywhere else — a guest's browser never sets `--fsvh`, so this is a no-op there. */
 .stage {
   position: relative;
   width: 100%;
-  height: 100svh;
-  min-height: 100svh;
+  height: var(--fsvh, 100svh);
+  min-height: var(--fsvh, 100svh);
   overflow: hidden;
   isolation: isolate;
   background: #E8E0D2;
@@ -28,7 +31,7 @@
    normally in .flowStack and is what actually determines the section's height. */
 .stage[data-flow='true'] {
   height: auto;
-  min-height: 100svh;
+  min-height: var(--fsvh, 100svh);
 }
 
 /* Stretches to match whatever height .flowStack's in-flow content establishes (inset:0 sizes
@@ -43,13 +46,16 @@
   pointer-events: none;
 }
 
-/* Real content, in normal flow — this is what gives the stage its height. */
+/* Real content, in normal flow — this is what gives the stage its height. `calc(var(--fsvh,
+   100svh) * N)` rather than `Nsvh` for the same reason as `.stage` above: under "Reveal
+   off-screen" the ambient iframe viewport is 1.5x taller than the pinned stage, so a raw `Nsvh`
+   here would size against the wrong box (docs/FIX_QUEUE.md Issue 2). */
 .flowStack {
   position: relative;
   display: flex;
   flex-direction: column;
-  gap: 4svh;
-  padding: 8svh 0;
+  gap: calc(var(--fsvh, 100svh) * 0.04);
+  padding: calc(var(--fsvh, 100svh) * 0.08) 0;
 }
 
 /* A flow-mode slot item (see Layer.tsx's `flow` prop): width-constrained and centred like an
@@ -209,6 +215,18 @@
   width: 100%;
   height: 100%;
   object-fit: contain;
+}
+
+/* Play-once video scenery (kind 'video'). Mirrors `.img` rather than `.scrollVideo`: height is
+   driven by the source's own aspect ratio so a `chain: true` layer behaves exactly like the static
+   image it replaces. The canvas element carries intrinsic dimensions once the first frame is
+   drawn, which is what makes `height: auto` resolve. */
+.videoLayer {
+  display: block;
+  width: 100%;
+  height: auto;
+  pointer-events: none;
+  user-select: none;
 }
 
 /* Art is inert; slots stay interactive. Inside the Adjust panel every layer becomes clickable

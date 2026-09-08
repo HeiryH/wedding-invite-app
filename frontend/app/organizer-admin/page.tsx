@@ -276,7 +276,7 @@ export default function OrganizerAdminDashboard() {
   const [editData, setEditData] = useState({ brideName: '', groomName: '', eventTitle: '', weddingDate: '', weddingTime: '', venue: '', venueAddress: '', maxCapacity: 0, showCapacityWarning: false });
   const [saving, setSaving] = useState(false);
 
-  const userTier = user?.tier ?? 'FREE';
+  const userTier = user?.tier ?? 'BASIC';
   const isFree = tierRank(userTier) === 0;
 
   const [activeTab, setActiveTab] = useState<ActiveTab | null>(null);

@@ -11,8 +11,8 @@ import { Dialog } from '@/components/ui/Dialog';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { tierLabel } from '@/lib/tierRank';
 
-type Tier = 'FREE' | 'PREMIUM' | 'PRO';
-const TIERS: Tier[] = ['FREE', 'PREMIUM', 'PRO'];
+type Tier = 'BASIC' | 'PREMIUM' | 'PRO';
+const TIERS: Tier[] = ['BASIC', 'PREMIUM', 'PRO'];
 
 export default function HostsPage() {
   const [hosts, setHosts] = useState<HostAdminUser[]>([]);

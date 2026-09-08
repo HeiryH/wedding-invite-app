@@ -12,7 +12,7 @@ namespace WeddingInvite.Core.DTOs
         public string ComponentPath { get; set; } = string.Empty;
         public bool IsActive { get; set; }
         public bool IsPremium { get; set; }
-        public string Tier { get; set; } = "FREE";
+        public string Tier { get; set; } = "BASIC";
         public int SortOrder { get; set; }
         public bool IsAuthored { get; set; }
         // Only meaningful when IsAuthored — the Record<StageId,StageDef> JSON the authoring UI
@@ -38,7 +38,7 @@ namespace WeddingInvite.Core.DTOs
     {
         public string TemplateName { get; set; } = string.Empty;
         public string Description { get; set; } = string.Empty;
-        public string Tier { get; set; } = "FREE";
+        public string Tier { get; set; } = "BASIC";
         public bool IsActive { get; set; }
         public int SortOrder { get; set; }
         public string EventTypes { get; set; } = "WEDDING";
@@ -51,6 +51,6 @@ namespace WeddingInvite.Core.DTOs
         public string TemplateName { get; set; } = string.Empty;
         public string TemplateCode { get; set; } = string.Empty;
         public string Description { get; set; } = string.Empty;
-        public string Tier { get; set; } = "FREE";
+        public string Tier { get; set; } = "BASIC";
     }
 }

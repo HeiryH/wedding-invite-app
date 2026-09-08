@@ -18,8 +18,8 @@ namespace WeddingInvite.Models
         
         // Status
         public bool IsActive { get; set; } = true;
-        public bool IsPremium { get; set; } = false; // kept in sync with Tier (Tier != FREE)
-        public string Tier { get; set; } = "FREE"; // FREE | PREMIUM | PRO
+        public bool IsPremium { get; set; } = false; // kept in sync with Tier (Tier != BASIC)
+        public string Tier { get; set; } = "BASIC"; // BASIC | PREMIUM | PRO
         public int SortOrder { get; set; } = 0;
 
         // Authored templates: a Record<StageId, StageDef> JSON blob (frontend

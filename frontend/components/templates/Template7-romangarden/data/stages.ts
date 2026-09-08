@@ -31,9 +31,26 @@ export const T7_STAGES: Record<string, StageDef> = {
     // the background instead of pulling apart on an unusual aspect ratio. Mobile only: the desktop
     // composition is a different picture with its own reference shape, and desktop aspect ratios
     // don't vary the way phone ones do. See StageDef.canvas.
-    canvas: { mobile: { w: 390, h: 844 } },
+    // Desktop reuses the couple's existing hand-tuned `desktop:` layer overrides below (a human
+    // already composed these for wide screens) — this canvas entry doesn't change any of those
+    // values, only stops them from drifting apart on desktop shapes other than 1440x900. Verified
+    // by screenshot at 1024x900 through 2560x1080 that this reference size renders identically to
+    // the pre-canvas composition (canvas == stage at exactly this aspect) — see docs/FIX_QUEUE.md
+    // Issue 1.
+    canvas: { mobile: { w: 390, h: 844 }, desktop: { w: 1440, h: 900 } },
     layers: [
-      L({ id: 'arch',      kind: 'img',  src: 'welcome/arch.webp',           x: 50, y: 40, w: 92,  z: 3, order: 0, depth: 0.5 }),
+      // Play-once video (see _shared/effects/PlayOnceVideoLayer.tsx): the bare arch holds on frame
+      // one, and once the stage has been seen, the document has loaded and this layer's own
+      // entrance has finished, vines grow up the columns exactly once and stay. One way — no
+      // reverse, no scroll coupling (that's `scrollVideo`, the RSVP RS).
+      //
+      // `w: 99` rather than the static art's 92: the source frames pad the arch and the vines
+      // spread outward as they grow, so the asset is cropped to the union of all 97 frames and the
+      // arch only spans ~93% of that crop at rest. 92 / 0.933 ≈ 99 puts the columns back where the
+      // static arch had them. Cropped aspect (1.282) ≈ the old arch.webp's (1.266), so the box is
+      // otherwise a near drop-in.
+      L({ id: 'arch',      kind: 'video', videoSrc: 'welcome/arch_keyed.mp4', x: 50, y: 40, w: 99, z: 3, order: 0, depth: 0.5,
+          chromaThreshold: 18, chromaFade: 10, label: 'Arch (vines grow in)' }),
       L({ id: 'barrier',   kind: 'img',  src: 'welcome/barrier.webp',        x: 50, y: 68, w: 140, z: 5, order: 1, depth: 1.1 }),
       L({ id: 'fountain',  kind: 'img',  src: 'welcome/water-fountain.webp', x: 15, y: 60, w: 28,  z: 4, order: 2, depth: 1.5 }),
       L({ id: 'column',    kind: 'img',  src: 'welcome/plant-column.webp',   x: 87, y: 55, w: 26,  z: 4, order: 3, depth: 1.5 }),
@@ -51,7 +68,7 @@ export const T7_STAGES: Record<string, StageDef> = {
       L({ id: 'hero-timer', kind: 'anchor', parent: 'countdown', label: 'Countdown Timer', order: 4 }),
     ],
     desktop: {
-      arch:      { y: 38, w: 40 },
+      arch:      { y: 38, w: 43 },  // 40 / 0.933 — see the mobile `w: 99` note above
       barrier:   { y: 64, w: 101 },
       fountain:  { x: 17, y: 55, w: 15 },
       column:    { x: 84, y: 52, w: 13 },
@@ -68,7 +85,13 @@ export const T7_STAGES: Record<string, StageDef> = {
     label: 'Ceremony',
     bg: 'ceremony/background.webp',
     bgFit: 'cover',
-    canvas: { mobile: { w: 390, h: 844 } },
+    // Desktop reuses the couple's existing hand-tuned `desktop:` layer overrides below (a human
+    // already composed these for wide screens) — this canvas entry doesn't change any of those
+    // values, only stops them from drifting apart on desktop shapes other than 1440x900. Verified
+    // by screenshot at 1024x900 through 2560x1080 that this reference size renders identically to
+    // the pre-canvas composition (canvas == stage at exactly this aspect) — see docs/FIX_QUEUE.md
+    // Issue 1.
+    canvas: { mobile: { w: 390, h: 844 }, desktop: { w: 1440, h: 900 } },
     layers: [
       // A landscape architrave: on a portrait phone its straight top edge saws a visible seam
       // across the screen, and scaling it up to hide that pushes the columns off both sides.
@@ -95,7 +118,13 @@ export const T7_STAGES: Record<string, StageDef> = {
     label: 'The Couple',
     bg: 'ceremony/background.webp',
     bgFit: 'cover',
-    canvas: { mobile: { w: 390, h: 844 } },
+    // Desktop reuses the couple's existing hand-tuned `desktop:` layer overrides below (a human
+    // already composed these for wide screens) — this canvas entry doesn't change any of those
+    // values, only stops them from drifting apart on desktop shapes other than 1440x900. Verified
+    // by screenshot at 1024x900 through 2560x1080 that this reference size renders identically to
+    // the pre-canvas composition (canvas == stage at exactly this aspect) — see docs/FIX_QUEUE.md
+    // Issue 1.
+    canvas: { mobile: { w: 390, h: 844 }, desktop: { w: 1440, h: 900 } },
     layers: [
       // A landscape architrave: on a portrait phone its straight top edge saws a visible seam
       // across the screen, and scaling it up to hide that pushes the columns off both sides.
@@ -122,7 +151,13 @@ export const T7_STAGES: Record<string, StageDef> = {
     label: 'Details',
     bg: 'ceremony/background.webp',
     bgFit: 'cover',
-    canvas: { mobile: { w: 390, h: 844 } },
+    // Desktop reuses the couple's existing hand-tuned `desktop:` layer overrides below (a human
+    // already composed these for wide screens) — this canvas entry doesn't change any of those
+    // values, only stops them from drifting apart on desktop shapes other than 1440x900. Verified
+    // by screenshot at 1024x900 through 2560x1080 that this reference size renders identically to
+    // the pre-canvas composition (canvas == stage at exactly this aspect) — see docs/FIX_QUEUE.md
+    // Issue 1.
+    canvas: { mobile: { w: 390, h: 844 }, desktop: { w: 1440, h: 900 } },
     layers: [
       // A landscape architrave: on a portrait phone its straight top edge saws a visible seam
       // across the screen, and scaling it up to hide that pushes the columns off both sides.
@@ -149,7 +184,13 @@ export const T7_STAGES: Record<string, StageDef> = {
     label: 'Programme',
     bg: 'ceremony/background.webp',
     bgFit: 'cover',
-    canvas: { mobile: { w: 390, h: 844 } },
+    // Desktop reuses the couple's existing hand-tuned `desktop:` layer overrides below (a human
+    // already composed these for wide screens) — this canvas entry doesn't change any of those
+    // values, only stops them from drifting apart on desktop shapes other than 1440x900. Verified
+    // by screenshot at 1024x900 through 2560x1080 that this reference size renders identically to
+    // the pre-canvas composition (canvas == stage at exactly this aspect) — see docs/FIX_QUEUE.md
+    // Issue 1.
+    canvas: { mobile: { w: 390, h: 844 }, desktop: { w: 1440, h: 900 } },
     layers: [
       // Desktop-only — see the note on the other ceremony stages.
       L({ id: 'pillars',   kind: 'img',  src: 'ceremony/pillars.webp',         x: 50, y: 46, w: 145, z: 2, order: 0, depth: 0.4, hidden: true }),
@@ -201,7 +242,13 @@ export const T7_STAGES: Record<string, StageDef> = {
     label: 'RSVP',
     bg: 'rsvp/background.webp',
     bgFit: 'cover',
-    canvas: { mobile: { w: 390, h: 844 } },
+    // Desktop reuses the couple's existing hand-tuned `desktop:` layer overrides below (a human
+    // already composed these for wide screens) — this canvas entry doesn't change any of those
+    // values, only stops them from drifting apart on desktop shapes other than 1440x900. Verified
+    // by screenshot at 1024x900 through 2560x1080 that this reference size renders identically to
+    // the pre-canvas composition (canvas == stage at exactly this aspect) — see docs/FIX_QUEUE.md
+    // Issue 1.
+    canvas: { mobile: { w: 390, h: 844 }, desktop: { w: 1440, h: 900 } },
     // Split like `wishes` below (title / prompt / form) plus a fourth layer, `seating`, only
     // reachable when the wedding's tier/feature includes it (SLOT_AVAILABLE.rsvpSeating gates on
     // `seatingEnabled`, same flag every other seating-aware control already reads). `form` and
@@ -216,10 +263,28 @@ export const T7_STAGES: Record<string, StageDef> = {
       L({ id: 'prompt',  kind: 'slot', slot: 'rsvpPrompt',          x: 50, y: 31, w: 78, h: 6,  z: 5, order: 0, chain: false, depth: 0.3, label: 'RSVP Prompt' }),
       L({ id: 'form',    kind: 'slot', slot: 'rsvpForm',    presentation: 'sheet', sheetId: 'rsvp', x: 50, y: 54, w: 74, h: 44, z: 5, order: 1, chain: false, depth: 0.15, label: 'RSVP Form (step 1) · in pop-up' }),
       L({ id: 'seating', kind: 'slot', slot: 'rsvpSeating', presentation: 'sheet', sheetId: 'rsvp', x: 50, y: 54, w: 74, h: 44, z: 4, order: 1, chain: false, depth: 0.15, label: 'Seating (step 2) · in pop-up' }),
-      // No idle animation: this is a primary action in a quiet composition, and a button that
-      // never stops moving reads as noise (it also makes the control a moving tap target). The
-      // wishes trigger floats because it's decorative art the guest has to notice; this doesn't.
-      L({ id: 'rsvpOpen', kind: 'slot', slot: 'sheetTrigger', sheetId: 'rsvp', x: 50, y: 54, w: 46, h: 8, z: 6, order: 1, chain: false, depth: 0.15, label: 'RSVP Button' }),
+      // The RS (roman scroll): a scroll-scrubbed mp4 (see _shared/effects/ScrollVideoLayer.tsx) —
+      // closed at rest, unrolls as this layer scrolls toward screen centre, reveals `text` once
+      // open, tap-to-open the same `sheetId:'rsvp'` sheet the old plain button opened.
+      // `videoStartSec`/`resetSec: 0` (unlike Template 5's envelope, which rests *slightly ajar* at
+      // 0.5/0.2) so it reads as fully closed both at first paint and whenever scrolled back away.
+      // Box sized to the asset's own 746:562 aspect ratio, not the old thin-button box.
+      //
+      // `triggerStart: 100`/`triggerEnd: 0` — i.e. "centre at viewport bottom" through "centre at
+      // viewport top", symmetric about the viewport centre, so `pivot: 0.5` puts *fully open*
+      // exactly at mid-screen and the unroll starts as the RS enters rather than partway up.
+      // `holdWidth: 0.12` widens the fully-open plateau to ~24% of that range, so it stays open
+      // through a comfortable band of scrolling either side of centre before rolling shut.
+      L({
+        id: 'rsvpOpen', kind: 'scrollVideo', sheetId: 'rsvp',
+        videoSrc: 'rsvp/scroll_keyed.mp4',
+        x: 50, y: 54, w: 60, h: 45, z: 6, order: 1, chain: false, depth: 0.15,
+        label: 'RS (RSVP Roman Scroll)',
+        triggerStart: 100, triggerEnd: 0, scrub: 0.5, pivot: 0.5, holdWidth: 0.12,
+        videoStartSec: 0, openThreshold: 0.85, resetSec: 0,
+        chromaThreshold: 30, chromaFade: 20,
+        text: 'RSVP NOW',
+      }),
     ],
     desktop: {
       frame:   { y: 40, w: 60 },
@@ -228,7 +293,7 @@ export const T7_STAGES: Record<string, StageDef> = {
       prompt:  { y: 28, w: 34, h: 6 },
       form:    { y: 48, w: 42, h: 38 },
       seating: { y: 48, w: 42, h: 38 },
-      rsvpOpen: { y: 50, w: 22, h: 7 },
+      rsvpOpen: { y: 50, w: 30, h: 22.6 },
     },
   },
 
@@ -237,7 +302,13 @@ export const T7_STAGES: Record<string, StageDef> = {
     label: 'Wishes',
     bg: 'wishes/background.webp',
     bgFit: 'cover',
-    canvas: { mobile: { w: 390, h: 844 } },
+    // Desktop reuses the couple's existing hand-tuned `desktop:` layer overrides below (a human
+    // already composed these for wide screens) — this canvas entry doesn't change any of those
+    // values, only stops them from drifting apart on desktop shapes other than 1440x900. Verified
+    // by screenshot at 1024x900 through 2560x1080 that this reference size renders identically to
+    // the pre-canvas composition (canvas == stage at exactly this aspect) — see docs/FIX_QUEUE.md
+    // Issue 1.
+    canvas: { mobile: { w: 390, h: 844 }, desktop: { w: 1440, h: 900 } },
     layers: [
       L({ id: 'title',     kind: 'img',  src: 'wishes/title.webp',           x: 50, y: 13, w: 84,  z: 3, order: 0, depth: 0.4 }),
       L({ id: 'titleText', kind: 'slot', slot: 'wishTitle',                  x: 50, y: 15, w: 66, h: 9, z: 6, order: 0, chain: false, depth: 0.4, canvasAnchor: true }),
@@ -274,7 +345,13 @@ export const T7_STAGES: Record<string, StageDef> = {
     label: 'Photos',
     bg: 'photobooth/background.webp',
     bgFit: 'cover',
-    canvas: { mobile: { w: 390, h: 844 } },
+    // Desktop reuses the couple's existing hand-tuned `desktop:` layer overrides below (a human
+    // already composed these for wide screens) — this canvas entry doesn't change any of those
+    // values, only stops them from drifting apart on desktop shapes other than 1440x900. Verified
+    // by screenshot at 1024x900 through 2560x1080 that this reference size renders identically to
+    // the pre-canvas composition (canvas == stage at exactly this aspect) — see docs/FIX_QUEUE.md
+    // Issue 1.
+    canvas: { mobile: { w: 390, h: 844 }, desktop: { w: 1440, h: 900 } },
     layers: [
       L({ id: 'partition', kind: 'img',  src: 'photobooth/title-partition.webp', x: 50, y: 14, w: 36,  z: 3, order: 0, depth: 0.5 }),
       L({ id: 'frame',     kind: 'img',  src: 'photobooth/frame.webp',           x: 50, y: 46, w: 100, z: 2, order: 1, depth: 0.3 }),

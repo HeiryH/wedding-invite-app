@@ -73,7 +73,7 @@ public class TemplateConfigTests
     public void CanWrite_SuperAdminMayWriteAnything()
     {
         Assert.True(TemplateConfigPolicy.CanWrite("nav.rsvp", UserRoles.SuperAdmin, tier: null));
-        Assert.True(TemplateConfigPolicy.CanWrite("t7.layout.mobile.welcome", UserRoles.SuperAdmin, tier: "FREE"));
+        Assert.True(TemplateConfigPolicy.CanWrite("t7.layout.mobile.welcome", UserRoles.SuperAdmin, tier: "BASIC"));
     }
 
     [Fact]
@@ -82,7 +82,7 @@ public class TemplateConfigTests
         // The Adjust panel is a PRO feature.
         Assert.True(TemplateConfigPolicy.CanWrite("t7.layout.mobile.welcome", UserRoles.OrganizerAdmin, "PRO"));
         Assert.False(TemplateConfigPolicy.CanWrite("t7.layout.mobile.welcome", UserRoles.OrganizerAdmin, "PREMIUM"));
-        Assert.False(TemplateConfigPolicy.CanWrite("t7.layout.mobile.welcome", UserRoles.OrganizerAdmin, "FREE"));
+        Assert.False(TemplateConfigPolicy.CanWrite("t7.layout.mobile.welcome", UserRoles.OrganizerAdmin, "BASIC"));
         Assert.False(TemplateConfigPolicy.CanWrite("t7.layout.mobile.welcome", UserRoles.OrganizerAdmin, null));
     }
 
@@ -90,9 +90,9 @@ public class TemplateConfigTests
     public void CanWrite_NonLayoutKeysIgnoreTier()
     {
         // A couple on any tier can still edit ordinary content.
-        Assert.True(TemplateConfigPolicy.CanWrite("invite.body", UserRoles.OrganizerAdmin, "FREE"));
+        Assert.True(TemplateConfigPolicy.CanWrite("invite.body", UserRoles.OrganizerAdmin, "BASIC"));
         // handleSave writes section.order every save; a tier gate here would silently drop reorders.
-        Assert.True(TemplateConfigPolicy.CanWrite("section.order", UserRoles.OrganizerAdmin, "FREE"));
+        Assert.True(TemplateConfigPolicy.CanWrite("section.order", UserRoles.OrganizerAdmin, "BASIC"));
     }
 
     [Theory]
@@ -214,7 +214,7 @@ public class TemplateConfigTests
     }
 
     [Theory]
-    [InlineData("FREE")]
+    [InlineData("BASIC")]
     [InlineData("PREMIUM")]
     public async Task Save_SubProLayoutKeyIsDroppedButOtherKeysSave(string tier)
     {
@@ -243,7 +243,7 @@ public class TemplateConfigTests
 
         // …then the couple is downgraded and saves a bag that omits the layout key. It must NOT be
         // pruned — the layout still renders on the public page, they just can't edit it.
-        await svc.SaveConfigAsync(WeddingId, Bag(("invite.body", "hi")), UserRoles.OrganizerAdmin, "FREE");
+        await svc.SaveConfigAsync(WeddingId, Bag(("invite.body", "hi")), UserRoles.OrganizerAdmin, "BASIC");
 
         var stored = await svc.GetConfigAsync(WeddingId);
         Assert.Equal("{}", stored["t7.layout.mobile.welcome"]);

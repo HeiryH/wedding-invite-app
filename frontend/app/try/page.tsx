@@ -209,7 +209,7 @@ function TryEditor() {
       itinerary: [],
     };
 
-    localStorage.setItem('preview_draft', JSON.stringify(payload));
+    localStorage.setItem('preview_draft_v2', JSON.stringify(payload));
     iframe.contentWindow.postMessage({ type: 'PREVIEW_UPDATE', payload }, window.location.origin);
   }, [brideName, groomName, weddingDate, venue, venueAddress, templateId, templates]);
 
@@ -314,7 +314,7 @@ function TryEditor() {
                 </p>
                 <TemplateLibrary
                   templates={templates}
-                  userTier="FREE"
+                  userTier="BASIC"
                   currentTemplateId={templateId}
                   onSelect={(t) => setTemplateId(t.templateId)}
                   compact

@@ -8,6 +8,7 @@ import { DEFAULT_SHEET, useSheets } from './slots/sheets';
 import { fontVar } from '@/lib/fonts/curated';
 import CurvedText from './CurvedText';
 import ScrollVideoLayer from './effects/ScrollVideoLayer';
+import PlayOnceVideoLayer from './effects/PlayOnceVideoLayer';
 import { resolveBindings } from './bindings';
 import styles from './Stage.module.css';
 import './reveal.css';
@@ -246,6 +247,7 @@ export default function Layer({ layer, slotProps, eager, selected, editing, flow
               color: layer.color ?? '#3F3524',
               fontSize: `${layer.fontSize ?? 4}cqi`,
               fontWeight: layer.fontWeight ?? 600,
+              lineHeight: layer.lineHeight,
               fontFamily: fontVar(layer.fontFamily),
               letterSpacing: layer.letterSpacing !== undefined ? `${layer.letterSpacing}em` : undefined,
               wordSpacing: layer.wordSpacing !== undefined ? `${layer.wordSpacing}em` : undefined,
@@ -272,6 +274,24 @@ export default function Layer({ layer, slotProps, eager, selected, editing, flow
           />
         );
 
+      case 'video': {
+        // Play-once scenery (see effects/PlayOnceVideoLayer.tsx) — same asset-root convention and
+        // the same box model as `img` above, so it drops straight into a composition in place of a
+        // static piece of art. `.videoLayer` mirrors `.img`'s `width:100%; height:auto`, so a
+        // `chain: true` layer still takes its height from the source's aspect ratio.
+        if (!layer.videoSrc) return null;
+        const vsrc = layer.videoSrc.startsWith('/') ? layer.videoSrc : `${assetRoot}/${layer.videoSrc}`;
+        return (
+          <PlayOnceVideoLayer
+            src={vsrc}
+            boxRef={boxRef}
+            layer={layer}
+            size={assetSizes[layer.videoSrc]}
+            className={styles.videoLayer}
+          />
+        );
+      }
+
       case 'scrollVideo': {
         if (!layer.videoSrc) return null;
         const src = layer.videoSrc.startsWith('/') ? layer.videoSrc : `${assetRoot}/${layer.videoSrc}`;
@@ -281,11 +301,17 @@ export default function Layer({ layer, slotProps, eager, selected, editing, flow
         // opens the sheet this layer names (`Layer.sheetId`), mirroring Template5.tsx's own
         // envelope-tap-to-RSVP gesture. This is the whole mp4-trigger story: to swap a button for
         // an animated envelope, change the trigger layer's `kind` and keep its `sheetId`.
+        //
+        // Optional caption (e.g. "RSVP NOW"): reuses the same generic text/color/font fields and
+        // `resolveBindings`/`fontVar` helpers the `case 'text'` branch above already uses — this
+        // is the only new piece here, everything else is unchanged. Fades in once the effect
+        // reports itself open; `pointerEvents: 'none'` so it never steals the tap-to-open hit.
+        const caption = layer.text ? resolveBindings(layer.text, slotProps) : undefined;
         return (
           <div
             onClick={() => { if (scrollVideoOpen) sheets.open(layer.sheetId || DEFAULT_SHEET); }}
             role={scrollVideoOpen ? 'button' : undefined}
-            style={{ width: '100%', height: '100%', cursor: scrollVideoOpen ? 'pointer' : undefined }}
+            style={{ position: 'relative', width: '100%', height: '100%', cursor: scrollVideoOpen ? 'pointer' : undefined }}
           >
             <ScrollVideoLayer
               src={src}
@@ -294,6 +320,22 @@ export default function Layer({ layer, slotProps, eager, selected, editing, flow
               onOpenChange={setScrollVideoOpen}
               className={styles.scrollVideo}
             />
+            {caption && (
+              <div
+                style={{
+                  position: 'absolute', inset: 0, display: 'grid', placeItems: 'center',
+                  pointerEvents: 'none', textAlign: 'center',
+                  opacity: scrollVideoOpen ? 1 : 0, transition: 'opacity 0.4s ease',
+                  color: layer.color ?? 'var(--slot-ink, #2b2a28)',
+                  fontFamily: fontVar(layer.fontFamily),
+                  fontSize: `${layer.fontSize ?? 5}cqi`,
+                  fontWeight: layer.fontWeight ?? 600,
+                  letterSpacing: layer.letterSpacing !== undefined ? `${layer.letterSpacing}em` : '0.08em',
+                }}
+              >
+                {caption}
+              </div>
+            )}
           </div>
         );
       }

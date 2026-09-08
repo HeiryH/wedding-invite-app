@@ -46,7 +46,7 @@ public class CustomDomainTests
     }
 
     [Theory]
-    [InlineData("FREE")]
+    [InlineData("BASIC")]
     [InlineData("PREMIUM")]
     public async Task NonPro_CannotSetDomain(string tier)
     {
@@ -100,7 +100,7 @@ public class CustomDomainTests
     public async Task ClearingDomain_IsAllowed_OnAnyTier()
     {
         using var db = new TestDb();
-        SeedCouple(db, 205, TierEntitlements.Free);
+        SeedCouple(db, 205, TierEntitlements.Basic);
         var svc = BuildService(db);
 
         var result = await svc.SetDomainAsync(205, null);

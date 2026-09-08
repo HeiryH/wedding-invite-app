@@ -19,7 +19,7 @@
 .sticky {
   position: sticky;
   top: 0;
-  height: 100svh;
+  height: var(--fsvh, 100svh);
   overflow: hidden;
   isolation: isolate;
   background: #e8e0d2;
@@ -34,7 +34,7 @@
   position: absolute;
   top: 0;
   left: 0;
-  width: 150vw;
+  width: calc(var(--fvw, 100vw) * 1.5);
   height: 100%;
   transform: translateX(var(--rail-bg-x, 0));
   will-change: transform;
@@ -75,7 +75,7 @@
 
 .panel {
   position: relative;
-  flex: 0 0 100vw;
+  flex: 0 0 var(--fvw, 100vw);
   height: 100%;
 }
 

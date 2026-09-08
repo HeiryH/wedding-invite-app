@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { frameSvh } from '../frameViewport';
 
 const INTENSITY: Record<string, number> = { on: 1, subtle: 0.45, off: 0 };
 
@@ -39,7 +40,11 @@ export function useParallax(
 
     const update = () => {
       frame = 0;
-      const vh = window.innerHeight;
+      // `frameSvh()` falls back to `window.innerHeight` when no Adjust Editor frame is pinned
+      // (i.e. always, for a real guest) — see `_shared/frameViewport.ts`. Under "Reveal off-screen"
+      // the ambient `window.innerHeight` is 1.5x the pinned stage, which used to multiply every
+      // `--sl-par` px offset by that factor (docs/FIX_QUEUE.md Issue 2).
+      const vh = frameSvh();
 
       for (const el of depthLayers) {
         const rect = el.getBoundingClientRect();

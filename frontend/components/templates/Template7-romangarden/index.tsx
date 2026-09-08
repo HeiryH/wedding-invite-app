@@ -43,10 +43,11 @@ interface Template7Props {
 
 /** Fallback device dims per breakpoint. In "Reveal off-screen" mode the stage is pinned to the
  *  real device size so bleed spills around it in the widened preview iframe; the customize page
- *  sends the size actually being previewed as `editor.frameW/frameH` and these are only used when
- *  it doesn't (e.g. the authoring preview, which never reveals). */
+ *  sends the size actually being previewed as `editor.frame.{w,svh}` and these are only used when
+ *  it doesn't (e.g. the authoring preview, which never reveals). Height is the Safari-*visible*
+ *  (svh) height, not the whole screen — see docs/FIX_QUEUE.md Issue 2. */
 const REVEAL_FRAME_W: Record<Breakpoint, number> = { mobile: 390, desktop: 1440 };
-const REVEAL_FRAME_H: Record<Breakpoint, number> = { mobile: 844, desktop: 900 };
+const REVEAL_FRAME_H: Record<Breakpoint, number> = { mobile: 664, desktop: 900 };
 
 /** The shared-art stage for the compiled ceremony row (see `data/stages.ts`). Stable identity so
  *  the `useStageLayout` memo below isn't invalidated every render. */
@@ -119,14 +120,17 @@ export default function Template7({
   const navScale = NAV_SIZE_SCALE[t('nav.size', 'default')] ?? 1;
   const navTextScale = NAV_SIZE_SCALE[t('nav.textSize', 'default')] ?? 1;
 
-  // Adjust panel's "Card" section (Blur/Tint/Opacity/Radius) — glassmorphism for every
-  // `.panel`-based slot at once (walimah/couple/details/RSVP/wishes/...), mirroring Template 5's
-  // own frosted-glass card. Blur 0 (the default) is "off": every `--slot-panel-*` var below is
-  // left unset, so slots.module.css's neutral scrim renders exactly as before.
-  const cardBlurPx = Number(t('t7.layout.slotTheme.cardBlur', '0')) || 0;
+  // Adjust panel's "Card" section — glassmorphism for every `.panel`-based slot at once
+  // (walimah/couple/details/RSVP/wishes/...), mirroring Template 5's own frosted-glass card.
+  // `cardStyle` defaults to 'glass' whenever a pre-existing `cardBlur` value is on record (a
+  // config saved before the style dropdown existed), so the Adjust panel's Card section stays in
+  // sync with what's actually rendering instead of showing "None" over a real applied blur.
+  const legacyCardBlur = Number(t('t7.layout.slotTheme.cardBlur', '0')) || 0;
+  const cardStyle = t('t7.layout.slotTheme.cardStyle', legacyCardBlur > 0 ? 'glass' : 'none');
+  const cardBlurPx = legacyCardBlur || 16;
   const cardTint = t('t7.layout.slotTheme.cardTint', '#fffbf4');
   const cardTintOpacity = Number(t('t7.layout.slotTheme.cardTintOpacity', '0.45')) || 0.45;
-  const cardRadius = Number(t('t7.layout.slotTheme.cardRadius', '24')) || 0;
+  const cardRadius = Number(t('t7.layout.slotTheme.cardRadius', '24')) || 24;
 
   const slotProps: SlotProps = useMemo(
     () => ({
@@ -251,9 +255,22 @@ export default function Template7({
         '--slot-ink-soft': '#6f675c',
         '--slot-ink-faint': '#9b9284',
         '--slot-rule': 'rgba(61, 56, 51, 0.28)',
-        '--slot-font-display': fontVar(customConfig?.['t7.layout.slotTheme.headingFont']) ?? "'Cinzel', serif",
-        '--slot-font-serif': "'Cormorant Garamond', serif",
-        '--slot-font-body': "'EB Garamond', serif",
+        // Font fallbacks go through `fontVar()` (the reliably self-hosted next/font copy), never
+        // a literal quoted family name — a literal name depends on this file's own Google Fonts
+        // `@import` finishing before paint, which is fragile and was the root cause of headings/
+        // buttons occasionally rendering in the wrong font while `fontVar`-driven text didn't.
+        '--slot-font-display': fontVar(customConfig?.['t7.layout.slotTheme.headingFont']) ?? fontVar('cinzel'),
+        '--slot-font-serif':
+          fontVar(customConfig?.['t7.layout.slotTheme.bodyFont'])
+          ?? fontVar(customConfig?.['t7.layout.slotTheme.headingFont'])
+          ?? fontVar('cormorant'),
+        '--slot-font-body':
+          fontVar(customConfig?.['t7.layout.slotTheme.bodyFont'])
+          ?? fontVar(customConfig?.['t7.layout.slotTheme.headingFont'])
+          ?? fontVar('eb-garamond'),
+        // T7's own baseline scrim — its shipped identity, independent of the optional Card style
+        // below. Selecting "None" in the Card dropdown turns off the *optional* glass overlay
+        // only; it doesn't strip T7's own always-on look, which was never part of that system.
         '--slot-hero-scrim-1': 'rgba(244, 241, 234, 0.88)',
         '--slot-hero-scrim-2': 'rgba(244, 241, 234, 0.62)',
         '--slot-panel-scrim-1': 'rgba(244, 241, 234, 0.82)',
@@ -263,10 +280,7 @@ export default function Template7({
         '--slot-radius': '0',
         '--t7-nav-scale': navScale,
         '--t7-nav-text-scale': navTextScale,
-        // Card Blur/Tint/Opacity/Radius (Adjust panel "Theme" section) — see cardBlurPx above.
-        // Left unset at 0 (the default) so slots.module.css's own `var(--slot-panel-*, ...)`
-        // fallbacks apply, unchanged from before these existed.
-        ...(cardBlurPx > 0 ? {
+        ...(cardStyle === 'glass' ? {
           '--slot-panel-bg': `color-mix(in srgb, ${cardTint} ${Math.round(cardTintOpacity * 100)}%, transparent)`,
           '--slot-panel-blur': `blur(${cardBlurPx}px) saturate(140%)`,
           '--slot-panel-border': '1px solid rgba(255, 255, 255, 0.45)',
@@ -332,8 +346,8 @@ export default function Template7({
             // Outline the layer the parent's Adjust dock currently has selected.
             editing={editing && editor?.selectedStage === r.def.id}
             revealOverflow={editing && Boolean(editor?.revealOverflow)}
-            revealFrameW={editor?.frameW ?? REVEAL_FRAME_W[breakpoint]}
-            revealFrameH={editor?.frameH ?? REVEAL_FRAME_H[breakpoint]}
+            revealFrameW={editor?.frame?.w ?? editor?.frameW ?? REVEAL_FRAME_W[breakpoint]}
+            revealFrameH={editor?.frame?.svh ?? editor?.frameH ?? REVEAL_FRAME_H[breakpoint]}
             selectedLayer={editor?.selectedLayer}
           />
         ));

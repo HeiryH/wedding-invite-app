@@ -17,6 +17,6 @@ namespace WeddingInvite.Core.Services
         Task RequestPasswordResetAsync(string email, string resetLinkBase);
         Task ResetPasswordWithTokenAsync(string token, string newPassword);
         Task DeleteUserAsync(int userId);
-        string GenerateJwtToken(string email, string role, int? eventId, string tier = "FREE");
+        string GenerateJwtToken(string email, string role, int? eventId, string tier = "BASIC");
     }
 }

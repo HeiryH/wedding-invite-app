@@ -13,8 +13,8 @@ import { Button } from '@/components/ui/Button';
 import { EmptyState } from '@/components/ui/EmptyState';
 
 type Filter = 'all' | 'upcoming' | 'active' | 'inactive';
-type TierFilter = 'ALL' | 'FREE' | 'PREMIUM' | 'PRO';
-const TIER_FILTERS: TierFilter[] = ['FREE', 'PREMIUM', 'PRO'];
+type TierFilter = 'ALL' | 'BASIC' | 'PREMIUM' | 'PRO';
+const TIER_FILTERS: TierFilter[] = ['BASIC', 'PREMIUM', 'PRO'];
 
 function FilterChip({ active, onClick, children, count }: { active: boolean; onClick: () => void; children: React.ReactNode; count: number }) {
   return (
@@ -103,7 +103,7 @@ export default function SuperAdminDashboard() {
 
   const tierCounts = useMemo(() => {
     const c: Record<string, number> = { ALL: weddings.length };
-    for (const t of TIER_FILTERS) c[t] = weddings.filter(w => (w.ownerTier ?? 'FREE').toUpperCase() === t).length;
+    for (const t of TIER_FILTERS) c[t] = weddings.filter(w => (w.ownerTier ?? 'BASIC').toUpperCase() === t).length;
     return c;
   }, [weddings]);
 
@@ -112,7 +112,7 @@ export default function SuperAdminDashboard() {
     if (filter === 'active' && !(w.isActive && new Date(w.eventDate) <= new Date())) return false;
     if (filter === 'inactive' && w.isActive) return false;
     if (eventTypeFilter !== 'ALL' && w.eventType !== eventTypeFilter) return false;
-    if (tierFilter !== 'ALL' && (w.ownerTier ?? 'FREE').toUpperCase() !== tierFilter) return false;
+    if (tierFilter !== 'ALL' && (w.ownerTier ?? 'BASIC').toUpperCase() !== tierFilter) return false;
     if (searchTerm) {
       const s = `${w.name1} ${w.name2} ${w.slug} ${w.venue}`.toLowerCase();
       if (!s.includes(searchTerm.toLowerCase())) return false;

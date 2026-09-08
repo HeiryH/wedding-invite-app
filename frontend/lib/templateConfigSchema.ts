@@ -176,7 +176,7 @@ const COMMON_FIELDS: TemplateConfigField[] = [
     fieldType: 'hidden',
     adminOnly: false,
     section: 'general',
-    templateIds: [1, 2, 3, 4, 6, 7, 8, 9],
+    templateIds: [1, 2, 3, 4, 6, 7, 8, 9, 10],
   },
 
   // ── Ceremony ────────────────────────────────────────────────────────────────
@@ -220,6 +220,9 @@ const COMMON_FIELDS: TemplateConfigField[] = [
     section: 'rsvp',
     group: 'RSVP',
     chip: 'RSVP',
+    // T10's RSVP title is a plain text layer (Adjust panel edits it directly, with full font/
+    // size/line-height control) rather than the shared rsvpTitle slot this field drives.
+    templateIds: [1, 2, 3, 4, 5, 6, 7, 8, 9],
   },
   {
     key: 'rsvp.subtitle',
@@ -232,6 +235,7 @@ const COMMON_FIELDS: TemplateConfigField[] = [
     section: 'rsvp',
     group: 'RSVP',
     chip: 'RSVP',
+    templateIds: [1, 2, 3, 4, 5, 6, 7, 8, 9],
   },
 
   // ── Wishes ──────────────────────────────────────────────────────────────────
@@ -246,6 +250,8 @@ const COMMON_FIELDS: TemplateConfigField[] = [
     section: 'wishes',
     group: 'Wishes & Guestbook',
     chip: 'Content',
+    // T10's wishes prompt is a plain text layer, edited directly via the Adjust panel.
+    templateIds: [1, 2, 3, 4, 5, 6, 7, 8, 9],
   },
 
   // Wish form + its optional photo step. These live in the shared wish slots, so they're
@@ -414,7 +420,7 @@ const COMMON_FIELDS: TemplateConfigField[] = [
     section: 'music',
     group: 'Audio',
     chip: 'Audio',
-    templateIds: [5, 6, 7],
+    templateIds: [5, 6, 7, 10],
   },
   {
     key: 'music.loop',
@@ -427,7 +433,7 @@ const COMMON_FIELDS: TemplateConfigField[] = [
     section: 'music',
     group: 'Audio',
     chip: 'Settings',
-    templateIds: [5, 6, 7],
+    templateIds: [5, 6, 7, 10],
   },
 
   // ── Photo Booth ─────────────────────────────────────────────────────────────
@@ -459,6 +465,7 @@ const SECTION_TITLE_FIELDS: TemplateConfigField[] = [
     section: 'ceremony',
     group: 'Ceremony / Walimah',
     chip: 'Content',
+    // T10's Details title is a plain text layer (Adjust panel), not this shared makeTitleSlot field.
     templateIds: [5, 7],
   },
   {
@@ -473,6 +480,7 @@ const SECTION_TITLE_FIELDS: TemplateConfigField[] = [
     block: 'itinerary',
     group: 'Schedule / Itinerary',
     chip: 'Schedule',
+    // T10's Itinerary title is a plain text layer (Adjust panel), not this shared field.
     templateIds: [5, 7],
   },
   {
@@ -486,6 +494,7 @@ const SECTION_TITLE_FIELDS: TemplateConfigField[] = [
     section: 'wishes',
     group: 'Wishes & Guestbook',
     chip: 'Content',
+    // T10's Wishes title is a plain text layer (Adjust panel), not this shared field.
     templateIds: [5, 7],
   },
   {
@@ -499,7 +508,7 @@ const SECTION_TITLE_FIELDS: TemplateConfigField[] = [
     section: 'photobooth',
     group: 'Photo Booth',
     chip: 'Content',
-    templateIds: [7],
+    templateIds: [7, 10],
   },
   {
     key: 'photobooth.prompt',
@@ -512,7 +521,7 @@ const SECTION_TITLE_FIELDS: TemplateConfigField[] = [
     section: 'photobooth',
     group: 'Photo Booth',
     chip: 'Content',
-    templateIds: [7],
+    templateIds: [7, 10],
   },
   {
     key: 'photobooth.upload_label',
@@ -525,7 +534,7 @@ const SECTION_TITLE_FIELDS: TemplateConfigField[] = [
     section: 'photobooth',
     group: 'Photo Booth',
     chip: 'Content',
-    templateIds: [7],
+    templateIds: [7, 10],
   },
   {
     key: 'general.brideFirst',
@@ -746,6 +755,36 @@ const TEMPLATE9_EXTRA_FIELDS: TemplateConfigField[] = [
   },
 ];
 
+// ── Template 10 — Sunny Safari (PARTY) ──────────────────────────────────────
+// Names/title/date/venue in the hero are plain `kind:'text'` layers (see data/stages.ts), not DOM
+// elements — so unlike T8/T9 they need no `names.*.color`/`.shadow` + `attachTo` schema fields at
+// all; the couple restyles them straight through the Adjust panel like any other layer.
+const TEMPLATE10_EXTRA_FIELDS: TemplateConfigField[] = [
+  {
+    key: 'photobooth.frameArt',
+    label: 'Photo Frame Style',
+    hint: "Sunny Safari's own gallery card, or Roman Garden's engraved frame overlay.",
+    defaultValue: 'none',
+    maxLength: 10,
+    richText: false,
+    fieldType: 'select',
+    options: ['none', 'roman'],
+    optionLabels: { none: 'Safari (plain)', roman: 'Engraved (Roman Garden)' },
+    adminOnly: false,
+    section: 'photobooth',
+    group: 'Photo Booth',
+    chip: 'Style',
+    templateIds: [10],
+  },
+  // T10's own nav pill is position:fixed chrome, outside any one stage's box — not a draggable
+  // layer, so it's tuned here (like T7's own nav.size/nav.textSize) rather than in the Adjust
+  // dock. Declared fresh rather than reusing T7's entries (those live in TEMPLATE5_EXTRA_FIELDS,
+  // gated to templateIds:[7], and that array is never composed into TEMPLATE_CONFIGS[7] either —
+  // pre-existing and out of scope here).
+  { key: 'nav.size', label: 'Nav Bar Size', fieldType: 'select', defaultValue: 'default', maxLength: 10, richText: false, adminOnly: false, options: ['compact', 'default', 'large', 'xlarge'], section: 'navigation', group: 'Navigation Bar', chip: 'Display', templateIds: [10] },
+  { key: 'nav.textSize', label: 'Nav Bar Text Size', fieldType: 'select', defaultValue: 'default', maxLength: 10, richText: false, adminOnly: false, options: ['compact', 'default', 'large', 'xlarge'], section: 'navigation', group: 'Navigation Bar', chip: 'Display', templateIds: [10] },
+];
+
 const TEMPLATE_CONFIGS: Record<number, TemplateConfigField[]> = {
   1: COMMON_FIELDS,
   2: COMMON_FIELDS,
@@ -756,6 +795,7 @@ const TEMPLATE_CONFIGS: Record<number, TemplateConfigField[]> = {
   7: [...COMMON_FIELDS, ...SECTION_TITLE_FIELDS, ...TEMPLATE7_EXTRA_FIELDS],
   8: [...COMMON_FIELDS, ...TEMPLATE8_EXTRA_FIELDS],
   9: [...COMMON_FIELDS, ...TEMPLATE9_EXTRA_FIELDS],
+  10: [...COMMON_FIELDS, ...SECTION_TITLE_FIELDS, ...TEMPLATE10_EXTRA_FIELDS],
 };
 
 function fieldsFor(templateId: number): TemplateConfigField[] {
@@ -764,8 +804,8 @@ function fieldsFor(templateId: number): TemplateConfigField[] {
 }
 
 // Mirrors TierEntitlements.Rank on the backend.
-const TIER_RANK: Record<string, number> = { FREE: 0, PREMIUM: 1, PRO: 2 };
-const rank = (tier?: string) => TIER_RANK[tier ?? 'FREE'] ?? 0;
+const TIER_RANK: Record<string, number> = { BASIC: 0, PREMIUM: 1, PRO: 2 };
+const rank = (tier?: string) => TIER_RANK[tier ?? 'BASIC'] ?? 0;
 
 export function getConfigFields(templateId: number, role: string, tier?: string): TemplateConfigField[] {
   let fields = fieldsFor(templateId);
@@ -793,7 +833,7 @@ export function blockOf(field: TemplateConfigField): TemplateConfigBlock {
  * The curated field set for the guest self-serve Personalise page — content the
  * guest writes, not the styling/layout "chrome" a couple tweaks in the full editor.
  *
- * Derived from getConfigFields (as a FREE organizer) so it inherits templateIds /
+ * Derived from getConfigFields (as a BASIC organizer) so it inherits templateIds /
  * adminOnly / minTier gating for free and stays in sync as the schema grows.
  * A field can opt in/out explicitly via `guestEssential`.
  */
@@ -801,7 +841,7 @@ const GUEST_CONTENT_CHIPS = new Set(['Content', 'Schedule', 'RSVP', 'Wishes', 'F
 const GUEST_CONTENT_TYPES = new Set(['text', 'richtext', 'boolean']);
 
 export function getGuestFields(templateId: number): TemplateConfigField[] {
-  return getConfigFields(templateId, 'ORGANIZER_ADMIN', 'FREE').filter((f) => {
+  return getConfigFields(templateId, 'ORGANIZER_ADMIN', 'BASIC').filter((f) => {
     if (f.guestEssential !== undefined) return f.guestEssential;
     return (
       GUEST_CONTENT_TYPES.has(f.fieldType) &&

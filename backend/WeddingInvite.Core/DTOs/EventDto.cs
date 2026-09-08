@@ -37,7 +37,7 @@ namespace WeddingInvite.Core.DTOs
         public string? CreatedByEmail { get; set; }
         public string? Domain { get; set; }
         // The couple admin's tier (FREE|PREMIUM|PRO) — governs feature availability for this event.
-        public string OwnerTier { get; set; } = "FREE";
+        public string OwnerTier { get; set; } = "BASIC";
     }
 
     // What clients send when creating an event

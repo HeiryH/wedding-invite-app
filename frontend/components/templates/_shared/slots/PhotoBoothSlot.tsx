@@ -24,6 +24,10 @@ const stackVariants = {
  * static grid.
  */
 function PhotoBoothBody({ photos, onUploadPhoto, t, editing, upload }: SlotProps & { upload: boolean }) {
+  // The engraved-frame overlay is T7 art specifically — a template whose own photobooth scene
+  // doesn't want it (e.g. Sunny Safari draws its own gallery board) sets `photobooth.frameArt` to
+  // 'none' in its schema defaults. Any other value (including the unset default) keeps it.
+  const frameArt = t('photobooth.frameArt', 'roman');
   const inputRef = useRef<HTMLInputElement>(null);
   const [layout, setLayout] = useState<'stack' | 'grid'>(photos.length > 1 ? 'stack' : 'grid');
   const [index, setIndex] = useState(0);
@@ -158,14 +162,16 @@ function PhotoBoothBody({ photos, onUploadPhoto, t, editing, upload }: SlotProps
                     decoding="async"
                   />
                   {/* Alternate the two engraved frames so the grid doesn't read as a repeat */}
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={`${T7_ASSETS}/photobooth/${i % 2 === 0 ? 'square-frame' : 'oval-frame'}.webp`}
-                    alt=""
-                    className={styles.photoFrameArt}
-                    loading="lazy"
-                    decoding="async"
-                  />
+                  {frameArt !== 'none' && (
+                    /* eslint-disable-next-line @next/next/no-img-element */
+                    <img
+                      src={`${T7_ASSETS}/photobooth/${i % 2 === 0 ? 'square-frame' : 'oval-frame'}.webp`}
+                      alt=""
+                      className={styles.photoFrameArt}
+                      loading="lazy"
+                      decoding="async"
+                    />
+                  )}
                 </figure>
               ))}
             </div>

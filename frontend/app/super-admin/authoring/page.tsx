@@ -12,16 +12,16 @@ import { Textarea } from '@/components/ui/Textarea';
 import { Badge } from '@/components/ui/Badge';
 import { Card } from '@/components/ui/Card';
 
-type Tier = 'FREE' | 'PREMIUM' | 'PRO';
+type Tier = 'BASIC' | 'PREMIUM' | 'PRO';
 
 const TIERS: { value: Tier; label: string }[] = [
-  { value: 'FREE', label: 'Free' },
+  { value: 'BASIC', label: 'Basic' },
   { value: 'PREMIUM', label: 'Premium' },
   { value: 'PRO', label: 'Pro' },
 ];
 
 const tierBadge: Record<Tier, { tone: 'neutral' | 'gold' | 'brand'; label: string }> = {
-  FREE: { tone: 'neutral', label: 'Free' },
+  BASIC: { tone: 'neutral', label: 'Basic' },
   PREMIUM: { tone: 'gold', label: 'Premium' },
   PRO: { tone: 'brand', label: 'Pro' },
 };
@@ -40,7 +40,7 @@ export default function AuthoringListPage() {
   const [code, setCode] = useState('');
   const [codeTouched, setCodeTouched] = useState(false);
   const [description, setDescription] = useState('');
-  const [tier, setTier] = useState<Tier>('FREE');
+  const [tier, setTier] = useState<Tier>('BASIC');
   const [saving, setSaving] = useState(false);
 
   useEffect(() => { load(); }, []);
@@ -174,7 +174,7 @@ export default function AuthoringListPage() {
       ) : (
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
           {templates.map((t, i) => {
-            const tb = tierBadge[t.tier] ?? tierBadge.FREE;
+            const tb = tierBadge[t.tier] ?? tierBadge.BASIC;
             return (
               <motion.div key={t.templateId} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.04 }}>
                 <Card padding="0" style={{ opacity: t.isActive ? 1 : 0.6, overflow: 'hidden', cursor: 'pointer' }}

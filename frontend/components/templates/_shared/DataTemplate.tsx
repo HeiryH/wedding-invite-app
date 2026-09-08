@@ -66,32 +66,48 @@ export default function DataTemplate({
   // slots.module.css's own neutral fallback (no couple has ever touched theming ⇒ no inline value
   // here at all, not even the neutral default duplicated).
   const accentColor = customConfig?.[`${keyPrefix}.layout.slotTheme.accentColor`];
-  const headingFont = fontVar(customConfig?.[`${keyPrefix}.layout.slotTheme.headingFont`]);
-  // Glassmorphism ("Card" section of the Theme control) — off (cardBlur unset/0) keeps every
-  // `.panel`-based slot (walimahBody/coupleNames/ceremonyDetails/RSVP) exactly as it renders
-  // today. On, it reproduces Template 5's own `.ceremonyCard` recipe (flat translucent tint +
-  // backdrop blur + hairline border + soft multi-layer shadow) generically for any slot that
-  // uses `.panel`, via the same `--slot-panel-*` custom properties T7 already overrides for its
-  // own (non-glass) scrim look.
-  const cardBlur = Number(customConfig?.[`${keyPrefix}.layout.slotTheme.cardBlur`] ?? 0);
+  const headingFontOverride = customConfig?.[`${keyPrefix}.layout.slotTheme.headingFont`];
+  const headingFont = fontVar(headingFontOverride);
+  // Body falls back to Heading (not straight past it) when only one font is picked, so setting
+  // just "Heading" in the Adjust panel re-fonts the whole template.
+  const bodyFont = fontVar(customConfig?.[`${keyPrefix}.layout.slotTheme.bodyFont`]) ?? headingFont;
+  // Card style ("Card" section of the Theme control). No `cardStyle` key at all (every authored
+  // template published before this control existed) changes nothing — `slots.module.css`'s own
+  // neutral scrim renders exactly as it always has. A `cardStyle` key only appears once an author
+  // actually opens the dropdown, at which point it's an explicit, couple-visible choice: 'none'
+  // forces the panel fully transparent, 'radial' pins today's neutral scrim explicitly (so it no
+  // longer silently depends on the CSS fallback), 'glass' is Template 5's frosted-glass recipe.
+  // A bare legacy `cardBlur` (saved before this dropdown existed) still means 'glass', so an
+  // existing design's rendering never silently changes underneath it.
+  const legacyCardBlur = Number(customConfig?.[`${keyPrefix}.layout.slotTheme.cardBlur`] ?? 0);
+  const cardStyle = customConfig?.[`${keyPrefix}.layout.slotTheme.cardStyle`]
+    ?? (legacyCardBlur > 0 ? 'glass' : undefined);
   const cardTint = customConfig?.[`${keyPrefix}.layout.slotTheme.cardTint`] || '#fffbf4';
   const cardTintOpacity = Number(customConfig?.[`${keyPrefix}.layout.slotTheme.cardTintOpacity`] ?? 0.45);
   const cardRadius = Number(customConfig?.[`${keyPrefix}.layout.slotTheme.cardRadius`] ?? 24);
-  const glassStyle: CSSProperties | undefined = cardBlur > 0
-    ? ({
-        '--slot-panel-bg': `color-mix(in srgb, ${cardTint} ${Math.round(cardTintOpacity * 100)}%, transparent)`,
-        '--slot-panel-blur': `blur(${cardBlur}px) saturate(140%)`,
-        '--slot-panel-border': '1px solid rgba(255, 255, 255, 0.45)',
-        '--slot-panel-radius': `${cardRadius}px`,
-        '--slot-panel-shadow':
-          '0 1px 2px rgba(120, 86, 70, 0.04), 0 8px 24px rgba(214, 168, 150, 0.12), 0 24px 60px rgba(180, 130, 110, 0.08)',
-      } as CSSProperties)
+  const cardBlurPx = legacyCardBlur || 16;
+  const cardStyleVars: CSSProperties | undefined =
+    cardStyle === 'glass' ? ({
+      '--slot-panel-bg': `color-mix(in srgb, ${cardTint} ${Math.round(cardTintOpacity * 100)}%, transparent)`,
+      '--slot-panel-blur': `blur(${cardBlurPx}px) saturate(140%)`,
+      '--slot-panel-border': '1px solid rgba(255, 255, 255, 0.45)',
+      '--slot-panel-radius': `${cardRadius}px`,
+      '--slot-panel-shadow':
+        '0 1px 2px rgba(120, 86, 70, 0.04), 0 8px 24px rgba(214, 168, 150, 0.12), 0 24px 60px rgba(180, 130, 110, 0.08)',
+    } as CSSProperties)
+    : cardStyle === 'radial' ? ({
+      '--slot-panel-scrim-1': 'rgba(246, 245, 243, 0.82)',
+      '--slot-panel-scrim-2': 'rgba(246, 245, 243, 0.66)',
+      '--slot-panel-scrim-3': 'rgba(246, 245, 243, 0.28)',
+    } as CSSProperties)
+    : cardStyle === 'none' ? ({ '--slot-panel-bg': 'transparent' } as CSSProperties)
     : undefined;
-  const themeStyle: CSSProperties | undefined = accentColor || headingFont || glassStyle
+  const themeStyle: CSSProperties | undefined = accentColor || headingFont || bodyFont || cardStyleVars
     ? {
         ...(accentColor ? { '--slot-ink': accentColor } : {}),
         ...(headingFont ? { '--slot-font-display': headingFont } : {}),
-        ...glassStyle,
+        ...(bodyFont ? { '--slot-font-serif': bodyFont, '--slot-font-body': bodyFont } : {}),
+        ...cardStyleVars,
       } as CSSProperties
     : undefined;
 

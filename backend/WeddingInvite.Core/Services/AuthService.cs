@@ -6,6 +6,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
 using WeddingInvite.Core.Constants;
 using WeddingInvite.Core.DTOs;
+using WeddingInvite.Core.Utilities;
 using WeddingInvite.Data.Repositories;
 using WeddingInvite.Models;
 
@@ -18,19 +19,25 @@ namespace WeddingInvite.Core.Services
         private readonly IPasswordResetTokenRepository _resetTokenRepo;
         private readonly IEmailService _emailService;
         private readonly IEventRepository _eventRepo;
+        private readonly IPackageRepository _packageRepo;
+        private readonly IEventFeatureRepository _eventFeatureRepo;
 
         public AuthService(
             IUserRepository userRepo,
             IConfiguration configuration,
             IPasswordResetTokenRepository resetTokenRepo,
             IEmailService emailService,
-            IEventRepository eventRepo)
+            IEventRepository eventRepo,
+            IPackageRepository packageRepo,
+            IEventFeatureRepository eventFeatureRepo)
         {
             _userRepo = userRepo;
             _configuration = configuration;
             _resetTokenRepo = resetTokenRepo;
             _emailService = emailService;
             _eventRepo = eventRepo;
+            _packageRepo = packageRepo;
+            _eventFeatureRepo = eventFeatureRepo;
         }
 
         public async Task<LoginResponseDto> LoginAsync(LoginDto loginDto)
@@ -165,9 +172,9 @@ namespace WeddingInvite.Core.Services
 
         public async Task<UserDto> SetTierAsync(int userId, string tier)
         {
-            var valid = new[] { "FREE", "PREMIUM", "PRO" };
+            var valid = new[] { "BASIC", "PREMIUM", "PRO" };
             if (!valid.Contains(tier.ToUpper()))
-                throw new ArgumentException($"Invalid tier '{tier}'. Must be FREE, PREMIUM, or PRO.");
+                throw new ArgumentException($"Invalid tier '{tier}'. Must be BASIC, PREMIUM, or PRO.");
 
             var user = await _userRepo.GetByIdAsync(userId);
             if (user == null)
@@ -176,17 +183,29 @@ namespace WeddingInvite.Core.Services
             user.Tier = tier.ToUpper();
             var updated = await _userRepo.UpdateAsync(user);
 
-            // Upgrading to a paid tier publishes the (previously private) free-tier event
-            // so the couple can share it and collect real RSVPs.
-            if (TierEntitlements.Rank(updated.Tier) >= TierEntitlements.Rank(TierEntitlements.Premium)
-                && updated.EventId.HasValue)
+            if (updated.EventId.HasValue)
             {
-                var evt = await _eventRepo.GetByIdAsync(updated.EventId.Value);
-                if (evt != null && !evt.IsPublic)
+                // Upgrading to a paid tier publishes the (previously private) free-tier event
+                // so the couple can share it and collect real RSVPs.
+                if (TierEntitlements.Rank(updated.Tier) >= TierEntitlements.Rank(TierEntitlements.Premium))
                 {
-                    evt.IsPublic = true;
-                    await _eventRepo.UpdateAsync(evt);
+                    var evt = await _eventRepo.GetByIdAsync(updated.EventId.Value);
+                    if (evt != null && !evt.IsPublic)
+                    {
+                        evt.IsPublic = true;
+                        await _eventRepo.UpdateAsync(evt);
+                    }
                 }
+
+                // The Access tab's tier picker used to only change User.Tier — the wedding's own
+                // EventFeature toggles never moved, so a couple upgraded to PRO still had every
+                // PRO feature off until someone remembered to flip each one on the Features tab —
+                // and, in the other direction, a downgrade left everything the old tier had
+                // unlocked switched on forever. Turning tier up now turns on everything newly
+                // included; turning it down revokes anything no longer included, even if it was
+                // on. A feature within the *new* tier that the couple had already turned off stays
+                // off — only the entitlement ceiling is enforced, not their own choices under it.
+                await TierFeatureSync.SyncEnabledFeaturesAsync(updated.EventId.Value, updated.Tier, _packageRepo, _eventFeatureRepo);
             }
 
             return MapToDto(updated);
@@ -266,7 +285,7 @@ namespace WeddingInvite.Core.Services
             CreatedDate = user.CreatedDate
         };
 
-        public string GenerateJwtToken(string email, string role, int? eventId, string tier = "FREE")
+        public string GenerateJwtToken(string email, string role, int? eventId, string tier = "BASIC")
         {
             var jwtSettings = _configuration.GetSection("JwtSettings");
             var secretKey = jwtSettings["SecretKey"];
@@ -279,7 +298,7 @@ namespace WeddingInvite.Core.Services
                 new Claim(ClaimTypes.Email, email),
                 new Claim(ClaimTypes.Role, role),
                 new Claim(ClaimTypes.Name, email), // ✅ ADD THIS - This is what User.Identity.Name reads
-                new Claim("Tier", string.IsNullOrWhiteSpace(tier) ? "FREE" : tier),
+                new Claim("Tier", string.IsNullOrWhiteSpace(tier) ? "BASIC" : tier),
                 new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
             };
 
