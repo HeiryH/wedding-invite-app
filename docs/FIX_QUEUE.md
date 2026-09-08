@@ -647,3 +647,60 @@ proxy_buffer_size 16k;
 proxy_buffers 4 16k;
 proxy_busy_buffers_size 32k;
 ```
+
+## Issue 5 — T7 welcome arch "pops in" late, and template video re-downloads every view
+
+**Branch:** `ae-unified` · **Status:** DONE · **Raised:** 2026-09-09 · **Fixed:** 2026-09-09
+
+User-reported: on the public site, T7's welcome "arch" (a play-once chromakey video, vines growing
+up the columns — `kind: 'video'`, see `_shared/effects/PlayOnceVideoLayer.tsx`) takes about a
+second to appear, and its late arrival makes the reveal order look broken — the barrier (`order: 1`,
+a plain `<img>`) visibly shows up *before* the arch (`order: 0`, meant to reveal first).
+
+**Root cause.** `PlayOnceVideoLayer` draws to a `<canvas>` via chromakey, and nothing is drawn until
+`hasDecodedFrame(video)` is true — which requires the browser to have fetched and decoded video data
+first. Confirmed against production: `arch_keyed.mp4` is 1.18MB, H.264, already faststart-optimized
+(moov atom before mdat, so that wasn't it) — real measured TTFB 0.21s / full download 0.97s, right in
+line with the reported lag. Meanwhile the layer's own CSS entrance animation (the shared
+`--sl-delay = 0.35 + order*0.22s` stagger every layer uses) fires **on schedule regardless of the
+canvas's contents** — so the arch's box animates into its revealed position on time, empty, and the
+real content only shows up whenever the video happens to finish decoding. The component's own doc
+comment already described the intended behavior ("holds on frame one" immediately) and even had a
+`showFirstFrame()` function reaching for it — but that function is itself gated on
+`video.readyState >= 1`, which still requires a network round-trip; there was no independent
+fallback. The original static `arch.webp` this layer used before being converted to video was still
+sitting on disk, entirely unused.
+
+**The fix — `Layer.posterSrc`** (`types.ts`, added to `layout.ts`'s `OVERRIDABLE`, resolved in
+`Layer.tsx` the same way `videoSrc` already is): a static image `PlayOnceVideoLayer` draws onto the
+canvas immediately on mount, independent of the video's own load state. A `hasRealFrameRef` guard
+means a real decoded video frame — if it somehow arrives before the poster image does — is never
+clobbered by an even-slower poster landing after it. T7's `arch` layer now sets
+`posterSrc: 'welcome/arch.webp'`. The two assets aren't pixel-identical (the video's crop is
+slightly larger to fit the vines growing outward — already documented in the stage-data comment,
+`w: 99` vs `92`), so there's a sub-second, barely-visible stretch during the swap; not worth solving
+for a transient placeholder.
+
+**Verified with a real browser** (Playwright), not just by reasoning about the code: intercepted and
+delayed only the video request by 3s, sampled canvas pixel alpha at intervals. **Before the video
+had loaded at all** (`video.readyState === 0`, `HAVE_NOTHING`): canvas already **32% painted** via
+the poster. After the video's artificial delay elapsed (`readyState === 4`): the real keyed frame
+had taken over. `tsc --noEmit` + `next build` both clean, 30/30 pages.
+
+**Second, smaller fix — Cache-Control on `/templates/*`.** Every asset under `public/templates/`
+(all template art + video) was served with Next's default `public, max-age=0` — every single page
+view, including repeat visits, forces a revalidation round-trip. Added a `headers()` rule in
+`next.config.ts` for `/templates/:path*`: `public, max-age=86400, stale-while-revalidate=604800`.
+Deliberately **not** `immutable` + a long max-age — these filenames aren't content-hashed the way
+`_next/static/*` chunks are, and one of them has already been overwritten in place by a fix before
+(the RSVP scroll video re-encode, Issue 3's "actual RS bug" note) — `immutable` would let a browser
+skip revalidating entirely and keep serving a since-fixed asset indefinitely. This helps repeat
+views (a couple re-checking their own invite, a guest re-opening the link) — it does **not** help a
+true first-time visitor, who has nothing cached either way; the poster-frame fix above is what
+actually fixes the first-view experience.
+
+**Not addressed here, potentially the same underlying gap:** `ScrollVideoLayer.tsx` (the RSVP
+roman-scroll, `kind: 'scrollVideo'`) has no equivalent poster mechanism either — it's scroll-gated
+rather than load-gated so the failure mode is different (a blank canvas only if a guest scrolls to
+it before the video's decoded, not an out-of-order reveal), but worth the same fix if it's ever
+reported as a problem.

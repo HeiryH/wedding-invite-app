@@ -281,9 +281,13 @@ export default function Layer({ layer, slotProps, eager, selected, editing, flow
         // `chain: true` layer still takes its height from the source's aspect ratio.
         if (!layer.videoSrc) return null;
         const vsrc = layer.videoSrc.startsWith('/') ? layer.videoSrc : `${assetRoot}/${layer.videoSrc}`;
+        const posterSrc = layer.posterSrc
+          ? (layer.posterSrc.startsWith('/') ? layer.posterSrc : `${assetRoot}/${layer.posterSrc}`)
+          : undefined;
         return (
           <PlayOnceVideoLayer
             src={vsrc}
+            posterSrc={posterSrc}
             boxRef={boxRef}
             layer={layer}
             size={assetSizes[layer.videoSrc]}

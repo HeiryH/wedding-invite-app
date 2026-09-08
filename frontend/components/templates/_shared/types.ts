@@ -233,6 +233,13 @@ export interface Layer {
    *  before playing. Defaults to this layer's own entrance timing, `0.35 + order * 0.22 + animDur`,
    *  so the piece finishes arriving before it comes alive. Set explicitly to override. */
   playDelaySec?: number;
+  /** kind 'video' — a static image (same asset-root convention as `videoSrc`) drawn onto the
+   *  canvas immediately on mount, before the video has decoded any frame. Without it the canvas is
+   *  fully transparent until the video downloads — on a slow connection that can take ~1s, during
+   *  which the layer's own CSS entrance animation has already fired empty, so it visibly "pops in"
+   *  late relative to layers around it instead of appearing on schedule. Should be the video's own
+   *  first frame (or near-identical) so the swap from poster → live video is invisible. */
+  posterSrc?: string;
 
   /** Set by a persisted override to suppress a layer that ships in the defaults. */
   deleted?: boolean;

@@ -49,7 +49,7 @@ export const T7_STAGES: Record<string, StageDef> = {
       // arch only spans ~93% of that crop at rest. 92 / 0.933 ≈ 99 puts the columns back where the
       // static arch had them. Cropped aspect (1.282) ≈ the old arch.webp's (1.266), so the box is
       // otherwise a near drop-in.
-      L({ id: 'arch',      kind: 'video', videoSrc: 'welcome/arch_keyed.mp4', x: 50, y: 40, w: 99, z: 3, order: 0, depth: 0.5,
+      L({ id: 'arch',      kind: 'video', videoSrc: 'welcome/arch_keyed.mp4', posterSrc: 'welcome/arch.webp', x: 50, y: 40, w: 99, z: 3, order: 0, depth: 0.5,
           chromaThreshold: 18, chromaFade: 10, label: 'Arch (vines grow in)' }),
       L({ id: 'barrier',   kind: 'img',  src: 'welcome/barrier.webp',        x: 50, y: 68, w: 140, z: 5, order: 1, depth: 1.1 }),
       L({ id: 'fountain',  kind: 'img',  src: 'welcome/water-fountain.webp', x: 15, y: 60, w: 28,  z: 4, order: 2, depth: 1.5 }),

@@ -19,10 +19,20 @@ import { drawKeyedFrame, hasDecodedFrame } from './chromaKey';
  *   2. the document has finished loading (`window.load`), so decoding doesn't fight image fetches,
  *   3. this layer's own entrance animation has finished — mirrors Layer.tsx's `--sl-delay`
  *      (`0.35 + order * 0.22`) plus its duration, so the piece has landed before it comes alive.
+ *
+ * `posterSrc`, if given, is drawn onto the canvas immediately on mount, independent of all three
+ * gates above — the video itself can take up to ~1s to become decodable on a slow connection (a
+ * network fetch, not something any of the waits above control), and until it does the canvas is
+ * otherwise fully transparent. Without a poster, this layer's CSS entrance animation still fires on
+ * schedule (mirroring every other layer) but paints nothing, so it visibly "pops in" late relative
+ * to layers around it once the video finally decodes — this is exactly that bug, fixed.
  */
 export interface PlayOnceVideoLayerProps {
   /** Resolved video URL (asset-root resolution is the caller's job — mirrors Layer.tsx's `img`). */
   src: string;
+  /** Resolved poster-image URL (same resolution convention as `src`), or `undefined` if the layer
+   *  has none. Drawn onto the canvas immediately on mount — see the component doc comment. */
+  posterSrc?: string;
   /** The layer's own positioned box; used as the IntersectionObserver target. */
   boxRef: RefObject<HTMLElement | null>;
   /** Fully-resolved layer (shipped defaults already merged with any saved override). */
@@ -35,12 +45,15 @@ export interface PlayOnceVideoLayerProps {
   className?: string;
 }
 
-export default function PlayOnceVideoLayer({ src, boxRef, layer, size, className }: PlayOnceVideoLayerProps) {
+export default function PlayOnceVideoLayer({ src, posterSrc, boxRef, layer, size, className }: PlayOnceVideoLayerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const ctxRef = useRef<CanvasRenderingContext2D | null>(null);
   const rafRef = useRef<number | null>(null);
   const playedRef = useRef(false);
+  // Set the moment a real decoded video frame is painted, so a slow-loading poster image can't
+  // clobber it if it arrives after the video already did.
+  const hasRealFrameRef = useRef(false);
 
   const {
     chromaThreshold = 18, chromaFade = 10, order = 0, animDur = 1, playDelaySec,
@@ -53,6 +66,7 @@ export default function PlayOnceVideoLayer({ src, boxRef, layer, size, className
     if (!video || !canvas || !box) return;
 
     let cancelled = false;
+    hasRealFrameRef.current = false;
 
     const paint = () => {
       if (cancelled) return;
@@ -64,6 +78,7 @@ export default function PlayOnceVideoLayer({ src, boxRef, layer, size, className
       const ctx = ctxRef.current;
       if (!ctx) return;
       drawKeyedFrame(video, canvas, ctx, chromaThreshold, chromaFade);
+      hasRealFrameRef.current = true;
       // Keep painting only while the animation is actually running; once it ends we hold the
       // final frame, so there is nothing left to repaint (an idle rAF loop keying 1.5M pixels a
       // frame would be a real battery cost on a page that's otherwise static).
@@ -78,6 +93,23 @@ export default function PlayOnceVideoLayer({ src, boxRef, layer, size, className
     };
     if (video.readyState >= 1) showFirstFrame();
     else video.addEventListener('loadedmetadata', showFirstFrame, { once: true });
+
+    // Poster: draws independently of all of the above, as soon as it decodes — typically much
+    // faster than the video, since it's a single still image rather than something the browser
+    // has to fetch and decode as video. Skipped if a real video frame already landed first (a slow
+    // network could plausibly deliver the video before an even-slower poster).
+    if (posterSrc) {
+      const posterImg = new Image();
+      posterImg.onload = () => {
+        if (cancelled || hasRealFrameRef.current) return;
+        if (!ctxRef.current) ctxRef.current = canvas.getContext('2d', { willReadFrequently: true });
+        const ctx = ctxRef.current;
+        if (!ctx) return;
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(posterImg, 0, 0, canvas.width, canvas.height);
+      };
+      posterImg.src = posterSrc;
+    }
 
     const onSeeked = () => paint();
     video.addEventListener('seeked', onSeeked);
@@ -128,7 +160,7 @@ export default function PlayOnceVideoLayer({ src, boxRef, layer, size, className
       video.removeEventListener('seeked', onSeeked);
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
     };
-  }, [src, boxRef, chromaThreshold, chromaFade, order, animDur, playDelaySec]);
+  }, [src, posterSrc, boxRef, chromaThreshold, chromaFade, order, animDur, playDelaySec]);
 
   return (
     <>

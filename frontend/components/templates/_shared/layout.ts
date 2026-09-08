@@ -26,7 +26,7 @@ export const OVERRIDABLE: (keyof Layer)[] = [
   'videoSrc', 'triggerStart', 'triggerEnd', 'scrub', 'pivot', 'holdWidth', 'videoStartSec',
   'openThreshold', 'resetSec', 'chromaThreshold', 'chromaFade',
   // kind 'video' (play-once) — see PlayOnceVideoLayer.tsx.
-  'playDelaySec',
+  'playDelaySec', 'posterSrc',
   // kind 'slot' presentation mode ('inline' | 'sheet') and which named sheet it belongs to /
   // opens — see _shared/SheetHost.tsx and _shared/slots/sheets.tsx.
   'presentation', 'sheetId',
