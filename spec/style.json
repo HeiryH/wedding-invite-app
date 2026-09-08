@@ -1,0 +1,41 @@
+{
+  "spec_version": 2,
+  "slug": "rose-horizon",
+  "source_reference": [
+    "/Users/helmyheiry/wedding-invite-app/.worktrees/rose-horizon-20260908/docs/rose-horizon-refs/reference-01.jpg"
+  ],
+  "medium_statement": "Soft gouache/airbrush digital illustration for a Muslim wedding portrait: mostly flat-to-gently-shaded color fields with a diffused, brush-blended cloud texture in the sky and background elements, rendered by a hand that favors soft edges over crisp vector boundaries.",
+  "line": "Thin, confident, fully closed ink outlines used only on facial features and fine details (glasses, hijab edge); clothing, sky and floral shapes carry no outline at all and rely on flat color edges instead.",
+  "fill": {
+    "mode": "wash",
+    "description": "Soft, semi-transparent pigment bleeding at edges — visible in the sky's cloud transitions and border roses' hazy diffusion. Skin and clothing keep smoother, opaque coverage with gentle blended shading, never a hard cel edge."
+  },
+  "texture": "Fine, even brush-grain across sky and cloud passages, like soft airbrush spatter with visible directional strokes; smooth and grain-free on skin and gown fabric.",
+  "palette": [
+    { "hex": "#faebcc", "role": "warm ivory cream — bridal gown, hijab, cream rose petals" },
+    { "hex": "#9cc8d3", "role": "pale powder-blue sky" },
+    { "hex": "#fcb887", "role": "warm peach — skin tone, coral bouquet accents" },
+    { "hex": "#4a362e", "role": "deep espresso brown — groom's hair and suit shading" },
+    { "hex": "#7ca3c0", "role": "mid cornflower-blue sky gradient" },
+    { "hex": "#c7ddd7", "role": "hazy dusty blue-grey — soft-focus border rose petals" },
+    { "hex": "#e0d2bb", "role": "warm beige — lace and gown highlight, skin undertone" },
+    { "hex": "#6f7661", "role": "muted sage-olive — bouquet stems and foliage" }
+  ],
+  "background": {
+    "mode": "computed-key",
+    "hex": "#0000ff",
+    "asset_background_hex": "#0000ff",
+    "asset_background_min_delta_e": 127.4
+  },
+  "forbidden": [
+    "cast shadow",
+    "drop shadow",
+    "contact shadow",
+    "glossy 3D highlight",
+    "hard black outline on clothing, sky or objects (outline reserved for facial features only)",
+    "saturated neon color",
+    "photographic realism",
+    "crisp flat vector fill with no blending"
+  ],
+  "notes": "Pinterest Muslim-wedding reference. Classic-family (flow+overlay), PRO tier, slug rose-horizon (Template11). Two decorative systems beyond section content, tracked in the design brief, not this schema: (1) rose-border frame per section via SectionOverlay, (2) one tileable vertical 'flow background' behind all sections, parallax-scrolled. This spec covers rendering only; scene-level geometry for those two lives outside scene.json's Stage-family vocabulary."
+}
