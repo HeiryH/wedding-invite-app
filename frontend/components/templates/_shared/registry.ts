@@ -5,8 +5,8 @@ import { T3_STAGES, t3StageIds } from '../Template3-gardenromance/data/t3Stages'
 import { T4_STAGES, t4StageIds } from '../Template4-minimalnoir/data/t4Stages';
 import { T5_STAGES, t5StageIds } from '../Template5-dreamingfloral/data/t5Stages';
 import { T6_STAGES, t6StageIds } from '../Template6-fairygarden/data/t6Stages';
-import { T7_STAGES, STAGE_GROUPS } from '../Template7-romangarden/data/stages';
-import { T10_STAGES, STAGE_GROUPS as T10_STAGE_GROUPS } from '../Template10-sunnysafari/data/stages';
+import { T7_STAGES, T7_ASSETS, STAGE_GROUPS } from '../Template7-romangarden/data/stages';
+import { T10_STAGES, T10_ASSETS, STAGE_GROUPS as T10_STAGE_GROUPS } from '../Template10-sunnysafari/data/stages';
 
 /**
  * Everything a template's `layout` resolution needs, computed once per render in the customize
@@ -36,6 +36,12 @@ export interface TemplateEngine {
    *  section (accent color + heading font, via `--slot-*` CSS custom properties). T1-T6 have their
    *  own bespoke, non-slot RSVP/wishes markup this doesn't reach. */
   slotTheme?: boolean;
+  /** Public path prefix this template's shipped art/video is served from (e.g. `/templates/t7`) —
+   *  absent for templates with no such shared prefix. Lets the Adjust panel resolve a layer's
+   *  `videoSrc` into a real URL for things like the "Capture from video" poster control, without
+   *  needing the full `EngineProvider` context the actual template render tree has (the panel lives
+   *  in the parent, outside the preview iframe — see AdjustPanel.tsx's own doc comment). */
+  assetRoot?: string;
   resolveStages(ctx: StageIdsCtx): Record<string, StageDef>;
   stageIds(ctx: StageIdsCtx): string[];
 }
@@ -53,6 +59,7 @@ export const TEMPLATE_ENGINES: Record<number, TemplateEngine> = {
     keyPrefix: 't7',
     reveal: true,
     slotTheme: true,
+    assetRoot: T7_ASSETS,
     resolveStages(ctx) {
       // In the compiled ceremony row the frame art is deduped into the shared "Ceremony Backdrop"
       // stage, and each beat renders only its own content — so strip the now-unused per-beat art
@@ -79,6 +86,7 @@ export const TEMPLATE_ENGINES: Record<number, TemplateEngine> = {
     keyPrefix: 't10',
     reveal: true,
     slotTheme: true,
+    assetRoot: T10_ASSETS,
     resolveStages: () => T10_STAGES,
     stageIds: (ctx) => ctx.codes.flatMap((c) => T10_STAGE_GROUPS[c] ?? []),
   },

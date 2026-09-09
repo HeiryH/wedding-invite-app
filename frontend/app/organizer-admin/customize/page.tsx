@@ -854,6 +854,7 @@ export default function CustomizePage() {
         stageIds: engine.stageIds(ctx),
         reveal: engine.reveal,
         slotTheme: Boolean(engine.slotTheme),
+        assetRoot: engine.assetRoot,
       };
     }
     // Authored templates (data, not code — see _shared/DataTemplate.tsx) have no registry entry;
@@ -1746,6 +1747,7 @@ export default function CustomizePage() {
             <AdjustPanel
               stages={layout!.stages}
               keyPrefix={layout!.keyPrefix}
+              assetRoot={layout!.assetRoot}
               stageIds={stageIds}
               breakpoint={previewBreakpoint}
               config={draftConfig}

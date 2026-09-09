@@ -224,6 +224,19 @@
   color: var(--text-muted);
 }
 
+.posterThumb {
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  object-fit: cover;
+  border-radius: 7px;
+  border: 1px solid var(--border-default);
+  background:
+    linear-gradient(45deg, var(--surface-sunken) 25%, transparent 25%, transparent 75%, var(--surface-sunken) 75%) 0 0 / 12px 12px,
+    linear-gradient(45deg, var(--surface-sunken) 25%, transparent 25%, transparent 75%, var(--surface-sunken) 75%) 6px 6px / 12px 12px,
+    var(--surface-card);
+  margin-top: 8px;
+}
+
 .chain {
   width: 100%;
   padding: 6px 0;

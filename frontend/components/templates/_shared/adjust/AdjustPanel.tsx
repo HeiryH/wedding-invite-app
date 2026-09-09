@@ -7,6 +7,7 @@ import { resolveStage, serializeStage, baseStage, layoutKey, type StageBg } from
 import { SLOT_CATALOG_GROUPS, type SlotCatalogEntry } from '../slots/catalog';
 import { BINDING_TOKENS } from '../bindings';
 import { CURATED_FONTS } from '@/lib/fonts/registry';
+import { drawKeyedFrame, hasDecodedFrame } from '../effects/chromaKey';
 import styles from './AdjustPanel.module.css';
 
 const ANIM_LABELS: Record<AnimType, string> = {
@@ -31,6 +32,10 @@ interface Props {
   stages: Record<string, StageDef>;
   /** Config-key namespace for this template's layouts ('t7', 't5', …). */
   keyPrefix: string;
+  /** Public path prefix this template's shipped art/video is served from (e.g. `/templates/t7`) —
+   *  see the matching doc comment on `TemplateEngine.assetRoot` in `_shared/registry.ts`. Absent
+   *  ⇒ the "Capture from video" poster control is hidden (no way to resolve a real video URL). */
+  assetRoot?: string;
   stageIds: StageId[];
   breakpoint: Breakpoint;
   config: Record<string, string>;
@@ -92,7 +97,7 @@ function Slider({ label, value, min, max, step, onChange }: {
 }
 
 export default function AdjustPanel({
-  stages, keyPrefix, stageIds, breakpoint, config, onLayoutChange,
+  stages, keyPrefix, assetRoot, stageIds, breakpoint, config, onLayoutChange,
   selectedStage, selectedLayer, onSelectStage, onSelectLayer, onClose,
   canReveal, revealOverflow, onToggleReveal, onUploadImage, slotCatalog,
   slotTheme, slotThemeAccentDefault,
@@ -270,6 +275,54 @@ export default function AdjustPanel({
       const msg =
         (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
       flash(msg || 'Upload failed');
+    }
+  };
+
+  // Grabs the video's own real first frame (chroma-keyed with this layer's own threshold/fade, so
+  // it's pixel-identical to what the live render will eventually show) and uploads it as the
+  // poster — structurally impossible to mismatch, unlike hand-picking a still elsewhere. Loads a
+  // second, off-DOM <video> rather than reusing anything from the live preview (the panel lives in
+  // the parent tree, outside the preview iframe — it has no video element to read from at all).
+  const captureVideoFrame = async () => {
+    if (!current?.videoSrc || !assetRoot || !onUploadImage) return;
+    const src = current.videoSrc.startsWith('/') ? current.videoSrc : `${assetRoot}/${current.videoSrc}`;
+    const threshold = current.chromaThreshold ?? 18;
+    const fade = current.chromaFade ?? 10;
+    flash('Capturing frame…');
+    try {
+      const blob = await new Promise<Blob>((resolve, reject) => {
+        const video = document.createElement('video');
+        video.muted = true;
+        video.playsInline = true;
+        video.preload = 'auto';
+        const timeout = setTimeout(() => reject(new Error('Video took too long to load')), 10000);
+        const cleanup = () => { clearTimeout(timeout); video.src = ''; };
+        const paint = () => {
+          if (!hasDecodedFrame(video)) {
+            requestAnimationFrame(paint);
+            return;
+          }
+          const canvas = document.createElement('canvas');
+          const ctx = canvas.getContext('2d', { willReadFrequently: true });
+          if (!ctx) { cleanup(); reject(new Error('Canvas unavailable')); return; }
+          drawKeyedFrame(video, canvas, ctx, threshold, fade);
+          canvas.toBlob((b) => {
+            cleanup();
+            if (b) resolve(b); else reject(new Error('Frame export failed'));
+          }, 'image/png');
+        };
+        video.addEventListener('loadedmetadata', () => { video.currentTime = 0; }, { once: true });
+        video.addEventListener('seeked', paint, { once: true });
+        video.addEventListener('error', () => { cleanup(); reject(new Error('Video failed to load')); }, { once: true });
+        video.src = src;
+      });
+      flash('Uploading…');
+      const file = new File([blob], 'poster-capture.png', { type: 'image/png' });
+      const url = await onUploadImage(file);
+      patchLayer(current.id, { posterSrc: url });
+      flash('Poster captured from video');
+    } catch (err) {
+      flash(err instanceof Error ? err.message : 'Capture failed');
     }
   };
 
@@ -801,10 +854,19 @@ export default function AdjustPanel({
                       {/* Drawn onto the canvas immediately on mount, before the video has decoded a
                           frame — without one the layer is a blank hole until the video loads (see
                           PlayOnceVideoLayer.tsx and docs/FIX_QUEUE.md Issue 5). Should be the
-                          video's own first frame, or close to it, so the swap is invisible. */}
+                          video's own first frame, or close to it, so the swap is invisible — the
+                          checkerboard behind the preview is the actual alpha channel, not a bug. */}
+                      {current.posterSrc && (
+                        <img src={current.posterSrc} alt="Poster preview" className={styles.posterThumb} />
+                      )}
                       {onUploadImage && (
                         <div className={styles.btnRow}>
-                          <button className={styles.btn} onClick={() => pickImage('poster')}>
+                          {assetRoot && current.videoSrc && (
+                            <button className={styles.btn} onClick={captureVideoFrame} title="Grabs the video's own real first frame — can't drift out of sync with it">
+                              Capture from video
+                            </button>
+                          )}
+                          <button className={`${styles.btn} ${styles.btnGhost}`} onClick={() => pickImage('poster')}>
                             {current.posterSrc ? 'Replace poster' : 'Set poster image'}
                           </button>
                           {current.posterSrc && (

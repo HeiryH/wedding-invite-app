@@ -824,3 +824,27 @@ This is template-neutral (`useStageReveal` is shared by the whole engine, not T7
 almost certainly explains a class of "the reveal looks broken sometimes" reports that would have
 been very hard to pin down without the user's own before/after A-B observation — cache state was
 never a variable anyone had reason to suspect for a CSS entrance animation. Deployed 2026-09-09.
+
+### Follow-up — poster-image discoverability (feature, not a bug)
+
+The poster control from earlier in this issue had two real gaps once the user actually went looking
+for it: no way to see what image was currently set without loading the live page, and no protection
+against setting a poster that doesn't match the video's actual first frame (which would show as a
+visible flash/pop the moment the real video frame replaces it).
+
+- **Thumbnail preview** — the current `posterSrc`, if any, now renders as an actual image in the
+  panel (on a checkerboard background, so real transparency is visible rather than looking like a
+  flat color) instead of only being knowable by loading the live page.
+- **"Capture from video"** — loads the video off-DOM, seeks to frame 0, runs it through the exact
+  same `drawKeyedFrame` chroma-key math the live render uses (with the layer's own
+  threshold/fade), exports the result as a transparent PNG, and uploads it as the poster —
+  structurally can't drift out of sync with the video since it *is* a frame of the video. Preferred
+  over manual upload (moved to a secondary/ghost button) since it removes the "go find/export a
+  matching still frame by hand" step entirely.
+- **Plumbing**: `TemplateEngine.assetRoot` (`_shared/registry.ts`) exposes each template's public
+  asset path prefix (e.g. `/templates/t7`) through to `AdjustPanel`, which lives in the parent tree
+  outside the preview iframe and had no way to resolve a real video URL before this.
+
+Verified: `tsc --noEmit` + `next build` clean, 30/30 pages. The capture mechanism itself was tested
+standalone against the real `arch_keyed.mp4` (not just read for correctness) — produced a correctly
+transparent PNG, pixel-accurate to the video's actual first frame.
