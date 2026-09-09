@@ -108,7 +108,7 @@ export default function AdjustPanel({
   // Layer-detail tab: geometry vs style vs animation. Sticky across layer selection.
   const [detailTab, setDetailTab] = useState<'layout' | 'style' | 'anim'>('layout');
   const fileRef = useRef<HTMLInputElement>(null);
-  const uploadTarget = useRef<'layer' | 'bg'>('layer');
+  const uploadTarget = useRef<'layer' | 'bg' | 'poster'>('layer');
   const slotIdCounter = useRef(0);
 
   const def = stages[selectedStage];
@@ -249,7 +249,7 @@ export default function AdjustPanel({
     flash(`Copied to ${other}`);
   };
 
-  const pickImage = (target: 'layer' | 'bg') => {
+  const pickImage = (target: 'layer' | 'bg' | 'poster') => {
     uploadTarget.current = target;
     fileRef.current?.click();
   };
@@ -261,8 +261,10 @@ export default function AdjustPanel({
     try {
       const url = await onUploadImage(file);
       if (uploadTarget.current === 'bg') patchBg({ bgSrc: url });
-      else addLayer('img', { src: url });
-      flash('Image added');
+      else if (uploadTarget.current === 'poster') {
+        if (current) patchLayer(current.id, { posterSrc: url });
+      } else addLayer('img', { src: url });
+      flash(uploadTarget.current === 'poster' ? 'Poster image set' : 'Image added');
     } catch (err) {
       // Surface the server's reason (e.g. an unsupported format) instead of a blank failure.
       const msg =
@@ -796,6 +798,25 @@ export default function AdjustPanel({
                       <Slider label="Play Delay (s)" value={current.playDelaySec ?? Number((0.35 + current.order * 0.22 + (current.animDur ?? 1)).toFixed(2))} min={0} max={8} step={0.1} onChange={set('playDelaySec')} />
                       <Slider label="Chroma Threshold" value={current.chromaThreshold ?? 18} min={0} max={100} step={1} onChange={set('chromaThreshold')} />
                       <Slider label="Chroma Fade" value={current.chromaFade ?? 10} min={0} max={100} step={1} onChange={set('chromaFade')} />
+                      {/* Drawn onto the canvas immediately on mount, before the video has decoded a
+                          frame — without one the layer is a blank hole until the video loads (see
+                          PlayOnceVideoLayer.tsx and docs/FIX_QUEUE.md Issue 5). Should be the
+                          video's own first frame, or close to it, so the swap is invisible. */}
+                      {onUploadImage && (
+                        <div className={styles.btnRow}>
+                          <button className={styles.btn} onClick={() => pickImage('poster')}>
+                            {current.posterSrc ? 'Replace poster' : 'Set poster image'}
+                          </button>
+                          {current.posterSrc && (
+                            <button
+                              className={`${styles.btn} ${styles.btnGhost}`}
+                              onClick={() => patchLayer(current.id, { posterSrc: undefined })}
+                            >
+                              Remove poster
+                            </button>
+                          )}
+                        </div>
+                      )}
                     </>
                   )}
                 </>

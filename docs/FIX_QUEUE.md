@@ -704,3 +704,58 @@ roman-scroll, `kind: 'scrollVideo'`) has no equivalent poster mechanism either �
 rather than load-gated so the failure mode is different (a blank canvas only if a guest scrolls to
 it before the video's decoded, not an out-of-order reveal), but worth the same fix if it's ever
 reported as a problem.
+
+## Issue 6 — T7 `arch`/`fountain` reveal out of sync (stray `order` overrides), + poster now editable
+
+**Branch:** `ae-unified` · **Status:** PARTIAL — code done, live data fix pending · **Raised/Fixed
+(code):** 2026-09-09
+
+Two follow-ups from Issue 5, reported after that fix shipped.
+
+**1. "Fountain doesn't animate, loads instantly."** Verified false as literally stated — measured
+directly against production (`ihsan-and-aimi`, a real couple's live invite) with repeated samples
+over ~3.6s: `fountain`'s opacity genuinely ramps `0.00 → 0.54 → 0.95 → 1.00` with a matching
+`translateY` easing to `none`, a real, working rise animation, not an instant pop-in. Same
+confirmed for `arch`/`barrier`.
+
+**What's actually wrong: reveal *timing*, not the reveal mechanism.** Direct DB inspection found
+`arch` and `fountain` — on **both** the local test event (`helyana-and-heiry`) and this **real
+production event** — carry a persisted `order` override one higher than their shipped default
+(`arch`: 0→1, `fountain`: 2→3). `order` drives the entrance stagger
+(`--sl-delay = 0.35 + order*0.22s`), so `arch` now reveals at the exact same moment as `barrier`
+(both resolve to 0.57s) instead of alone, first — and `fountain` ties with `column` (both 1.01s)
+instead of preceding it. Individually invisible (each layer still animates correctly), the *relative
+sequence* — the actual design intent — is what's broken.
+
+**Root cause of the corruption: not found.** Checked every code path that legitimately writes
+`order`: `Layer.tsx`'s drag-move/resize (`onDragMove`) patches only `x`/`y`/`w`/`h` — never `order`
+or `z`. `AdjustPanel.tsx`'s z-stack drag-reorder (`reorder`/`restack`) patches only `z` — confirmed
+by reading the function, never `order`. The only legitimate way to change it is the explicit "Phase"
+slider (`AdjustPanel.tsx`, bound directly to `current.order`) — a real, intentional control. That
+the *same two specific layers* are affected on two independent databases suggests something
+systematic rather than two separate manual slider mistakes, but no live-reproducible bug was found
+in the time spent — flagged as unresolved, not as "confirmed harmless."
+
+**Fix, code-only so far:** none needed for the reveal system itself (verified correct). **The data
+fix is blocked pending the operator** — direct SQL against the production DB requires a permission
+grant this session doesn't have, and there's no API path either (`PUT /api/template-config/event/{id}`
+needs a `SUPER_ADMIN` session this environment doesn't hold). A backup was taken
+(`wedding.db.bak-preOrderFix-20260909013229` on the VPS) before the attempt was blocked; nothing was
+changed. Three ways to actually apply it: (a) through the Adjust Editor UI itself — select `arch`,
+set Phase back to 0, select `fountain`, set Phase back to 2 (the real, verifiable save path); (b) a
+direct `sqlite3 UPDATE` on `TemplateConfigs` for `EventId=8`, `t7.layout.mobile.welcome`, dropping
+just the two `order` keys and keeping every other saved edit; (c) grant the running session a
+permission rule to do (b) directly.
+
+**2. "The fallback should show up in the AE, so I can adjust the animation and timing."** A real
+gap, not a misunderstanding — `posterSrc` (Issue 5) had no UI control at all; a video layer's poster
+could only be set by hand-editing `data/stages.ts`. Added a **Poster Image** row to the
+`isPlayOnceVideo` section of `AdjustPanel.tsx` ("Set poster image" / "Replace poster" / "Remove
+poster"), reusing the existing `onUploadImage`/`photoService.upload` path unchanged — no backend
+widening needed, since (unlike a video-replace, which is still blocked on the image-only upload
+validator) a poster genuinely *is* an image. "Remove poster" patches `posterSrc: undefined`, which —
+same mechanism as every other per-layer override in this engine — drops the key entirely on
+serialize (`JSON.stringify` omits `undefined`), so it reverts to whatever the shipped stage data
+declares rather than forcing "no poster." The layer's existing **Play Delay** and chroma sliders
+already covered "timing"; poster image was the only missing control. `tsc --noEmit` clean, `next
+build` clean, 30/30 pages.
