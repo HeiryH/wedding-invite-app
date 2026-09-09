@@ -1,0 +1,51 @@
+{
+  "section": "walimah",
+  "design_size": [
+    1024,
+    1696
+  ],
+  "props": [
+    {
+      "name": "Crescent wreath with cream rose",
+      "matched": true,
+      "via": "sheet-position",
+      "box": [
+        40,
+        469,
+        857,
+        1278
+      ],
+      "size": [
+        817,
+        809
+      ],
+      "pct": {
+        "x": 43.8,
+        "y": 51.5,
+        "w": 79.79,
+        "h": 47.7
+      }
+    },
+    {
+      "name": "Dusty blue-grey rose bloom",
+      "matched": true,
+      "via": "sheet-position",
+      "box": [
+        549,
+        208,
+        970,
+        617
+      ],
+      "size": [
+        421,
+        409
+      ],
+      "pct": {
+        "x": 74.17,
+        "y": 24.32,
+        "w": 41.11,
+        "h": 24.12
+      }
+    }
+  ]
+}
