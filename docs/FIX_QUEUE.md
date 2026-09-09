@@ -783,13 +783,42 @@ reload there's no such delay: the observer's very first callback (IntersectionOb
 "already intersecting" targets almost immediately on `.observe()`) can land in the *same* frame as
 the initial mount, so the pre-reveal state is never painted and the transition is skipped entirely.
 
-**The fix** — defer the `setSeen` state flip by two animation frames
-(`requestAnimationFrame(() => requestAnimationFrame(() => setSeen(...)))`), the standard idiom for
-guaranteeing a real paint of the "from" state happens before a state change that starts a CSS
-transition, regardless of how fast everything else on the page loaded. **Verified locally**: same
-cold-vs-warm test, run three times in the same browser context after the fix — every load (cold,
-warm, warm again) now shows the identical gradual ramp (`0.00 → ~0.35 → ~0.80 → ~0.95`); no more
-instant snap on any reload.
+**First attempt, shipped then found insufficient:** deferred the `setSeen` flip by two animation
+frames (`requestAnimationFrame(() => requestAnimationFrame(() => setSeen(...)))`) — the standard
+idiom for guaranteeing a real paint of the "from" state before a transition-triggering change.
+Verified locally (three loads in one browser context, all showed the correct gradual ramp) and
+**deployed** — but a follow-up local test that added realistic network latency (no bandwidth
+throttle, just RTT, closer to the real gap between the VPS and a real visitor) reproduced the
+*exact same instant-snap bug* even with this fix live. Re-checked directly against production after
+that deploy and confirmed it: still broken. `requestAnimationFrame` only guarantees callback
+*ordering* relative to paint scheduling — it doesn't guarantee a paint actually happens if nothing
+forces the browser to consider one necessary in between, and evidently two frames' worth of that
+guarantee isn't the actual bottleneck here.
+
+**What the real bottleneck turned out to be**, found by testing progressively larger explicit
+delays until the bug reliably disappeared: the public invite page is a client component that
+fetches its event/config data in a `useEffect` — on a cold load, that fetch (plus decoding
+images/fonts) naturally takes real time, during which a loading placeholder is shown; the actual
+Stage/Layer tree doesn't exist yet, so by the time it *does* mount, real wall-clock time has already
+passed. On a fully warm/cached reload that whole sequence can resolve fast enough to stop providing
+that natural gap — but not because of a missing single paint; something on a busier/quieter main
+thread (most likely React settling the freshly-mounted tree together with other pending work) needs
+noticeably more than a couple of frames to actually separate. `setTimeout(..., 50)` — comfortably
+more than enough time for a paint under normal assumptions — still reproduced the bug in the
+latency-added test. `setTimeout(..., 500)` did not, across 4 repeated warm reloads.
+
+**The actual fix**: replaced the double-rAF with a flat `setTimeout(fn, 500)` deferring the
+`setSeen` flip. Cost is the same on every load — this only delays when `data-seen` is *allowed* to
+flip, not the reveal's own `--sl-delay`/`--sl-dur` timing once it does; a cold load's natural
+network/decode gap is usually already bigger than 500ms, so warm reloads end up matching the cold
+experience rather than lagging it. **Verified**: 4 repeated warm reloads locally, all showing a real
+gradual opacity ramp (not an instant jump to 1) — see `docs/FIX_QUEUE.md` git history for the exact
+before/after sample data if needed. Deployed 2026-09-09 (superseding the double-rAF commit from
+earlier the same day, which is why two separate commits reference this issue).
+
+Also fixed as a byproduct of this investigation: the local test event's own `order`/`playDelaySec`
+corruption (see the section above) was stripped locally to get a clean signal for testing — the
+**production** event's corruption is still unfixed, same blocked/pending status as above.
 
 This is template-neutral (`useStageReveal` is shared by the whole engine, not T7-specific) and
 almost certainly explains a class of "the reveal looks broken sometimes" reports that would have

@@ -30,24 +30,32 @@ export function useStageReveal(reduced: boolean) {
           .map((e) => (e.target as HTMLElement).dataset.stage!);
         if (!arrived.length) return;
 
-        // On a cold load, decoding/network delay naturally puts a real paint of the pre-reveal
-        // state (opacity 0, translateY 42px — reveal.css's `[data-sl-anim]` base rule) between
-        // mount and this callback, so the CSS transition to `[data-seen='true']`'s target state
-        // has something to animate from. On a warm/cached reload everything can resolve fast
-        // enough that this observer's very first callback fires in the same frame as mount —
-        // the browser then never gets to paint the pre-reveal state at all, so there's nothing
-        // for the transition to interpolate from and every layer just snaps straight to "revealed"
-        // with no visible animation. The standard fix: defer the state flip by two animation
-        // frames, which guarantees a real paint of the pre-reveal state happens first regardless
-        // of how fast everything else loaded.
-        requestAnimationFrame(() => requestAnimationFrame(() => {
+        // On a cold load, the public invite page (a client component that fetches its event/config
+        // data in a useEffect) shows a loading placeholder for however long that fetch takes, so
+        // the real Stage/Layer tree — and this observer — don't even mount until real time has
+        // already passed, which is what let the pre-reveal state (opacity 0, translateY 42px —
+        // reveal.css's `[data-sl-anim]` base rule) get painted before this callback ever fires. On
+        // a fully warm/cached reload that gap can shrink well past the point of mattering, and
+        // measured directly (real browser, cold vs. warm reload of the same page): a 2-frame
+        // (`requestAnimationFrame` ×2) defer here — the standard fix for "no paint happened between
+        // states" — was NOT enough; the CSS transition still got skipped, snapping straight to
+        // revealed with no visible animation. A flat 500ms defer measured reliably correct across
+        // repeated warm reloads (rAF-based approaches only guarantee frame ordering, not real
+        // elapsed time, and whatever's actually gating this — most likely React settling the
+        // freshly-mounted tree together with something else on an unusually quiet main thread — is
+        // apparently not bounded by a couple of frames). The cost is identical on every load: this
+        // only delays the point at which `data-seen` is *allowed* to flip, not the reveal's own
+        // `--sl-delay`/`--sl-dur` timing once it does — on a cold load that already-existing gap is
+        // usually bigger than 500ms anyway, so warm reloads end up matching, not lagging, the cold
+        // experience.
+        setTimeout(() => {
           setSeen((prev) => {
             const next = new Set(prev);
             let changed = false;
             for (const id of arrived) if (!next.has(id)) { next.add(id); changed = true; }
             return changed ? next : prev;
           });
-        }));
+        }, 500);
 
         for (const e of entries) {
           if (e.isIntersecting && e.intersectionRatio > 0.15) io.unobserve(e.target);
