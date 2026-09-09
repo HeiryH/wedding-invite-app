@@ -82,16 +82,33 @@ already exists.
   legibility contract below (no code-side luminance measurement on a Recraft render; that
   measurement only applies to the procedural fallback).
 
-## Geometry
+## Geometry — mirror-stacked, not `background-repeat`
 
 - Tile: **1024 × 2048**, at `frontend/public/templates/rose-horizon/bg/flow.webp`.
-- Repeats on the **vertical axis** (`background-repeat: repeat-y`).
-- Rendered on a `position: fixed` full-viewport layer beneath all content, so no page-height
-  measurement is needed and content length is irrelevant.
-- **Seam not yet numerically verified on the Recraft render** — the procedural version's seam
-  math doesn't apply to a human-rendered asset. Visual check pending before `assemble` treats
-  this as final; if the seam is visible, mirror-tiling this exact render is the fix (pixel-
-  perfect by construction) at the cost of visible bilateral symmetry.
+- **Tiling mechanism: mirror stacking, implemented in `_shared/FlowBackground.tsx`.** Not CSS
+  `background-repeat: repeat-y`. That property requires the tile's own top row to match its
+  bottom row *in the same orientation* — a real constraint this render doesn't cleanly satisfy
+  (see "Seam — resolved" below). Instead, real `<img>` copies are stacked with **every other
+  one vertically flipped**. Copy N's bottom edge meets copy N+1's top edge, which after the
+  flip *is the same row* — pixel-identical by construction, regardless of whether the tile's
+  two ends ever matched each other. Every join is a mirror reflection, not a repeat, so there
+  is nothing to seam-check. (CSS has no mirror-repeat keyword, which is why this needs real
+  stacked elements rather than a `background-image`.)
+- **Height-reactive, not a fixed guess.** `FlowBackground` measures
+  `document.documentElement.scrollHeight` via `ResizeObserver` and computes how many tiles are
+  needed to cover the viewport across the full parallax range, recomputing whenever content
+  height changes (data loading, font swaps, viewport resize). No template-specific height
+  assumption is baked in anywhere.
+- A `position: fixed` viewport-clipping wrapper crops the stack to the visible screen; the
+  stack itself is translated by the parallax scroll listener (see Motion).
+
+## Seam — resolved, not by fixing the image
+
+Measured on the raw tile: wrap delta 11.28 vs interior row delta 3.72 (3.03× — a real tone
+step, confirmed by eye on close inspection). Original plan was a post-process feather. **Moot
+under mirror-stacking**: that fix targets `repeat-y`'s failure mode (row 0 must equal row H-1),
+which mirror-stacking never depends on in the first place. The art file is used exactly as
+rendered, unedited.
 
 ## Motion — three-tier parallax, "floating over the background"
 
@@ -105,12 +122,13 @@ like it's floating over the background":
 | Section content panel | **0.70×** | the translucent card holding real DOM text/forms |
 | Decorative props (roses, icons, etc.) | **1.05×** | fastest — nearest, and *faster* than 1.0 so it reads as foreground, not just unparallaxed |
 
-All three numbers are **proposed, unverified on a real device** — same status the single
-background rate had before. Implementation is one passive scroll listener writing three CSS
-custom properties (`--bg-par`, `--panel-par`, `--prop-par`), the same pattern
-`_shared/hooks/useParallax.ts` already uses elsewhere in this codebase; `background-position-y`
-reads the first, each section panel's transform reads the second, each prop layer's transform
-reads the third. Must honour `prefers-reduced-motion`: hold all three static when set.
+All three numbers are **proposed, unverified on a real device**. Background motion is
+implemented (`_shared/FlowBackground.tsx`, its own passive scroll listener writing
+`--flowbg-y`, the same single-listener/rAF-coalesced pattern `useParallax.ts` already uses
+elsewhere); the panel and prop tiers are not wired up yet (that's `assemble`'s job — panel and
+prop layers need to exist first). `FlowBackground` honours `prefers-reduced-motion` itself
+(CSS media query holds `--flowbg-y` at its initial value); the panel/prop tiers must do the
+same when built.
 
 ## Legibility contract
 
@@ -128,29 +146,27 @@ visually at Gate 2, not code-generated).
 
 | # | Test | Threshold |
 |---|---|---|
-| 1 | Seam: mean per-channel abs diff between last row and first row, vs mean adjacent-row diff | seam ≤ 1.5 × interior |
+| 1 | Seam: mean per-channel abs diff between last row and first row, vs mean adjacent-row diff | **N/A under mirror-stacking** — see below |
 | 2 | Luminance spread across the tile | ≤ 60 / 255 |
 | 3 | Subject present | none |
 | 4 | Colours outside the declared palette ramp | none |
 
-Test 1's form matters: it does **not** require the last row to *equal* the first row. In a
-correctly periodic tile, row `H-1` is one step before row `0`, so the right question is whether
-the wrap step is indistinguishable from any other row step. A test demanding equality would
-reject a correct tile and accept a flat one.
+Test 1 was written for `background-repeat`, which needs row `H-1` to equal row `0`. Under
+mirror-stacking (the tiling mechanism actually in use — see Geometry) that requirement doesn't
+exist: every join is a same-row reflection, correct regardless of what the tile's own two ends
+look like. Kept in this table only for a future template that uses plain `repeat-y`.
 
 ## Open questions for the human
 
-1. ~~Seam on the Recraft render is unverified.~~ **Checked**: pattern continuity across the
-   join is good — the wavy bands land at matching horizontal positions, per
-   `00-background.md`'s instruction. But there's a real, measurable brightness/tone step right
-   at the seam (wrap delta 11.28 vs interior row delta 3.72, a 3.03× ratio — well above the
-   "indistinguishable" bar of 1.5×), visible as a faint horizontal line on close inspection even
-   though it's easy to miss at a glance. **Needs a decision**: accept as-is (may be unnoticeable
-   once parallax-scrolled behind translucent content panels), fix with a cheap post-process
-   feather across a thin band at the join (pattern already matches, only tone needs smoothing —
-   a much smaller fix than the earlier failed crossfade attempts, which had to fix real content
-   mismatches), or regenerate.
+1. ~~Seam on the Recraft render is unverified.~~ **Resolved twice over**: pattern continuity
+   across the join is good (wavy bands land at matching horizontal positions), and the
+   remaining tone-step is moot anyway — mirror-stacking (`_shared/FlowBackground.tsx`) doesn't
+   depend on the tile's two ends matching at all. No image fix needed.
 2. **The three parallax rates (0.30 / 0.70 / 1.05) are proposed, not verified** on a real
-   device.
+   device. Background's rate is wired (`FlowBackground`'s `parallaxRate` prop); panel/prop
+   tiers are `assemble`'s job.
 3. ~~Is one shared background right for all six sections?~~ **Resolved: yes** — confirmed by
    the human this session. One asset, no per-section variation.
+4. ~~Should this use CSS `background-repeat` or JS-stacked tiles?~~ **Resolved: JS-stacked,
+   mirror-flipped, height-reactive** — confirmed by the human this session, implemented in
+   `_shared/FlowBackground.tsx`.
