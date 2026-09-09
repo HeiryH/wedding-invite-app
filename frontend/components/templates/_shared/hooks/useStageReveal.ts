@@ -30,12 +30,24 @@ export function useStageReveal(reduced: boolean) {
           .map((e) => (e.target as HTMLElement).dataset.stage!);
         if (!arrived.length) return;
 
-        setSeen((prev) => {
-          const next = new Set(prev);
-          let changed = false;
-          for (const id of arrived) if (!next.has(id)) { next.add(id); changed = true; }
-          return changed ? next : prev;
-        });
+        // On a cold load, decoding/network delay naturally puts a real paint of the pre-reveal
+        // state (opacity 0, translateY 42px — reveal.css's `[data-sl-anim]` base rule) between
+        // mount and this callback, so the CSS transition to `[data-seen='true']`'s target state
+        // has something to animate from. On a warm/cached reload everything can resolve fast
+        // enough that this observer's very first callback fires in the same frame as mount —
+        // the browser then never gets to paint the pre-reveal state at all, so there's nothing
+        // for the transition to interpolate from and every layer just snaps straight to "revealed"
+        // with no visible animation. The standard fix: defer the state flip by two animation
+        // frames, which guarantees a real paint of the pre-reveal state happens first regardless
+        // of how fast everything else loaded.
+        requestAnimationFrame(() => requestAnimationFrame(() => {
+          setSeen((prev) => {
+            const next = new Set(prev);
+            let changed = false;
+            for (const id of arrived) if (!next.has(id)) { next.add(id); changed = true; }
+            return changed ? next : prev;
+          });
+        }));
 
         for (const e of entries) {
           if (e.isIntersecting && e.intersectionRatio > 0.15) io.unobserve(e.target);

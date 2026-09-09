@@ -759,3 +759,39 @@ serialize (`JSON.stringify` omits `undefined`), so it reverts to whatever the sh
 declares rather than forcing "no poster." The layer's existing **Play Delay** and chroma sliders
 already covered "timing"; poster image was the only missing control. `tsc --noEmit` clean, `next
 build` clean, 30/30 pages.
+
+### Update — the real cause, found: reveal races a warm cache
+
+**Status now: FIXED.** After the above shipped, the user reported the precise, reproducible
+pattern that cracked it: **hard reload (empty cache) → arch and fountain rise perfectly. Normal
+reload → both snap in instantly, no animation.** Reproduced directly against production with
+repeated sampling: a cold first load ramps `fountain`'s opacity smoothly
+(`0.00 → 0.29 → 0.80 → 0.98 → 1.00` over ~2s); a second `goto()` in the *same browser context*
+(everything served from cache) shows `1.00` already on the very first sample taken 300ms after
+navigation — the transition never visibly ran at all.
+
+**Root cause:** `useStageReveal.ts`'s `IntersectionObserver` callback calls `setSeen(...)`
+synchronously the moment a stage is confirmedly on-screen, which flips `data-seen="true"` and
+triggers the CSS transition to the revealed state (`reveal.css`). CSS transitions only animate
+when the browser has actually **painted** the "from" state at least once before the "to" state is
+applied — if both happen within the same paint cycle, there's nothing to interpolate from and the
+element simply appears in its final state. On a cold load, real network/decode delay for images,
+fonts, and JS naturally spaces the initial mount (painted with the pre-reveal `opacity:0` state)
+and the observer's first callback far enough apart that a paint always lands in between — so this
+bug was invisible under every condition tested while building Issue 5's fix. On a warm/cached
+reload there's no such delay: the observer's very first callback (IntersectionObserver fires
+"already intersecting" targets almost immediately on `.observe()`) can land in the *same* frame as
+the initial mount, so the pre-reveal state is never painted and the transition is skipped entirely.
+
+**The fix** — defer the `setSeen` state flip by two animation frames
+(`requestAnimationFrame(() => requestAnimationFrame(() => setSeen(...)))`), the standard idiom for
+guaranteeing a real paint of the "from" state happens before a state change that starts a CSS
+transition, regardless of how fast everything else on the page loaded. **Verified locally**: same
+cold-vs-warm test, run three times in the same browser context after the fix — every load (cold,
+warm, warm again) now shows the identical gradual ramp (`0.00 → ~0.35 → ~0.80 → ~0.95`); no more
+instant snap on any reload.
+
+This is template-neutral (`useStageReveal` is shared by the whole engine, not T7-specific) and
+almost certainly explains a class of "the reveal looks broken sometimes" reports that would have
+been very hard to pin down without the user's own before/after A-B observation — cache state was
+never a variable anyone had reason to suspect for a CSS entrance animation. Deployed 2026-09-09.
