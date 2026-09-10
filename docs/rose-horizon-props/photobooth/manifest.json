@@ -1,0 +1,51 @@
+{
+  "section": "photobooth",
+  "design_size": [
+    1024,
+    1696
+  ],
+  "props": [
+    {
+      "name": "Floral-corner picture frame",
+      "matched": true,
+      "via": "sheet-position",
+      "box": [
+        72,
+        115,
+        956,
+        535
+      ],
+      "size": [
+        884,
+        420
+      ],
+      "pct": {
+        "x": 50.2,
+        "y": 19.16,
+        "w": 86.33,
+        "h": 24.76
+      }
+    },
+    {
+      "name": "Cream rose bloom",
+      "matched": true,
+      "via": "sheet-position",
+      "box": [
+        0,
+        1311,
+        395,
+        1696
+      ],
+      "size": [
+        395,
+        385
+      ],
+      "pct": {
+        "x": 19.29,
+        "y": 88.65,
+        "w": 38.57,
+        "h": 22.7
+      }
+    }
+  ]
+}

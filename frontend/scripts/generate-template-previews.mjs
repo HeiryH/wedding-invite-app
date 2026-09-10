@@ -23,6 +23,7 @@ const CODES = [
   'gilded-arch',
   'engraved-certificate',
   'sunny-safari',
+  'rose-horizon',
 ];
 
 const BASE = 'http://localhost:3000';

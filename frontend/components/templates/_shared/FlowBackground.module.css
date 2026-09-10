@@ -1,0 +1,32 @@
+/* Fixed, viewport-clipping window. The stack itself moves via --flowbg-y (a translateY written
+   by a passive scroll listener); the viewport just crops it to the visible screen. */
+.viewport {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.inner {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  transform: translateY(var(--flowbg-y, 0px));
+  will-change: transform;
+}
+
+/* Tiles stack with zero gap — each one's own top/bottom is a mirror join with its neighbour
+   (see FlowBackground.tsx), so no gap or overlap can be tolerated between them. */
+.tile {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .inner {
+    transform: none;
+  }
+}

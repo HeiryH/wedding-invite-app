@@ -1,10 +1,16 @@
 /**
  * visual-qa.mjs — Gate 4 for the invite pipeline: does an assembled template actually
  * render, per section, on a real phone screen? No database row, no PRO tier needed —
- * seeds a synthetic wedding straight into the `preview_draft` localStorage key that
- * `app/(standalone)/organizer-admin/preview/page.tsx` reads on mount (the storage key
- * was unified across the app — every write site uses bare `preview_draft`, including
- * `/personalise`, `/try`, and `/organizer-admin/customize`).
+ * seeds a synthetic wedding straight into the `preview_draft_v2` localStorage key that
+ * `app/(standalone)/organizer-admin/preview/page.tsx` reads on mount. NOTE: this was
+ * `preview_draft` (no suffix) until the preview page's own key was bumped to `_v2` for an
+ * `editor.frame` shape change — this script silently wrote to the dead key from that point
+ * on, so the preview page never left its "Loading preview…" state and every run since the
+ * bump failed with the misleading "template did not render at all," blaming whatever
+ * template was being tested instead of the harness itself. Confirmed live 2026-09-09: both
+ * breakpoints failed that way against Template11 with the old key. Re-verify the other write
+ * sites this comment used to claim unification with (`/personalise`, `/try`,
+ * `/organizer-admin/customize`) before trusting that claim again.
  *
  * Deliberately targets /organizer-admin/preview, NOT /template-preview/[code] — that route
  * clips to a hard 390x700 overflow:hidden box and silently renders blank + data-preview-ready
@@ -58,7 +64,9 @@ const payload = {
   coupleMedia: [],
   wishes: [],
   photoBoothEnabled: true,
-  customConfig: {},
+  // 'walimah.body' set (non-empty) so resolveSectionOrder's hasWalimah gate actually includes
+  // the walimah stage -- an empty customConfig silently skipped testing it entirely before.
+  customConfig: { 'walimah.body': '<p>Join us for the Walimah ceremony.</p>' },
   // Field names must match the real ItineraryItem shape — itineraryItemId / label / detail,
   // as written by app/personalise/page.tsx and read by ItineraryListSlot. This payload used
   // to say { id, title, time }, which matches nothing: every row rendered empty, so the
@@ -91,7 +99,7 @@ for (const bp of BREAKPOINTS) {
   });
   await context.addInitScript(
     ([draft, cookieKey]) => {
-      localStorage.setItem('preview_draft', JSON.stringify(draft));
+      localStorage.setItem('preview_draft_v2', JSON.stringify(draft));
       // Suppress the CookieConsent banner — without this, the banner overlays the bottom of every
       // capture and hides whichever stage prop lands there (the wish list, the itinerary list,
       // the photobooth vase/camera, etc.). The app checks `cookie-consent` in localStorage and

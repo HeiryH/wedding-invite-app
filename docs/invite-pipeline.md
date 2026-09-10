@@ -3,8 +3,11 @@
 Autonomous, human-gated pipeline that authors new invite templates for this app end to
 end — from a reference photo to a merged React component — using a Hermes kanban board
 (`invite-pipeline`, in `~/.hermes/kanban.db`) to orchestrate a chain of AI worker tasks
-across several specialized profiles. As of this writing it has produced one template in
-progress: **Template10, "Twilight Banquet"** (slug `twilight-banquet`, PRO tier, WEDDING).
+across several specialized profiles. As of this writing it has shipped one Stage-family
+template (**Template10, "Sunny Safari"**, slug `sunny-safari`, PRO tier, PARTY — merged
+2026-09-08; "Twilight Banquet" was an earlier, superseded run against the same template
+slot) and produced one Classic-family template (**Template11, "Rose Horizon"**, slug
+`rose-horizon`, PRO tier, WEDDING — see 2026-09-10 below, the pipeline's first Classic run).
 
 This file documents how the pipeline actually works today. It is a living reference — the
 authoritative, always-current source for each stage's exact instructions is
@@ -163,6 +166,172 @@ together, plus a running list of known issues.
   mid-run on `APIConnectionError` to OpenRouter (2026-09-02 `assemble`, twice on 2026-09-06
   `compose`). Retries are 3 attempts inside ~80s with no meaningful backoff, and a crash-block
   notifies nobody except via the `kanban-watchdog` cron.
+
+- **2026-09-10 — the pipeline's first Classic-family run: Template11 "Rose Horizon"**
+  (slug `rose-horizon`, PRO, WEDDING). **Not run through the Hermes kanban board** — done
+  directly in a Claude Code session with the human, stage by stage, deliberately following
+  each stage's own task-body file rather than freelancing (after an early stretch of this
+  same run that didn't, and was corrected mid-course — see "process findings" below). Every
+  stage in the documented chain ran: `intake → scene-research → scene-manifest →
+  section-spec → ingest → assemble → visual-qa → code → code-review → migration → preview →
+  audit`, ending **ALIGNED** (one disclosed DRIFT, accepted — see below). Worktree
+  `.worktrees/rose-horizon-20260908`, branch `wt/rose-horizon-20260908`.
+
+  **Why this run matters beyond one more template**: every stage's task-body file was
+  written against the Stage-family pipeline (T7, then T10) as the only real precedent.
+  Running it against a Classic-family brief for the first time surfaced several places
+  where that vocabulary silently doesn't transfer — not bugs in the sense of "the docs are
+  wrong," but a family of assumption the docs never had reason to state, because nothing
+  had tested it. Findings below; the actionable ones are already applied to the relevant
+  task-body files in this same pass, not just described here.
+
+  **The assemble/code split doesn't hold for Classic.** `assemble-task-body.md` describes
+  `assemble` as lightweight — write `data/stages.ts`, no per-template JSX — because a
+  shared engine (`Stage.tsx`) renders whatever it writes. Classic templates have no such
+  engine: `Template4.tsx`, an existing mid-complexity template, is 960 lines of fully
+  bespoke React (real RSVP/wish/photo logic, live countdown, framer-motion). For Classic,
+  assembling a template *is* coding it; there is no data layer to generate into. This run's
+  `assemble` and `code` stages were done together in practice, by necessity, not by
+  choice — `code-task-body.md`'s "do NOT touch stage placement, that's assemble's job" and
+  `assemble-task-body.md`'s "no per-template JSX" both assume a split that a Classic brief
+  can't honour. Recommendation for the next Classic run: merge these two stages explicitly
+  in the task-body files (or fork a `assemble-classic-task-body.md` variant) rather than
+  have a worker quietly do both under one stage's name, which is what happened here.
+
+  **Reserved-zone placement, not a static reference canvas.** T7/T10 solve device-shape
+  drift with `StageDef.canvas` — scenery composes inside a fixed-aspect reference box that
+  cover-fits the device (this repo's own `CLAUDE.md`, "Device-shape drift" section). That
+  doesn't transfer to Classic: a Stage is always exactly `100svh`, but a Classic content
+  panel's height is real, variable DOM content (a 3-row schedule vs. a 6-row one) — there
+  is no single reference aspect to cover-fit against ahead of time. Confirmed live: a prop
+  positioned by percentage against the approved design's fixed canvas (1024×1696) rendered
+  directly across the itinerary schedule's text on both breakpoints — not a hypothetical
+  risk, an actual defect, caught by looking at the screenshots rather than trusting the
+  harness's pass count. Fix: measure where the panel actually rendered at runtime
+  (`ResizeObserver`) and push any prop that would intersect it clear, toward whichever edge
+  costs less (`PropLayer.tsx`'s `usePanelZone`/`clearZone`, this run). This is arguably
+  *more* robust than the Stage-family's static canvas for exactly the case where Classic
+  differs from Stage — variable content height — and is a candidate for its own documented
+  pattern, not a one-off.
+
+  **A single asset spanning most of the frame (a "frame," not an icon) breaks naive
+  collision avoidance.** Applying the reserved-zone push above uniformly to *every* prop
+  regressed the one section whose art is a full corner-to-corner arch — pushed as one rigid
+  rectangle, it can't keep its top half above and bottom half below the panel at once, so
+  the fix hid the arch's crown and dragged roses across the panel's own text. A prop
+  spanning >60% of both axes at once is structurally a border meant to surround the panel,
+  not avoid it, and needs to be exempted from the same check that fixes everything else.
+  Worth stating explicitly in `assemble-task-body.md`/`ingest-task-body.md` if a future
+  Classic template ships a full-frame decorative asset: check its footprint before
+  reasoning about placement as if it were an icon.
+
+  **`ingest-art.py`'s diff-locator breaks when `design.png` bakes in placeholder text.**
+  `section-spec-task-body.md`'s own convention is real sample copy in the render spec ("a
+  real wedding's actual name/date/venue renders through React slots later, this is just
+  representative"). `ingest-art.py`'s `prop_regions()` diffs `design.png` against
+  `background.png` assuming the two differ *only* by props — with real text baked into one
+  and not the other, the diff flagged 12–16 candidate regions per section for 2–4 real
+  props. Worse: `assign()`'s bg-diff pairing has **no confidence floor** — `MIN_CONFIDENCE`
+  only gates the fallback full-design search, so contaminated matches scoring as low as
+  0.06 were silently accepted as `matched: true`. Confirmed via the required visual
+  reassembly check (`ingest-task-body.md`'s own Step 2): an envelope icon landed mid-canvas
+  instead of near the top it was actually drawn at. **Working alternative for a drop shaped
+  like this one**: when the prop sheet isn't a "shopping list" grid but already has each
+  prop sitting near its own final position (true for every section in this run, verified
+  before relying on it — see the sheet-position measurements in this run's own session
+  history), the sheet's own alpha-channel bounding box *is* the placement; no diffing
+  needed. `ingest-by-sheet-position.py` (this run, in `tools-flowbg/`) implements this as a
+  documented fallback locator, not a silent workaround — `ingest-art.py` itself is
+  unchanged; this is a second tool for a case the first one doesn't fit, and a future
+  ingest stage should check which situation it's actually in before picking a locator.
+
+  **The `--expect` mismatch discipline needs a decision tree, not just a stop rule.**
+  `ingest-task-body.md` already says "do not proceed on an `--expect` mismatch," but not
+  *what to do next*, and this run needed three different answers for three different
+  causes of the same symptom (a sheet splitting into fewer groups than confirmed props):
+  - **Genuinely fused, zero gap at the minimum tested value.** No `--group-gap` can help —
+    dilation only ever adds connections, never removes real ones. This means the render
+    itself needs redoing with explicit non-overlap wording in the section-spec, not a
+    segmentation retry. (Welcome, this run — confirmed unfixable, left for a future
+    regenerate by explicit human decision, not silently accepted as fine.)
+  - **Wrong default gap.** The tool's own formula (`max(8, 2.5% of the sheet's short
+    side)`) over-merged a case where a much smaller gap correctly separated everything.
+    Fix: sweep, don't trust the default (walimah, this run — initially mis-diagnosed as
+    unfixable via the same sweep-by-count-only mistake below, then correctly fixed once the
+    sweep checked actual boundaries).
+  - **No single gap value produces the right grouping**, because the physical distances
+    contradict the confirmed grouping (a piece meant to fuse with one neighbour sits
+    physically closer to a different neighbour it should NOT fuse with). No `--group-gap`
+    escapes this by construction. Needs a manual union of the specific islands that should
+    fuse, keeping others separate — a few lines of code, not a parameter (walimah's
+    wreath+star+cream-rose case, `tools-flowbg/walimah-crop-fix.py`, this run).
+
+  A sharper lesson underneath all three: **checking group *count* alone is not enough to
+  conclude a split is correct** — this run initially reported walimah "fixed" from a gap
+  sweep that only counted groups, and the fix was wrong (a small fragment had split off,
+  not the actual wreath/rose separation). Only opening the actual cropped image caught it.
+  `ingest-task-body.md`'s Step 2 already says "the test is visual, not numeric" for the
+  *initial* cut; this run found the same principle applies just as hard to *verifying a
+  fix* to a bad cut — a re-cut needs the same visual re-check as the original, not just a
+  matching count.
+
+  **`visual-qa.mjs` has been silently broken since its own storage key was bumped.** The
+  preview page's real key is `preview_draft_v2` (bumped for an `editor.frame` shape
+  change); the harness wrote to `preview_draft` (no suffix) — its own header comment
+  claimed key unification across the app, which is no longer true for at least this one
+  write site. Every run since that bump failed with "template did not render at all,"
+  blaming whichever template was under test instead of the harness itself. **Fixed in this
+  run** (`frontend/scripts/visual-qa.mjs`, committed to this run's branch — needs merging
+  to `ae-unified` independently of this template, since the bug affects every template's
+  QA, not just this one). Also found and fixed in the same pass: the harness's own
+  synthetic payload never set `walimah.body`, so `resolveSectionOrder`'s gate silently
+  excluded that whole section from every run that ever used it — walimah has now actually
+  been screenshot-verified for the first time.
+
+  **`preview-task-body.md`'s "most templates render through a generic path" doesn't hold.**
+  `app/template-preview/[code]/page.tsx` has no generic fallback at all — every template
+  from T1 through T10 has its own explicit `{code === '...' && <TemplateN />}` line, no
+  exceptions found. Corrected the task body's own wording in this pass.
+
+  **A confirmed spec value can drift after Gate 1 without a fresh re-approval, and only
+  `audit` catches it.** This run's background candidate (Gate 1's literal pick, "D": a
+  populated scene with rose-vine trellis, clouds, a bird) got rewritten mid-run to an
+  abstract, content-free wash, for a good and disclosed reason (the populated version
+  would have duplicated every rose already owned by the prop layer — the same
+  background/prop duplication bug `spec/scene.json` was built in 2026-09-04 to prevent,
+  reproduced here by treating the flow background as outside that contract's scope). The
+  human was present for and approved that correction in the moment — but the literal
+  confirmed candidate text was never re-submitted for a fresh yes/no against what actually
+  shipped, and nothing before `audit` checks for that kind of drift. `audit` caught it
+  correctly, named the specific mismatch, and routed it back to the human rather than
+  deciding ACCEPT vs. REJECT itself — which is the discipline working as designed. Worth
+  asking whether `section-spec` or `scene-manifest` should flag a *large* wording change
+  against the original candidate text as it happens, rather than leaving it to surface only
+  at the very end.
+
+  **Process findings, about how this run was conducted, not about the pipeline's own
+  design:**
+  - Generating unapproved art before its section-spec existed, twice, before being
+    corrected by the human — the entire reason `section-spec` is a text gate before any
+    pixel is generated (`section-spec-task-body.md`'s own stated rationale) is to prevent
+    exactly this. Worth restating: no `generate_image`/Recraft call before its section's
+    spec has been approved, full stop, not even for "just a quick probe."
+  - Inventing a bespoke procedural-generation mechanism mid-run to route around a stuck
+    problem, rather than proposing it as an option and getting it approved — even though
+    the underlying technique (code for abstract/constraint-defined assets) turned out to be
+    sound and was kept as a documented fallback (`tools-flowbg/flowbg.py`), *how* it entered
+    the run was the mistake, not the technique itself.
+  - A `git add` call with one bad pathspec mixed into a multi-path list silently failed to
+    stage anything from that call, and a commit was made without checking `git status`
+    first to confirm what actually landed — produced a real commit that looked complete and
+    wasn't (missing files caught and fixed in a follow-up commit once the gap was found by
+    directly diffing HEAD against the working tree, not by trusting the earlier commit's own
+    message). General lesson, not pipeline-specific: verify staged content before
+    committing, especially after any command in the same call reported an error.
+
+  **Net result**: `audit` scheduled **ALIGNED** (background DRIFT explicitly accepted by
+  the human, not silently waved through). Migration scaffolded, not applied. Deploy not
+  attempted — a separate manual step, per this repo's own convention.
 
 ## How the kanban mechanics actually work
 

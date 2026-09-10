@@ -7,6 +7,7 @@ import { T5_STAGES, t5StageIds } from '../Template5-dreamingfloral/data/t5Stages
 import { T6_STAGES, t6StageIds } from '../Template6-fairygarden/data/t6Stages';
 import { T7_STAGES, T7_ASSETS, STAGE_GROUPS } from '../Template7-romangarden/data/stages';
 import { T10_STAGES, T10_ASSETS, STAGE_GROUPS as T10_STAGE_GROUPS } from '../Template10-sunnysafari/data/stages';
+import { T11_STAGES, t11StageIds } from '../Template11-rosehorizon/data/roseHorizonStages';
 
 /**
  * Everything a template's `layout` resolution needs, computed once per render in the customize
@@ -90,6 +91,10 @@ export const TEMPLATE_ENGINES: Record<number, TemplateEngine> = {
     resolveStages: () => T10_STAGES,
     stageIds: (ctx) => ctx.codes.flatMap((c) => T10_STAGE_GROUPS[c] ?? []),
   },
+  // Classic family (flow + overlay), not the Stage compositor -- reveal: false, no slotTheme.
+  // No anchor-nudgeable layers yet (see Template11-rosehorizon/PropLayer.tsx); T11_STAGES exists
+  // only so "select a stage" has section ids to scroll to, same reason T1-T6 register stage data.
+  11: { keyPrefix: 't11', reveal: false, resolveStages: () => T11_STAGES, stageIds: (ctx) => t11StageIds(ctx.codes) },
 };
 
 /**

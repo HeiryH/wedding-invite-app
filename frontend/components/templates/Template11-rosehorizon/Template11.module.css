@@ -1,0 +1,181 @@
+.section {
+  position: relative;
+  min-height: 100svh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8vh 0;
+  overflow: hidden; /* a prop's box can bleed past the section edge by design (corner framing) */
+}
+
+/* x/y from the manifest are CENTER points (see ingest-by-sheet-position.py's pct block),
+   sized as a percent of the section's own box -- matches how every prop was actually measured
+   off the approved design. */
+.prop {
+  position: absolute;
+  /* Base centering (-50%,-50%) composed with useParallax's own offset -- same consumption
+     pattern as Stage.module.css's .layerBox, translate(var(--sl-par-x,0px), var(--sl-par,0px)). */
+  transform: translate(-50%, -50%) translate(var(--sl-par-x, 0px), var(--sl-par, 0px));
+  pointer-events: none;
+  z-index: 1;
+  user-select: none;
+}
+
+/* The translucent content card every section's real DOM sits on -- see spec/background.md's
+   Legibility contract: text never renders directly on the flow background. */
+.panel {
+  position: relative;
+  z-index: 2;
+  width: min(86%, 420px);
+  margin: 0 auto;
+  padding: 2.4rem 1.6rem;
+  border-radius: 20px;
+  background: rgba(255, 253, 248, 0.72);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  box-shadow: 0 8px 32px rgba(74, 54, 46, 0.08);
+  text-align: center;
+  transform: translate(var(--sl-par-x, 0px), var(--sl-par, 0px));
+}
+
+.themeLabel {
+  font-size: 0.75rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: #7ca3c0;
+  margin-bottom: 0.6rem;
+}
+
+.heading {
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: clamp(2rem, 8vw, 2.8rem);
+  color: #4a362e;
+  margin: 0 0 0.6rem;
+}
+
+.subheading {
+  font-size: 0.8rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: #4a362e;
+  opacity: 0.75;
+  margin-bottom: 0.4rem;
+}
+
+.body {
+  font-size: 0.95rem;
+  line-height: 1.6;
+  color: #4a362e;
+}
+
+.scrollCue {
+  position: absolute;
+  bottom: 2rem;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 2;
+  color: #4a362e;
+  opacity: 0.6;
+}
+
+.field {
+  width: 100%;
+  padding: 0.8rem 1rem;
+  margin-bottom: 0.8rem;
+  border: 1px solid rgba(74, 54, 46, 0.2);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.6);
+  font-size: 0.9rem;
+  color: #4a362e;
+}
+
+.button {
+  width: 100%;
+  padding: 0.85rem;
+  border: none;
+  border-radius: 10px;
+  background: #fcb887;
+  color: #4a362e;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+}
+.button:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.attendChoice {
+  display: flex;
+  gap: 0.6rem;
+  margin-bottom: 0.8rem;
+}
+.attendChoice button {
+  flex: 1;
+  padding: 0.7rem;
+  border-radius: 10px;
+  border: 1px solid rgba(74, 54, 46, 0.2);
+  background: rgba(255, 255, 255, 0.5);
+  font-size: 0.75rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+.attendChoiceActive {
+  background: #4a362e !important;
+  color: #faebcc !important;
+  border-color: #4a362e !important;
+}
+
+.itineraryRow {
+  display: flex;
+  gap: 1rem;
+  align-items: baseline;
+  padding: 0.6rem 0;
+  border-bottom: 1px solid rgba(74, 54, 46, 0.12);
+  text-align: left;
+}
+.itineraryTime {
+  font-size: 0.75rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #7ca3c0;
+  flex: 0 0 auto;
+}
+.itineraryLabel {
+  color: #4a362e;
+  font-weight: 600;
+}
+
+.wishItem {
+  text-align: left;
+  padding: 0.6rem 0;
+  border-bottom: 1px solid rgba(74, 54, 46, 0.12);
+}
+.wishAuthor {
+  font-weight: 600;
+  color: #4a362e;
+  font-size: 0.85rem;
+}
+.wishMessage {
+  color: #4a362e;
+  opacity: 0.85;
+  font-size: 0.85rem;
+}
+
+.photoGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.6rem;
+  margin-top: 1rem;
+}
+.photoGrid img {
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: cover;
+  border-radius: 10px;
+}
+
+/* No reduced-motion override needed here: useParallax itself skips writing --sl-par when
+   reduced motion is set (see _shared/hooks/useParallax.ts), so .prop's transform simply never
+   receives a parallax offset -- there's nothing for this stylesheet to turn off. */
