@@ -21,6 +21,7 @@ const CODES = [
   'fairy-garden',
   'roman-garden',
   'sunny-safari',
+  'rose-horizon',
 ];
 
 const BASE = 'http://localhost:3000';
