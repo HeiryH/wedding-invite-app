@@ -46,7 +46,7 @@ export default function DataTemplate({
 }: DataTemplateProps) {
   const editing = Boolean(editor?.enabled);
   const resolved = useStageLayout(keyPrefix, stages, stageIds, breakpoint, customConfig);
-  const { rootRef, seen } = useStageReveal(false);
+  const { rootRef, seen } = useStageReveal(false, stageIds.join(','));
   useParallax(rootRef, 'on', false);
 
   // A stage whose only content is an unavailable slot (e.g. an itinerary block with no itinerary
@@ -146,7 +146,9 @@ export default function DataTemplate({
             bgScale={r.bgScale}
             bgSrc={r.bgSrc}
             seen={seen.has(r.def.id)}
-            slotProps={slotProps}
+            // Per-stage: lets a slot resolve its own sub-layers (a hero, an itinerary list's
+            // Time/Label) via SlotProps.stageLayers — see types.ts's doc comment.
+            slotProps={{ ...slotProps, stageLayers: r.layers }}
             eager={i === 0}
             editing={editing && editor?.selectedStage === r.def.id}
             selectedLayer={editor?.selectedLayer}

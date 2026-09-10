@@ -21,8 +21,25 @@ import { SLOT_REGISTRY, sheetLayerGroups, stageHasContent, visibleSlotLayers } f
 import { SlotFlowProviders } from '@/components/templates/_shared/slots/FlowProviders';
 import SheetHost from '@/components/templates/_shared/SheetHost';
 import { fontVar } from '@/lib/fonts/registry';
-import NavBar from './components/NavBar';
+import TemplateNav, { type NavLayout } from '@/components/templates/_shared/nav/TemplateNav';
 import styles from './Template10.module.css';
+
+// Preserves T10's pre-consolidation nav pill pixel-for-pixel (its .nav/.navBtn/.navActive rules,
+// now removed from Template10.module.css, are reproduced here as --nav-* tokens for the shared
+// _shared/nav/TemplateNav).
+const T10_NAV_VARS: CSSProperties = {
+  '--nav-bg': 'rgba(32, 24, 15, 0.9)',
+  '--nav-border': 'rgba(255, 255, 255, 0.2)',
+  '--nav-radius': '999px',
+  '--nav-font': "'Baloo 2', system-ui, sans-serif",
+  '--nav-btn-pad-x': '0.85rem',
+  '--nav-btn-size': '0.65rem',
+  '--nav-btn-weight': '600',
+  '--nav-btn-tracking': '0.02em',
+  '--nav-color': 'rgba(255, 255, 255, 0.65)',
+  '--nav-active-bg': '#E9542E',
+  '--nav-active-color': '#FFF6E3',
+} as CSSProperties;
 
 interface Template10Props {
   wedding: Wedding;
@@ -104,14 +121,20 @@ export default function Template10({
   const musicUrl = t('music.url', '');
   const musicLoop = t('music.loop', 'true') === 'true';
   const parallaxMode = t('scene.parallax', 'on');
-  // The bottom nav pill is position:fixed chrome — not a stage-bound layer, so it's tuned via
-  // plain config rather than the Adjust dock. See nav.size/nav.textSize in templateConfigSchema.ts.
+  // The nav pill is position:fixed chrome — not a stage-bound layer, so it's tuned via plain
+  // config rather than the Adjust dock. See nav.size/nav.textSize/nav.layout in
+  // templateConfigSchema.ts.
   const navScale = NAV_SIZE_SCALE[t('nav.size', 'default')] ?? 1;
   const navTextScale = NAV_SIZE_SCALE[t('nav.textSize', 'default')] ?? 1;
+  const navLayout = t('nav.layout', 'bottom-pill') as NavLayout;
 
   // Adjust panel's "Card" section: an explicit style pick, not an implicit default. 'none' (the
-  // default here) forces every `.panel`-based slot (details/RSVP/wishes/photobooth) fully
-  // transparent — no scrim, no blur, nothing — until the couple deliberately picks a look.
+  // default here) leaves --slot-panel-bg unset entirely — slots.module.css's own `.panel`
+  // fallback is plain `transparent` (no scrim of any kind) and `.sheetCard`'s is a solid
+  // `#fdfaf5`, so a popup (RSVP/seating/wishes) always stays legible while inline content
+  // (photo booth) shows nothing until the couple picks a look here. 'radial'/'glass' each build
+  // a complete `--slot-panel-bg` value themselves rather than leaning on any implicit shape in
+  // the shared CSS, so what a couple sees is entirely this file's choice, not a hidden default.
   const cardStyle = t('t10.layout.slotTheme.cardStyle', 'none');
   const cardBlurPx = Number(t('t10.layout.slotTheme.cardBlur', '16')) || 16;
   const cardTint = t('t10.layout.slotTheme.cardTint', '#fff6e3');
@@ -126,11 +149,9 @@ export default function Template10({
       '--slot-panel-shadow': '0 1px 2px rgba(90,60,20,0.05), 0 8px 24px rgba(230,150,60,0.14), 0 24px 60px rgba(210,120,50,0.1)',
     } as CSSProperties)
     : cardStyle === 'radial' ? ({
-      '--slot-panel-scrim-1': 'rgba(255, 246, 227, 0.88)',
-      '--slot-panel-scrim-2': 'rgba(255, 246, 227, 0.7)',
-      '--slot-panel-scrim-3': 'rgba(255, 246, 227, 0.3)',
+      '--slot-panel-bg': 'radial-gradient(ellipse at center, rgba(255, 246, 227, 0.88) 0%, rgba(255, 246, 227, 0.7) 45%, rgba(255, 246, 227, 0.3) 72%, transparent 88%)',
     } as CSSProperties)
-    : ({ '--slot-panel-bg': 'transparent' } as CSSProperties);
+    : ({} as CSSProperties);
 
   const slotProps: SlotProps = useMemo(
     () => ({
@@ -172,7 +193,7 @@ export default function Template10({
   // reserve a fixed box its absolutely-positioned neighbours can never reflow into. Collected
   // across every stage so one host can mount them all — see _shared/SheetHost.tsx.
   const sheetGroups = useMemo(() => sheetLayerGroups(stages, slotProps), [stages, slotProps]);
-  const { rootRef, seen } = useStageReveal(reduced);
+  const { rootRef, seen } = useStageReveal(reduced, stageIds.join(','));
   useParallax(rootRef, parallaxMode, reduced);
 
   const firstStageId = stages[0]?.def.id;
@@ -263,6 +284,21 @@ export default function Template10({
         '--slot-panel-scrim-1': '#FDE9A0',
         '--slot-wishitem-align': 'center',
         '--slot-wishitem-border': 'none',
+        // Itinerary look, matching the reference mockup: centred stacked time/label pairs with
+        // generous breathing room, no timeline rail or dot markers (T7's elegant-wedding recipe),
+        // bold rounded-caps labels instead of a thin serif line.
+        '--slot-itin-align': 'center',
+        '--slot-itin-items-align': 'center',
+        '--slot-itin-indent': '0',
+        '--slot-itin-rail-display': 'none',
+        '--slot-itin-dot-display': 'none',
+        '--slot-itin-gap': '0.15rem',
+        '--slot-itin-item-padding': '0',
+        '--slot-itin-time-color': '#20180F',
+        '--slot-itin-title-font': 'var(--slot-font-display)',
+        '--slot-itin-title-weight': '800',
+        '--slot-itin-title-size': 'clamp(0.7rem, 1.9cqi, 0.88rem)',
+        '--slot-itin-title-transform': 'uppercase',
         // The "❦" hedera + rule pair under several shared title slots is a Roman Garden (T7)
         // flourish, not a template-neutral one — hidden here, unaffected everywhere else.
         '--slot-fleuron': 'none',
@@ -284,11 +320,8 @@ export default function Template10({
         // choice that reads as an obvious mismatch on a crayon-texture kids'-party design (the
         // reference art has no italics anywhere). `--slot-body-style` is the shared escape hatch.
         '--slot-body-style': 'normal',
-        '--t10-nav-scale': navScale,
-        '--t10-nav-text-scale': navTextScale,
-        // Card style — an explicit pick (Adjust panel "Card" section), not an implicit default.
-        // 'none' forces every panel fully transparent (no scrim, no blur) regardless of what
-        // slots.module.css's own fallback would otherwise paint.
+        // Card style — an explicit pick (Adjust panel "Card" section). See the cardStyle
+        // definition above for what each option does and does not touch.
         ...cardStyleVars,
       } as CSSProperties}
     >
@@ -306,7 +339,9 @@ export default function Template10({
             bgScale={r.bgScale}
             bgSrc={r.bgSrc}
             seen={seen.has(r.def.id) || reduced}
-            slotProps={slotProps}
+            // Per-stage: lets a slot resolve its own sub-layers (the hero, the itinerary list's
+            // Time/Label) via SlotProps.stageLayers — see types.ts's doc comment.
+            slotProps={{ ...slotProps, stageLayers: r.layers }}
             eager={r.def.id === firstStageId}
             // Outline the layer the parent's Adjust dock currently has selected.
             editing={editing && editor?.selectedStage === r.def.id}
@@ -318,7 +353,13 @@ export default function Template10({
         );
       })}
 
-      <NavBar items={navItems} active={activeSection} onNav={navTo} />
+      <TemplateNav
+        items={navItems}
+        active={activeSection}
+        onNav={navTo}
+        layout={navLayout}
+        vars={{ ...T10_NAV_VARS, '--nav-scale': navScale, '--nav-text-scale': navTextScale } as CSSProperties}
+      />
 
       {musicUrl && (
         <>

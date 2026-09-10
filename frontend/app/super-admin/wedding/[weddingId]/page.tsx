@@ -76,6 +76,11 @@ export default function WeddingDetailPage() {
     venueAddress: '',
   });
 
+  // Public URL (slug) — editWeddingData above no longer touches this; the slug is frozen after
+  // creation and only ever moves through this dedicated, deliberate control.
+  const [isEditingSlug, setIsEditingSlug] = useState(false);
+  const [slugDraft, setSlugDraft] = useState('');
+
   useEffect(() => {
     fetchData();
   }, [weddingId]);
@@ -135,6 +140,22 @@ export default function WeddingDetailPage() {
       setIsEditingWedding(false);
     } catch (err: any) {
       alert(err.response?.data?.message || 'Failed to update wedding');
+    }
+  };
+
+  const handleUpdateSlug = async () => {
+    if (!wedding) return;
+    const next = slugDraft.trim().toLowerCase();
+    if (!next || next === wedding.slug) { setIsEditingSlug(false); return; }
+    if (!window.confirm(
+      `Change the public URL from "${wedding.slug}" to "${next}"?\n\nAny invitation link already shared under "${wedding.slug}" will stop working immediately.`,
+    )) return;
+    try {
+      const updated = await eventService.setSlug(wedding.eventId, next);
+      setWedding(updated);
+      setIsEditingSlug(false);
+    } catch (err: any) {
+      alert(err.response?.data?.message || 'Failed to change the public URL');
     }
   };
 
@@ -453,10 +474,35 @@ export default function WeddingDetailPage() {
               <button onClick={() => setIsEditingWedding(true)} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '9px 14px', background: 'rgba(255,255,255,.7)', border: '1px solid rgba(255,255,255,.9)', borderRadius: 12, fontSize: 13.5, fontWeight: 500, color: 'var(--lavender-grey-ink)', cursor: 'pointer' }}>
                 <Icon name="settings" size={15} /> Edit details
               </button>
+              <button onClick={() => { setSlugDraft(wedding.slug); setIsEditingSlug(true); }} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '9px 14px', background: 'rgba(255,255,255,.7)', border: '1px solid rgba(255,255,255,.9)', borderRadius: 12, fontSize: 13.5, fontWeight: 500, color: 'var(--lavender-grey-ink)', cursor: 'pointer' }}>
+                <Icon name="link" size={15} /> Change public URL
+              </button>
               <button onClick={handleExport} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '9px 14px', background: 'rgba(255,255,255,.7)', border: '1px solid rgba(255,255,255,.9)', borderRadius: 12, fontSize: 13.5, fontWeight: 500, color: 'var(--lavender-grey-ink)', cursor: 'pointer' }}>
                 <Icon name="download" size={15} /> Export data
               </button>
             </div>
+            {isEditingSlug && (
+              <div style={{ marginTop: 12, padding: 12, background: 'rgba(255,255,255,.6)', border: '1px solid rgba(255,255,255,.9)', borderRadius: 12 }}>
+                <p style={{ margin: '0 0 8px', fontSize: 12.5, color: 'var(--danger, #b23b3b)' }}>
+                  The public URL no longer changes automatically when you edit names — this is the
+                  only way to move it. Any link already shared under the current URL will stop
+                  working the moment you save.
+                </p>
+                <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+                  <span style={{ fontSize: 13, color: 'var(--ink-2)' }}>
+                    {urlSegmentForEventType(wedding.eventType)}/
+                  </span>
+                  <input
+                    value={slugDraft}
+                    onChange={(e) => setSlugDraft(e.target.value)}
+                    placeholder="new-url-slug"
+                    style={{ ...inpEdit, flex: 1, minWidth: 180 }}
+                  />
+                  <button onClick={handleUpdateSlug} style={{ padding: '9px 18px', background: 'var(--lavender-grey-ink)', color: 'var(--floral)', border: 'none', borderRadius: 10, fontSize: 13.5, fontWeight: 500, cursor: 'pointer' }}>Save</button>
+                  <button onClick={() => setIsEditingSlug(false)} style={{ padding: '9px 18px', background: 'rgba(255,255,255,.5)', border: '1px solid rgba(255,255,255,.6)', borderRadius: 10, fontSize: 13.5, fontWeight: 500, cursor: 'pointer', color: 'var(--ink)' }}>Cancel</button>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>

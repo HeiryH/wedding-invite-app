@@ -7,14 +7,13 @@ using Xunit;
 namespace WeddingInvite.Tests;
 
 /// <summary>
-/// Pins down EventService's create/update validation and slug-generation behaviour after the
-/// Wedding→Event generalization rename (see ~/.claude/plans/so-this-invite-app-warm-pebble.md).
-/// Slug/Name1/Name2/EventType/EventTitle replace CoupleName/BrideName/GroomName, and slug
-/// generation is consolidated into the shared, type-aware SlugGenerator/EventNaming helpers.
+/// Pins down EventService's create/update validation and slug behaviour after the Wedding→Event
+/// generalization rename (see ~/.claude/plans/so-this-invite-app-warm-pebble.md). Slug/Name1/
+/// Name2/EventType/EventTitle replace CoupleName/BrideName/GroomName.
 ///
-/// The slug-collision gap this file used to document is now closed: UpdateAsync auto-suffixes a
-/// regenerated slug that would collide with another event (mirroring AuthController.SelfRegister's
-/// retry loop) instead of surfacing an unhandled DbUpdateException.
+/// The slug is set once at creation and frozen from then on — UpdateAsync never touches it, no
+/// matter what the names change to, so a shared invitation link never dies from an unrelated edit.
+/// The only way it moves afterward is the explicit, SUPER_ADMIN-only SetSlugAsync.
 /// </summary>
 public class EventServiceSlugTests
 {
@@ -177,10 +176,13 @@ public class EventServiceSlugTests
         await Assert.ThrowsAsync<ArgumentException>(() => BuildService(db).CreateAsync(dto));
     }
 
-    // ── UpdateAsync slug regeneration ───────────────────────────────────────
+    // ── UpdateAsync leaves the slug alone ────────────────────────────────────
+    // UpdateAsync used to regenerate the slug from the names on every save — editing a name
+    // silently moved the public URL and broke every link already shared. It now never touches
+    // Slug; the only way the slug changes after creation is the explicit SetSlugAsync below.
 
     [Fact]
-    public async Task UpdateAsync_RegeneratesSlug_FromFirstNamesOfNewName1AndName2()
+    public async Task UpdateAsync_LeavesSlugUnchanged_WhenNamesChange()
     {
         using var db = new TestDb();
         var svc = BuildService(db);
@@ -195,34 +197,56 @@ public class EventServiceSlugTests
             VenueAddress = created.VenueAddress,
         });
 
-        // Current format: "{firstNameOfName1}-{firstNameOfName2}", both lower-cased.
-        Assert.Equal("nur-firdaus", updated.Slug);
+        Assert.Equal(created.Slug, updated.Slug);
+        Assert.Equal("Nur Hidayah", updated.Name1);
+        Assert.Equal("Firdaus Bin Zainal", updated.Name2);
+    }
+
+    // ── SetSlugAsync ──────────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task SetSlugAsync_ChangesSlug_WhenValidAndAvailable()
+    {
+        using var db = new TestDb();
+        var svc = BuildService(db);
+        var created = await svc.CreateAsync(ValidCreateDto());
+
+        var updated = await svc.SetSlugAsync(created.EventId, "Nur-And-Firdaus");
+
+        Assert.Equal("nur-and-firdaus", updated.Slug);
     }
 
     [Fact]
-    public async Task UpdateAsync_AutoSuffixesRegeneratedSlug_WhenItWouldCollide()
+    public async Task SetSlugAsync_Throws_WhenSlugHasInvalidCharacters()
     {
-        // Previously a documented gap: CreateAsync checked SlugExistsAsync and threw a clean
-        // ArgumentException on collision, but UpdateAsync's regenerated slug was never rechecked in
-        // application code — the collision was only caught by the DB's UNIQUE index, surfacing as an
-        // unhandled DbUpdateException. Fixed here by adding the same retry-suffix loop
-        // AuthController.SelfRegister already uses: updating the second event to collide with the
-        // first's slug now succeeds and produces a suffixed slug instead of throwing.
         using var db = new TestDb();
         var svc = BuildService(db);
+        var created = await svc.CreateAsync(ValidCreateDto());
 
+        await Assert.ThrowsAsync<InvalidOperationException>(() => svc.SetSlugAsync(created.EventId, "nur and firdaus"));
+    }
+
+    [Fact]
+    public async Task SetSlugAsync_Throws_WhenSlugAlreadyTakenByAnotherEvent()
+    {
+        using var db = new TestDb();
+        var svc = BuildService(db);
         await svc.CreateAsync(ValidCreateDto(slug: "nur-firdaus", bride: "Nur", groom: "Firdaus"));
         var second = await svc.CreateAsync(ValidCreateDto(slug: "someone-else", bride: "Someone", groom: "Else"));
 
-        var updated = await svc.UpdateAsync(second.EventId, new UpdateEventDto
-        {
-            Name1 = "Nur",
-            Name2 = "Firdaus",
-            EventDate = second.EventDate,
-            Venue = second.Venue,
-            VenueAddress = second.VenueAddress,
-        });
+        await Assert.ThrowsAsync<InvalidOperationException>(() => svc.SetSlugAsync(second.EventId, "nur-firdaus"));
+    }
 
-        Assert.Equal("nur-firdaus-2", updated.Slug);
+    [Fact]
+    public async Task SetSlugAsync_Succeeds_WhenSlugUnchanged()
+    {
+        // A no-op rename must not trip the collision check against the event's own current slug.
+        using var db = new TestDb();
+        var svc = BuildService(db);
+        var created = await svc.CreateAsync(ValidCreateDto());
+
+        var updated = await svc.SetSlugAsync(created.EventId, created.Slug);
+
+        Assert.Equal(created.Slug, updated.Slug);
     }
 }

@@ -3,14 +3,10 @@
 import { useState, useEffect, useMemo, cloneElement } from 'react';
 import type { CSSProperties, ReactElement } from 'react';
 import { toHijriString } from '@/lib/templateUtils';
-import { resolveStage } from '@/components/templates/_shared/layout';
+import { resolveBindings } from '../bindings';
 import type { EditorHandle, Layer, SlotProps } from '../types';
-// CountdownSlot's hero sub-layer nudges (theme/bride/groom/date/timer) are still T7's own —
-// generalizing per-slot sub-layer authoring to arbitrary templates is out of scope for the slot
-// catalog extraction. Safe as a shared default: T7's own shipped hero-* anchors resolve to
-// identity (x:50,y:50,s:1, i.e. "no nudge") when there's no t7.layout.* override, so an authored
-// template harmlessly inherits a no-op here rather than a visible T7-specific position.
-import { T7_STAGES } from '../../Template7-romangarden/data/stages';
+import { staggerDelay } from '../reveal';
+import { subLayerStyle, subLayersOf } from './subLayerStyle';
 import styles from './slots.module.css';
 
 /** Returns null once the date has passed, so the hero never shows a dead 00:00:00. */
@@ -62,8 +58,12 @@ function HeroPiece({ layer, editor, id, children }: {
     'data-scroll-fade': anim === 'scroll-fade' ? true : undefined,
     style: {
       ...childStyle,
+      // Style-tab fields (color/font/size/spacing/border/shadow) — present only when the sub-layer
+      // is flagged `styleable` (all of these are), so this is a no-op until the couple actually
+      // touches the Style tab.
+      ...subLayerStyle(layer),
       '--sl-opacity': layer?.opacity ?? 1,
-      '--sl-delay': `${0.35 + (layer?.order ?? 0) * 0.22}s`,
+      '--sl-delay': staggerDelay(layer?.order ?? 0),
       ...(layer?.animDur ? { '--sl-dur': `${layer.animDur}s` } : {}),
     } as CSSProperties,
   });
@@ -86,7 +86,7 @@ function HeroPiece({ layer, editor, id, children }: {
   );
 }
 
-export function CountdownSlot({ wedding, t, config, breakpoint, editor }: SlotProps) {
+export function CountdownSlot({ wedding, t, stageLayers, layer, editor }: SlotProps) {
   const left = useCountdown(wedding.weddingDate);
   const date = new Date(wedding.weddingDate);
   const showHijri = t('general.showIslamicDate', 'false') === 'true';
@@ -97,21 +97,16 @@ export function CountdownSlot({ wedding, t, config, breakpoint, editor }: SlotPr
   const firstId = brideFirst ? 'hero-bride' : 'hero-groom';
   const secondId = brideFirst ? 'hero-groom' : 'hero-bride';
 
-  // Resolve the hero's sub-layer anchors (theme/bride/groom/date/timer) from the couple's saved
-  // deltas — falls back to the shipped defaults (staggered order 0..4) when there's no config.
-  const sub = useMemo(() => {
-    const layers = resolveStage('t7', T7_STAGES.welcome, breakpoint ?? 'mobile', config).layers;
-    const map: Record<string, Layer> = {};
-    for (const l of layers) if (l.parent === 'countdown') map[l.id] = l;
-    return map;
-  }, [config, breakpoint]);
+  // Resolve the hero's own sub-layer anchors (bride/groom/date/timer) out of the stage's already-
+  // resolved siblings — see SlotProps.stageLayers. Template-neutral: works the same whichever
+  // template's stage this slot happens to be rendering in.
+  const sub = useMemo(
+    () => subLayersOf(stageLayers, layer?.id ?? 'countdown'),
+    [stageLayers, layer?.id],
+  );
 
   return (
     <div className={styles.heroInner}>
-      <HeroPiece layer={sub['hero-theme']} editor={editor} id="hero-theme">
-        <p className={styles.themeLabel}>{t('invite.theme_label', 'Roman Garden')}</p>
-      </HeroPiece>
-
       <h1 className={styles.coupleNames}>
         <HeroPiece layer={sub[firstId]} editor={editor} id={firstId}>
           <span>{first}</span>
@@ -133,6 +128,68 @@ export function CountdownSlot({ wedding, t, config, breakpoint, editor }: SlotPr
         </div>
       </HeroPiece>
 
+      {left && (
+        <HeroPiece layer={sub['hero-timer']} editor={editor} id="hero-timer">
+          <div className={styles.countdown}>
+            {([
+              ['Days', left.days],
+              ['Hrs', left.hours],
+              ['Min', left.minutes],
+              ['Sec', left.seconds],
+            ] as const).map(([label, val]) => (
+              <div key={label} className={styles.countUnit}>
+                <span className={styles.countNum}>{String(val).padStart(2, '0')}</span>
+                <span className={styles.countLabel}>{label}</span>
+              </div>
+            ))}
+          </div>
+        </HeroPiece>
+      )}
+    </div>
+  );
+}
+
+/**
+ * T10's welcome hero — the same "one slot, several individually adjustable/styleable sub-layers"
+ * structure as `CountdownSlot` above (nudge + Style tab per piece via `HeroPiece`, a live countdown
+ * timer), just with this template's own content shape: an eyebrow line, an event title, one or two
+ * names, date and venue, rather than T7's bride/groom framing. This is the standard STAGE hero
+ * structure going forward — a new Stage template's welcome hero should follow this shape (or
+ * `CountdownSlot`'s, if "bride & groom" genuinely fits) rather than plain unstructured text layers.
+ *
+ * Each piece keeps `hasText: true` in the shipped sub-layer (see stages.ts) so the couple can still
+ * edit its literal copy (with `{{token}}` insertion) exactly as when these were standalone
+ * `kind:'text'` layers — only the position/animation/style now come from a nested sub-layer instead
+ * of the layer itself.
+ */
+export function EventHeroSlot(props: SlotProps) {
+  const { wedding, stageLayers, layer, editor } = props;
+  const left = useCountdown(wedding.weddingDate);
+
+  const sub = useMemo(
+    () => subLayersOf(stageLayers, layer?.id ?? 'hero'),
+    [stageLayers, layer?.id],
+  );
+
+  const text = (id: string, fallback: string) => resolveBindings(sub[id]?.text ?? fallback, props);
+
+  return (
+    <div className={styles.eventHero}>
+      <HeroPiece layer={sub['hero-eyebrow']} editor={editor} id="hero-eyebrow">
+        <p className={styles.heroEyebrow}>{text('hero-eyebrow', "You're invited to")}</p>
+      </HeroPiece>
+      <HeroPiece layer={sub['hero-title']} editor={editor} id="hero-title">
+        <p className={styles.heroTitle}>{text('hero-title', '{{eventTitle}}')}</p>
+      </HeroPiece>
+      <HeroPiece layer={sub['hero-names']} editor={editor} id="hero-names">
+        <p className={styles.heroNames}>{text('hero-names', '{{name1}} & {{name2}}')}</p>
+      </HeroPiece>
+      <HeroPiece layer={sub['hero-date']} editor={editor} id="hero-date">
+        <p className={styles.heroDateLine}>{text('hero-date', '{{date:long}}')}</p>
+      </HeroPiece>
+      <HeroPiece layer={sub['hero-venue']} editor={editor} id="hero-venue">
+        <p className={styles.heroVenueLine}>{text('hero-venue', '{{venue}}')}</p>
+      </HeroPiece>
       {left && (
         <HeroPiece layer={sub['hero-timer']} editor={editor} id="hero-timer">
           <div className={styles.countdown}>
@@ -182,17 +239,9 @@ export function TimerSlot({ wedding }: SlotProps) {
   );
 }
 
-/**
- * The theme badge and the date, split out of `CountdownSlot` as their own small standalone slots
- * for the authoring catalog (an authored template can drop just one in, rather than the whole
- * bundled hero). Theme label reads a schema field (`invite.theme_label`), not wedding data; date
- * stays its own component because "show the Hijri date" is a conditional a plain text layer can't
- * express.
- */
-export function HeroThemeSlot({ t }: SlotProps) {
-  return <p className={styles.themeLabel}>{t('invite.theme_label', 'Roman Garden')}</p>;
-}
-
+/** Just the date, split out of `CountdownSlot` for the authoring catalog (an authored template
+ *  can drop this in alone rather than the whole bundled hero). Its own component because "show
+ *  the Hijri date" is a conditional a plain text layer can't express. */
 export function HeroDateSlot({ wedding, t }: SlotProps) {
   const date = new Date(wedding.weddingDate);
   const showHijri = t('general.showIslamicDate', 'false') === 'true';

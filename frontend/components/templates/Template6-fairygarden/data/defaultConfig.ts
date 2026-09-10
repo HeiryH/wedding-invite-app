@@ -6,7 +6,6 @@ export const T6_DEFAULTS = {
   bloom: true,
   fogColor: '#0d1a0e',
   environment: 'forest' as const,
-  enchantmentLabel: 'Enchanted Garden',
   fireflyGreeting: 'Follow the light to our garden',
 };
 

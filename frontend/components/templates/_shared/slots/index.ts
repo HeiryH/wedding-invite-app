@@ -1,6 +1,6 @@
 import type { FC } from 'react';
 import type { Layer, SlotProps } from '../types';
-import { CountdownSlot, TimerSlot, ScrollCueSlot, HeroThemeSlot, HeroDateSlot } from './HeroSlots';
+import { CountdownSlot, EventHeroSlot, TimerSlot, ScrollCueSlot, HeroDateSlot } from './HeroSlots';
 import {
   WalimahTitleSlot, WalimahBodySlot, CoupleTitleSlot, CoupleNamesSlot,
   DetailsTitleSlot, CeremonyDetailsSlot, ItineraryTitleSlot, ItineraryListSlot,
@@ -17,9 +17,9 @@ import { NavSlot, MusicSlot, FooterSlot } from './ChromeSlots';
 /** What a `kind: 'slot'` layer actually renders. */
 export const SLOT_REGISTRY: Record<string, FC<SlotProps>> = {
   countdown: CountdownSlot,
+  eventHero: EventHeroSlot,
   timer: TimerSlot,
   scrollCue: ScrollCueSlot,
-  heroTheme: HeroThemeSlot,
   heroDate: HeroDateSlot,
   walimahTitle: WalimahTitleSlot,
   walimahBody: WalimahBodySlot,
@@ -52,9 +52,9 @@ export const SLOT_REGISTRY: Record<string, FC<SlotProps>> = {
  */
 export const SLOT_AVAILABLE: Record<string, (p: SlotProps) => boolean> = {
   countdown: () => true,
+  eventHero: () => true,
   timer: () => true,
   scrollCue: () => true,
-  heroTheme: () => true,
   heroDate: () => true,
   // Title checks the same key as its body so it can never show alone over an empty body — the
   // beat's stage-level gate (STAGE_GROUPS.walimah / resolveSectionOrder's hasWalimah) already

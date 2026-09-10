@@ -11,6 +11,14 @@ interface Props {
   selectedTableId: number | null;
   onSelect: (id: number) => void;
   prompt: string;
+  /** Prefix — the party size and a trailing period are appended automatically, e.g.
+   *  "Showing tables that can seat your party of 4." See rsvp.seating_party_prompt. */
+  partyPrompt?: string;
+  emptyMessage?: string;
+  fullLabel?: string;
+  /** Suffix — the number of open seats is prepended automatically, e.g. "3 seats left." See
+   *  rsvp.seating_seats_left_label. */
+  seatsLeftLabel?: string;
 }
 
 /**
@@ -23,6 +31,10 @@ export default function SeatingChart({
   selectedTableId,
   onSelect,
   prompt,
+  partyPrompt = 'Showing tables that can seat your party of',
+  emptyMessage = 'No tables have been set up yet — your seat will be assigned by the couple.',
+  fullLabel = 'Full',
+  seatsLeftLabel = 'seats left',
 }: Props) {
   const availableSeats = (t: SeatingTable) => t.capacity - t.guestCount;
   const canFit = (t: SeatingTable) => availableSeats(t) >= numberOfAttendees;
@@ -30,9 +42,7 @@ export default function SeatingChart({
   if (tables.length === 0) {
     return (
       <div className={styles.seating}>
-        <p className={styles.empty}>
-          No tables have been set up yet — your seat will be assigned by the couple.
-        </p>
+        <p className={styles.empty}>{emptyMessage}</p>
       </div>
     );
   }
@@ -41,7 +51,7 @@ export default function SeatingChart({
     <div className={styles.seating}>
       <h3 className={styles.sectionTitle}>{prompt}</h3>
       <p className={styles.sectionLead}>
-        Showing tables that can seat your party of {numberOfAttendees}.
+        {partyPrompt} {numberOfAttendees}.
       </p>
 
       <div className={styles.tableGrid}>
@@ -70,7 +80,7 @@ export default function SeatingChart({
               </span>
               <span className={styles.tableName}>{table.tableName}</span>
               <span className={styles.tableSeats}>
-                {fits ? `${availableSeats(table)} seats left` : 'Full'}
+                {fits ? `${availableSeats(table)} ${seatsLeftLabel}` : fullLabel}
               </span>
             </button>
           );

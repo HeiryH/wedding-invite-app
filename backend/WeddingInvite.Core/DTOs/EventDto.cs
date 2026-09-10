@@ -91,4 +91,9 @@ namespace WeddingInvite.Core.DTOs
         public string? Domain { get; set; }
     }
 
+    public class SetSlugDto
+    {
+        public string Slug { get; set; } = string.Empty;
+    }
+
 }

@@ -24,7 +24,10 @@ export const SECTION_BLOCK: Record<TemplateConfigSection, TemplateConfigBlock> =
   styling: 'welcome',
   general: 'details',
   footer: 'details',
-  navigation: 'details',
+  // A dedicated tab, not buried in Details — nav bar controls (size/text size/layout on T7/T10;
+  // the admin-only per-section nav labels on T1-T3/T5) are common enough to edit that they earned
+  // their own place in the rail rather than being the last, easy-to-miss group on another tab.
+  navigation: 'navigation',
 };
 
 const COMMON_FIELDS: TemplateConfigField[] = [
@@ -220,9 +223,12 @@ const COMMON_FIELDS: TemplateConfigField[] = [
     section: 'rsvp',
     group: 'RSVP',
     chip: 'RSVP',
-    // T10's RSVP title is a plain text layer (Adjust panel edits it directly, with full font/
-    // size/line-height control) rather than the shared rsvpTitle slot this field drives.
-    templateIds: [1, 2, 3, 4, 5, 6, 7, 8, 9],
+    // Drives the shared rsvpTitle slot (_shared/slots/RsvpFormSlot.tsx) — T1-T6/T8/T9 all render
+    // a hardcoded "RSVP" heading in their own bespoke markup and never read this key at all (see
+    // lib/__tests__/templateConfigSchema.scope.test.ts). T10's RSVP title is a plain text layer
+    // (Adjust panel edits it directly, with full font/size/line-height control) instead of the
+    // shared slot, so it's excluded too — only T7 actually uses this field.
+    templateIds: [7],
   },
   {
     key: 'rsvp.subtitle',
@@ -237,6 +243,31 @@ const COMMON_FIELDS: TemplateConfigField[] = [
     chip: 'RSVP',
     templateIds: [1, 2, 3, 4, 5, 6, 7, 8, 9],
   },
+
+  // RSVP form fields + the seating step. Same reasoning as the Wishes form block below: these
+  // live in the shared _shared/slots/RsvpFormSlot.tsx (RsvpFormSlot + RsvpSeatingSlot), used by
+  // both T7 and T10, and until now every one of these strings was hardcoded there — invisible to
+  // the couple no matter what they typed. `rsvp.seating_prompt` already existed but was declared
+  // only in TEMPLATE7_EXTRA_FIELDS (an array TEMPLATE_CONFIGS[10] never composes), so T10 couples
+  // could never reach it either — moved here and rescoped alongside its new siblings.
+  { key: 'rsvp.name_placeholder', label: 'Name Placeholder', fieldType: 'text', defaultValue: 'Full name *', maxLength: 40, richText: false, adminOnly: false, section: 'rsvp', group: 'RSVP', chip: 'RSVP', templateIds: [7, 10] },
+  { key: 'rsvp.email_placeholder', label: 'Email Placeholder', fieldType: 'text', defaultValue: 'Email', maxLength: 30, richText: false, adminOnly: false, section: 'rsvp', group: 'RSVP', chip: 'RSVP', templateIds: [7, 10] },
+  { key: 'rsvp.phone_placeholder', label: 'Phone Placeholder', fieldType: 'text', defaultValue: 'Phone', maxLength: 30, richText: false, adminOnly: false, section: 'rsvp', group: 'RSVP', chip: 'RSVP', templateIds: [7, 10] },
+  { key: 'rsvp.bride_side_label', label: "Bride's Side Option", fieldType: 'text', defaultValue: "Bride's side", maxLength: 30, richText: false, adminOnly: false, section: 'rsvp', group: 'RSVP', chip: 'RSVP', templateIds: [7, 10] },
+  { key: 'rsvp.groom_side_label', label: "Groom's Side Option", fieldType: 'text', defaultValue: "Groom's side", maxLength: 30, richText: false, adminOnly: false, section: 'rsvp', group: 'RSVP', chip: 'RSVP', templateIds: [7, 10] },
+  { key: 'rsvp.attending_label', label: 'Attending Button', fieldType: 'text', defaultValue: 'Joyfully accept', maxLength: 30, richText: false, adminOnly: false, section: 'rsvp', group: 'RSVP', chip: 'RSVP', templateIds: [7, 10] },
+  { key: 'rsvp.declining_label', label: 'Declining Button', fieldType: 'text', defaultValue: 'Regretfully decline', maxLength: 30, richText: false, adminOnly: false, section: 'rsvp', group: 'RSVP', chip: 'RSVP', templateIds: [7, 10] },
+  { key: 'rsvp.song_placeholder', label: 'Song Request Placeholder', fieldType: 'text', defaultValue: 'Song request (optional)', maxLength: 40, richText: false, adminOnly: false, section: 'rsvp', group: 'RSVP', chip: 'RSVP', templateIds: [7, 10] },
+  { key: 'rsvp.submit_label', label: 'Send RSVP Button', fieldType: 'text', defaultValue: 'Send RSVP', maxLength: 30, richText: false, adminOnly: false, section: 'rsvp', group: 'RSVP', chip: 'RSVP', templateIds: [7, 10] },
+  { key: 'rsvp.continue_label', label: 'Continue to Seating Button', hint: 'Shown instead of Send RSVP when seating is enabled and the guest is attending.', fieldType: 'text', defaultValue: 'Continue', maxLength: 30, richText: false, adminOnly: false, section: 'rsvp', group: 'RSVP', chip: 'RSVP', templateIds: [7, 10] },
+  { key: 'rsvp.closed_message', label: 'RSVPs Closed Message', fieldType: 'text', defaultValue: 'RSVPs are closed — thank you for your interest.', maxLength: 120, richText: false, adminOnly: false, section: 'rsvp', group: 'RSVP', chip: 'RSVP', templateIds: [7, 10] },
+  { key: 'rsvp.done_message', label: 'RSVP Sent Message', fieldType: 'text', defaultValue: 'Thank you. We look forward to celebrating with you.', maxLength: 120, richText: false, adminOnly: false, section: 'rsvp', group: 'RSVP', chip: 'RSVP', templateIds: [7, 10] },
+  { key: 'rsvp.seating_prompt', label: 'Seating Prompt', fieldType: 'text', defaultValue: 'Choose your table', maxLength: 60, richText: false, adminOnly: false, section: 'rsvp', group: 'RSVP', chip: 'RSVP', templateIds: [7, 10] },
+  { key: 'rsvp.seating_back_label', label: 'Seating Back Button', fieldType: 'text', defaultValue: 'Back', maxLength: 20, richText: false, adminOnly: false, section: 'rsvp', group: 'RSVP', chip: 'RSVP', templateIds: [7, 10] },
+  { key: 'rsvp.seating_empty_message', label: 'No Tables Message', hint: 'Shown when the couple hasn’t set up any tables yet.', fieldType: 'text', defaultValue: 'No tables have been set up yet — your seat will be assigned by the couple.', maxLength: 160, richText: false, adminOnly: false, section: 'rsvp', group: 'RSVP', chip: 'RSVP', templateIds: [7, 10] },
+  { key: 'rsvp.seating_party_prompt', label: 'Party Size Prompt', hint: 'The guest’s party size and a period are appended automatically, e.g. "…party of 4."', fieldType: 'text', defaultValue: 'Showing tables that can seat your party of', maxLength: 80, richText: false, adminOnly: false, section: 'rsvp', group: 'RSVP', chip: 'RSVP', templateIds: [7, 10] },
+  { key: 'rsvp.seating_full_label', label: 'Table Full Label', fieldType: 'text', defaultValue: 'Full', maxLength: 20, richText: false, adminOnly: false, section: 'rsvp', group: 'RSVP', chip: 'RSVP', templateIds: [7, 10] },
+  { key: 'rsvp.seating_seats_left_label', label: 'Seats Left Label', hint: 'The number of open seats is prepended automatically, e.g. "3 seats left."', fieldType: 'text', defaultValue: 'seats left', maxLength: 20, richText: false, adminOnly: false, section: 'rsvp', group: 'RSVP', chip: 'RSVP', templateIds: [7, 10] },
 
   // ── Wishes ──────────────────────────────────────────────────────────────────
   {
@@ -254,20 +285,25 @@ const COMMON_FIELDS: TemplateConfigField[] = [
     templateIds: [1, 2, 3, 4, 5, 6, 7, 8, 9],
   },
 
-  // Wish form + its optional photo step. These live in the shared wish slots, so they're
-  // registered for every template rather than pinned to T7 — an authored template that drops in
-  // `wishForm` gets the same controls. Until now every one of these strings was hardcoded in
-  // WishSlots.tsx, i.e. invisible to the couple no matter what they typed.
-  { key: 'wish.form_title', label: 'Wish Form Title', fieldType: 'text', defaultValue: 'Leave a Wish', maxLength: 40, richText: false, adminOnly: false, section: 'wishes', group: 'Wishes & Guestbook', chip: 'Content' },
-  { key: 'wish.message_placeholder', label: 'Message Placeholder', fieldType: 'text', defaultValue: 'Write your wish for the couple…', maxLength: 120, richText: false, adminOnly: false, section: 'wishes', group: 'Wishes & Guestbook', chip: 'Content' },
-  { key: 'wish.name_placeholder', label: 'Name Placeholder', fieldType: 'text', defaultValue: 'Your name *', maxLength: 40, richText: false, adminOnly: false, section: 'wishes', group: 'Wishes & Guestbook', chip: 'Content' },
-  { key: 'wish.submit_label', label: 'Send Wish Button', fieldType: 'text', defaultValue: 'Send Wish', maxLength: 30, richText: false, adminOnly: false, section: 'wishes', group: 'Wishes & Guestbook', chip: 'Content' },
-  { key: 'wish.sent_message', label: 'Wish Sent Message', fieldType: 'text', defaultValue: 'Thank you — your wish was sent.', maxLength: 120, richText: false, adminOnly: false, section: 'wishes', group: 'Wishes & Guestbook', chip: 'Content' },
-  { key: 'wish.photo_title', label: 'Photo Step Title', fieldType: 'text', defaultValue: 'Add a photo?', maxLength: 40, richText: false, adminOnly: false, section: 'wishes', group: 'Wishes & Guestbook', chip: 'Content' },
-  { key: 'wish.photo_prompt', label: 'Photo Step Prompt', fieldType: 'text', defaultValue: 'Optional — share a snapshot to go with your wish.', maxLength: 120, richText: false, adminOnly: false, section: 'wishes', group: 'Wishes & Guestbook', chip: 'Content' },
-  { key: 'wish.photo_choose_label', label: 'Choose Photo Button', fieldType: 'text', defaultValue: 'Choose a Photo', maxLength: 30, richText: false, adminOnly: false, section: 'wishes', group: 'Wishes & Guestbook', chip: 'Content' },
-  { key: 'wish.photo_caption_placeholder', label: 'Photo Caption Placeholder', fieldType: 'text', defaultValue: 'Caption (optional)', maxLength: 60, richText: false, adminOnly: false, section: 'wishes', group: 'Wishes & Guestbook', chip: 'Content' },
-  { key: 'wish.photo_skip_label', label: 'Skip Photo Button', fieldType: 'text', defaultValue: 'Skip', maxLength: 20, richText: false, adminOnly: false, section: 'wishes', group: 'Wishes & Guestbook', chip: 'Content' },
+  // Wish form + its optional photo step. These live in the shared wish slots
+  // (_shared/slots/WishSlots.tsx) — only T7 and T10 render through that catalog; T1-T6/T8/T9 have
+  // their own bespoke, hardcoded wish-form markup that never reads these keys (see
+  // lib/__tests__/templateConfigSchema.scope.test.ts, which caught this: these were previously
+  // undeclared with any templateIds at all, i.e. offered on every template's inspector while only
+  // ever doing something on two of them). An authored template that drops in `wishForm` also gets
+  // these controls, same as T7/T10 — TemplateConfigPolicy.LayoutKeyPattern's `ta?\d+` authored-id
+  // handling is a separate mechanism (layout keys only), so authored templates simply aren't
+  // listed here; add their numeric ids if that ever needs the same treatment.
+  { key: 'wish.form_title', label: 'Wish Form Title', fieldType: 'text', defaultValue: 'Leave a Wish', maxLength: 40, richText: false, adminOnly: false, section: 'wishes', group: 'Wishes & Guestbook', chip: 'Content', templateIds: [7, 10] },
+  { key: 'wish.message_placeholder', label: 'Message Placeholder', fieldType: 'text', defaultValue: 'Write your wish for the couple…', maxLength: 120, richText: false, adminOnly: false, section: 'wishes', group: 'Wishes & Guestbook', chip: 'Content', templateIds: [7, 10] },
+  { key: 'wish.name_placeholder', label: 'Name Placeholder', fieldType: 'text', defaultValue: 'Your name *', maxLength: 40, richText: false, adminOnly: false, section: 'wishes', group: 'Wishes & Guestbook', chip: 'Content', templateIds: [7, 10] },
+  { key: 'wish.submit_label', label: 'Send Wish Button', fieldType: 'text', defaultValue: 'Send Wish', maxLength: 30, richText: false, adminOnly: false, section: 'wishes', group: 'Wishes & Guestbook', chip: 'Content', templateIds: [7, 10] },
+  { key: 'wish.sent_message', label: 'Wish Sent Message', fieldType: 'text', defaultValue: 'Thank you — your wish was sent.', maxLength: 120, richText: false, adminOnly: false, section: 'wishes', group: 'Wishes & Guestbook', chip: 'Content', templateIds: [7, 10] },
+  { key: 'wish.photo_title', label: 'Photo Step Title', fieldType: 'text', defaultValue: 'Add a photo?', maxLength: 40, richText: false, adminOnly: false, section: 'wishes', group: 'Wishes & Guestbook', chip: 'Content', templateIds: [7, 10] },
+  { key: 'wish.photo_prompt', label: 'Photo Step Prompt', fieldType: 'text', defaultValue: 'Optional — share a snapshot to go with your wish.', maxLength: 120, richText: false, adminOnly: false, section: 'wishes', group: 'Wishes & Guestbook', chip: 'Content', templateIds: [7, 10] },
+  { key: 'wish.photo_choose_label', label: 'Choose Photo Button', fieldType: 'text', defaultValue: 'Choose a Photo', maxLength: 30, richText: false, adminOnly: false, section: 'wishes', group: 'Wishes & Guestbook', chip: 'Content', templateIds: [7, 10] },
+  { key: 'wish.photo_caption_placeholder', label: 'Photo Caption Placeholder', fieldType: 'text', defaultValue: 'Caption (optional)', maxLength: 60, richText: false, adminOnly: false, section: 'wishes', group: 'Wishes & Guestbook', chip: 'Content', templateIds: [7, 10] },
+  { key: 'wish.photo_skip_label', label: 'Skip Photo Button', fieldType: 'text', defaultValue: 'Skip', maxLength: 20, richText: false, adminOnly: false, section: 'wishes', group: 'Wishes & Guestbook', chip: 'Content', templateIds: [7, 10] },
 
   // ── Section backgrounds ─────────────────────────────────────────────────────
   {
@@ -282,35 +318,40 @@ const COMMON_FIELDS: TemplateConfigField[] = [
     block: 'welcome',
     group: 'Section Background',
     chip: 'Background',
-    templateIds: [1, 2, 3, 8],
+    templateIds: [1, 2, 3, 8, 9],
   },
   {
+    // Key name is historical and does NOT match what this paints — verified at every read site
+    // (Template1/2/3/4/8/9) it's the RSVP section's background, not a "ceremony" section (T1-T4
+    // don't have one). Keeping the key as-is: it's already saved on real weddings, and renaming it
+    // needs a data migration — see docs/FIX_QUEUE.md. Label + tab are fixed to match reality.
     key: 'section.ceremony.bg',
-    label: 'Ceremony',
+    label: 'RSVP',
     defaultValue: '',
     maxLength: 500,
     richText: false,
     fieldType: 'image',
     adminOnly: false,
     section: 'styling',
-    block: 'itinerary',
+    block: 'rsvp',
     group: 'Section Background',
     chip: 'Background',
-    templateIds: [1, 2, 3, 4, 8],
+    templateIds: [1, 2, 3, 4, 8, 9],
   },
   {
+    // Same historical-key situation as section.ceremony.bg above — this paints the Wishes section.
     key: 'section.celebration.bg',
-    label: 'Celebration',
+    label: 'Wishes',
     defaultValue: '',
     maxLength: 500,
     richText: false,
     fieldType: 'image',
     adminOnly: false,
     section: 'styling',
-    block: 'photobooth',
+    block: 'wishes',
     group: 'Section Background',
     chip: 'Background',
-    templateIds: [1, 2, 3, 4, 8],
+    templateIds: [1, 2, 3, 4, 8, 9],
   },
 
   // ── Footer ──────────────────────────────────────────────────────────────────
@@ -561,24 +602,17 @@ const SECTION_TITLE_FIELDS: TemplateConfigField[] = [
     section: 'invitation',
     group: 'Countdown',
     chip: 'Style',
-    templateIds: [3, 4, 5, 7],
+    // T7's countdown hero has no prefix-text element that reads this key at all — dropped from
+    // its templateIds (was listed but dead; see lib/__tests__/templateConfigSchema.scope.test.ts).
+    templateIds: [3, 4, 5],
   },
 ];
 
-const TEMPLATE3_EXTRA_FIELDS: TemplateConfigField[] = [
-  {
-    key: 'invite.theme_label',
-    label: 'Theme Banner',
-    defaultValue: 'Garden Romance',
-    maxLength: 30,
-    richText: false,
-    fieldType: 'text',
-    adminOnly: false,
-    section: 'invitation',
-    group: 'Heading',
-    chip: 'Content',
-  },
-];
+// T3 previously had its own 'invite.theme_label' Theme Banner field here — removed along with
+// every other template's theme badge (a naming label, not part of the rendered design; see
+// docs/FIX_QUEUE.md). Kept as an empty array rather than removing template 3's whole entry from
+// TEMPLATE_CONFIGS below, so a future T3-only field has an obvious home.
+const TEMPLATE3_EXTRA_FIELDS: TemplateConfigField[] = [];
 
 const TEMPLATE6_EXTRA_FIELDS: TemplateConfigField[] = [
   // ── Scene / 3D controls ─────────────────────────────────────────────────────
@@ -590,12 +624,14 @@ const TEMPLATE6_EXTRA_FIELDS: TemplateConfigField[] = [
   { key: 'scene.fog.color', label: 'Forest Fog Colour', defaultValue: '#0d1a0e', maxLength: 20, richText: false, fieldType: 'color', adminOnly: true, section: 'scene', group: 'Fairy Garden Scene', chip: 'Style', presets: 'generic' },
   { key: 'scene.environment', label: 'Lighting Preset', defaultValue: 'forest', maxLength: 10, richText: false, fieldType: 'select', options: ['forest', 'night', 'dawn'], adminOnly: true, section: 'scene', group: 'Fairy Garden Scene', chip: 'Style' },
   // ── T6 invitation extras ────────────────────────────────────────────────────
-  { key: 'invite.enchantment_label', label: 'Theme Badge Text', defaultValue: 'Enchanted Garden', maxLength: 30, richText: false, fieldType: 'text', adminOnly: false, section: 'invitation', group: 'Heading', chip: 'Content' },
   { key: 'invite.firefly_greeting', label: 'Firefly Intro Line', defaultValue: 'Follow the light to our garden', maxLength: 60, richText: false, fieldType: 'text', adminOnly: false, section: 'invitation', group: 'Heading', chip: 'Content' },
 ];
 
 const TEMPLATE5_EXTRA_FIELDS: TemplateConfigField[] = [
-  { key: 'invite.layout', label: 'Layout Style', defaultValue: 'classic', maxLength: 10, richText: false, fieldType: 'select', options: ['classic', 'minimal', 'ornate'], adminOnly: false, section: 'invitation', block: 'details', group: 'Invitation Layout', chip: 'Layout' },
+  // Only ever switches T5's welcome-section arc-text presentation (Template5.tsx's `layout`
+  // const) — nothing global. Filed under 'welcome', not 'details', and relabeled so it can't be
+  // confused with the PRO Adjust dock's stage layout (a much bigger, unrelated thing).
+  { key: 'invite.layout', label: 'Welcome Style', defaultValue: 'classic', maxLength: 10, richText: false, fieldType: 'select', options: ['classic', 'minimal', 'ornate'], adminOnly: false, section: 'invitation', block: 'welcome', group: 'Welcome Style', chip: 'Layout' },
   // The T5/T7 PRO Adjust dock is launched from a dedicated header button now, not a schema field.
   { key: 'template.bg', label: 'Page Background', defaultValue: '', maxLength: 500, richText: false, fieldType: 'image', adminOnly: false, section: 'styling', block: 'welcome', group: 'Page Background', chip: 'Background' },
   { key: 'template.bgSize', label: 'Size', defaultValue: 'cover', maxLength: 10, richText: false, fieldType: 'select', options: ['cover', 'contain', 'auto'], optionLabels: { auto: 'Natural' }, adminOnly: false, section: 'styling', block: 'welcome', group: 'Page Background', chip: 'Background' },
@@ -632,20 +668,12 @@ const TEMPLATE5_EXTRA_FIELDS: TemplateConfigField[] = [
 
   { key: 'nav.welcome',  label: 'Nav: Welcome',  fieldType: 'text', defaultValue: 'Welcome',  maxLength: 20, richText: false, adminOnly: true, section: 'navigation', group: 'Navigation Labels', chip: 'Display' },
   { key: 'nav.ceremony', label: 'Nav: Ceremony', fieldType: 'text', defaultValue: 'Ceremony', maxLength: 20, richText: false, adminOnly: true, section: 'navigation', group: 'Navigation Labels', chip: 'Display' },
-  // T7's own bottom nav pill is position:fixed chrome, outside any one stage's box — not a
-  // draggable layer, so it's tuned here (like scene.parallax / scene.ink.tint) rather than in the
-  // Adjust dock. `nav.size` scales the whole pill (padding/gap/buttons together, via transform —
-  // fine for a small fixed-size control with no reflow-sensitive content); `nav.textSize` is an
-  // independent multiplier on just the button labels.
-  { key: 'nav.size', label: 'Nav Bar Size', fieldType: 'select', defaultValue: 'default', maxLength: 10, richText: false, adminOnly: false, options: ['compact', 'default', 'large', 'xlarge'], section: 'navigation', group: 'Navigation Bar', chip: 'Display', templateIds: [7] },
-  { key: 'nav.textSize', label: 'Nav Bar Text Size', fieldType: 'select', defaultValue: 'default', maxLength: 10, richText: false, adminOnly: false, options: ['compact', 'default', 'large', 'xlarge'], section: 'navigation', group: 'Navigation Bar', chip: 'Display', templateIds: [7] },
 ];
 
 // ── Template 7 — Roman Garden ───────────────────────────────────────────────
 // The art is baked monochrome sepia, so a single ink tint re-tones every stage.
 const TEMPLATE7_EXTRA_FIELDS: TemplateConfigField[] = [
-  { key: 'invite.theme_label', label: 'Theme Badge', fieldType: 'text', defaultValue: 'Roman Garden', maxLength: 40, richText: false, adminOnly: false, section: 'invitation', group: 'Roman Garden Scene', chip: 'Style' },
-  { key: 'scene.parallax', label: 'Parallax Depth', hint: 'How far the scenery layers drift apart as you scroll.', fieldType: 'select', defaultValue: 'on', maxLength: 10, richText: false, adminOnly: false, options: ['on', 'subtle', 'off'], section: 'scene', group: 'Roman Garden Scene', chip: 'Style' },
+  { key: 'scene.parallax', label: 'Parallax Depth', hint: 'How far the scenery layers drift apart as you scroll.', fieldType: 'select', defaultValue: 'on', maxLength: 10, richText: false, adminOnly: false, options: ['on', 'subtle', 'off'], section: 'scene', group: 'Roman Garden Scene', chip: 'Style', templateIds: [7] },
   { key: 'scene.ink.tint', label: 'Ink Tone', hint: 'Re-tones every engraved stage at once — warmer or cooler.', fieldType: 'color', defaultValue: '#3D3833', maxLength: 20, richText: false, adminOnly: false, section: 'scene', group: 'Roman Garden Scene', chip: 'Style', presets: 'generic' },
   { key: 'scene.paper.grain', label: 'Paper Grain', hint: 'Subtle printed-paper texture over the whole invitation.', fieldType: 'boolean', defaultValue: 'true', maxLength: 5, richText: false, adminOnly: false, section: 'scene', group: 'Roman Garden Scene', chip: 'Style' },
 
@@ -658,8 +686,9 @@ const TEMPLATE7_EXTRA_FIELDS: TemplateConfigField[] = [
   { key: 'ceremony.calendar_label', label: 'Add to Calendar Button', fieldType: 'text', defaultValue: 'Add to Calendar', maxLength: 30, richText: false, adminOnly: false, section: 'ceremony', group: 'Ceremony Stages', chip: 'Content' },
   { key: 'ceremony.map_label', label: 'View Map Button', fieldType: 'text', defaultValue: 'View Map', maxLength: 30, richText: false, adminOnly: false, section: 'ceremony', group: 'Ceremony Stages', chip: 'Content' },
   { key: 'ceremony.map_hide_label', label: 'Hide Map Button', fieldType: 'text', defaultValue: 'Hide Map', maxLength: 30, richText: false, adminOnly: false, section: 'ceremony', group: 'Ceremony Stages', chip: 'Content' },
-
-  { key: 'rsvp.seating_prompt', label: 'Seating Prompt', fieldType: 'text', defaultValue: 'Choose your table', maxLength: 60, richText: false, adminOnly: false, section: 'rsvp', group: 'RSVP', chip: 'RSVP' },
+  // rsvp.seating_prompt and the rest of the RSVP/seating form fields now live in COMMON_FIELDS
+  // (shared by T7 and T10 — this array is T7-only) — see the "RSVP form fields + the seating
+  // step" block above.
 
   // Pop-up triggers. T7's RSVP and wish forms live in bottom sheets rather than on the stage (a
   // stage is an art composition; a form is variable-height content, and inline it has to reserve a
@@ -671,6 +700,20 @@ const TEMPLATE7_EXTRA_FIELDS: TemplateConfigField[] = [
   { key: 'sheet.wish.label', label: 'Wish Button Text', fieldType: 'text', defaultValue: 'Write a Wish', maxLength: 30, richText: false, adminOnly: false, section: 'wishes', group: 'Wishes & Guestbook', chip: 'Content' },
   { key: 'sheet.wish.image', label: 'Wish Button Artwork', hint: 'Optional — replaces the button with your own image (it gently floats in place).', fieldType: 'image', defaultValue: '', maxLength: 500, richText: false, adminOnly: false, section: 'wishes', group: 'Wishes & Guestbook', chip: 'Content' },
   // The T7 PRO Adjust dock is launched from a dedicated header button now, not a schema field.
+
+  // T7's own bottom nav pill is position:fixed chrome, outside any one stage's box — not a
+  // draggable layer, so it's tuned here (like scene.parallax / scene.ink.tint) rather than in the
+  // Adjust dock. `nav.size` scales the whole pill (padding/gap/buttons together, via transform —
+  // fine for a small fixed-size control with no reflow-sensitive content); `nav.textSize` is an
+  // independent multiplier on just the button labels. (These previously lived, unreachably, inside
+  // TEMPLATE5_EXTRA_FIELDS — an array TEMPLATE_CONFIGS[7] never composes — so the controls existed
+  // in the schema but no couple could ever see them. See lib/__tests__/templateConfigSchema.scope.test.ts.)
+  { key: 'nav.size', label: 'Nav Bar Size', fieldType: 'select', defaultValue: 'default', maxLength: 10, richText: false, adminOnly: false, options: ['compact', 'default', 'large', 'xlarge'], section: 'navigation', group: 'Navigation Bar', chip: 'Display', templateIds: [7] },
+  { key: 'nav.textSize', label: 'Nav Bar Text Size', fieldType: 'select', defaultValue: 'default', maxLength: 10, richText: false, adminOnly: false, options: ['compact', 'default', 'large', 'xlarge'], section: 'navigation', group: 'Navigation Bar', chip: 'Display', templateIds: [7] },
+  // T7's own nav-layout control — see nav.layout under TEMPLATE10_EXTRA_FIELDS for the shared
+  // documentation (this pair only exists twice, once per template, because TEMPLATE7_EXTRA_FIELDS
+  // and TEMPLATE10_EXTRA_FIELDS are never composed together).
+  { key: 'nav.layout', label: 'Nav Bar Layout', fieldType: 'select', defaultValue: 'bottom-pill', maxLength: 12, richText: false, adminOnly: false, options: ['bottom-pill', 'top-pill', 'bottom-bar', 'hidden'], optionLabels: { 'bottom-pill': 'Bottom (pill)', 'top-pill': 'Top (pill)', 'bottom-bar': 'Bottom (full bar)', hidden: 'Hidden' }, section: 'navigation', group: 'Navigation Bar', chip: 'Display', templateIds: [7] },
 ];
 
 // ── Template 8 — Gilded Arch (PARTY) ────────────────────────────────────────
@@ -777,12 +820,16 @@ const TEMPLATE10_EXTRA_FIELDS: TemplateConfigField[] = [
     templateIds: [10],
   },
   // T10's own nav pill is position:fixed chrome, outside any one stage's box — not a draggable
-  // layer, so it's tuned here (like T7's own nav.size/nav.textSize) rather than in the Adjust
-  // dock. Declared fresh rather than reusing T7's entries (those live in TEMPLATE5_EXTRA_FIELDS,
-  // gated to templateIds:[7], and that array is never composed into TEMPLATE_CONFIGS[7] either —
-  // pre-existing and out of scope here).
+  // layer, so it's tuned here (like T7's own nav.size/nav.textSize, and scene.parallax below)
+  // rather than in the Adjust dock. Declared fresh rather than reusing T7's entries because
+  // TEMPLATE7_EXTRA_FIELDS and TEMPLATE10_EXTRA_FIELDS are never composed together.
   { key: 'nav.size', label: 'Nav Bar Size', fieldType: 'select', defaultValue: 'default', maxLength: 10, richText: false, adminOnly: false, options: ['compact', 'default', 'large', 'xlarge'], section: 'navigation', group: 'Navigation Bar', chip: 'Display', templateIds: [10] },
   { key: 'nav.textSize', label: 'Nav Bar Text Size', fieldType: 'select', defaultValue: 'default', maxLength: 10, richText: false, adminOnly: false, options: ['compact', 'default', 'large', 'xlarge'], section: 'navigation', group: 'Navigation Bar', chip: 'Display', templateIds: [10] },
+  { key: 'nav.layout', label: 'Nav Bar Layout', fieldType: 'select', defaultValue: 'bottom-pill', maxLength: 12, richText: false, adminOnly: false, options: ['bottom-pill', 'top-pill', 'bottom-bar', 'hidden'], optionLabels: { 'bottom-pill': 'Bottom (pill)', 'top-pill': 'Top (pill)', 'bottom-bar': 'Bottom (full bar)', hidden: 'Hidden' }, section: 'navigation', group: 'Navigation Bar', chip: 'Display', templateIds: [10] },
+  // T10 shares the same useParallax engine T7 uses but never got the couple-facing control for
+  // it (T7's scene.parallax is declared in TEMPLATE7_EXTRA_FIELDS, which this template never
+  // composes) — added here so both Stage-family templates expose the same knob.
+  { key: 'scene.parallax', label: 'Parallax Depth', hint: 'How far the scenery layers drift apart as you scroll.', fieldType: 'select', defaultValue: 'on', maxLength: 10, richText: false, adminOnly: false, options: ['on', 'subtle', 'off'], section: 'scene', group: 'Sunny Safari Scene', chip: 'Style', templateIds: [10] },
 ];
 
 const TEMPLATE_CONFIGS: Record<number, TemplateConfigField[]> = {

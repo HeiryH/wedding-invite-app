@@ -59,13 +59,14 @@ export const T7_STAGES: Record<string, StageDef> = {
       L({ id: 'countdown', kind: 'slot', slot: 'countdown',                  x: 50, y: 40, w: 74, h: 42, z: 7, order: 5, chain: false, depth: 0.2, anim: 'none', canvasAnchor: true }),
       L({ id: 'cue',       kind: 'slot', slot: 'scrollCue',                  x: 50, y: 95, w: 50, h: 7,  z: 8, order: 6, chain: false, depth: 0 }),
       // Sub-layers of the hero — no visual of their own; the `countdown` slot applies each one's
-      // nudge/hide/animation to the matching element (see HeroSlots). Nested under `countdown` in
-      // the Adjust panel via `parent`. `order` gives the default staggered entrance cascade.
-      L({ id: 'hero-theme', kind: 'anchor', parent: 'countdown', label: 'Theme Label',     order: 0 }),
-      L({ id: 'hero-bride', kind: 'anchor', parent: 'countdown', label: 'Bride Name',      order: 1 }),
-      L({ id: 'hero-groom', kind: 'anchor', parent: 'countdown', label: 'Groom Name',      order: 2 }),
-      L({ id: 'hero-date',  kind: 'anchor', parent: 'countdown', label: 'Date',            order: 3 }),
-      L({ id: 'hero-timer', kind: 'anchor', parent: 'countdown', label: 'Countdown Timer', order: 4 }),
+      // nudge/hide/animation/style to the matching element (see HeroSlots). Nested under
+      // `countdown` in the Adjust panel via `parent`. `order` gives the default staggered entrance
+      // cascade. `styleable` gives each its own Style tab (font/color/spacing/border/shadow),
+      // applied via subLayerStyle.ts — the standard STAGE hero structure (see CLAUDE.md).
+      L({ id: 'hero-bride', kind: 'anchor', parent: 'countdown', label: 'Bride Name',      order: 1, styleable: true }),
+      L({ id: 'hero-groom', kind: 'anchor', parent: 'countdown', label: 'Groom Name',      order: 2, styleable: true }),
+      L({ id: 'hero-date',  kind: 'anchor', parent: 'countdown', label: 'Date',            order: 3, styleable: true }),
+      L({ id: 'hero-timer', kind: 'anchor', parent: 'countdown', label: 'Countdown Timer', order: 4, styleable: true }),
     ],
     desktop: {
       arch:      { y: 38, w: 43 },  // 40 / 0.933 — see the mobile `w: 99` note above
@@ -198,6 +199,10 @@ export const T7_STAGES: Record<string, StageDef> = {
       L({ id: 'potR',      kind: 'img',  src: 'ceremony/right-plant-pot.webp', x: 90, y: 77, w: 25,  z: 3, order: 3, depth: 1.4 }),
       L({ id: 'title',     kind: 'slot', slot: 'itineraryTitle',                x: 50, y: 16, w: 64, h: 8,  z: 6, order: 0, chain: false, depth: 0.3, label: 'Schedule Title' }),
       L({ id: 'programme', kind: 'slot', slot: 'itineraryList',                 x: 50, y: 54, w: 78, h: 54, z: 5, order: 1, chain: false, depth: 0.2, label: 'Schedule List' }),
+      // One shared Time style and one shared Label style, applied to every rendered item — see
+      // ItineraryListSlot/subLayerStyle.ts.
+      L({ id: 'itin-time',  kind: 'anchor', parent: 'programme', label: 'Time',  order: 0, styleable: true }),
+      L({ id: 'itin-title', kind: 'anchor', parent: 'programme', label: 'Label', order: 1, styleable: true }),
     ],
     desktop: {
       pillars:   { y: 49, w: 101, hidden: false },
@@ -391,7 +396,6 @@ export const T7_DEFAULTS: Record<string, string> = {
   'scene.ceremony.layout': 'stack',
   'scene.ink.tint': '#3D3833',
   'scene.paper.grain': 'true',
-  'invite.theme_label': 'Roman Garden',
   'ceremony.panel.couple_title': 'The Bride & Groom',
   'ceremony.panel.details_title': 'Ceremony Details',
   'rsvp.seating_prompt': 'Choose your table',

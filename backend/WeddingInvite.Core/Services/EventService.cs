@@ -171,18 +171,33 @@ namespace WeddingInvite.Core.Services
             evt.MaxCapacity = updateDto.MaxCapacity;
             evt.ShowCapacityWarning = updateDto.ShowCapacityWarning;
 
-            var baseSlug = SlugGenerator.GenerateBaseSlug(evt.EventType, updateDto.Name1, updateDto.Name2, updateDto.EventTitle);
+            // Slug is intentionally NOT touched here. It used to be regenerated from the names on
+            // every save, which silently moved the public URL and broke every link already shared
+            // whenever a couple fixed a typo'd name. The slug is now set once at creation
+            // (CreateAsync) and only ever changes through the explicit SetSlugAsync below, which a
+            // super admin drives deliberately with full knowledge that old links will die.
 
-            // Regenerating the slug on every save could collide with another event — auto-suffix
-            // rather than fail (mirrors AuthController.SelfRegister's retry loop), guarding against
-            // comparing the event against its own unchanged slug so a no-op update doesn't false-positive.
-            var slug = baseSlug;
-            var suffix = 2;
-            while (await _eventRepo.SlugExistsAsync(slug) && !string.Equals(slug, evt.Slug, StringComparison.Ordinal))
-                slug = $"{baseSlug}-{suffix++}";
+            await _eventRepo.UpdateAsync(evt);
+            return await MapToDto(evt);
+        }
+
+        public async Task<EventDto> SetSlugAsync(int id, string slug)
+        {
+            var evt = await _eventRepo.GetByIdAsync(id);
+            if (evt == null)
+                throw new KeyNotFoundException($"Event with ID {id} not found");
+
+            slug = (slug ?? string.Empty).ToLower().Trim();
+
+            if (!IsValidSlug(slug))
+                throw new InvalidOperationException("Slug can only contain letters, numbers, and hyphens");
+
+            // A no-op rename (setting it to what it already is) must not trip the collision check
+            // against itself.
+            if (!string.Equals(slug, evt.Slug, StringComparison.Ordinal) && await _eventRepo.SlugExistsAsync(slug))
+                throw new InvalidOperationException($"Slug '{slug}' is already taken");
 
             evt.Slug = slug;
-
             await _eventRepo.UpdateAsync(evt);
             return await MapToDto(evt);
         }

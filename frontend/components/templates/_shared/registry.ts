@@ -91,3 +91,53 @@ export const TEMPLATE_ENGINES: Record<number, TemplateEngine> = {
     stageIds: (ctx) => ctx.codes.flatMap((c) => T10_STAGE_GROUPS[c] ?? []),
   },
 };
+
+/**
+ * DOM `id` a template actually renders for a given rail block code, so the customize page's rail
+ * can scroll the preview to an exact element (`PREVIEW_SCROLL {sectionId}`) instead of an
+ * approximate `index/total` fraction.
+ *
+ * The flow+overlay Classic family (T1/T2/T3/T5/T6/T8/T9) renders `id="<code>"` verbatim
+ * (`welcome`, `walimah`, `rsvp`, `itinerary`, `wishes`, `photobooth`) — that's the default below.
+ * Two families need real translation, not a literal pass-through:
+ * - **Template 4** — sections are prefixed (`t4-rsvp`, `t4-wishes`, …) and welcome is `id="hero"`.
+ * - **The Stage compositor (T7/T10)** — `Stage.tsx` sets `id={def.id}`, the *stage* id, not the
+ *   rail's block code. A block can span several stages (T7's `walimah` block alone covers the
+ *   `ceremony-walimah`/`ceremony-couple`/`ceremony-details` beats — see `STAGE_GROUPS` below), so
+ *   only the block's *first* stage id is a valid target; a block code that happens to equal its
+ *   one stage's id (`welcome`, `rsvp`, `wishes`, `photobooth`) was scrolling correctly by
+ *   coincidence, `walimah`/`itinerary` never were (no element in the DOM has literally `id="walimah"`
+ *   or `id="itinerary"` on these two templates).
+ *
+ * `details`/`music` have no on-page section (`scrollFractionFor` already returns 0 for them), so
+ * they're left for the fraction fallback rather than given a fake id here.
+ */
+const T4_SECTION_IDS: Record<string, string> = {
+  welcome: 'hero',
+  // Both walimah (ceremony details) and itinerary content render inside the same
+  // countdown/details block (id="t4-details") — `t4-schedule` is a separate, purely decorative
+  // dark section (torn-edge + mid photo) with no walimah/itinerary content of its own.
+  walimah: 't4-details',
+  itinerary: 't4-details',
+  rsvp: 't4-rsvp',
+  wishes: 't4-wishes',
+  photobooth: 't4-photobooth',
+};
+
+export function sectionAnchorId(
+  templateId: number,
+  block: string,
+  ctx?: { draftConfig?: Record<string, string> },
+): string | undefined {
+  if (templateId === 4) return T4_SECTION_IDS[block];
+  if (block === 'details' || block === 'music' || block === 'navigation') return undefined;
+  if (templateId === 7) {
+    // In the compiled ceremony row, the walimah/couple/details beats' own art is stripped and the
+    // shared "Ceremony Backdrop" (ceremony-rail) leads the room — land there instead of the first
+    // (now art-less) beat, matching how the Adjust panel's own stage tabs already handle this.
+    if (block === 'walimah' && ctx?.draftConfig?.['scene.ceremony.layout'] === 'row') return 'ceremony-rail';
+    return STAGE_GROUPS[block]?.[0];
+  }
+  if (templateId === 10) return T10_STAGE_GROUPS[block]?.[0];
+  return block;
+}

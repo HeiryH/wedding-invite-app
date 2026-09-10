@@ -368,7 +368,8 @@ export type TemplateConfigBlock =
   | 'itinerary'
   | 'wishes'
   | 'photobooth'
-  | 'music';
+  | 'music'
+  | 'navigation';
 
 export interface TemplateConfigField {
   key: string;

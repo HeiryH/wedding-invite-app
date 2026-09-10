@@ -16,7 +16,6 @@ export interface FairyConfig {
   bloom: boolean;
   fogColor: string;
   environment: Environment;
-  enchantmentLabel: string;
   fireflyGreeting: string;
 }
 
@@ -35,7 +34,6 @@ export function useFairyConfig(customConfig?: Record<string, string>): FairyConf
       bloom: (c['scene.bloom'] ?? 'true') === 'true',
       fogColor: c['scene.fog.color'] ?? T6_DEFAULTS.fogColor,
       environment: (c['scene.environment'] ?? T6_DEFAULTS.environment) as Environment,
-      enchantmentLabel: c['invite.enchantment_label'] ?? T6_DEFAULTS.enchantmentLabel,
       fireflyGreeting: c['invite.firefly_greeting'] ?? T6_DEFAULTS.fireflyGreeting,
     };
   }, [customConfig]);

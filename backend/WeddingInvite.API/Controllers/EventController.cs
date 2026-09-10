@@ -127,6 +127,27 @@ namespace WeddingInvite.API.Controllers
             }
         }
 
+        // PUT: api/event/5/slug  (deliberately move the public URL — SUPER_ADMIN only; every
+        // link already shared under the old slug stops resolving the moment this runs)
+        [HttpPut("{id}/slug")]
+        [Authorize(Roles = "SUPER_ADMIN")]
+        public async Task<ActionResult<EventDto>> SetSlug(int id, [FromBody] SetSlugDto dto)
+        {
+            try
+            {
+                var evt = await _eventService.SetSlugAsync(id, dto.Slug);
+                return Ok(evt);
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(new { message = ex.Message });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
         // PUT: api/event/5/toggle-active
         [HttpPut("{id}/toggle-active")]
         [Authorize(Roles = "SUPER_ADMIN,HOST_ADMIN")]

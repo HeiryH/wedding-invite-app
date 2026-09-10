@@ -21,8 +21,25 @@ import { SLOT_REGISTRY, sheetLayerGroups, stageHasContent, visibleSlotLayers } f
 import { SlotFlowProviders } from '@/components/templates/_shared/slots/FlowProviders';
 import SheetHost from '@/components/templates/_shared/SheetHost';
 import { fontVar } from '@/lib/fonts/registry';
-import NavBar from './components/NavBar';
+import TemplateNav, { type NavLayout } from '@/components/templates/_shared/nav/TemplateNav';
 import styles from './Template7.module.css';
+
+// Preserves T7's pre-consolidation nav pill pixel-for-pixel (its .nav/.navBtn/.navActive rules,
+// now removed from Template7.module.css, are reproduced here as --nav-* tokens for the shared
+// _shared/nav/TemplateNav). Notably square corners (T7 never set a border-radius on its nav).
+const T7_NAV_VARS: CSSProperties = {
+  '--nav-bg': 'rgba(61, 56, 51, 0.92)',
+  '--nav-border': 'rgba(239, 235, 225, 0.25)',
+  '--nav-radius': '0',
+  '--nav-font': 'var(--t7-display)',
+  '--nav-btn-pad-x': '0.7rem',
+  '--nav-btn-size': '0.6rem',
+  '--nav-btn-weight': 'normal',
+  '--nav-btn-tracking': '0.16em',
+  '--nav-color': 'rgba(239, 235, 225, 0.62)',
+  '--nav-active-bg': 'var(--t7-cream)',
+  '--nav-active-color': 'var(--t7-ink)',
+} as CSSProperties;
 
 interface Template7Props {
   wedding: Wedding;
@@ -114,14 +131,19 @@ export default function Template7({
   const grain = t('scene.paper.grain', 'true') !== 'false';
   const parallaxMode = t('scene.parallax', 'on');
   const ceremonyLayout = t('scene.ceremony.layout', 'stack');
-  // The bottom nav pill is position:fixed chrome — not a stage-bound layer, so it's tuned via
-  // plain config (like scene.parallax) rather than the Adjust dock. See nav.size/nav.textSize in
-  // templateConfigSchema.ts.
+  // The nav pill is position:fixed chrome — not a stage-bound layer, so it's tuned via plain
+  // config (like scene.parallax) rather than the Adjust dock. See nav.size/nav.textSize/nav.layout
+  // in templateConfigSchema.ts.
   const navScale = NAV_SIZE_SCALE[t('nav.size', 'default')] ?? 1;
   const navTextScale = NAV_SIZE_SCALE[t('nav.textSize', 'default')] ?? 1;
+  const navLayout = t('nav.layout', 'bottom-pill') as NavLayout;
 
-  // Adjust panel's "Card" section — glassmorphism for every `.panel`-based slot at once
-  // (walimah/couple/details/RSVP/wishes/...), mirroring Template 5's own frosted-glass card.
+  // Adjust panel's "Card" section — an explicit style pick for every `.panel`-based slot at once
+  // (walimah/couple/details/RSVP/wishes/...), not an implicit default. 'none' (the default here)
+  // leaves --slot-panel-bg unset entirely — slots.module.css's own `.panel` fallback is plain
+  // `transparent` and `.sheetCard`'s is a solid `#fdfaf5`, so a popup (RSVP/wishes) always stays
+  // legible while inline content (walimah/couple/details) shows nothing until the couple picks a
+  // look. 'radial' and 'glass' each build a complete `--slot-panel-bg` themselves, mirroring T10.
   // `cardStyle` defaults to 'glass' whenever a pre-existing `cardBlur` value is on record (a
   // config saved before the style dropdown existed), so the Adjust panel's Card section stays in
   // sync with what's actually rendering instead of showing "None" over a real applied blur.
@@ -131,6 +153,18 @@ export default function Template7({
   const cardTint = t('t7.layout.slotTheme.cardTint', '#fffbf4');
   const cardTintOpacity = Number(t('t7.layout.slotTheme.cardTintOpacity', '0.45')) || 0.45;
   const cardRadius = Number(t('t7.layout.slotTheme.cardRadius', '24')) || 24;
+  const cardStyleVars: CSSProperties =
+    cardStyle === 'glass' ? ({
+      '--slot-panel-bg': `color-mix(in srgb, ${cardTint} ${Math.round(cardTintOpacity * 100)}%, transparent)`,
+      '--slot-panel-blur': `blur(${cardBlurPx}px) saturate(140%)`,
+      '--slot-panel-border': '1px solid rgba(255, 255, 255, 0.45)',
+      '--slot-panel-radius': `${cardRadius}px`,
+      '--slot-panel-shadow': '0 1px 2px rgba(120,86,70,0.04), 0 8px 24px rgba(214,168,150,0.12), 0 24px 60px rgba(180,130,110,0.08)',
+    } as CSSProperties)
+    : cardStyle === 'radial' ? ({
+      '--slot-panel-bg': 'radial-gradient(ellipse at center, rgba(244, 241, 234, 0.82) 0%, rgba(244, 241, 234, 0.66) 45%, rgba(244, 241, 234, 0.28) 72%, transparent 88%)',
+    } as CSSProperties)
+    : ({} as CSSProperties);
 
   const slotProps: SlotProps = useMemo(
     () => ({
@@ -175,7 +209,7 @@ export default function Template7({
   // The compiled-row shared art lives in its own stage (row-relative coordinates), resolved
   // independently so it isn't a scroll section. Only consumed when the ceremony renders as a row.
   const ceremonyRail = useStageLayout('t7', T7_STAGES, CEREMONY_RAIL_IDS, breakpoint, customConfig);
-  const { rootRef, seen } = useStageReveal(reduced);
+  const { rootRef, seen } = useStageReveal(reduced, stageIds.join(','));
   useParallax(rootRef, parallaxMode, reduced);
 
   // Re-group the flat resolved `stages` back into their sections, so a background-sharing group
@@ -268,25 +302,17 @@ export default function Template7({
           fontVar(customConfig?.['t7.layout.slotTheme.bodyFont'])
           ?? fontVar(customConfig?.['t7.layout.slotTheme.headingFont'])
           ?? fontVar('eb-garamond'),
-        // T7's own baseline scrim — its shipped identity, independent of the optional Card style
-        // below. Selecting "None" in the Card dropdown turns off the *optional* glass overlay
-        // only; it doesn't strip T7's own always-on look, which was never part of that system.
+        // T7's hero scrim (behind the countdown/couple names) stays always-on regardless of Card
+        // style — it's protecting legibility over the busiest single spot on the page, not a
+        // decorative card a couple would want to switch off. `--slot-panel-*` (every other
+        // content slot — walimah/couple/details/RSVP/wishes) is the opposite: 'none' (default)
+        // leaves it fully transparent, and only 'radial'/'glass' add a backing, each building its
+        // own complete `--slot-panel-bg` — see cardStyleVars below.
         '--slot-hero-scrim-1': 'rgba(244, 241, 234, 0.88)',
         '--slot-hero-scrim-2': 'rgba(244, 241, 234, 0.62)',
-        '--slot-panel-scrim-1': 'rgba(244, 241, 234, 0.82)',
-        '--slot-panel-scrim-2': 'rgba(244, 241, 234, 0.66)',
-        '--slot-panel-scrim-3': 'rgba(244, 241, 234, 0.28)',
         '--slot-accent-ink': '#efebe1',
         '--slot-radius': '0',
-        '--t7-nav-scale': navScale,
-        '--t7-nav-text-scale': navTextScale,
-        ...(cardStyle === 'glass' ? {
-          '--slot-panel-bg': `color-mix(in srgb, ${cardTint} ${Math.round(cardTintOpacity * 100)}%, transparent)`,
-          '--slot-panel-blur': `blur(${cardBlurPx}px) saturate(140%)`,
-          '--slot-panel-border': '1px solid rgba(255, 255, 255, 0.45)',
-          '--slot-panel-radius': `${cardRadius}px`,
-          '--slot-panel-shadow': '0 1px 2px rgba(120,86,70,0.04), 0 8px 24px rgba(214,168,150,0.12), 0 24px 60px rgba(180,130,110,0.08)',
-        } : null),
+        ...cardStyleVars,
       } as CSSProperties}
     >
       {stageGroups.map(({ code, items }) => {
@@ -341,7 +367,9 @@ export default function Template7({
             bgScale={r.bgScale}
             bgSrc={r.bgSrc}
             seen={seen.has(r.def.id) || reduced}
-            slotProps={slotProps}
+            // Per-stage: lets a slot resolve its own sub-layers (the hero, the itinerary list's
+            // Time/Label) via SlotProps.stageLayers — see types.ts's doc comment.
+            slotProps={{ ...slotProps, stageLayers: r.layers }}
             eager={r.def.id === firstStageId}
             // Outline the layer the parent's Adjust dock currently has selected.
             editing={editing && editor?.selectedStage === r.def.id}
@@ -357,7 +385,13 @@ export default function Template7({
       <div className={styles.tint} style={{ background: inkTint }} aria-hidden />
       {grain && <div className={styles.grain} aria-hidden />}
 
-      <NavBar items={navItems} active={activeSection} onNav={navTo} />
+      <TemplateNav
+        items={navItems}
+        active={activeSection}
+        onNav={navTo}
+        layout={navLayout}
+        vars={{ ...T7_NAV_VARS, '--nav-scale': navScale, '--nav-text-scale': navTextScale } as CSSProperties}
+      />
 
       {musicUrl && (
         <>

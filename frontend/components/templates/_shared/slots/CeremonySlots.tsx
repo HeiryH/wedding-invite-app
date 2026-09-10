@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { calendarLinks } from '@/lib/templateUtils';
 import type { SlotProps } from '../types';
+import { subLayerStyle, subLayersOf } from './subLayerStyle';
 import styles from './slots.module.css';
 
 /**
@@ -143,7 +144,14 @@ export function CeremonyDetailsSlot({ wedding, t }: SlotProps) {
 
 export const ItineraryTitleSlot = makeTitleSlot('itinerary.title', 'Aturcara Majlis');
 
-export function ItineraryListSlot({ itinerary }: SlotProps) {
+export function ItineraryListSlot({ itinerary, stageLayers, layer }: SlotProps) {
+  // One shared Time sub-layer and one shared Label sub-layer, applied uniformly to every rendered
+  // item — not per-item (see stages.ts's comment by these two sub-layers). Same structure as the
+  // hero (HeroSlots.tsx); the difference is these apply as plain inline style, not through
+  // HeroPiece, since there's no single element to nudge — N repeated items, not one piece.
+  const sub = subLayersOf(stageLayers, layer?.id ?? 'programme');
+  const timeStyle = subLayerStyle(sub['itin-time']);
+  const titleStyle = subLayerStyle(sub['itin-title']);
   return (
     <div className={styles.panel}>
       <ol className={styles.itineraryList}>
@@ -151,8 +159,8 @@ export function ItineraryListSlot({ itinerary }: SlotProps) {
           <li key={item.itineraryItemId} className={styles.itineraryItem}>
             {/* The old Programme scene silently dropped the time — a schedule without times
                 isn't a schedule. `detail` is where the couple types it. */}
-            {item.detail && <span className={styles.itineraryTime}>{item.detail}</span>}
-            <h4 className={styles.itineraryTitle}>{item.label}</h4>
+            {item.detail && <span className={styles.itineraryTime} style={timeStyle}>{item.detail}</span>}
+            <h4 className={styles.itineraryTitle} style={titleStyle}>{item.label}</h4>
           </li>
         ))}
       </ol>

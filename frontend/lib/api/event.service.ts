@@ -61,6 +61,14 @@ export const eventService = {
     return response.data;
   },
 
+  // Deliberately move the event's public URL. SUPER_ADMIN only — update() never touches the
+  // slug, so this is the only way it changes after creation. Every link already shared under
+  // the old slug stops resolving the moment this succeeds.
+  setSlug: async (id: number, slug: string): Promise<Event> => {
+    const response = await apiClient.put<Event>(`/event/${id}/slug`, { slug });
+    return response.data;
+  },
+
   // Delete event
   delete: async (id: number): Promise<void> => {
     await apiClient.delete(`/event/${id}`);

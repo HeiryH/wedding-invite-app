@@ -100,24 +100,15 @@
 }
 
 /* ── Hero (the `countdown` slot) ─────────────────────────────────────────── */
-.heroInner {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  height: 100%;
-  text-align: center;
-  /* The arch opening behind this is busy engraving — without a scrim the names disappear. */
-  background: radial-gradient(ellipse at center, rgba(244, 241, 234, 0.88) 0%, rgba(244, 241, 234, 0.62) 55%, transparent 78%);
-}
-.themeLabel {
-  font-family: var(--t7-display);
-  font-size: clamp(0.6rem, 1.5cqi, 0.78rem);
-  letter-spacing: 0.32em;
-  text-transform: uppercase;
-  color: var(--t7-ink-soft);
-  margin: 0 0 0.9rem;
-}
+/* .heroInner and .panel (removed below) had a hard-coded gradient duplicating what
+   _shared/slots/slots.module.css's own .heroInner/.panel now control — but both were dead code:
+   nothing in this template imports styles from this file for hero/panel content any more
+   (HeroSlots.tsx/CeremonySlots.tsx/etc. all use the shared module's classes instead), confirmed
+   by grepping this template's own .tsx files for every class name from here through
+   .itineraryTitle below — all zero references. That whole range (.coupleNames, .panelTitle,
+   .coupleRow, .detailRow, .itineraryList, ...) is equally dead but left in place for now — a
+   separate, larger cleanup; only the two gradient rules that were actively confusing (visibly
+   contradicting the shared file they were extracted from) are removed here. */
 .coupleNames {
   display: flex;
   flex-direction: column;
@@ -208,25 +199,7 @@
   50%      { transform: translateY(5px); }
 }
 
-/* ── Panel: the parchment card every content slot sits on ────────────────── */
-.panel {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  min-height: 100%;
-  padding: clamp(1rem, 3cqi, 1.6rem);
-  text-align: center;
-  /* Slots float over engraved stone, so text needs *some* backing to stay legible. It has to be
-     a soft radial falloff, not a filled rectangle: several stages put an ornate frame directly
-     behind the slot, and a hard-edged wash paints straight over the artwork it's sitting in. */
-  background: radial-gradient(
-    ellipse at center,
-    rgba(244, 241, 234, 0.82) 0%,
-    rgba(244, 241, 234, 0.66) 45%,
-    rgba(244, 241, 234, 0.28) 72%,
-    transparent 88%
-  );
-}
+/* ── Panel: the parchment card every content slot sits on (dead — see note above) ────────── */
 .panelTitle {
   font-family: var(--t7-display);
   font-size: clamp(1.05rem, 3cqi, 1.7rem);
@@ -601,46 +574,8 @@
   margin: 0.4rem 0 0;
 }
 
-.nav {
-  position: fixed;
-  left: 50%;
-  bottom: 1rem;
-  /* nav.size (templateConfigSchema.ts) — the whole pill is a small, fixed-size, non-reflowing
-     control, so scaling it as one unit is fine (unlike form/content slots, there's nothing here
-     that needs to reflow). */
-  transform: translateX(-50%) scale(var(--t7-nav-scale, 1));
-  z-index: 40;
-  display: flex;
-  gap: 0.15rem;
-  padding: 0.3rem;
-  max-width: calc(100cqi - 2rem);
-  overflow-x: auto;
-  scrollbar-width: none;
-  background: rgba(61, 56, 51, 0.92);
-  border: 1px solid rgba(239, 235, 225, 0.25);
-  backdrop-filter: blur(6px);
-}
-.nav::-webkit-scrollbar { display: none; }
-
-.navBtn {
-  padding: 0.42rem 0.7rem;
-  background: none;
-  border: none;
-  cursor: pointer;
-  white-space: nowrap;
-  font-family: var(--t7-display);
-  /* nav.textSize (templateConfigSchema.ts) — independent of nav.size's overall pill scale, for
-     bigger/smaller labels without changing the pill's footprint. */
-  font-size: calc(0.6rem * var(--t7-nav-text-scale, 1));
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  color: rgba(239, 235, 225, 0.62);
-  transition: color 0.2s ease, background 0.2s ease;
-}
-.navActive {
-  background: var(--t7-cream);
-  color: var(--t7-ink);
-}
+/* Nav bar itself moved to the shared _shared/nav/TemplateNav — this template only supplies its
+   theme tokens (--nav-*), passed inline as the `vars` prop at the render site in index.tsx. */
 
 .musicBtn {
   position: fixed;

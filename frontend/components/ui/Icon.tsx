@@ -74,6 +74,7 @@ const PATHS: Record<string, string> = {
   undo: "M3 7v6h6 M3 13A9 9 0 1 1 5.5 5.5L3 7",
   redo: "M21 7v6h-6 M21 13A9 9 0 1 0 18.5 5.5L21 7",
   save: "M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z M17 21v-8H7v8 M7 3v5h8",
+  "refresh-cw": "M23 4v6h-6 M1 20v-6h6 M3.51 9a9 9 0 0 1 14.85-3.36L23 10 M1 14l4.64 4.36A9 9 0 0 0 20.49 15",
 };
 
 export type IconName = keyof typeof PATHS;

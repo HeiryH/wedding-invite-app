@@ -72,17 +72,6 @@ export default function WelcomeSection({
 
       {/* Content */}
       <div className={styles.welcomeContent}>
-        <div style={a('welcome', 'badge')}>
-          <motion.span
-            className={styles.enchantmentBadge}
-            initial={{ opacity: 0, y: -12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3, duration: 0.7 }}
-          >
-            ✦ {config.enchantmentLabel} ✦
-          </motion.span>
-        </div>
-
         <div style={a('welcome', 'greeting')}>
           <motion.p
             className={`${styles.fireflyGreeting} ${alignClass(t('invite.heading.align', 'center'))}`}

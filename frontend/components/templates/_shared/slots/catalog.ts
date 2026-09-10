@@ -19,10 +19,10 @@ const base: Omit<Layer, 'id' | 'kind' | 'slot'> = {
 /** In `_shared/slots/`'s render order (Layer.tsx's `case 'slot'`), not the visual catalog order —
  *  see `SLOT_CATALOG_GROUPS` for how the authoring UI actually lists these. */
 export const SLOT_CATALOG: SlotCatalogEntry[] = [
-  { id: 'countdown', label: 'Countdown & Names (legacy, all-in-one)', group: 'Hero',
+  { id: 'countdown', label: 'Countdown & Names (bride/groom)', group: 'Hero',
     defaultLayer: { ...base, y: 40, w: 74, h: 42, z: 7, chain: false, depth: 0.2, anim: 'none' } },
-  { id: 'heroTheme', label: 'Theme Badge', group: 'Hero',
-    defaultLayer: { ...base, y: 30, w: 60, h: 8, z: 6, depth: 0.3 } },
+  { id: 'eventHero', label: 'Event Hero (title, names, date, venue, timer)', group: 'Hero',
+    defaultLayer: { ...base, y: 40, w: 88, h: 40, z: 7, chain: false, depth: 0.2, anim: 'none' } },
   { id: 'heroDate', label: 'Wedding Date', group: 'Hero',
     defaultLayer: { ...base, y: 60, w: 60, h: 10, depth: 0.2 } },
   { id: 'timer', label: 'Countdown Timer (only)', group: 'Hero',

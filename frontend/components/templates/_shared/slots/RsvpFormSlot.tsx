@@ -51,7 +51,7 @@ function isActiveStep(
   return thisStep === 'form' ? !seatingSelected : seatingSelected;
 }
 
-export function RsvpFormSlot({ wedding, onRSVP, seatingEnabled, editing, editor }: SlotProps) {
+export function RsvpFormSlot({ wedding, onRSVP, seatingEnabled, editing, editor, t }: SlotProps) {
   const paxLimit = (wedding.maxPax ?? 0) > 0 ? Math.min(10, wedding.maxPax!) : 10;
   // WEDDING is the only event type with two "sides" to ask about — a PARTY/CEREMONY guest has one
   // honoree or none at all. Template 8 already posts `brideOrGroomSide: null` for PARTY; mirrored
@@ -90,14 +90,14 @@ export function RsvpFormSlot({ wedding, onRSVP, seatingEnabled, editing, editor 
   return (
     <div className={styles.panel}>
       {closed ? (
-        <p className={styles.notice}>RSVPs are closed — thank you for your interest.</p>
+        <p className={styles.notice}>{t('rsvp.closed_message', 'RSVPs are closed — thank you for your interest.')}</p>
       ) : done ? (
-        <p className={styles.notice}>Thank you. We look forward to celebrating with you.</p>
+        <p className={styles.notice}>{t('rsvp.done_message', 'Thank you. We look forward to celebrating with you.')}</p>
       ) : (
         <form onSubmit={handleSubmit} className={styles.form}>
           <input
             className={styles.field}
-            placeholder="Full name *"
+            placeholder={t('rsvp.name_placeholder', 'Full name *')}
             required
             value={form.guestName}
             onChange={(e) => setForm((f) => ({ ...f, guestName: e.target.value }))}
@@ -107,13 +107,13 @@ export function RsvpFormSlot({ wedding, onRSVP, seatingEnabled, editing, editor 
             <input
               className={styles.field}
               type="email"
-              placeholder="Email"
+              placeholder={t('rsvp.email_placeholder', 'Email')}
               value={form.email}
               onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
             />
             <input
               className={styles.field}
-              placeholder="Phone"
+              placeholder={t('rsvp.phone_placeholder', 'Phone')}
               value={form.phoneNumber}
               onChange={(e) => setForm((f) => ({ ...f, phoneNumber: e.target.value }))}
             />
@@ -126,8 +126,8 @@ export function RsvpFormSlot({ wedding, onRSVP, seatingEnabled, editing, editor 
                 value={form.brideOrGroomSide}
                 onChange={(e) => setForm((f) => ({ ...f, brideOrGroomSide: e.target.value as 'Bride' | 'Groom' }))}
               >
-                <option value="Bride">Bride&apos;s side</option>
-                <option value="Groom">Groom&apos;s side</option>
+                <option value="Bride">{t('rsvp.bride_side_label', "Bride's side")}</option>
+                <option value="Groom">{t('rsvp.groom_side_label', "Groom's side")}</option>
               </select>
             )}
             <input
@@ -149,27 +149,27 @@ export function RsvpFormSlot({ wedding, onRSVP, seatingEnabled, editing, editor 
               className={`${styles.choice} ${form.isAttending ? styles.choiceActive : ''}`}
               onClick={() => setForm((f) => ({ ...f, isAttending: true }))}
             >
-              Joyfully accept
+              {t('rsvp.attending_label', 'Joyfully accept')}
             </button>
             <button
               type="button"
               className={`${styles.choice} ${!form.isAttending ? styles.choiceActive : ''}`}
               onClick={() => setForm((f) => ({ ...f, isAttending: false }))}
             >
-              Regretfully decline
+              {t('rsvp.declining_label', 'Regretfully decline')}
             </button>
           </div>
 
           <input
             className={styles.field}
-            placeholder="Song request (optional)"
+            placeholder={t('rsvp.song_placeholder', 'Song request (optional)')}
             value={form.songRequest}
             onChange={(e) => setForm((f) => ({ ...f, songRequest: e.target.value }))}
           />
 
           <div className={styles.formActions}>
             <button type="submit" className={`${styles.plaque} ${styles.plaqueBtn}`} disabled={submitting}>
-              {submitting ? 'Sending…' : form.isAttending && seatingEnabled ? 'Continue' : 'Send RSVP'}
+              {submitting ? 'Sending…' : form.isAttending && seatingEnabled ? t('rsvp.continue_label', 'Continue') : t('rsvp.submit_label', 'Send RSVP')}
             </button>
           </div>
         </form>
@@ -202,7 +202,7 @@ export function RsvpSeatingSlot({ wedding, onRSVP, tables, editing, editor, t }:
   return (
     <div className={styles.panel}>
       {done ? (
-        <p className={styles.notice}>Thank you. We look forward to celebrating with you.</p>
+        <p className={styles.notice}>{t('rsvp.done_message', 'Thank you. We look forward to celebrating with you.')}</p>
       ) : (
         <form onSubmit={(e) => { e.preventDefault(); void send(); }} className={styles.form}>
           <SeatingChart
@@ -211,13 +211,17 @@ export function RsvpSeatingSlot({ wedding, onRSVP, tables, editing, editor, t }:
             selectedTableId={selectedTableId}
             onSelect={setSelectedTableId}
             prompt={t('rsvp.seating_prompt', 'Choose your table')}
+            partyPrompt={t('rsvp.seating_party_prompt', 'Showing tables that can seat your party of')}
+            emptyMessage={t('rsvp.seating_empty_message', 'No tables have been set up yet — your seat will be assigned by the couple.')}
+            fullLabel={t('rsvp.seating_full_label', 'Full')}
+            seatsLeftLabel={t('rsvp.seating_seats_left_label', 'seats left')}
           />
           <div className={styles.formActions}>
             <button type="button" className={styles.linkBtn} onClick={() => setStep('form')}>
-              Back
+              {t('rsvp.seating_back_label', 'Back')}
             </button>
             <button type="submit" className={`${styles.plaque} ${styles.plaqueBtn}`} disabled={submitting}>
-              {submitting ? 'Sending…' : 'Send RSVP'}
+              {submitting ? 'Sending…' : t('rsvp.submit_label', 'Send RSVP')}
             </button>
           </div>
         </form>

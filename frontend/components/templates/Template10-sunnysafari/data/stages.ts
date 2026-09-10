@@ -54,39 +54,22 @@ export const T10_STAGES: Record<string, StageDef> = {
       L({ id: 'cloud-mr', kind: 'img', src: 'welcome/cloud-mid-right.webp', x: 82.1, y: 20, w: 28.1, z: 2, order: 0 }),
       // ── Field (mid-ground) ───────────────────────────────────────────────
       L({ id: 'zebra', kind: 'img', src: 'welcome/zebra.webp', x: 24.8, y: 44.2, w: 34.4, z: 3, order: 1 }),
-      // ── Hero text block — plain `kind:'text'` layers with {{binding}} tokens (bindings.ts),
-      // not a bespoke slot: this event type has no "sides" and no countdown in the reference
-      // design, so there's nothing here a shared slot buys over a couple of text layers the
-      // Adjust panel can already restyle (color/font/shadow/curve) like any other text. Being
-      // `kind:'text'` also means these default INTO the art canvas (see Stage.tsx's `inCanvas`),
-      // so the copy stays welded to the sky/zebra composition on every device shape, exactly like
-      // the reference.
-      L({
-        id: 'eyebrow', kind: 'text', text: "You're invited to",
-        x: 50, y: 24, w: 70, h: 5, z: 7, order: 2, chain: false, depth: 0.3,
-        color: INK, fontFamily: 'nunito', fontWeight: 700, fontSize: 3.4, letterSpacing: 0.04,
-        label: 'Eyebrow',
-      }),
-      L({
-        id: 'title', kind: 'text', text: '{{eventTitle}}',
-        x: 50, y: 34, w: 84, h: 20, z: 7, order: 3, chain: false, depth: 0.25,
-        color: INK, fontFamily: 'baloo-2', fontWeight: 800, fontSize: 10, label: 'Event Title',
-      }),
-      L({
-        id: 'names', kind: 'text', text: '{{name1}} & {{name2}}',
-        x: 50, y: 46.5, w: 74, h: 7, z: 7, order: 4, chain: false, depth: 0.2,
-        color: INK, fontFamily: 'baloo-2', fontWeight: 700, fontSize: 5.6, label: 'Names',
-      }),
-      L({
-        id: 'date', kind: 'text', text: '{{date:long}}',
-        x: 50, y: 51.5, w: 78, h: 5, z: 7, order: 5, chain: false, depth: 0.2,
-        color: INK, fontFamily: 'nunito', fontWeight: 700, fontSize: 3.4, label: 'Date',
-      }),
-      L({
-        id: 'venue', kind: 'text', text: '{{venue}}',
-        x: 50, y: 55, w: 78, h: 5, z: 7, order: 6, chain: false, depth: 0.2,
-        color: INK, fontFamily: 'nunito', fontWeight: 600, fontSize: 3.2, label: 'Venue',
-      }),
+      // ── Hero — the same "one slot, several individually adjustable/styleable sub-layers"
+      // structure as T7's `countdown` (see EventHeroSlot/HeroSlots.tsx and CLAUDE.md's Stage +
+      // layer engine section — this is the standard STAGE hero shape now, not a T7-only pattern).
+      // Each sub-layer below keeps `hasText: true` so its copy is still couple-editable with
+      // `{{token}}` insertion, exactly as when these were standalone `kind:'text'` layers — only
+      // the position/animation/style now live on the sub-layer instead of the layer itself. The
+      // container is `kind:'slot'` (not `'text'`) so it can host a live countdown timer, which no
+      // single text layer could; being `canvasAnchor: true` keeps it welded to the sky/zebra
+      // composition on every device shape, same as the old text layers' default canvas membership.
+      L({ id: 'hero', kind: 'slot', slot: 'eventHero', x: 50, y: 40, w: 88, h: 40, z: 7, order: 2, chain: false, depth: 0.2, anim: 'none', canvasAnchor: true, label: 'Hero' }),
+      L({ id: 'hero-eyebrow', kind: 'anchor', parent: 'hero', label: 'Eyebrow',      order: 0, styleable: true, hasText: true, text: "You're invited to" }),
+      L({ id: 'hero-title',   kind: 'anchor', parent: 'hero', label: 'Event Title',  order: 1, styleable: true, hasText: true, text: '{{eventTitle}}' }),
+      L({ id: 'hero-names',   kind: 'anchor', parent: 'hero', label: 'Names',        order: 2, styleable: true, hasText: true, text: '{{name1}} & {{name2}}' }),
+      L({ id: 'hero-date',    kind: 'anchor', parent: 'hero', label: 'Date',         order: 3, styleable: true, hasText: true, text: '{{date:long}}' }),
+      L({ id: 'hero-venue',   kind: 'anchor', parent: 'hero', label: 'Venue',        order: 4, styleable: true, hasText: true, text: '{{venue}}' }),
+      L({ id: 'hero-timer',   kind: 'anchor', parent: 'hero', label: 'Countdown Timer', order: 5, styleable: true }),
       // ── Foreground (dancers + drum + snake, in front of the text baseline) ──
       L({ id: 'monkey-4', kind: 'img', src: 'welcome/monkey-4.webp', x: 15.7, y: 67.4, w: 25.7, z: 5, order: 7 }),
       L({ id: 'monkey-2', kind: 'img', src: 'welcome/monkey-2.webp', x: 39.2, y: 65.7, w: 21.7, z: 5, order: 8 }),
@@ -97,11 +80,11 @@ export const T10_STAGES: Record<string, StageDef> = {
       L({ id: 'cue', kind: 'slot', slot: 'scrollCue', x: 50, y: 95, w: 50, h: 7, z: 8, order: 13, chain: false, depth: 0, anim: 'none' }),
     ],
     desktop: {
-      title: { fontSize: 6.5 },
-      names: { fontSize: 3.6 },
-      date: { fontSize: 2.4 },
-      venue: { fontSize: 2.2 },
-      eyebrow: { fontSize: 2.2 },
+      'hero-title': { fontSize: 6.5 },
+      'hero-names': { fontSize: 3.6 },
+      'hero-date': { fontSize: 2.4 },
+      'hero-venue': { fontSize: 2.2 },
+      'hero-eyebrow': { fontSize: 2.2 },
     },
   },
 
@@ -142,11 +125,20 @@ export const T10_STAGES: Record<string, StageDef> = {
       L({ id: 'sun', kind: 'img', src: 'itinerary/sun.webp', x: 25, y: 13.8, w: 14.9, z: 2, order: 0 }),
       L({ id: 'compass', kind: 'img', src: 'itinerary/compass.webp', x: 76.7, y: 14.1, w: 26.4, z: 3, order: 1 }),
       L({
-        id: 'title', kind: 'text', text: 'Our Safari Day',
+        id: 'title', kind: 'text', text: 'OUR SAFARI DAY',
         x: 50, y: 9, w: 72, h: 6, z: 7, order: 2, chain: false, depth: 0.3,
         color: INK, fontFamily: 'baloo-2', fontWeight: 800, fontSize: 6.5, label: 'Itinerary Title',
       }),
-      L({ id: 'list', kind: 'slot', slot: 'itineraryList', x: 50, y: 40, w: 80, h: 46, z: 7, order: 3, chain: false, depth: 0.2, label: 'Itinerary List' }),
+      // Narrower than a typical slot box on purpose: the list is now centred (see
+      // --slot-itin-* overrides in index.tsx), and monkey-guide/binoculars sit close on either
+      // side — a wide centred line would run under that art on a long label like "Lunch Under
+      // The Acacia".
+      L({ id: 'list', kind: 'slot', slot: 'itineraryList', x: 50, y: 38, w: 62, h: 42, z: 7, order: 3, chain: false, depth: 0.2, label: 'Itinerary List' }),
+      // Every rendered item shares one Time style and one Label style — not a per-item override
+      // (a schedule with 6 differently-styled rows would stop reading as one list) — see
+      // ItineraryListSlot/subLayerStyle.ts. Same sub-layer + Style tab structure as the hero above.
+      L({ id: 'itin-time',  kind: 'anchor', parent: 'list', label: 'Time',  order: 0, styleable: true }),
+      L({ id: 'itin-title', kind: 'anchor', parent: 'list', label: 'Label', order: 1, styleable: true }),
       L({ id: 'monkey-guide', kind: 'img', src: 'itinerary/monkey-guide.webp', x: 76.6, y: 51, w: 43.9, z: 5, order: 4 }),
       L({ id: 'binoculars', kind: 'img', src: 'itinerary/binoculars.webp', x: 24.7, y: 54.2, w: 38.4, z: 4, order: 5 }),
       L({ id: 'paw-print-ledge', kind: 'img', src: 'itinerary/paw-print-ledge.webp', x: 51.1, y: 83.9, w: 91.3, z: 4, order: 6 }),
@@ -247,6 +239,5 @@ export const STAGE_GROUPS: Record<string, string[]> = {
  *  Mirrors T7's own T10_DEFAULTS-style export — documentation only; the real defaults live in
  *  `lib/templateConfigSchema.ts`. */
 export const T10_DEFAULTS: Record<string, string> = {
-  'invite.theme_label': 'Sunny Safari',
   'photobooth.frameArt': 'none',
 };

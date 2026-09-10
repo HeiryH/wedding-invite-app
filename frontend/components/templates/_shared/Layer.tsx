@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent } from 'react';
 import type { Layer as LayerModel, SlotProps } from './types';
 import { IDLE_BASE_DUR } from './idle';
+import { staggerDelay } from './reveal';
 import { useEngine } from './engine';
 import { DEFAULT_SHEET, useSheets } from './slots/sheets';
 import { fontVar } from '@/lib/fonts/registry';
@@ -159,7 +160,7 @@ export default function Layer({ layer, slotProps, eager, selected, editing, flow
     zIndex: editing && selected ? 9999 : layer.z,
     '--sl-scale': layer.s,
     '--sl-opacity': layer.opacity,
-    '--sl-delay': `${0.35 + layer.order * 0.22}s`,
+    '--sl-delay': staggerDelay(layer.order),
     ...(layer.animDur ? { '--sl-dur': `${layer.animDur}s` } : {}),
   };
   // Flow-mode slot item: stays in normal document flow (no left/top/translate), just a
@@ -174,7 +175,7 @@ export default function Layer({ layer, slotProps, eager, selected, editing, flow
     zIndex: layer.z,
     '--sl-scale': layer.s,
     '--sl-opacity': layer.opacity,
-    '--sl-delay': `${0.35 + layer.order * 0.22}s`,
+    '--sl-delay': staggerDelay(layer.order),
     ...(layer.animDur ? { '--sl-dur': `${layer.animDur}s` } : {}),
   };
 

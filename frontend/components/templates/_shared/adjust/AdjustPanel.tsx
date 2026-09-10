@@ -383,9 +383,12 @@ export default function AdjustPanel({
   const NO_TEXT_SLOTS = new Set(['nav', 'music']);
   const hasSlotText = isSlot && Boolean(current?.slot) && !NO_TEXT_SLOTS.has(current!.slot!);
   const bgSelected = selectedLayer === BG_ID;
-  // Only text layers and anchors explicitly flagged `styleable` (Phase 3) expose the Style tab —
-  // most anchors wrap a live component/name with no free-form text styling to override.
-  const canStyle = current?.kind === 'text' || Boolean(current?.styleable);
+  // Only text layers, sheetTrigger buttons, and anchors explicitly flagged `styleable` (Phase 3)
+  // expose the Style tab — most anchors wrap a live component/name with no free-form text styling
+  // to override. sheetTrigger (the RSVP/wish "open the sheet" button — SheetTriggerSlot.tsx) reads
+  // the exact same field set text does (color/font/border/radius/shadow), so it gets the tab too
+  // rather than a bespoke button-only control set.
+  const canStyle = current?.kind === 'text' || current?.slot === 'sheetTrigger' || Boolean(current?.styleable);
 
   const nameOf = (l: Layer) => {
     const n = l.label ?? (l.kind === 'slot' ? `▤ ${l.slot}` : l.id);
@@ -932,7 +935,13 @@ export default function AdjustPanel({
                   step={0.5}
                   onChange={set('borderWidth')}
                 />
-                {(current.borderWidth ?? 0) > 0 && (
+                {/* A sheetTrigger button already ships with a visible border and rounded corners
+                    from .plaque's own CSS (theme accent color, --slot-radius) — unlike bare text,
+                    which has no box at all until borderWidth is actually turned up. So Color/
+                    Radius show for a button unconditionally (there's already something to color/
+                    round), where for text they stay gated behind Width > 0 (rounding a corner
+                    that doesn't exist yet reads as broken, not as "no border set"). */}
+                {((current.borderWidth ?? 0) > 0 || current.slot === 'sheetTrigger') && (
                   <>
                     <div className={styles.control} style={{ gridTemplateColumns: '54px 1fr' }}>
                       <span>Color</span>

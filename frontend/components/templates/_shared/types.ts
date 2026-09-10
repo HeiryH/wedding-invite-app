@@ -351,8 +351,7 @@ export interface SlotProps {
   onUploadPhoto?: (data: unknown) => Promise<void>;
   /** True inside the Adjust panel — slots suppress submits so editing can't post real data. */
   editing: boolean;
-  /** Optional: lets a slot resolve its own sub-layer anchors (e.g. the T7 hero breaks its
-   *  theme/names/date/timer into individually adjustable sub-layers). */
+  /** The raw config bag, for a slot that needs a lookup `t()` doesn't cover. */
   config?: Record<string, string>;
   breakpoint?: Breakpoint;
   editor?: EditorHandle;
@@ -364,6 +363,17 @@ export interface SlotProps {
    * needing one hardcoded component per sheet.
    */
   layer?: Layer;
+  /**
+   * Every layer already resolved for the stage this slot is rendering in (same array `Stage.tsx`
+   * is about to render), injected per-stage at the `<Stage slotProps={...}>` call site in each
+   * template's `index.tsx`. Lets a slot find its own sub-layers generically — any layer whose
+   * `parent` equals `layer.id` — without hardcoding a template/stage import the way the original
+   * T7-only hero did. This is the standard mechanism for "one slot, several individually
+   * adjustable/styleable sub-pieces" (see `_shared/slots/subLayerStyle.ts`): the T7/T10 hero
+   * (bride/groom/date/timer or eyebrow/title/names/date/venue/timer) and the itinerary list's
+   * Time/Label sub-layers all resolve through this field.
+   */
+  stageLayers?: Layer[];
 }
 
 /**

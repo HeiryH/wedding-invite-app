@@ -276,7 +276,7 @@ export default function Template3({
                     className={`text-green-600 text-sm uppercase tracking-[0.25em] mb-3 ${alignClass(customConfig?.['invite.heading.align'])}`}
                     style={{ ...hStyle, ...sx('welcome', 'heading') }}
                   >
-                    — {t('invite.theme_label', 'Garden Romance')} —
+                    — {t('invite.heading', "You're Invited to the Wedding of")} —
                   </motion.p>
                 </div>
                 <div style={a('welcome', 'brideName')} data-seen="true">

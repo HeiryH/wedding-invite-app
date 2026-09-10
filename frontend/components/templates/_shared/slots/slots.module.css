@@ -29,15 +29,6 @@
     transparent 78%
   );
 }
-.themeLabel {
-  font-family: var(--slot-font-display, system-ui, sans-serif);
-  font-size: calc(clamp(0.6rem, 1.5cqi, 0.78rem) * var(--slot-text-scale, 1));
-  font-weight: 600;
-  letter-spacing: 0.32em;
-  text-transform: uppercase;
-  color: var(--slot-ink-soft, #6b6863);
-  margin: 0 0 0.9rem;
-}
 .coupleNames {
   display: flex;
   flex-direction: column;
@@ -106,6 +97,56 @@
   text-transform: uppercase;
   color: var(--slot-ink-soft, #6b6863);
   margin-top: 0.3rem;
+}
+
+/* ── EventHeroSlot (T10's welcome hero) — see HeroSlots.tsx's doc comment. No scrim background
+   (unlike .heroInner): this template's hero sits over open sky, not a busy scene, and the original
+   plain text layers never had one either. */
+.eventHero {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  text-align: center;
+  gap: 0.3em;
+}
+.heroEyebrow {
+  margin: 0;
+  color: var(--slot-ink, #2b2a28);
+  font-family: var(--slot-font-serif, Georgia, serif);
+  font-weight: 700;
+  font-size: calc(3.4cqi * var(--slot-text-scale, 1));
+  letter-spacing: 0.04em;
+}
+.heroTitle {
+  margin: 0;
+  color: var(--slot-ink, #2b2a28);
+  font-family: var(--slot-font-display, system-ui, sans-serif);
+  font-weight: 800;
+  font-size: calc(10cqi * var(--slot-text-scale, 1));
+  line-height: 1.05;
+}
+.heroNames {
+  margin: 0;
+  color: var(--slot-ink, #2b2a28);
+  font-family: var(--slot-font-display, system-ui, sans-serif);
+  font-weight: 700;
+  font-size: calc(5.6cqi * var(--slot-text-scale, 1));
+}
+.heroDateLine {
+  margin: 0;
+  color: var(--slot-ink, #2b2a28);
+  font-family: var(--slot-font-serif, Georgia, serif);
+  font-weight: 700;
+  font-size: calc(3.4cqi * var(--slot-text-scale, 1));
+}
+.heroVenueLine {
+  margin: 0;
+  color: var(--slot-ink, #2b2a28);
+  font-family: var(--slot-font-serif, Georgia, serif);
+  font-weight: 600;
+  font-size: calc(3.2cqi * var(--slot-text-scale, 1));
 }
 
 .scrollCue {
@@ -211,10 +252,14 @@
 }
 
 /* ── Panel: the scrim card every content slot sits on ────────────────────────────────────── */
-/* `--slot-panel-bg` (set only when an author/couple turns on glassmorphism — see AdjustPanel's
-   "Card" section) replaces the whole background with a flat translucent tint, same recipe as
-   Template 5's own `.ceremonyCard`; the four properties below it are otherwise `none`/`0`, so an
-   untouched slot's look (radial scrim, no blur/border/shadow) is unchanged. */
+/* `--slot-panel-bg` is set only when a couple explicitly turns on a Card style in the Adjust
+   panel's "Card" section (None / Radial / Glass — see AdjustPanel.tsx and each template's
+   `cardStyleVars`). Left unset (None, the default), this is plain `transparent` — no scrim, no
+   blur, no border, no shadow — because several stages put ornate frame art directly behind a
+   slot, and any always-on backing paints a hard edge over it. "Radial" and "Glass" build their
+   own complete `--slot-panel-bg` value (a full gradient / a translucent flat tint respectively)
+   rather than relying on this rule's fallback, so this file has no baked-in gradient shape of
+   its own — every visible look here is something the couple deliberately chose. */
 .panel {
   display: flex;
   flex-direction: column;
@@ -222,13 +267,7 @@
   min-height: 100%;
   padding: clamp(1rem, 3cqi, 1.6rem);
   text-align: center;
-  background: var(--slot-panel-bg, radial-gradient(
-    ellipse at center,
-    var(--slot-panel-scrim-1, rgba(246, 245, 243, 0.82)) 0%,
-    var(--slot-panel-scrim-2, rgba(246, 245, 243, 0.66)) 45%,
-    var(--slot-panel-scrim-3, rgba(246, 245, 243, 0.28)) 72%,
-    transparent 88%
-  ));
+  background: var(--slot-panel-bg, transparent);
   backdrop-filter: var(--slot-panel-blur, none);
   -webkit-backdrop-filter: var(--slot-panel-blur, none);
   border: var(--slot-panel-border, none);
@@ -344,12 +383,21 @@
 }
 
 /* ── Itinerary / programme ────────────────────────────────────────────────────────────────── */
+/* Defaults below are T7's original, unchanged look (a left-aligned vertical timeline: a rail
+   line + a dot per item). Every visual choice is a `--slot-itin-*` custom property so a template
+   with a structurally different design — e.g. T10's centered, rail-less, bold-caps mockup — can
+   override the whole look from its own wrapper (same recipe as `--slot-wishitem-*` for wish
+   cards) without a second copy of this file. */
 .itineraryList {
   position: relative;
   list-style: none;
   margin: 0.6rem 0 0;
-  padding: 0 0 0 1.5rem;
-  text-align: left;
+  padding: 0 0 0 var(--slot-itin-indent, 1.5rem);
+  text-align: var(--slot-itin-align, left);
+  display: flex;
+  flex-direction: column;
+  align-items: var(--slot-itin-items-align, stretch);
+  gap: var(--slot-itin-gap, 0px);
 }
 .itineraryList::before {
   content: '';
@@ -359,10 +407,11 @@
   bottom: 0.4rem;
   width: 1px;
   background: var(--slot-rule, rgba(43, 42, 40, 0.16));
+  display: var(--slot-itin-rail-display, block);
 }
 .itineraryItem {
   position: relative;
-  padding: 0.55rem 0;
+  padding: var(--slot-itin-item-padding, 0.55rem 0);
 }
 .itineraryItem::before {
   content: '';
@@ -373,6 +422,7 @@
   height: 7px;
   border-radius: 50%;
   background: var(--slot-accent, var(--slot-ink, #2b2a28));
+  display: var(--slot-itin-dot-display, block);
 }
 .itineraryTime {
   display: block;
@@ -381,12 +431,13 @@
   font-size: calc(0.62rem * var(--slot-text-scale, 1));
   letter-spacing: 0.16em;
   text-transform: uppercase;
-  color: var(--slot-ink-faint, #9a9690);
+  color: var(--slot-itin-time-color, var(--slot-ink-faint, #9a9690));
 }
 .itineraryTitle {
-  font-family: var(--slot-font-serif, Georgia, serif);
-  font-size: calc(clamp(0.95rem, 2cqi, 1.1rem) * var(--slot-text-scale, 1));
-  font-weight: 400;
+  font-family: var(--slot-itin-title-font, var(--slot-font-serif, Georgia, serif));
+  font-size: calc(var(--slot-itin-title-size, clamp(0.95rem, 2cqi, 1.1rem)) * var(--slot-text-scale, 1));
+  font-weight: var(--slot-itin-title-weight, 400);
+  text-transform: var(--slot-itin-title-transform, none);
   color: var(--slot-ink, #2b2a28);
   margin: 0.15rem 0 0;
 }

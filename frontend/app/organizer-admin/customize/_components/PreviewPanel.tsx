@@ -254,6 +254,16 @@ export function PreviewPanel({
           onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent'; }}>
           <Icon name="rotate-ccw" size={12} />
         </button>
+        <div style={{ width: 1, height: 18, background: 'var(--border-subtle)', margin: '0 4px' }} />
+        <button
+          onClick={() => { iframeRef.current?.contentWindow?.location.reload(); }}
+          title="Reload preview — replays entrance animations without leaving this page"
+          style={toolbarBtn}
+          onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'var(--surface-sunken)'; }}
+          onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
+        >
+          <Icon name="refresh-cw" size={13} />
+        </button>
       </div>
 
       {/* Top right: fullscreen + share */}

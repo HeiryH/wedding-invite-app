@@ -27,7 +27,7 @@ import { PRESETS, isShadowField, chipOf, useSchemaIndex } from './_components/Sc
 // selecting {stages, keyPrefix, stageIds, reveal} — adding a template to the Adjust feature means
 // a registry entry there, not a branch here.
 import AdjustPanel from '@/components/templates/_shared/adjust/AdjustPanel';
-import { TEMPLATE_ENGINES } from '@/components/templates/_shared/registry';
+import { TEMPLATE_ENGINES, sectionAnchorId } from '@/components/templates/_shared/registry';
 import { resolveStage, serializeStage, layoutKey } from '@/components/templates/_shared/layout';
 import type { Layer as LayerModel, Breakpoint, StageDef } from '@/components/templates/_shared/types';
 import { Button } from '@/components/ui/Button';
@@ -63,7 +63,7 @@ const PORTRAIT_SLOTS_T4 = [
 ];
 
 // ── Block model ───────────────────────────────────────────────────────────────
-type BlockId = 'details' | 'welcome' | 'walimah' | 'rsvp' | 'itinerary' | 'wishes' | 'photobooth' | 'music';
+type BlockId = 'details' | 'welcome' | 'walimah' | 'rsvp' | 'itinerary' | 'wishes' | 'photobooth' | 'music' | 'navigation';
 
 const SECTION_BLOCKS: { code: string; label: string; icon: string }[] = [
   { code: 'welcome',    label: 'Cover',       icon: 'image' },
@@ -84,7 +84,7 @@ function parseSectionOrder(value: string | undefined): string[] {
 }
 
 function scrollFractionFor(block: BlockId, order: string[]): number {
-  if (block === 'details' || block === 'music') return 0;
+  if (block === 'details' || block === 'music' || block === 'navigation') return 0;
   const i = order.indexOf(block);
   return i <= 0 ? 0 : i / Math.max(1, order.length);
 }
@@ -101,19 +101,21 @@ const BLOCK_INFO: Record<string, { eyebrow: string; title: string; subtitle: str
   wishes:     { eyebrow: 'Section · Wishes', title: 'Wishes & Guestbook', subtitle: 'Messages from your guests.' },
   photobooth: { eyebrow: 'Section · Photo Booth', title: 'Photo Booth', subtitle: 'Guest photo gallery.' },
   music:      { eyebrow: 'Background Music', title: 'Music & playlist', subtitle: 'Audio that plays while guests browse.' },
+  navigation: { eyebrow: 'Navigation Bar', title: 'Navigation', subtitle: 'How guests move between sections.' },
 };
 
 // Group render order per rail block. Groups the schema declares but this list omits are
 // appended at the end, so a newly-added field always surfaces somewhere rather than vanishing.
 const GROUP_ORDER: Record<BlockId, string[]> = {
-  details:    ['Invitation Layout', 'Wedding Details', 'Display', 'Navigation Labels', 'Advanced', 'Footer', 'Change Template'],
-  welcome:    ['Heading', 'Invitation Message', 'Countdown', 'Roman Garden Scene', 'Fairy Garden Scene', 'Stage Layout', 'Decorative Layers', 'Section Background', 'Page Background'],
+  details:    ['Wedding Details', 'Display', 'Advanced', 'Footer', 'Change Template'],
+  welcome:    ['Heading', 'Welcome Style', 'Invitation Message', 'Countdown', 'Roman Garden Scene', 'Fairy Garden Scene', 'Stage Layout', 'Decorative Layers', 'Section Background', 'Page Background'],
   walimah:    ['Ceremony / Walimah', 'Ceremony Stages', 'Couple Names in Card'],
-  rsvp:       ['RSVP'],
-  itinerary:  ['Schedule / Itinerary', 'Section Background'],
-  wishes:     ['Wishes & Guestbook'],
-  photobooth: ['Photo Booth', 'Portrait & Gallery Slots', 'Section Headings', 'Section Background'],
+  rsvp:       ['RSVP', 'Section Background'],
+  itinerary:  ['Schedule / Itinerary'],
+  wishes:     ['Wishes & Guestbook', 'Section Background'],
+  photobooth: ['Photo Booth', 'Portrait & Gallery Slots', 'Section Headings'],
   music:      [],
+  navigation: ['Navigation Bar', 'Navigation Labels'],
 };
 
 // Groups that exist only to host a hand-written widget — they hold no schema fields.
@@ -127,6 +129,12 @@ const GROUP_ORDER: Record<BlockId, string[]> = {
 const SYNTHETIC_GROUPS: Partial<Record<BlockId, string[]>> = {
   details:    ['Wedding Details', 'Change Template'],
   photobooth: ['Portrait & Gallery Slots'],
+  // Same bug as 'Wedding Details' above: the group only ever rendered when a template's schema
+  // happened to contribute a 'Schedule / Itinerary'-grouped field, which only T5 (itinerary.item.
+  // color) and T5/T7 (itinerary.title) do — every other template, T10 included, had no schema
+  // field to trigger the group at all, so the ItineraryEditor (its `after:` addendum in
+  // renderBlock) never rendered and the Itinerary tab showed nothing to add or edit.
+  itinerary:  ['Schedule / Itinerary'],
 };
 
 // ── Existing sub-components (functional, restyled inputs) ─────────────────────
@@ -358,26 +366,18 @@ function RichTextEditor({ value, onChange, maxLength }: {
 
 // ── Itinerary editor ──────────────────────────────────────────────────────────
 
-function ItineraryEditor({ weddingId, onItemsChange }: { weddingId: number; onItemsChange?: (items: ItineraryItem[]) => void }) {
-  const [items, setItems] = useState<ItineraryItem[]>([]);
-  const [loading, setLoading] = useState(true);
+function ItineraryEditor({ weddingId, items, onItemsChange }: { weddingId: number; items: ItineraryItem[]; onItemsChange: (items: ItineraryItem[]) => void }) {
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editDraft, setEditDraft] = useState({ label: '', detail: '' });
   const [newRow, setNewRow] = useState({ label: '', detail: '' });
   const [adding, setAdding] = useState(false);
-
-  useEffect(() => {
-    itineraryService.getByWeddingId(weddingId).then((data) => { setItems(data); setLoading(false); });
-  }, [weddingId]);
-
-  useEffect(() => { onItemsChange?.(items); }, [items]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const nextSort = items.length > 0 ? Math.max(...items.map((i) => i.sortOrder)) + 1 : 1;
 
   const handleAdd = async () => {
     if (!newRow.label.trim()) return;
     const created = await itineraryService.create(weddingId, { ...newRow, label: newRow.label.trim(), detail: newRow.detail.trim(), sortOrder: nextSort });
-    setItems((p) => [...p, created]);
+    onItemsChange([...items, created]);
     setNewRow({ label: '', detail: '' });
     setAdding(false);
   };
@@ -385,13 +385,13 @@ function ItineraryEditor({ weddingId, onItemsChange }: { weddingId: number; onIt
   const handleSaveEdit = async (item: ItineraryItem) => {
     if (!editDraft.label.trim()) return;
     const updated = await itineraryService.update(item.itineraryItemId, { label: editDraft.label.trim(), detail: editDraft.detail.trim(), sortOrder: item.sortOrder });
-    setItems((p) => p.map((i) => i.itineraryItemId === updated.itineraryItemId ? updated : i));
+    onItemsChange(items.map((i) => i.itineraryItemId === updated.itineraryItemId ? updated : i));
     setEditingId(null);
   };
 
   const handleDelete = async (id: number) => {
     await itineraryService.delete(id);
-    setItems((p) => p.filter((i) => i.itineraryItemId !== id));
+    onItemsChange(items.filter((i) => i.itineraryItemId !== id));
   };
 
   const handleMove = async (index: number, dir: 'up' | 'down') => {
@@ -400,13 +400,11 @@ function ItineraryEditor({ weddingId, onItemsChange }: { weddingId: number; onIt
     const next = [...items];
     [next[index], next[swap]] = [next[swap], next[index]];
     const reordered = next.map((item, i) => ({ ...item, sortOrder: i + 1 }));
-    setItems(reordered);
+    onItemsChange(reordered);
     await itineraryService.reorder(weddingId, { items: reordered.map((i) => ({ itineraryItemId: i.itineraryItemId, sortOrder: i.sortOrder })) });
   };
 
   const inputStyle: React.CSSProperties = { width: '100%', padding: '6px 10px', border: '1px solid var(--border-default)', borderRadius: 'var(--radius-sm)', fontSize: 'var(--text-sm)', fontFamily: 'var(--font-ui)', color: 'var(--text-body)', background: 'var(--surface-card)', outline: 'none', boxSizing: 'border-box' };
-
-  if (loading) return <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-subtle)', padding: '8px 0' }}>Loading…</p>;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -643,19 +641,22 @@ const RAIL_SECTIONS = [
   { id: 'photobooth' as BlockId,label: 'Photos',  icon: 'camera'     },
 ];
 
-function SectionRail({ mode, onToggle, activeBlock, sectionOrder, onSelectBlock, hasMusic }: {
+function SectionRail({ mode, onToggle, activeBlock, sectionOrder, onSelectBlock, hasMusic, hasNav }: {
   mode: EditorMode;
   onToggle: () => void;
   activeBlock: BlockId;
   sectionOrder: string[];
   onSelectBlock: (block: BlockId) => void;
   hasMusic: boolean;
+  hasNav: boolean;
 }) {
   const railItems = [
     RAIL_SECTIONS[0], // details always first
     ...sectionOrder.map(code => RAIL_SECTIONS.find(s => s.id === code)).filter(Boolean) as typeof RAIL_SECTIONS,
     // only templates that actually play audio get a Music tab
     ...(hasMusic ? [{ id: 'music' as BlockId, label: 'Music', icon: 'music' }] : []),
+    // only templates with a couple-editable nav bar (T7/T10 today) get a Navigation tab
+    ...(hasNav ? [{ id: 'navigation' as BlockId, label: 'Navigation', icon: 'menu' }] : []),
   ];
 
   return (
@@ -1060,12 +1061,13 @@ export default function CustomizePage() {
   const load = async () => {
     if (!weddingId) return;
     try {
-      const [eventData, media, config, photoBooth, tmpl] = await Promise.all([
+      const [eventData, media, config, photoBooth, tmpl, itineraryItems] = await Promise.all([
         eventService.getById(weddingId),
         photoService.getCoupleMediaByWeddingId(weddingId),
         templateConfigService.getByWeddingId(weddingId),
         eventFeatureService.isFeatureEnabled(weddingId, 'PHOTO_BOOTH'),
         templateService.getActive(),
+        itineraryService.getByWeddingId(weddingId),
       ]);
       // AdjustPanel/PreviewPanel/the standalone preview iframe (out of scope for this migration)
       // still expect the legacy `Wedding` shape — adapt once here, at the fetch boundary.
@@ -1106,6 +1108,7 @@ export default function CustomizePage() {
       setWedding(w);
       setCoupleMedia(media);
       setPhotoBoothEnabled(photoBooth);
+      setItinerary(itineraryItems);
       const wd = { brideName: w.brideName, groomName: w.groomName, eventTitle: eventData.eventTitle ?? '', weddingDate: w.weddingDate.slice(0, 16), venue: w.venue, venueAddress: w.venueAddress, maxPax: w.maxPax ?? 0 };
       setWeddingDraft(wd);
       setWeddingSaved(wd);
@@ -1187,7 +1190,14 @@ export default function CustomizePage() {
   const selectBlock = (block: BlockId, order: string[] = sectionOrder) => {
     setActiveBlock(block);
     if (editorMode === 'collapsed') setEditorMode('expanded');
-    iframeRef.current?.contentWindow?.postMessage({ type: 'PREVIEW_SCROLL', fraction: scrollFractionFor(block, order) }, window.location.origin);
+    iframeRef.current?.contentWindow?.postMessage({
+      type: 'PREVIEW_SCROLL',
+      // sectionId lands on the exact element; fraction is the fallback the preview uses when a
+      // template has no anchor for this block (e.g. 'details'/'music', or a template not yet
+      // covered by sectionAnchorId).
+      sectionId: wedding ? sectionAnchorId(wedding.templateId, block, { draftConfig }) : undefined,
+      fraction: scrollFractionFor(block, order),
+    }, window.location.origin);
   };
 
   const handleMoveBlock = (code: string, dir: 'up' | 'down') => {
@@ -1445,7 +1455,7 @@ export default function CustomizePage() {
     }
 
     if (block === 'itinerary' && title === 'Schedule / Itinerary') {
-      return { after: <ItineraryEditor weddingId={weddingId!} onItemsChange={setItinerary} /> };
+      return { after: <ItineraryEditor weddingId={weddingId!} items={itinerary} onItemsChange={setItinerary} /> };
     }
 
     if (block === 'photobooth' && title === 'Portrait & Gallery Slots') {
@@ -1607,6 +1617,7 @@ export default function CustomizePage() {
               sectionOrder={sectionOrder}
               onSelectBlock={selectBlock}
               hasMusic={schema.has('music.url')}
+              hasNav={schema.has('nav.layout')}
             />
           )}
 

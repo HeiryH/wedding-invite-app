@@ -1,9 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, type CSSProperties } from 'react';
 import type { SlotProps } from '../types';
 import { useEngine } from '../engine';
 import { DEFAULT_SHEET, useSheets } from './sheets';
+import { fontVar } from '@/lib/fonts/registry';
 import styles from './slots.module.css';
 
 /**
@@ -40,6 +41,31 @@ export default function SheetTriggerSlot({ t, layer, editing }: SlotProps) {
   // that on pointerdown) — popping the sheet would fight the editor's own selection-driven open.
   const activate = () => { if (!editing) open(id); };
 
+  // Same Style-tab fields as Layer.tsx's `case 'text'`, with one deliberate difference: a
+  // sheetTrigger button already ships with a visible border and rounded corners from .plaque's
+  // own CSS (theme accent color, --slot-radius) — unlike bare text, which has no box at all until
+  // borderWidth is actually turned up. So Color/Radius apply here independently, the moment
+  // either is set, instead of both waiting on borderWidth like text's do (see the matching
+  // AdjustPanel.tsx comment by the Style tab's Border section). `undefined` fields fall through
+  // to .plaque's own CSS defaults, so a button with no overrides looks exactly as it did before
+  // this existed. Shadow renders as `boxShadow` here rather than text's `textShadow` — a drop
+  // shadow reads as "the button" for a filled shape, not "the label text" sitting on it.
+  const hasShadow = Boolean(layer?.shadowBlur || layer?.shadowX || layer?.shadowY);
+  const hasBorderOverride = layer?.borderWidth !== undefined || layer?.borderColor !== undefined;
+  const btnStyle: CSSProperties = {
+    color: layer?.color,
+    fontSize: layer?.fontSize !== undefined ? `${layer.fontSize}cqi` : undefined,
+    fontWeight: layer?.fontWeight,
+    fontFamily: layer?.fontFamily ? fontVar(layer.fontFamily) : undefined,
+    letterSpacing: layer?.letterSpacing !== undefined ? `${layer.letterSpacing}em` : undefined,
+    wordSpacing: layer?.wordSpacing !== undefined ? `${layer.wordSpacing}em` : undefined,
+    border: hasBorderOverride ? `${layer?.borderWidth ?? 1}px solid ${layer?.borderColor ?? '#000'}` : undefined,
+    borderRadius: layer?.radius !== undefined ? `${layer.radius}px` : undefined,
+    boxShadow: hasShadow
+      ? `${layer?.shadowX ?? 0}px ${layer?.shadowY ?? 0}px ${layer?.shadowBlur ?? 0}px ${layer?.shadowColor ?? 'rgba(0,0,0,0.4)'}`
+      : undefined,
+  };
+
   if (art) {
     return (
       <button type="button" className={styles.triggerArtBtn} onClick={activate} aria-label={label}>
@@ -59,7 +85,7 @@ export default function SheetTriggerSlot({ t, layer, editing }: SlotProps) {
 
   return (
     <div className={styles.triggerBtnWrap}>
-      <button type="button" className={`${styles.plaque} ${styles.plaqueBtn}`} onClick={activate}>
+      <button type="button" className={`${styles.plaque} ${styles.plaqueBtn}`} style={btnStyle} onClick={activate}>
         {label}
       </button>
     </div>
