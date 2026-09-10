@@ -10,16 +10,20 @@ export interface RoseHorizonProp {
   w: number;
   h: number;
   src: string;
+  /** Spans most of both axes at once (a border/frame, not an icon) -- exempt from
+   *  PropLayer's reserved-zone collision avoidance; see gen-props-data.py for why. */
+  frame?: boolean;
 }
 
 export const PROP_DEPTH = 1.3; // foreground -- CLAUDE.md's T7 depth calibration: 1.2-1.5 = foreground props
 
 export const ROSE_HORIZON_PROPS: Record<string, RoseHorizonProp[]> = {
   welcome: [
-    { id: 'floral-arch-and-roses', x: 50.0, y: 50.38, w: 100.0, h: 99.23, src: '/templates/rose-horizon/assets/welcome/floral-arch-and-roses.webp' }, // Floral arch and roses
+    { id: 'floral-arch-and-roses', x: 50.0, y: 50.38, w: 100.0, h: 99.23, src: '/templates/rose-horizon/assets/welcome/floral-arch-and-roses.webp', frame: true }, // Floral arch and roses
   ],
   walimah: [
-    { id: 'crescent-wreath-with-cream-rose', x: 43.8, y: 51.5, w: 79.79, h: 47.7, src: '/templates/rose-horizon/assets/walimah/crescent-wreath-with-cream-rose.webp' }, // Crescent wreath with cream rose
+    { id: 'rose-wreathed-crescent-moon-and-star', x: 52.59, y: 43.69, w: 62.21, h: 32.08, src: '/templates/rose-horizon/assets/walimah/rose-wreathed-crescent-moon-and-star.webp' }, // Rose-wreathed crescent moon and star
+    { id: 'cream-rose-bloom', x: 25.83, y: 63.03, w: 43.85, h: 24.65, src: '/templates/rose-horizon/assets/walimah/cream-rose-bloom.webp' }, // Cream rose bloom
     { id: 'dusty-blue-grey-rose-bloom', x: 74.17, y: 24.32, w: 41.11, h: 24.12, src: '/templates/rose-horizon/assets/walimah/dusty-blue-grey-rose-bloom.webp' }, // Dusty blue-grey rose bloom
   ],
   rsvp: [

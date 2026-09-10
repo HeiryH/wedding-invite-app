@@ -6,30 +6,51 @@
   ],
   "props": [
     {
-      "name": "Crescent wreath with cream rose",
+      "name": "Rose-wreathed crescent moon and star",
       "matched": true,
-      "via": "sheet-position",
+      "via": "manual-crop",
       "box": [
-        40,
+        220,
         469,
         857,
+        1013
+      ],
+      "size": [
+        637,
+        544
+      ],
+      "pct": {
+        "x": 52.59,
+        "y": 43.69,
+        "w": 62.21,
+        "h": 32.08
+      }
+    },
+    {
+      "name": "Cream rose bloom",
+      "matched": true,
+      "via": "manual-crop",
+      "box": [
+        40,
+        860,
+        489,
         1278
       ],
       "size": [
-        817,
-        809
+        449,
+        418
       ],
       "pct": {
-        "x": 43.8,
-        "y": 51.5,
-        "w": 79.79,
-        "h": 47.7
+        "x": 25.83,
+        "y": 63.03,
+        "w": 43.85,
+        "h": 24.65
       }
     },
     {
       "name": "Dusty blue-grey rose bloom",
       "matched": true,
-      "via": "sheet-position",
+      "via": "manual-crop",
       "box": [
         549,
         208,

@@ -29,10 +29,22 @@ for section in SECTIONS:
         src_webp = PROPS_DIR / section / f"{name}.webp"
         dest = section_assets_dir / f"{slug}.webp"
         dest.write_bytes(src_webp.read_bytes())
+        # A "frame" asset spans most of both axes at once (the welcome arch: w~100%, h~99%) --
+        # structurally a border meant to surround the content panel, not an icon that sits
+        # beside it. Reserved-zone collision avoidance (PropLayer.tsx) pushes a prop as one
+        # rigid rectangle to clear the panel, which is right for an icon but wrong for a frame
+        # (it can't independently keep its top half above and bottom half below at once) --
+        # confirmed live: applying it to the welcome arch pushed the whole asset down, hiding
+        # its crown and dragging roses across the panel's own text. Exempt anything spanning
+        # >60% of BOTH axes; every real icon prop in this template is well under that on at
+        # least one axis (walimah's wreath+star, the widest non-frame prop, is 62% wide but
+        # only 32% tall).
+        is_frame = p["pct"]["w"] > 60 and p["pct"]["h"] > 60
         entries.append(dict(
             section=section, id=slug, name=name,
             src=f"/templates/rose-horizon/assets/{section}/{slug}.webp",
             x=p["pct"]["x"], y=p["pct"]["y"], w=p["pct"]["w"], h=p["pct"]["h"],
+            frame=is_frame,
         ))
 
 lines = [
@@ -48,6 +60,9 @@ lines = [
     "  w: number;",
     "  h: number;",
     "  src: string;",
+    "  /** Spans most of both axes at once (a border/frame, not an icon) -- exempt from",
+    "   *  PropLayer's reserved-zone collision avoidance; see gen-props-data.py for why. */",
+    "  frame?: boolean;",
     "}",
     "",
     "export const PROP_DEPTH = 1.3; // foreground -- CLAUDE.md's T7 depth calibration: 1.2-1.5 = foreground props",
@@ -61,9 +76,10 @@ for e in entries:
 for section in SECTIONS:
     lines.append(f"  {section}: [")
     for e in by_section[section]:
+        frame_field = ", frame: true" if e["frame"] else ""
         lines.append(
             f"    {{ id: '{e['id']}', x: {e['x']}, y: {e['y']}, w: {e['w']}, h: {e['h']}, "
-            f"src: '{e['src']}' }}, // {e['name']}"
+            f"src: '{e['src']}'{frame_field} }}, // {e['name']}"
         )
     lines.append("  ],")
 lines.append("};")
