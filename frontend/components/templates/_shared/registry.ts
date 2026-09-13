@@ -43,6 +43,21 @@ export interface TemplateEngine {
    *  needing the full `EngineProvider` context the actual template render tree has (the panel lives
    *  in the parent, outside the preview iframe — see AdjustPanel.tsx's own doc comment). */
   assetRoot?: string;
+  /** True only for a template whose background is ONE continuous asset shared by every section
+   *  (Template 11's mirror-stacked `FlowBackground`) rather than a per-section image. Gates the
+   *  Adjust panel's stage-independent "Background · Flow" section (replace image + parallax
+   *  rate, via `${keyPrefix}.layout.pageBg.*`) — the same "control that isn't owned by any one
+   *  stage" shape `slotTheme` already uses for T7's accent/font. A template with a genuinely
+   *  per-section background (T1-T6 today) should keep using the `section.<code>.bg` schema field
+   *  instead — this flag exists specifically for the "one shared asset" shape, not as a general
+   *  background-replacement mechanism. */
+  pageBackground?: boolean;
+  /** Shows the Adjust panel's stage-independent "Card" section (None/Radial/Glass, via
+   *  `${keyPrefix}.layout.slotTheme.card*`) for a template whose RSVP/wishes/etc. are bespoke
+   *  markup (`slotTheme` false) but still have a real content card worth restyling — T7/T10 get
+   *  this for free from `slotTheme` already; this flag is for a template that needs Card without
+   *  also getting Theme's accent/font fields, which wouldn't reach non-slot markup. */
+  cardStyle?: boolean;
   resolveStages(ctx: StageIdsCtx): Record<string, StageDef>;
   stageIds(ctx: StageIdsCtx): string[];
 }
@@ -91,10 +106,16 @@ export const TEMPLATE_ENGINES: Record<number, TemplateEngine> = {
     resolveStages: () => T10_STAGES,
     stageIds: (ctx) => ctx.codes.flatMap((c) => T10_STAGE_GROUPS[c] ?? []),
   },
-  // Classic family (flow + overlay), not the Stage compositor -- reveal: false, no slotTheme.
-  // No anchor-nudgeable layers yet (see Template11-rosehorizon/PropLayer.tsx); T11_STAGES exists
-  // only so "select a stage" has section ids to scroll to, same reason T1-T6 register stage data.
-  11: { keyPrefix: 't11', reveal: false, resolveStages: () => T11_STAGES, stageIds: (ctx) => t11StageIds(ctx.codes) },
+  // Classic family (flow + overlay), not the Stage compositor -- reveal: false. RSVP/Wishes/
+  // Schedule/Photos now render through the shared `_shared/slots/*` registry (same components
+  // T7/T10 use, in bottom-sheet forms) same as those two -- slotTheme: true. Welcome/Ceremony stay
+  // bespoke `anchor` markup, same as every other Classic template. `pageBackground: true` because
+  // FlowBackground is one continuous mirror-stacked asset behind every section, not a per-section
+  // image -- see the field's own doc comment above.
+  11: {
+    keyPrefix: 't11', reveal: false, pageBackground: true, slotTheme: true,
+    resolveStages: () => T11_STAGES, stageIds: (ctx) => t11StageIds(ctx.codes),
+  },
 };
 
 /**

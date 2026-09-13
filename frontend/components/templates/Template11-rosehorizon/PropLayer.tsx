@@ -1,49 +1,66 @@
-import { useEffect, useRef, useState } from 'react';
-import { ROSE_HORIZON_PROPS, PROP_DEPTH } from './data/roseHorizonProps';
+import { useEffect, useMemo, useState } from 'react';
 import type { SectionCode } from '@/lib/templateUtils';
-import styles from './Template11.module.css';
+import type { Breakpoint, EditorHandle } from '@/components/templates/_shared/types';
+import { EngineProvider, type Engine } from '@/components/templates/_shared/engine';
+import SharedLayer from '@/components/templates/_shared/Layer';
+import { resolveStage, baseStage } from '@/components/templates/_shared/layout';
+import { T11_STAGES, SHIPPED_PROP_IDS } from './data/roseHorizonStages';
+import styles from './PropLayer.module.css';
 
 interface Zone {
   top: number;    // % of section height
   bottom: number; // % of section height
 }
 
+// Same engine shape SectionOverlay.tsx uses — no shipped slot registry, no bundled art beyond
+// what the layer's own `src` already names as an absolute path.
+const ENGINE: Engine = { assetRoot: '/templates/rose-horizon', assetSizes: {}, slotRegistry: {} };
+
+/** The one prop whose box spans most of both axes at once (the welcome arch) — a frame, not an
+ *  icon, meant to surround the panel rather than avoid it. See `clearZone`'s own comment. A
+ *  couple-added image (an "+Image" addition, `custom-<id>`) is never in this set, so it always
+ *  gets normal collision avoidance — reasonable default for an arbitrary added decoration. */
+const FRAME_PROP_IDS = new Set(['floral-arch-and-roses']);
+
 /**
- * Renders this section's decorative art (roses, icons, the welcome arch) at the positions
- * `ingest` measured off the human-approved Recraft design — see docs/rose-horizon-props/.
- *
- * Not couple-editable via the Adjust dock: SectionOverlay's decorative-layer system is built
- * for layers the couple adds themselves (ships with none by default, per every other Classic
- * template). There's no existing mechanism for a template to ship its OWN default decorative
- * art through that system, so this renders directly instead. Known gap, not an oversight --
- * worth folding back as a real engine capability if a future template wants the same thing.
- *
- * `data-depth` + `useParallax` (called by the parent template) is the SAME shared mechanism
- * every other template's decorative/anchor layers already use -- not a bespoke one-off.
+ * Renders this section's decorative image layers — both the shipped `PropLayer` art (roses,
+ * icons, the welcome arch, positioned by `T11_STAGES`' own defaults, generated from the ingest
+ * pipeline's measured manifest — see roseHorizonStages.ts) and any couple-added "+Image" extra —
+ * through the exact same shared `<Layer>` component every other template's art uses, so a couple
+ * gets full drag/resize/hide on these, not just the anchors. Text/shape couple additions are a
+ * separate concern, rendered by `SectionOverlay` — see that file's own doc comment for why the
+ * split exists.
  *
  * ## Reserved-zone collision avoidance (fixes real, confirmed overlap)
  *
- * A prop's x/y/w/h is a percentage of the APPROVED DESIGN's fixed 1024x1696 canvas (measured
- * by ingest). The live section is `min-height: 100svh` with a variable-height content panel
- * centred in it — a different, and not fixed, aspect ratio and box. The same percentage can
+ * A prop's default x/y/w/h is a percentage of the APPROVED DESIGN's fixed 1024x1696 canvas
+ * (measured by ingest). The live section is `min-height: 100svh` with a variable-height content
+ * panel centred in it — a different, and not fixed, aspect ratio and box. The same percentage can
  * therefore land in a different place on screen than it did in the design. Confirmed live on
- * itinerary: the hourglass icon rendered directly across "Guest Arrival" / "Akad Nikah" text,
- * on both mobile and desktop breakpoints (docs/rose-horizon-qa/*-itinerary.png before this
- * fix).
+ * itinerary: the hourglass icon rendered directly across "Guest Arrival" / "Akad Nikah" text, on
+ * both mobile and desktop breakpoints (docs/rose-horizon-qa/*-itinerary.png before this fix).
  *
  * The Stage family solves the equivalent problem with `StageDef.canvas` — scenery composes
- * inside a fixed-aspect reference box that cover-fits the device, same technique
- * `bgFit:'cover'` already uses. That doesn't transfer cleanly here: Stage sections are a fixed
- * `100svh`, but a Classic panel's height is real, variable content (a 3-row schedule vs. a
- * 6-row one) — there is no single reference aspect to cover-fit against ahead of time.
+ * inside a fixed-aspect reference box that cover-fits the device, same technique `bgFit:'cover'`
+ * already uses. That doesn't transfer cleanly here: Stage sections are a fixed `100svh`, but a
+ * Classic panel's height is real, variable content (a 3-row schedule vs. a 6-row one) — there is
+ * no single reference aspect to cover-fit against ahead of time.
  *
  * So instead of a static reference box, the reserved zone is measured from the ACTUAL rendered
  * panel at runtime (a `ResizeObserver` on the panel element, reported by the parent template),
  * and any prop whose vertical span would intersect it is pushed to clear it — toward whichever
- * edge (above/below) requires the smaller nudge, with a small margin so it doesn't hug the
- * panel edge. This is strictly more robust for variable-height content than a static
- * design-canvas percentage could be, since it reacts to what actually rendered, not what the
- * design assumed would render.
+ * edge (above/below) requires the smaller nudge, with a small margin so it doesn't hug the panel
+ * edge.
+ *
+ * **Only applied to a prop still at its shipped default position.** The first version of this
+ * applied the nudge unconditionally, on top of whatever the couple had already dragged it to —
+ * which meant a couple could never actually place a prop over the panel on purpose (every drag
+ * that entered the zone was silently pushed back out, in the editor and live alike). Now/wanting
+ * props to intentionally overlap a section (confirmed: the panel no longer blocks them, see
+ * PropLayer.module.css's `.wrap` z-index) means an explicit couple placement has to win outright.
+ * So the guard only fires when the resolved position still equals the layer's own shipped
+ * default — the moment a couple moves it (drag, or a saved Adjust-panel delta), it's `y !==
+ * default y` and this function is skipped entirely for that layer, forever.
  */
 const MARGIN = 3; // % of section height, gap kept between a nudged prop and the panel edge
 
@@ -69,27 +86,66 @@ function clearZone(p: { y: number; h: number; frame?: boolean }, zone: Zone | nu
   return Math.min(100, Math.max(0, pushed));
 }
 
-export function PropLayer({ section, reservedZone }: { section: SectionCode; reservedZone: Zone | null }) {
-  const props = ROSE_HORIZON_PROPS[section] ?? [];
+export function PropLayer({
+  section, reservedZone, breakpoint, config, editor,
+}: {
+  section: SectionCode;
+  reservedZone: Zone | null;
+  breakpoint: Breakpoint;
+  config?: Record<string, string>;
+  editor?: EditorHandle;
+}) {
+  const def = T11_STAGES[section];
+  const { layers } = useMemo(
+    () => resolveStage('t11', def, breakpoint, config),
+    [def, breakpoint, config],
+  );
+  // What each prop's `y` is before any couple override — the yardstick clearZone() compares
+  // against to tell "still at its shipped spot" from "the couple moved this on purpose".
+  const defaultY = useMemo(
+    () => new Map(baseStage(def, breakpoint).layers.map((l) => [l.id, l.y])),
+    [def, breakpoint],
+  );
+
+  const dockOpen = Boolean(editor?.enabled);
+  const stageActive = dockOpen && editor?.selectedStage === section;
+  // Only the shipped props — a couple's own "+Image" addition (a `custom-<id>`, never in this
+  // set) goes through SectionOverlay instead, same as any other couple-added extra. See
+  // `SHIPPED_PROP_IDS`'s own doc comment for why the split exists.
+  const shippedIds = SHIPPED_PROP_IDS[section] ?? new Set<string>();
+  const imgLayers = layers.filter((l) => l.kind === 'img' && !l.hidden && shippedIds.has(l.id));
+  if (!imgLayers.length) return null;
+
   return (
-    <>
-      {props.map((p) => (
-        <img
-          key={p.id}
-          src={p.src}
-          alt=""
-          draggable={false}
-          data-depth={PROP_DEPTH}
-          className={styles.prop}
-          style={{
-            left: `${p.x}%`,
-            top: `${clearZone(p, reservedZone)}%`,
-            width: `${p.w}%`,
-            height: `${p.h}%`,
-          }}
-        />
-      ))}
-    </>
+    <EngineProvider value={ENGINE}>
+      {/* `data-seen="true"` unconditionally: hybrid-overlay Classic templates have no scroll-
+          gated reveal for decorative art (same as SectionOverlay's own extras) — without an
+          ancestor carrying it, reveal.css's `[data-sl-anim]{opacity:0}` base rule leaves every
+          prop permanently invisible, since nothing ever flips it to "seen". `data-editing='true'`
+          on an ANCESTOR is separately what Stage.module.css's `.layerBox` pointer-events rule is
+          gated on (mirroring Stage.tsx's own `<section data-editing>`) — without it, art stays
+          un-clickable even with `editing` wired in JS. See PropLayer.module.css's `.wrap` for the
+          positioning/stacking-context half of this. */}
+      <div className={styles.wrap} data-seen="true" data-editing={dockOpen || undefined}>
+        {imgLayers.map((l) => {
+          const atDefault = l.y === defaultY.get(l.id);
+          const y = atDefault
+            ? clearZone({ y: l.y, h: l.h, frame: FRAME_PROP_IDS.has(l.id) }, reservedZone)
+            : l.y; // couple has explicitly repositioned this prop — their placement always wins
+          return (
+            <SharedLayer
+              key={l.id}
+              layer={{ ...l, y }}
+              eager={false}
+              selected={stageActive && editor?.selectedLayer === l.id}
+              editing={dockOpen}
+              stageActive={stageActive}
+              stageId={section}
+            />
+          );
+        })}
+      </div>
+    </EngineProvider>
   );
 }
 

@@ -5,37 +5,71 @@
   align-items: center;
   justify-content: center;
   padding: 8vh 0;
-  overflow: hidden; /* a prop's box can bleed past the section edge by design (corner framing) */
+  /* `overflow-x: clip` only, `overflow-y` left at its default `visible` -- same recipe T7's
+     `.wrapper` already uses (Template7.module.css) for the identical reason: a prop is allowed
+     to bleed past its own section's top/bottom edge into the next section (this template's whole
+     point is one continuous illustrated scroll, not discrete scenes -- see FlowBackground), but a
+     wide prop must never widen the page horizontally. Pairing `clip` with an unset (`visible`)
+     other axis is the specific pairing that avoids the CSS overflow spec's visible→auto
+     coercion (which DOES apply to `hidden`/`scroll`/`auto` pairings) -- `clip` is deliberately
+     exempt, which is why this isn't `overflow: hidden` reduced to one axis. */
+  overflow-x: clip;
 }
 
-/* x/y from the manifest are CENTER points (see ingest-by-sheet-position.py's pct block),
-   sized as a percent of the section's own box -- matches how every prop was actually measured
-   off the approved design. */
-.prop {
-  position: absolute;
-  /* Base centering (-50%,-50%) composed with useParallax's own offset -- same consumption
-     pattern as Stage.module.css's .layerBox, translate(var(--sl-par-x,0px), var(--sl-par,0px)). */
-  transform: translate(-50%, -50%) translate(var(--sl-par-x, 0px), var(--sl-par, 0px));
-  pointer-events: none;
-  z-index: 1;
-  user-select: none;
-}
-
-/* The translucent content card every section's real DOM sits on -- see spec/background.md's
-   Legibility contract: text never renders directly on the flow background. */
+/* The content card the welcome/ceremony DOM sits on -- Colour/blur/border/radius/shadow are CSS
+   custom properties (the same `--slot-panel-*` names T7/T10 and this template's own shared-slot
+   stages use for their Card control) so the Adjust panel's Card section can restyle it. Fallback
+   here is `transparent`/`none` -- same neutral default `_shared/slots/slots.module.css`'s own
+   `.panel` uses -- so "Card: None" (the default) really is no card at all, and a couple who wants
+   legibility backing over the illustrated art opts into Radial or Glass instead of having one
+   forced on unconditionally. See Template11.tsx's `cardStyleVars` doc comment for why this can't
+   just be `--slot-panel-bg: transparent` set unconditionally instead (it would also blank the
+   RSVP/wish bottom sheet, which must stay legible regardless of Card style).
+   z-index 2, deliberately LOWER than PropLayer.module.css's `.wrap` (z:3): props render ABOVE
+   the card by default now, not behind it -- a couple can still push a prop further back only by
+   lowering the whole PropLayer group, there's no per-prop toggle (see `.wrap`'s own comment for
+   why it's grouped, not per-layer). */
 .panel {
   position: relative;
   z-index: 2;
   width: min(86%, 420px);
   margin: 0 auto;
   padding: 2.4rem 1.6rem;
-  border-radius: 20px;
-  background: rgba(255, 253, 248, 0.72);
-  backdrop-filter: blur(6px);
-  -webkit-backdrop-filter: blur(6px);
-  box-shadow: 0 8px 32px rgba(74, 54, 46, 0.08);
+  border-radius: var(--slot-panel-radius, 0);
+  background: var(--slot-panel-bg, transparent);
+  backdrop-filter: var(--slot-panel-blur, none);
+  -webkit-backdrop-filter: var(--slot-panel-blur, none);
+  border: var(--slot-panel-border, none);
+  box-shadow: var(--slot-panel-shadow, none);
   text-align: center;
   transform: translate(var(--sl-par-x, 0px), var(--sl-par, 0px));
+}
+
+/* Same box/position/parallax/z-index as `.panel` above, but with none of its own visual chrome --
+   used by the RSVP/Wishes/Schedule/Photos stages, whose content is now real `kind:'slot'` layers
+   from the shared `_shared/slots/*` registry (see Template11.tsx's `flowSlotsFor` and
+   StageSection.tsx's `panelless`). Each slot already supplies its own look (a form's own `.panel`
+   card from slots.module.css, or bare text for a title/prompt), so this wrapper only needs to
+   stack them and stay a real measured box for PropLayer's reserved-zone avoidance -- a second
+   card here would double-box the ones that already draw their own. */
+.flowZone {
+  position: relative;
+  z-index: 2;
+  width: min(86%, 420px);
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  text-align: center;
+  transform: translate(var(--sl-par-x, 0px), var(--sl-par, 0px));
+}
+
+.amp {
+  display: inline-block;
+  margin: 0 0.35em;
+  opacity: 0.7;
+  font-style: italic;
 }
 
 .themeLabel {
@@ -68,113 +102,72 @@
   color: #4a362e;
 }
 
+.hijriDate {
+  font-size: 0.75rem;
+  letter-spacing: 0.05em;
+  color: #4a362e;
+  opacity: 0.65;
+  margin: 0.2rem 0 0;
+}
+
+.countdown {
+  display: flex;
+  justify-content: center;
+  gap: clamp(0.5rem, 2.5cqi, 1.4rem);
+  margin: 0.9rem 0;
+}
+.countUnit {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 2.6rem;
+}
+.countNum {
+  font-family: Georgia, 'Times New Roman', serif;
+  font-weight: 700;
+  font-size: 1.6rem;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  color: #4a362e;
+}
+.countLabel {
+  font-size: 0.62rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #4a362e;
+  opacity: 0.6;
+  margin-top: 0.3rem;
+}
+
+.footer {
+  position: relative;
+  z-index: 2;
+  padding: 2.4rem 1.6rem 3rem;
+  text-align: center;
+}
+
+.footerTagline {
+  font-size: 0.8rem;
+  letter-spacing: 0.05em;
+  color: #4a362e;
+  opacity: 0.6;
+}
+
 .scrollCue {
   position: absolute;
   bottom: 2rem;
   left: 50%;
   transform: translateX(-50%);
-  z-index: 2;
+  z-index: 4; /* above PropLayer's .wrap (3) so it never gets buried under a bleeding prop */
   color: #4a362e;
   opacity: 0.6;
 }
 
-.field {
-  width: 100%;
-  padding: 0.8rem 1rem;
-  margin-bottom: 0.8rem;
-  border: 1px solid rgba(74, 54, 46, 0.2);
-  border-radius: 10px;
-  background: rgba(255, 255, 255, 0.6);
-  font-size: 0.9rem;
-  color: #4a362e;
-}
-
-.button {
-  width: 100%;
-  padding: 0.85rem;
-  border: none;
-  border-radius: 10px;
-  background: #fcb887;
-  color: #4a362e;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  cursor: pointer;
-}
-.button:disabled {
-  opacity: 0.6;
-  cursor: default;
-}
-
-.attendChoice {
-  display: flex;
-  gap: 0.6rem;
-  margin-bottom: 0.8rem;
-}
-.attendChoice button {
-  flex: 1;
-  padding: 0.7rem;
-  border-radius: 10px;
-  border: 1px solid rgba(74, 54, 46, 0.2);
-  background: rgba(255, 255, 255, 0.5);
-  font-size: 0.75rem;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-  cursor: pointer;
-}
-.attendChoiceActive {
-  background: #4a362e !important;
-  color: #faebcc !important;
-  border-color: #4a362e !important;
-}
-
-.itineraryRow {
-  display: flex;
-  gap: 1rem;
-  align-items: baseline;
-  padding: 0.6rem 0;
-  border-bottom: 1px solid rgba(74, 54, 46, 0.12);
-  text-align: left;
-}
-.itineraryTime {
-  font-size: 0.75rem;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-  color: #7ca3c0;
-  flex: 0 0 auto;
-}
-.itineraryLabel {
-  color: #4a362e;
-  font-weight: 600;
-}
-
-.wishItem {
-  text-align: left;
-  padding: 0.6rem 0;
-  border-bottom: 1px solid rgba(74, 54, 46, 0.12);
-}
-.wishAuthor {
-  font-weight: 600;
-  color: #4a362e;
-  font-size: 0.85rem;
-}
-.wishMessage {
-  color: #4a362e;
-  opacity: 0.85;
-  font-size: 0.85rem;
-}
-
-.photoGrid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 0.6rem;
-  margin-top: 1rem;
-}
-.photoGrid img {
-  width: 100%;
-  aspect-ratio: 1;
-  object-fit: cover;
-  border-radius: 10px;
-}
+/* .field, .button, .attendChoice, .attendChoiceActive, .itineraryRow, .itineraryTime,
+   .itineraryLabel, .wishItem, .wishAuthor, .wishMessage and .photoGrid used to style this
+   template's own hand-rolled RSVP/Wishes/Schedule/Photos markup -- removed as dead CSS now that
+   those stages render through the shared _shared/slots/* registry (slots.module.css owns their
+   look; see Template11.tsx's flowSlotsFor). */
 
 /* No reduced-motion override needed here: useParallax itself skips writing --sl-par when
    reduced motion is set (see _shared/hooks/useParallax.ts), so .prop's transform simply never

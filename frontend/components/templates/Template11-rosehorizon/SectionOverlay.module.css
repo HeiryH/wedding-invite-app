@@ -1,0 +1,9 @@
+/* Absolutely-positioned decorative layer host over one Rose Horizon section. StageSection.tsx's
+   `.section` is already `position: relative`. */
+.overlay {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 6;
+}

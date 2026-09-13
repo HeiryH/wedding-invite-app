@@ -1,0 +1,29 @@
+/* Fills `.section` exactly and is the containing block every prop's `position: absolute`
+   `.layerBox` resolves its x/y/w/h percentages against — `.section` is `display: flex`, and a
+   plain `position: relative` div here would size to its own (zero, since every child is itself
+   `position: absolute`) content as a flex item instead of filling the section. `position:
+   absolute; inset: 0` removes it from flex flow entirely, same fix SectionOverlay.module.css's
+   `.overlay` already uses.
+
+   Also isolates a real stacking context (via the explicit z-index), so individual props' own z
+   values (1, 2, 3... for the Adjust panel's list order) never leak out to compete with anything
+   outside this wrapper — they only ever compete with EACH OTHER. z-index 3 is deliberately ABOVE
+   `.panel`'s 2 (Template11.module.css): props render on top of the content card by default now
+   (corner roses spilling onto the card edge is the intended look), not hidden behind it. Still
+   below `.scrollCue`'s 4, so the "scroll to next section" control stays reachable, and below
+   SectionOverlay's 6, so a couple's own "+Text/+Shape" additions can still go frontmost.
+
+   `pointer-events: none` on the WRAPPER itself (mirroring SectionOverlay.module.css's identical
+   `.overlay` rule) is load-bearing, not cosmetic: this div's own box covers the ENTIRE section via
+   `inset: 0`, so without this it would sit — fully transparent, but still hit-testable — above
+   everything in the RSVP/Wishes/Schedule/Photos flow content beneath it (z:2), intercepting every
+   real click/tap on the actual form fields and buttons there for actual guests. Individual props
+   re-enable their own pointer-events exactly where they need to (`.layerBox[data-kind='img']` is
+   `none` on the public page; `[data-editing='true'] .layerBox` flips it back to `auto` only inside
+   the Adjust dock) — this wrapper existing purely for stacking-context/positioning never should. */
+.wrap {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  pointer-events: none;
+}
