@@ -143,7 +143,10 @@
   transform:
     translate(-50%, -50%)
     translate(var(--sl-par-x, 0px), var(--sl-par, 0px))
-    scale(var(--sl-scale, 1));
+    rotate(var(--sl-rot, 0deg))
+    scale(var(--sl-scale, 1))
+    scaleX(var(--sl-flip-x, 1))
+    scaleY(var(--sl-flip-y, 1));
   transform-origin: center center;
   will-change: transform;
 }
@@ -249,6 +252,16 @@
   outline-offset: 3px;
 }
 
+/* A locked layer is inert on canvas regardless of dock/active state -- no click, no drag, no
+   resize handle (Layer.tsx never renders one for a locked layer anyway; this is belt-and-braces
+   for the box itself). Still reachable from the Adjust panel's layer list, which doesn't hit-test
+   the canvas. Wins over the dock-wide pointer-events:auto rule above via source order + equal
+   specificity is not guaranteed, so `!important` makes the override unconditional. */
+.layerBox[data-locked='true'] {
+  pointer-events: none !important;
+  cursor: default !important;
+}
+
 /* A slot component can render nothing (e.g. RsvpFormSlot/RsvpSeatingSlot each stand down while
    the other owns the step, per _shared/slots/rsvpFlow.tsx) while still occupying its full box —
    without this, that box's default `pointer-events: auto` sits over whatever's positioned
@@ -278,6 +291,28 @@
   touch-action: none;
   z-index: 10;
 }
+
+/* Width-only resize handles for a flow-mode slot (Layer.tsx's `canResizeW` branch) — a vertical
+   bar centred on each edge rather than a corner square, since only width is ever adjustable here.
+   `.flowItem` is already `position: relative`, so these anchor to it directly. */
+.flowHandleLeft,
+.flowHandleRight {
+  position: absolute;
+  top: 50%;
+  translate: 0 -50%;
+  width: 10px;
+  height: 32px;
+  border-radius: 4px;
+  background: #C98A54;
+  border: 2px solid #fff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  cursor: ew-resize;
+  pointer-events: auto;
+  touch-action: none;
+  z-index: 10;
+}
+.flowHandleLeft { left: -6px; }
+.flowHandleRight { right: -6px; }
 
 @media (prefers-reduced-motion: reduce) {
   .layerBox {

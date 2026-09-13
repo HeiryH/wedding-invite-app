@@ -343,8 +343,11 @@ export default function Template10({
             // Time/Label) via SlotProps.stageLayers — see types.ts's doc comment.
             slotProps={{ ...slotProps, stageLayers: r.layers }}
             eager={r.def.id === firstStageId}
-            // Outline the layer the parent's Adjust dock currently has selected.
-            editing={editing && editor?.selectedStage === r.def.id}
+            // `editing` (dock open at all) opens dock-wide click-to-select for cross-section
+            // selection; `stageActive` (this stage is the one currently open) gates full
+            // drag/resize and which layer's outline actually shows as selected.
+            editing={editing}
+            stageActive={editing && editor?.selectedStage === r.def.id}
             revealOverflow={editing && Boolean(editor?.revealOverflow)}
             revealFrameW={editor?.frame?.w ?? editor?.frameW ?? REVEAL_FRAME_W[breakpoint]}
             revealFrameH={editor?.frame?.svh ?? editor?.frameH ?? REVEAL_FRAME_H[breakpoint]}

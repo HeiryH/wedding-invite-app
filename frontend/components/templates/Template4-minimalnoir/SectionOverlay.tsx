@@ -30,21 +30,24 @@ export default function SectionOverlay({
     [def, breakpoint, config],
   );
 
-  const editing = Boolean(editor?.enabled) && editor?.selectedStage === stageId;
+  const dockOpen = Boolean(editor?.enabled);
+  const stageActive = dockOpen && editor?.selectedStage === stageId;
   // Anchor layers have no overlay visual — they nudge real DOM elements (see useAnchors).
   const visible = layers.filter((l) => !l.hidden && l.kind !== 'anchor');
   if (!visible.length) return null;
 
   return (
     <EngineProvider value={ENGINE}>
-      <div className={styles.overlay} data-stage={stageId} data-seen="true" data-editing={editing || undefined}>
+      <div className={styles.overlay} data-stage={stageId} data-seen="true" data-editing={dockOpen || undefined}>
         {visible.map((l) => (
           <Layer
             key={l.id}
             layer={l}
             eager={false}
-            selected={editing && editor?.selectedLayer === l.id}
-            editing={editing}
+            selected={stageActive && editor?.selectedLayer === l.id}
+            editing={dockOpen}
+            stageActive={stageActive}
+            stageId={stageId}
           />
         ))}
       </div>

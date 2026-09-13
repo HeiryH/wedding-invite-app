@@ -71,6 +71,15 @@ interface Props {
   /** The accent color actually rendered when no override is saved — differs by host template (T7
    *  vs. the neutral authored default) — so the swatch reflects reality, not an arbitrary guess. */
   slotThemeAccentDefault?: string;
+  /** True only for a template whose background is ONE continuous asset shared by every section
+   *  (see `TemplateEngine.pageBackground`'s doc comment in registry.ts) — shows a stage-independent
+   *  "Background · Flow" section (replace image + parallax rate) writing
+   *  `${keyPrefix}.layout.pageBg.*` keys, the same shape `slotTheme` already uses. */
+  pageBackground?: boolean;
+  /** Shows the "Card" style section (None/Radial/Glass) independent of `slotTheme` — for a
+   *  bespoke-markup template with a real content card (T11) but no shared slot registry for the
+   *  accent/font Theme fields to reach. See `TemplateEngine.cardStyle` in registry.ts. */
+  cardControl?: boolean;
 }
 
 const FIT_OPTIONS: ObjectFit[] = ['cover', 'contain', 'fill'];
@@ -100,12 +109,15 @@ export default function AdjustPanel({
   stages, keyPrefix, assetRoot, stageIds, breakpoint, config, onLayoutChange,
   selectedStage, selectedLayer, onSelectStage, onSelectLayer, onClose,
   canReveal, revealOverflow, onToggleReveal, onUploadImage, slotCatalog,
-  slotTheme, slotThemeAccentDefault,
+  slotTheme, slotThemeAccentDefault, pageBackground, cardControl,
 }: Props) {
   // Namespaced under `.layout.` purely to inherit the existing PRO-gate regex — not a stage layer.
   const themeKey = (field: 'accentColor' | 'headingFont' | 'bodyFont' | 'cardStyle' | 'cardBlur' | 'cardTint' | 'cardTintOpacity' | 'cardRadius') =>
     `${keyPrefix}.layout.slotTheme.${field}`;
   const themeDefaults = { accentColor: slotThemeAccentDefault ?? '#2b2a28' };
+  // Same shape as themeKey — a plain config key, not a stage layer delta, since this control
+  // isn't owned by any one stage (see TemplateEngine.pageBackground's doc comment).
+  const pageBgKey = (field: 'src' | 'parallaxRate') => `${keyPrefix}.layout.pageBg.${field}`;
   const [note, setNote] = useState('');
   const [dragId, setDragId] = useState<string | null>(null);
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
@@ -113,7 +125,7 @@ export default function AdjustPanel({
   // Layer-detail tab: geometry vs style vs animation. Sticky across layer selection.
   const [detailTab, setDetailTab] = useState<'layout' | 'style' | 'anim'>('layout');
   const fileRef = useRef<HTMLInputElement>(null);
-  const uploadTarget = useRef<'layer' | 'bg' | 'poster'>('layer');
+  const uploadTarget = useRef<'layer' | 'bg' | 'poster' | 'pageBg'>('layer');
   const slotIdCounter = useRef(0);
 
   const def = stages[selectedStage];
@@ -254,7 +266,7 @@ export default function AdjustPanel({
     flash(`Copied to ${other}`);
   };
 
-  const pickImage = (target: 'layer' | 'bg' | 'poster') => {
+  const pickImage = (target: 'layer' | 'bg' | 'poster' | 'pageBg') => {
     uploadTarget.current = target;
     fileRef.current?.click();
   };
@@ -266,6 +278,7 @@ export default function AdjustPanel({
     try {
       const url = await onUploadImage(file);
       if (uploadTarget.current === 'bg') patchBg({ bgSrc: url });
+      else if (uploadTarget.current === 'pageBg') onLayoutChange(pageBgKey('src'), url);
       else if (uploadTarget.current === 'poster') {
         if (current) patchLayer(current.id, { posterSrc: url });
       } else addLayer('img', { src: url });
@@ -402,7 +415,9 @@ export default function AdjustPanel({
     const kids = childrenOf.get(l.id);
     const hasKids = !!kids?.length;
     const isOpen = !collapsed.has(l.id);
-    const draggable = l.kind !== 'anchor';
+    // A locked layer can't be reordered by drag any more than it can be dragged on canvas — the
+    // lock/hide/select/delete-block affordances are still reachable by clicking (not dragging).
+    const draggable = l.kind !== 'anchor' && !l.locked;
     return (
       <div key={l.id}>
         <div
@@ -430,6 +445,13 @@ export default function AdjustPanel({
             {nameOf(l)}
           </button>
           <button
+            className={`${styles.iconBtn} ${l.locked ? styles.iconBtnLocked : styles.iconBtnOff}`}
+            onClick={() => patchLayer(l.id, { locked: !l.locked })}
+            title={l.locked ? 'Unlock — allow canvas click/drag again' : 'Lock — protect from accidental canvas click/drag'}
+          >
+            {l.locked ? '🔒' : '🔓'}
+          </button>
+          <button
             className={`${styles.iconBtn} ${l.hidden ? styles.iconBtnOff : ''}`}
             onClick={() => patchLayer(l.id, { hidden: !l.hidden })}
             title={l.hidden ? 'Show' : 'Hide'}
@@ -437,9 +459,9 @@ export default function AdjustPanel({
             {l.hidden ? '○' : '●'}
           </button>
           <button
-            className={`${styles.iconBtn} ${styles.iconBtnDanger}`}
-            onClick={() => removeLayer(l.id)}
-            title={l.kind === 'anchor' ? 'Remove from invitation' : 'Delete layer'}
+            className={`${styles.iconBtn} ${styles.iconBtnDanger} ${l.locked ? styles.iconBtnDisabled : ''}`}
+            onClick={() => { if (!l.locked) removeLayer(l.id); }}
+            title={l.locked ? 'Locked — unlock to delete' : l.kind === 'anchor' ? 'Remove from invitation' : 'Delete layer'}
           >
             ✕
           </button>
@@ -502,12 +524,19 @@ export default function AdjustPanel({
               </select>
             </div>
 
-            {/* Card style — None leaves every slot's own template-authored look untouched (no
-                scrim, no blur); Radial reproduces the soft off-white vignette some templates
-                shipped with by default before this control existed; Glass is Template 5's
-                frosted-glass card recipe. Each template's index.tsx decides its own "None"
-                baseline — this control only ever ADDS a look on top, it never forces one. */}
-            <div className={styles.label}>Card</div>
+          </>
+        )}
+
+        {/* Card style — None leaves every slot's own template-authored look untouched (no scrim,
+            no blur); Radial reproduces the soft off-white vignette some templates shipped with by
+            default before this control existed; Glass is Template 5's frosted-glass card recipe.
+            Each template's index.tsx decides its own "None" baseline — this control only ever
+            ADDS a look on top, it never forces one. Independent of `slotTheme`: a bespoke-markup
+            template (T11) can have a real content card worth restyling without also having the
+            shared slot registry's accent/font Theme fields, which wouldn't reach its markup. */}
+        {(slotTheme || cardControl) && (
+          <>
+            <div className={styles.label} style={{ marginTop: slotTheme ? undefined : 0 }}>Card</div>
             <div className={styles.control} style={{ gridTemplateColumns: '54px 1fr' }}>
               <span>Style</span>
               <select
@@ -539,7 +568,7 @@ export default function AdjustPanel({
                 <Slider
                   label="Opacity"
                   value={Number(config[themeKey('cardTintOpacity')] ?? 0.45)}
-                  min={0.1} max={0.9} step={0.05}
+                  min={0} max={0.9} step={0.05}
                   onChange={(v) => onLayoutChange(themeKey('cardTintOpacity'), String(v))}
                 />
                 <Slider
@@ -549,6 +578,33 @@ export default function AdjustPanel({
                   onChange={(v) => onLayoutChange(themeKey('cardRadius'), String(v))}
                 />
               </>
+            )}
+          </>
+        )}
+
+        {pageBackground && (
+          <>
+            <div className={styles.label} style={{ marginTop: slotTheme || cardControl ? undefined : 0 }}>Background · Flow</div>
+            <Slider
+              label="Parallax"
+              value={Number(config[pageBgKey('parallaxRate')] ?? 0.3)}
+              min={0} max={1} step={0.05}
+              onChange={(v) => onLayoutChange(pageBgKey('parallaxRate'), String(v))}
+            />
+            {onUploadImage && (
+              <div className={styles.btnRow}>
+                <button className={styles.btn} onClick={() => pickImage('pageBg')}>
+                  {config[pageBgKey('src')] ? 'Replace image' : 'Set image'}
+                </button>
+                {config[pageBgKey('src')] && (
+                  <button
+                    className={`${styles.btn} ${styles.btnGhost}`}
+                    onClick={() => onLayoutChange(pageBgKey('src'), '')}
+                  >
+                    Reset to default
+                  </button>
+                )}
+              </div>
             )}
           </>
         )}
@@ -681,9 +737,16 @@ export default function AdjustPanel({
           <>
             <div className={styles.label}>{current.label ?? current.id}</div>
 
+            {current.locked && (
+              <p className={styles.lockedNote}>
+                🔒 Locked — protected from canvas click/drag and from edits here. Click 🔓 in the
+                layer list above to unlock it.
+              </p>
+            )}
+
             {/* Geometry, style, and animation are split into tabs so neither crowds the column.
                 scrollVideo has no entrance/exit/style vocabulary, so it only ever shows Layout. */}
-            {!isScrollVideo && (
+            {!current.locked && !isScrollVideo && (
               <div className={styles.tabs} style={{ marginBottom: 8 }}>
                 <button
                   className={`${styles.tab} ${detailTab === 'layout' ? styles.tabActive : ''}`}
@@ -708,7 +771,7 @@ export default function AdjustPanel({
               </div>
             )}
 
-            {isScrollVideo || isSheet || detailTab === 'layout' ? (
+            {current.locked ? null : isScrollVideo || isSheet || detailTab === 'layout' ? (
               <>
                 <div className={styles.control} style={{ gridTemplateColumns: '54px 1fr' }}>
                   <span>Name</span>
@@ -801,6 +864,50 @@ export default function AdjustPanel({
                       own to offer Width/Height on, so Scale is their only sizing control. */}
                   {(isImage || isAnchor) && !isSheet && (
                     <Slider label="Scale" value={current.s} min={0.2} max={3} step={0.02} onChange={set('s')} />
+                  )}
+                  {/* Rotate/Flip — image art only (a shape/text/slot box has real content that a
+                      mirror or a tilt would read as broken, not stylistic). Composes with Scale in
+                      the same transform (Stage.module.css's `.layerBox`), so no extra wrapper. */}
+                  {isImage && !isSheet && (
+                    <>
+                      <Slider label="Rotate" value={current.rotation ?? 0} min={-180} max={180} step={1} onChange={set('rotation')} />
+                      <div className={styles.btnRow}>
+                        <button
+                          className={`${styles.btn} ${current.flipX ? '' : styles.btnGhost}`}
+                          onClick={() => patchLayer(current.id, { flipX: !current.flipX })}
+                        >
+                          {current.flipX ? '✓ Flip H' : 'Flip H'}
+                        </button>
+                        <button
+                          className={`${styles.btn} ${current.flipY ? '' : styles.btnGhost}`}
+                          onClick={() => patchLayer(current.id, { flipY: !current.flipY })}
+                        >
+                          {current.flipY ? '✓ Flip V' : 'Flip V'}
+                        </button>
+                      </div>
+                    </>
+                  )}
+                  {/* A slot's own `.slot` CSS scrolls internally by default when its content is
+                      taller than the box (Layer.tsx). No-Scroll flips it to `overflow: visible` —
+                      the box stops clipping and content spills past its bottom edge uncropped
+                      instead, for a couple who'd rather see everything at once than scroll a
+                      small form. Not offered inside a sheet — the pop-up's own scroll container
+                      (slots.module.css's `.sheetCard`) already handles overflow there. */}
+                  {isSlot && !isSheet && (
+                    <div className={styles.btnRow}>
+                      <button
+                        className={`${styles.btn} ${current.overflowMode === 'visible' ? styles.btnGhost : ''}`}
+                        onClick={() => patchLayer(current.id, { overflowMode: undefined })}
+                      >
+                        {current.overflowMode !== 'visible' ? '✓ Scroll' : 'Scroll'}
+                      </button>
+                      <button
+                        className={`${styles.btn} ${current.overflowMode === 'visible' ? '' : styles.btnGhost}`}
+                        onClick={() => patchLayer(current.id, { overflowMode: 'visible' })}
+                      >
+                        {current.overflowMode === 'visible' ? '✓ No Scroll' : 'No Scroll'}
+                      </button>
+                    </div>
                   )}
                   {slotVOverflow && (
                     <div style={{
@@ -1081,9 +1188,11 @@ export default function AdjustPanel({
               </p>
             )}
 
-            <button className={`${styles.btn} ${styles.btnGhost}`} onClick={resetLayer} style={{ width: '100%', marginTop: 8 }}>
-              {isAnchor ? 'Reset position' : 'Reset layer'}
-            </button>
+            {!current.locked && (
+              <button className={`${styles.btn} ${styles.btnGhost}`} onClick={resetLayer} style={{ width: '100%', marginTop: 8 }}>
+                {isAnchor ? 'Reset position' : 'Reset layer'}
+              </button>
+            )}
           </>
         ) : (
           <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 8 }}>

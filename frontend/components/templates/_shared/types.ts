@@ -149,6 +149,28 @@ export interface Layer {
   /** Parallax factor. 0 = welded to the background. Defaults to z/10 when absent. */
   depth?: number;
 
+  /** Degrees, clockwise. Applied about the layer's own centre, same origin `s` (Scale) already
+   *  uses — see Stage.module.css's `.layerBox` transform chain. `undefined`/0 = no rotation. */
+  rotation?: number;
+  /** Mirrors the layer about its own vertical axis (`scaleX(-1)`). Composes with `rotation`/`s`
+   *  in the same transform, so a flipped-and-rotated prop doesn't need a second wrapper. */
+  flipX?: boolean;
+  /** Mirrors the layer about its own horizontal axis (`scaleY(-1)`). */
+  flipY?: boolean;
+
+  /** When true, this layer is inert on the preview canvas — no click-to-select, no drag, no
+   *  resize handle, regardless of the Adjust dock's state. Still manageable from the Adjust
+   *  panel's layer list (hide/rename/unlock/delete), which doesn't need canvas hit-testing. The
+   *  point is protecting a layer from an accidental canvas click/drag while working a crowded
+   *  stage, not hiding it from the editor entirely. */
+  locked?: boolean;
+
+  /** kind 'slot' only. `undefined`/'scroll' (default) ⇒ today's behavior — the slot's own `.slot`
+   *  CSS scrolls internally when its content is taller than the box. 'visible' ⇒ the box stops
+   *  clipping/scrolling and content spills past its bottom edge uncropped — for a couple who'd
+   *  rather see everything than scroll a small form. */
+  overflowMode?: 'scroll' | 'visible';
+
   /**
    * Entrance animation type, played when the layer's stage scrolls into view (staggered by
    * `order`). `undefined` ⇒ `'rise'` (the shipped fade + slide-up), so existing layouts are

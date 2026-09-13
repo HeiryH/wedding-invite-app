@@ -18,7 +18,13 @@ interface Props {
   slotProps: SlotProps;
   /** Only the first stage on screen loads its art eagerly. */
   eager: boolean;
+  /** True whenever the Adjust dock is open at all (not scoped to this stage) — see Layer.tsx's
+   *  matching prop doc. Opens dock-wide click-to-select for every layer on this stage, even when
+   *  it isn't the one currently active in the panel. */
   editing?: boolean;
+  /** True only when this stage is the one currently open in the Adjust dock — gates full
+   *  drag/resize and which layer's outline actually shows as "selected" (see Layer.tsx). */
+  stageActive?: boolean;
   /** Editor-only: relax the overflow clip so off-screen layers stay grabbable. */
   revealOverflow?: boolean;
   /** Editor-only: the real device width/height (px) to pin the stage to while revealing, so bleed
@@ -37,7 +43,7 @@ interface Props {
 }
 
 export default function Stage({
-  def, layers, bgFit, bgPosition, bgScale, bgSrc, seen, slotProps, eager, editing,
+  def, layers, bgFit, bgPosition, bgScale, bgSrc, seen, slotProps, eager, editing, stageActive,
   revealOverflow, revealFrameW, revealFrameH, selectedLayer, suppressId, transparent,
 }: Props) {
   const { assetRoot, assetSizes } = useEngine();
@@ -96,8 +102,10 @@ export default function Stage({
       layer={l}
       slotProps={slotProps}
       eager={eager}
-      selected={editing && selectedLayer === l.id}
+      selected={stageActive && selectedLayer === l.id}
       editing={editing}
+      stageActive={stageActive}
+      stageId={def.id}
     />
   );
   // Flow mode splits layers into two populations rendered in separate containers (see
@@ -117,6 +125,7 @@ export default function Stage({
       data-has-canvas={canvasDef ? true : undefined}
       data-seen={seen}
       data-editing={editing || undefined}
+      data-stage-active={stageActive || undefined}
       data-reveal={revealOverflow || undefined}
       style={{
         ...(transparent ? { background: 'transparent' } : null),
@@ -165,8 +174,10 @@ export default function Stage({
                 layer={l}
                 slotProps={slotProps}
                 eager={eager}
-                selected={editing && selectedLayer === l.id}
+                selected={stageActive && selectedLayer === l.id}
                 editing={editing}
+                stageActive={stageActive}
+                stageId={def.id}
               />
             ))}
           </div>
@@ -177,8 +188,10 @@ export default function Stage({
                 layer={l}
                 slotProps={slotProps}
                 eager={eager}
-                selected={editing && selectedLayer === l.id}
+                selected={stageActive && selectedLayer === l.id}
                 editing={editing}
+                stageActive={stageActive}
+                stageId={def.id}
                 flow
               />
             ))}

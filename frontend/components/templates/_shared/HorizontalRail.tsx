@@ -210,16 +210,21 @@ export default function HorizontalRail({
 
         {/* Shared frame art — rendered once across the full row so a wide piece spans the beats. */}
         <div ref={planeRef} className={styles.plane} style={{ width: `calc(var(--fvw, 100vw) * ${n})` }}>
-          {shared.map((l, i) => (
-            <Layer
-              key={l.id}
-              layer={l}
-              slotProps={slotProps}
-              eager={Boolean(firstEager) && i === 0}
-              selected={editing && editor?.selectedStage === sharedStageId && editor?.selectedLayer === l.id}
-              editing={editing && editor?.selectedStage === sharedStageId}
-            />
-          ))}
+          {shared.map((l, i) => {
+            const sharedActive = editing && editor?.selectedStage === sharedStageId;
+            return (
+              <Layer
+                key={l.id}
+                layer={l}
+                slotProps={slotProps}
+                eager={Boolean(firstEager) && i === 0}
+                selected={sharedActive && editor?.selectedLayer === l.id}
+                editing={editing}
+                stageActive={sharedActive}
+                stageId={sharedStageId}
+              />
+            );
+          })}
         </div>
 
         <div ref={trackRef} className={styles.track} style={{ width: `calc(var(--fvw, 100vw) * ${n})` }}>
@@ -232,7 +237,8 @@ export default function HorizontalRail({
                 seen={seen.has(i)}
                 slotProps={slotProps}
                 eager={Boolean(firstEager) && i === 0}
-                editing={editing && editor?.selectedStage === p.def.id}
+                editing={editing}
+                stageActive={editing && editor?.selectedStage === p.def.id}
                 selectedLayer={editor?.selectedLayer}
                 suppressId
                 transparent

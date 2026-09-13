@@ -154,6 +154,19 @@
 }
 .iconBtnOff { color: var(--text-faint); }
 .iconBtnDanger { color: var(--danger); }
+.iconBtnLocked { color: var(--warning); }
+.iconBtnDisabled { opacity: 0.35; cursor: default; }
+
+.lockedNote {
+  font-size: 11.5px;
+  line-height: 1.4;
+  color: var(--warning);
+  background: var(--warning-subtle);
+  border: 1px solid var(--warning-border);
+  border-radius: 8px;
+  padding: 6px 8px;
+  margin: 0 0 10px;
+}
 
 .control {
   display: grid;

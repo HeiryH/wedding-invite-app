@@ -22,14 +22,27 @@ interface Props {
   eager: boolean;
   selected?: boolean;
   /**
-   * True iff this layer's stage is the one currently open in the Adjust dock. Drives click-to-
-   * select and drag-to-move/resize by posting straight to the parent customize page — this
-   * component renders identically inside the editor iframe and on the public invitation, where
-   * `editing` is always false, so none of this attaches there (a stray `postMessage` to itself on
-   * the public page is otherwise harmless — no listener is registered — but gating on `editing`
-   * means it never fires there at all).
+   * True whenever the Adjust dock is open AT ALL — not scoped to one stage. Drives click-to-select
+   * (posting straight to the parent customize page, which auto-switches its active tab to
+   * `stageId`) and the dock-wide CSS pointer-events opt-in, so a layer anywhere in the scrolling
+   * preview can be clicked without first selecting its section's tab. This component renders
+   * identically inside the editor iframe and on the public invitation, where `editing` is always
+   * false, so none of this attaches there (a stray `postMessage` to itself on the public page is
+   * otherwise harmless — no listener is registered — but gating on `editing` means it never fires
+   * there at all).
    */
   editing?: boolean;
+  /** True only while `editing` is also true AND this layer's own stage is the one currently open
+   *  in the Adjust dock (what `editing` alone used to mean before cross-section selection existed).
+   *  Gates full drag-to-move/resize and the resize handle(s) — reaching a layer outside the active
+   *  tab is a two-step gesture by design: a click there selects it and switches the dock to its
+   *  stage (via `editing`+`stageId`), and only the *next* gesture, once `stageActive` has caught up
+   *  with the parent round-trip, can drag/resize it. */
+  stageActive?: boolean;
+  /** This layer's own stage/section id — included in the `PREVIEW_LAYER_SELECT`/`PREVIEW_LAYER_EDIT`
+   *  messages so the parent always knows which stage's config to patch or switch to, regardless of
+   *  what tab happens to be open at the moment the message arrives. */
+  stageId?: string;
   /** Only ever passed (true) for `kind:'slot'` layers inside a `StageDef.flow` stage (see
    *  Stage.tsx) — renders in normal document flow (width%, centred, z-stacked) instead of the
    *  usual absolutely-positioned box, so the slot's own content height determines the section's
@@ -44,7 +57,7 @@ interface Props {
  *  no local optimistic transform. */
 interface DragState {
   pointerId: number;
-  mode: 'move' | 'resize';
+  mode: 'move' | 'resize' | 'resize-w';
   startX: number;
   startY: number;
   rectW: number;
@@ -55,9 +68,13 @@ interface DragState {
   layerH: number;
   chain: boolean;
   moved: boolean;
+  /** 'resize-w' only — which edge is being dragged, since a flow item's box is horizontally
+   *  centred (margin: 0 auto): dragging the right edge rightward and the left edge leftward must
+   *  both grow the width, so the left handle's delta is negated relative to the right's. */
+  edgeSign?: number;
 }
 
-export default function Layer({ layer, slotProps, eager, selected, editing, flow }: Props) {
+export default function Layer({ layer, slotProps, eager, selected, editing, stageActive, stageId, flow }: Props) {
   const { assetRoot, assetSizes, slotRegistry } = useEngine();
   const sheets = useSheets();
   const boxRef = useRef<HTMLDivElement>(null);
@@ -71,9 +88,9 @@ export default function Layer({ layer, slotProps, eager, selected, editing, flow
     const patch = pendingPatchRef.current;
     pendingPatchRef.current = null;
     if (patch) {
-      window.parent.postMessage({ type: 'PREVIEW_LAYER_EDIT', layerId: layer.id, patch }, window.location.origin);
+      window.parent.postMessage({ type: 'PREVIEW_LAYER_EDIT', layerId: layer.id, stageId, patch }, window.location.origin);
     }
-  }, [layer.id]);
+  }, [layer.id, stageId]);
 
   const schedulePatch = useCallback((patch: Partial<LayerModel>) => {
     pendingPatchRef.current = patch;
@@ -82,11 +99,11 @@ export default function Layer({ layer, slotProps, eager, selected, editing, flow
 
   useEffect(() => () => { if (rafRef.current) cancelAnimationFrame(rafRef.current); }, []);
 
-  const beginDrag = (e: ReactPointerEvent<HTMLDivElement>, mode: DragState['mode']) => {
-    if (!editing) return;
+  const beginDrag = (e: ReactPointerEvent<HTMLDivElement>, mode: DragState['mode'], edgeSign = 1) => {
+    if (!stageActive || layer.locked) return;
     e.stopPropagation();
     if (mode === 'move') {
-      window.parent.postMessage({ type: 'PREVIEW_LAYER_SELECT', layerId: layer.id }, window.location.origin);
+      window.parent.postMessage({ type: 'PREVIEW_LAYER_SELECT', layerId: layer.id, stageId }, window.location.origin);
     }
     // Layer geometry is a percentage of its positioning frame, so that frame's own on-screen box
     // is what converts a pixel drag delta back into the same percentage space. For a layer inside
@@ -98,7 +115,7 @@ export default function Layer({ layer, slotProps, eager, selected, editing, flow
     const rect = frameEl?.getBoundingClientRect();
     if (!rect || rect.width === 0 || rect.height === 0) return;
     dragRef.current = {
-      pointerId: e.pointerId, mode,
+      pointerId: e.pointerId, mode, edgeSign,
       startX: e.clientX, startY: e.clientY,
       rectW: rect.width, rectH: rect.height,
       layerX: layer.x, layerY: layer.y, layerW: layer.w, layerH: layer.h, chain: layer.chain,
@@ -126,6 +143,10 @@ export default function Layer({ layer, slotProps, eager, selected, editing, flow
       // corner under the pointer means both edges move — the width/height delta is doubled.
       const nextW = clampSize(d.layerW + 2 * dxPct);
       schedulePatch(d.chain ? { w: nextW } : { w: nextW, h: clampSize(d.layerH + 2 * dyPct) });
+    } else if (d.mode === 'resize-w') {
+      // Flow items are horizontally centred (margin: 0 auto), so the same doubled-delta trick
+      // applies — just width, no y/h (a flow item has no free vertical position to resize into).
+      schedulePatch({ w: clampSize(d.layerW + 2 * dxPct * (d.edgeSign ?? 1)) });
     } else {
       schedulePatch({ x: clampPos(d.layerX + dxPct), y: clampPos(d.layerY + dyPct) });
     }
@@ -157,11 +178,14 @@ export default function Layer({ layer, slotProps, eager, selected, editing, flow
     // handle — nested inside that context — can never paint or hit-test above a higher-z sibling
     // it happens to overlap. Editing mode should also float the active layer to the front, which
     // conveniently fixes both at once.
-    zIndex: editing && selected ? 9999 : layer.z,
+    zIndex: stageActive && selected ? 9999 : layer.z,
     '--sl-scale': layer.s,
     '--sl-opacity': layer.opacity,
     '--sl-delay': staggerDelay(layer.order),
     ...(layer.animDur ? { '--sl-dur': `${layer.animDur}s` } : {}),
+    ...(layer.rotation ? { '--sl-rot': `${layer.rotation}deg` } : {}),
+    ...(layer.flipX ? { '--sl-flip-x': -1 } : {}),
+    ...(layer.flipY ? { '--sl-flip-y': -1 } : {}),
   };
   // Flow-mode slot item: stays in normal document flow (no left/top/translate), just a
   // width%-constrained, centred, z-stacked block. `position: relative` (not static) is what lets
@@ -220,6 +244,11 @@ export default function Layer({ layer, slotProps, eager, selected, editing, flow
         const slotStyle: CSSProperties & Record<string, string | number> = {
           '--slot-text-scale': layer.textScale ?? 1,
           ...(chromeFixed ? { pointerEvents: 'none' } : null),
+          // 'visible' lets content spill past the box's bottom edge uncropped instead of scrolling
+          // internally — omitted (not set to `undefined`, which the CSSProperties/Record index
+          // signature here rejects) leaves `.slot`'s own `overflow-y: auto` CSS fallback in place,
+          // so an untouched layer is unchanged. See AdjustPanel.tsx's Scroll/No-Scroll toggle.
+          ...(layer.overflowMode === 'visible' ? { overflowY: 'visible' } : null),
         };
         return (
           <div
@@ -350,6 +379,14 @@ export default function Layer({ layer, slotProps, eager, selected, editing, flow
     }
   };
 
+  // `stageActive` gates full drag (this layer's own stage is the one open in the dock); `editing`
+  // alone (dock open at all) still gets a click-to-select — the two-step "click elsewhere to jump
+  // the dock to it, then drag" gesture the cross-section select feature relies on. A locked layer
+  // is inert on canvas either way — still reachable from the Adjust panel's layer list.
+  const canDrag = Boolean(stageActive) && !flow && !layer.locked;
+  const canSelect = Boolean(editing) && !layer.locked;
+  const canResizeW = Boolean(stageActive) && flow && !layer.locked;
+
   return (
     <div
       ref={boxRef}
@@ -359,15 +396,18 @@ export default function Layer({ layer, slotProps, eager, selected, editing, flow
       data-depth={layer.depth ?? layer.z / 10}
       data-layer={layer.id}
       data-selected={selected || undefined}
+      data-locked={layer.locked || undefined}
       // useParallax sets --sl-fade / --sl-out on this box (they inherit down to the reveal elements).
       data-scroll-fade={anim === 'scroll-fade' || undefined}
       data-scroll-exit={animOut ? true : undefined}
-      // A flow item stays in normal document flow — no drag-to-move/resize (its position is
-      // determined by content order, not x/y), but it's still click-to-select in the editor.
-      onPointerDown={editing && !flow ? (e) => beginDrag(e, 'move') : editing ? () => window.parent.postMessage({ type: 'PREVIEW_LAYER_SELECT', layerId: layer.id }, window.location.origin) : undefined}
-      onPointerMove={editing && !flow ? onDragMove : undefined}
-      onPointerUp={editing && !flow ? endDrag : undefined}
-      onPointerCancel={editing && !flow ? endDrag : undefined}
+      onPointerDown={
+        canDrag ? (e) => beginDrag(e, 'move')
+        : canSelect ? () => window.parent.postMessage({ type: 'PREVIEW_LAYER_SELECT', layerId: layer.id, stageId }, window.location.origin)
+        : undefined
+      }
+      onPointerMove={canDrag ? onDragMove : undefined}
+      onPointerUp={canDrag ? endDrag : undefined}
+      onPointerCancel={canDrag ? endDrag : undefined}
     >
       {/* box: position/parallax/scale · inner: entrance · idle: continuous loop · exit: scroll-out
           — four elements so the transforms never fight (each owns its own nested node). */}
@@ -376,7 +416,7 @@ export default function Layer({ layer, slotProps, eager, selected, editing, flow
           <div className={styles.layerExit} data-sl-out={animOut}>{content()}</div>
         </div>
       </div>
-      {editing && selected && !flow && (
+      {stageActive && selected && !flow && !layer.locked && (
         <div
           className={styles.handle}
           data-role="resize-handle"
@@ -385,6 +425,29 @@ export default function Layer({ layer, slotProps, eager, selected, editing, flow
           onPointerUp={endDrag}
           onPointerCancel={endDrag}
         />
+      )}
+      {/* Width-only edge handles for a flow-mode slot (no free x/y/h to resize into — just how
+          wide the column is). Both edges use the same centred-growth math; the left one negates
+          its delta (see DragState.edgeSign) so dragging outward on either side grows the width. */}
+      {canResizeW && selected && (
+        <>
+          <div
+            className={styles.flowHandleLeft}
+            data-role="resize-handle-w"
+            onPointerDown={(e) => beginDrag(e, 'resize-w', -1)}
+            onPointerMove={onDragMove}
+            onPointerUp={endDrag}
+            onPointerCancel={endDrag}
+          />
+          <div
+            className={styles.flowHandleRight}
+            data-role="resize-handle-w"
+            onPointerDown={(e) => beginDrag(e, 'resize-w', 1)}
+            onPointerMove={onDragMove}
+            onPointerUp={endDrag}
+            onPointerCancel={endDrag}
+          />
+        </>
       )}
     </div>
   );

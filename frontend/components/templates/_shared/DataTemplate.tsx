@@ -150,7 +150,8 @@ export default function DataTemplate({
             // Time/Label) via SlotProps.stageLayers — see types.ts's doc comment.
             slotProps={{ ...slotProps, stageLayers: r.layers }}
             eager={i === 0}
-            editing={editing && editor?.selectedStage === r.def.id}
+            editing={editing}
+            stageActive={editing && editor?.selectedStage === r.def.id}
             selectedLayer={editor?.selectedLayer}
             // `.stage` always paints an opaque fill (Stage.module.css) so a stage with no art of
             // its own still shows something — but that fill would completely hide a page-level
