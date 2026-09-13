@@ -809,6 +809,19 @@ export default function CustomizePage() {
   // "Reveal off-screen" relaxes the stage clip in the preview so nudged-out layers stay grabbable.
   const [revealOverflow, setRevealOverflow] = useState(false);
 
+  // Undo/redo — a linear history of snapshots over the whole "unsaved draft" surface
+  // (draftConfig/weddingDraft/sectionOrder). Snapshot-based rather than per-action, so it needs no
+  // instrumentation at each of the many places that call setDraftConfig/setWeddingDraft/
+  // setSectionOrder (schema fields, the Adjust dock's layer edits, section drag-reorder, switching
+  // templates) — a single debounced effect below watches the combined state instead. Itinerary is
+  // deliberately excluded: its CRUD calls (itineraryService.create/update/delete) hit the backend
+  // immediately, so there is no client-side "unsaved" version of it to step through.
+  type EditSnapshot = { draftConfig: Record<string, string>; weddingDraft: typeof emptyWed; sectionOrder: string[] };
+  const [history, setHistory] = useState<{ stack: EditSnapshot[]; index: number }>({ stack: [], index: -1 });
+  const applyingHistoryRef = useRef(false);
+  const canUndo = history.index > 0;
+  const canRedo = history.index >= 0 && history.index < history.stack.length - 1;
+
   const [itinerary, setItinerary] = useState<ItineraryItem[]>([]);
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -855,6 +868,8 @@ export default function CustomizePage() {
         stageIds: engine.stageIds(ctx),
         reveal: engine.reveal,
         slotTheme: Boolean(engine.slotTheme),
+        pageBackground: Boolean(engine.pageBackground),
+        cardStyle: Boolean(engine.cardStyle),
         assetRoot: engine.assetRoot,
       };
     }
@@ -892,12 +907,14 @@ export default function CustomizePage() {
 
   // Canvas drag/resize (see Layer.tsx's PREVIEW_LAYER_EDIT) lands here — the same patch-and-
   // reserialize AdjustPanel's own sliders already do, just triggered from the preview iframe
-  // instead of the dock. The layer always belongs to `activeStage`: every template scopes
-  // `editing` to `editor.selectedStage`, so a layer can only be interactive on canvas while its
-  // stage is the one the dock has open.
-  const patchLayerFromCanvas = useCallback((layerId: string, patch: Partial<LayerModel>) => {
+  // instead of the dock. `stageId` comes straight off the message (Layer.tsx always knows its own
+  // stage — see its `stageId` prop) rather than being assumed to be `activeStage`: cross-section
+  // selection means a drag can now start on a layer whose stage isn't the one the dock has open
+  // yet (the click that started it is also what's asking the dock to switch there), so relying on
+  // `activeStage` here would race that switch instead of just using the id the drag already knows.
+  const patchLayerFromCanvas = useCallback((stageId: string, layerId: string, patch: Partial<LayerModel>) => {
     if (!layout) return;
-    const def = layout.stages[activeStage];
+    const def = layout.stages[stageId];
     if (!def) return;
     const breakpoint: Breakpoint = previewBreakpoint;
     const { layers, bgFit, bgPosition, bgScale, bgSrc } = resolveStage(layout.keyPrefix, def, breakpoint, draftConfig);
@@ -906,7 +923,7 @@ export default function CustomizePage() {
       layoutKey(layout.keyPrefix, breakpoint, def.id),
       serializeStage(def, breakpoint, nextLayers, { bgFit, bgPosition, bgScale, bgSrc }),
     );
-  }, [layout, activeStage, previewBreakpoint, draftConfig, handleLayoutChange]);
+  }, [layout, previewBreakpoint, draftConfig, handleLayoutChange]);
 
   // Opening the dock collapses the left inspector to its icon rail so the centred preview keeps room.
   const toggleAdjust = useCallback(() => {
@@ -1014,24 +1031,86 @@ export default function CustomizePage() {
         iframeRef.current?.contentWindow?.postMessage({ type: 'PREVIEW_UPDATE', payload: payloadRef.current }, window.location.origin);
       }
       if (event.data?.type === 'PREVIEW_LAYER_SELECT') {
+        // Cross-section selection: a click on canvas can now come from a stage other than the
+        // one the dock currently has open (Layer.tsx always includes its own `stageId`) — jump
+        // the dock's active tab to match so the layer list/detail panel reflect what was clicked,
+        // without requiring the couple to click the section tab first.
+        const stageId = event.data.stageId as string | undefined;
+        if (stageId) setSelectedStage(stageId);
         setSelectedLayer(event.data.layerId as string);
       }
       if (event.data?.type === 'PREVIEW_LAYER_EDIT') {
-        patchLayerFromCanvas(event.data.layerId as string, event.data.patch as Partial<LayerModel>);
+        const stageId = (event.data.stageId as string | undefined) ?? activeStage;
+        patchLayerFromCanvas(stageId, event.data.layerId as string, event.data.patch as Partial<LayerModel>);
       }
     };
     window.addEventListener('message', handler);
     return () => window.removeEventListener('message', handler);
-  }, [patchLayerFromCanvas]);
+  }, [patchLayerFromCanvas, activeStage]);
 
-  // Keyboard shortcut: Cmd+S to save
+  // Record a history snapshot ~500ms after the draft settles — long enough that a slider drag or a
+  // burst of rapid edits (the Adjust dock's own per-frame patches during a canvas drag included)
+  // collapses into one undo step instead of one per intermediate value, short enough that a couple
+  // of quick, separate edits still land as separate steps. Skipped entirely for the render that
+  // applies an undo/redo itself (`applyingHistoryRef`), so navigating history never re-records the
+  // state it just navigated to.
+  useEffect(() => {
+    if (loading) return;
+    if (applyingHistoryRef.current) { applyingHistoryRef.current = false; return; }
+    const snap: EditSnapshot = { draftConfig, weddingDraft, sectionOrder };
+    const t = setTimeout(() => {
+      setHistory((prev) => {
+        const base = prev.stack.slice(0, prev.index + 1);
+        const last = base[base.length - 1];
+        if (last && JSON.stringify(last) === JSON.stringify(snap)) return prev;
+        // Cap so a long editing session can't grow this without bound.
+        const nextStack = [...base, snap].slice(-100);
+        return { stack: nextStack, index: nextStack.length - 1 };
+      });
+    }, 500);
+    return () => clearTimeout(t);
+  }, [draftConfig, weddingDraft, sectionOrder, loading]);
+
+  // Reads `history` from the closure (this render's value) rather than a functional updater —
+  // both handlers only ever run from a discrete user action (a click or a keydown), never from a
+  // hot path where the value could go stale between calls, so this stays simple and keeps every
+  // other draft-state setter (draftConfig/weddingDraft/sectionOrder) a plain top-level call instead
+  // of nesting them inside setHistory's own updater.
+  const handleUndo = useCallback(() => {
+    if (history.index <= 0) return;
+    const newIndex = history.index - 1;
+    applyingHistoryRef.current = true;
+    const snap = history.stack[newIndex];
+    setDraftConfig(snap.draftConfig);
+    setWeddingDraft(snap.weddingDraft);
+    setSectionOrder(snap.sectionOrder);
+    setHistory((prev) => ({ ...prev, index: newIndex }));
+  }, [history]);
+
+  const handleRedo = useCallback(() => {
+    if (history.index < 0 || history.index >= history.stack.length - 1) return;
+    const newIndex = history.index + 1;
+    applyingHistoryRef.current = true;
+    const snap = history.stack[newIndex];
+    setDraftConfig(snap.draftConfig);
+    setWeddingDraft(snap.weddingDraft);
+    setSectionOrder(snap.sectionOrder);
+    setHistory((prev) => ({ ...prev, index: newIndex }));
+  }, [history]);
+
+  // Keyboard shortcuts: Cmd+S to save, Cmd+Z to undo, Cmd+Shift+Z (and the Windows-standard
+  // Cmd+Y) to redo.
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === 's') { e.preventDefault(); if (isDirty) handleSave(); }
+      if (!(e.metaKey || e.ctrlKey)) return;
+      if (e.key === 's') { e.preventDefault(); if (isDirty) handleSave(); return; }
+      if (e.key.toLowerCase() === 'z' && e.shiftKey) { e.preventDefault(); handleRedo(); return; }
+      if (e.key.toLowerCase() === 'z') { e.preventDefault(); handleUndo(); return; }
+      if (e.key.toLowerCase() === 'y') { e.preventDefault(); handleRedo(); }
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [isDirty]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [isDirty, handleUndo, handleRedo]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Reset active chip + scroll position when block changes
   useEffect(() => {
@@ -1554,13 +1633,15 @@ export default function CustomizePage() {
 
         <div style={{ flex: 1 }} />
 
-        {/* Undo/Redo (visual only for now) */}
-        <button title="Undo" style={{ width: 32, height: 32, display: 'grid', placeItems: 'center', border: 'none', borderRadius: 6, cursor: 'pointer', background: 'transparent', color: 'var(--text-muted)', transition: 'background 150ms' }}
-          onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'var(--surface-sunken)'; }} onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent'; }}>
+        {/* Undo/Redo — steps through the `history` snapshot stack above. */}
+        <button title="Undo (⌘Z)" disabled={!canUndo} onClick={handleUndo}
+          style={{ width: 32, height: 32, display: 'grid', placeItems: 'center', border: 'none', borderRadius: 6, cursor: canUndo ? 'pointer' : 'default', background: 'transparent', color: canUndo ? 'var(--text-muted)' : 'var(--text-faint)', opacity: canUndo ? 1 : 0.5, transition: 'background 150ms' }}
+          onMouseEnter={e => { if (canUndo) (e.currentTarget as HTMLElement).style.background = 'var(--surface-sunken)'; }} onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent'; }}>
           <Icon name="undo" size={14} />
         </button>
-        <button title="Redo" style={{ width: 32, height: 32, display: 'grid', placeItems: 'center', border: 'none', borderRadius: 6, cursor: 'pointer', background: 'transparent', color: 'var(--text-muted)', transition: 'background 150ms' }}
-          onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'var(--surface-sunken)'; }} onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent'; }}>
+        <button title="Redo (⌘⇧Z)" disabled={!canRedo} onClick={handleRedo}
+          style={{ width: 32, height: 32, display: 'grid', placeItems: 'center', border: 'none', borderRadius: 6, cursor: canRedo ? 'pointer' : 'default', background: 'transparent', color: canRedo ? 'var(--text-muted)' : 'var(--text-faint)', opacity: canRedo ? 1 : 0.5, transition: 'background 150ms' }}
+          onMouseEnter={e => { if (canRedo) (e.currentTarget as HTMLElement).style.background = 'var(--surface-sunken)'; }} onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent'; }}>
           <Icon name="redo" size={14} />
         </button>
 
@@ -1780,7 +1861,14 @@ export default function CustomizePage() {
               onToggleReveal={() => setRevealOverflow((r) => !r)}
               onUploadImage={handleAdjustUpload}
               slotTheme={Boolean(layout?.slotTheme)}
-              slotThemeAccentDefault={wedding.templateId === 7 ? '#3d3833' : wedding.templateId === 10 ? '#D9481B' : '#2b2a28'}
+              slotThemeAccentDefault={
+                wedding.templateId === 7 ? '#3d3833'
+                : wedding.templateId === 10 ? '#D9481B'
+                : wedding.templateId === 11 ? '#fcb887'
+                : '#2b2a28'
+              }
+              pageBackground={Boolean(layout?.pageBackground)}
+              cardControl={Boolean(layout?.cardStyle)}
             />
           </aside>
         )}
