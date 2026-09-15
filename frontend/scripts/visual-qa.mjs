@@ -34,8 +34,8 @@ if (!templateId || !slug) {
   process.exit(2);
 }
 
-const BASE = 'http://localhost:3000';
-const OUT = path.resolve(process.cwd(), `docs/${slug}-qa`);
+const BASE = process.env.VISUAL_QA_BASE || 'http://localhost:3000';
+const OUT = path.resolve(process.cwd(), process.env.VISUAL_QA_OUT || `docs/${slug}-qa`);
 fs.mkdirSync(OUT, { recursive: true });
 
 // Minimal synthetic wedding — enough for TemplateWrapper to route to TEMPLATE_ENGINES[id]

@@ -8,6 +8,7 @@ import { T6_STAGES, t6StageIds } from '../Template6-fairygarden/data/t6Stages';
 import { T7_STAGES, T7_ASSETS, STAGE_GROUPS } from '../Template7-romangarden/data/stages';
 import { T10_STAGES, T10_ASSETS, STAGE_GROUPS as T10_STAGE_GROUPS } from '../Template10-sunnysafari/data/stages';
 import { T11_STAGES, t11StageIds } from '../Template11-rosehorizon/data/roseHorizonStages';
+import { T12_STAGES, t12StageIds } from '../Template12-dreamywoodland/data/dreamyWoodlandStages';
 
 /**
  * Everything a template's `layout` resolution needs, computed once per render in the customize
@@ -115,6 +116,11 @@ export const TEMPLATE_ENGINES: Record<number, TemplateEngine> = {
   11: {
     keyPrefix: 't11', reveal: false, pageBackground: true, slotTheme: true,
     resolveStages: () => T11_STAGES, stageIds: (ctx) => t11StageIds(ctx.codes),
+  },
+  12: {
+    keyPrefix: 't12', reveal: false, pageBackground: true, slotTheme: true,
+    assetRoot: '/templates/dreamy-woodland',
+    resolveStages: () => T12_STAGES, stageIds: (ctx) => t12StageIds(ctx.codes),
   },
 };
 

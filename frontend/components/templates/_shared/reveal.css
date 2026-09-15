@@ -66,6 +66,18 @@
 [data-sl-out='slide-out-down']  { transform: translateY(calc(var(--sl-out, 0) * 60%)); }
 [data-sl-out='slide-out-left']  { transform: translateX(calc(var(--sl-out, 0) * -60%)); }
 [data-sl-out='slide-out-right'] { transform: translateX(calc(var(--sl-out, 0) * 60%)); }
+[data-sl-out='slide-fade-out-down'] {
+  transform: translateY(calc(var(--sl-out, 0) * 60%));
+  opacity: calc(1 - var(--sl-out, 0));
+}
+[data-sl-out='slide-fade-out-left'] {
+  transform: translateX(calc(var(--sl-out, 0) * -60%));
+  opacity: calc(1 - var(--sl-out, 0));
+}
+[data-sl-out='slide-fade-out-right'] {
+  transform: translateX(calc(var(--sl-out, 0) * 60%));
+  opacity: calc(1 - var(--sl-out, 0));
+}
 [data-sl-out='zoom-out'] {
   transform: scale(calc(1 - var(--sl-out, 0) * 0.4));
   opacity: calc(1 - var(--sl-out, 0) * 0.6);

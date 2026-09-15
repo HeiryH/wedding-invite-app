@@ -44,6 +44,7 @@ const TEMPLATE_ROOTS: Record<number, string[]> = {
   8: ['Template8.tsx'],
   9: ['Template9.tsx'],
   10: ['Template10.tsx', 'Template10-sunnysafari', '_shared'],
+  12: ['Template12.tsx', 'Template12-dreamywoodland', '_shared'],
 };
 
 /** Keys with no literal call site anywhere in template markup — read some other way (a backend-
@@ -112,4 +113,19 @@ describe('templateConfigSchema field scoping', () => {
       ).toEqual([]);
     });
   }
+
+  it('exposes Dreamy Woodland copy and shared-slot controls', () => {
+    const keys = new Set(getConfigFields(12, 'SUPER_ADMIN').map((field) => field.key));
+    for (const key of [
+      'invite.heading', 'section.order', 'walimah.body', 'walimah.title',
+      'rsvp.title', 'rsvp.subtitle', 'rsvp.name_placeholder', 'rsvp.submit_label',
+      'sheet.rsvp.label', 'sheet.rsvp.image', 'itinerary.title',
+      'wish.title', 'wish.prompt', 'wish.form_title', 'wish.submit_label',
+      'sheet.wish.label', 'sheet.wish.image', 'photobooth.title',
+      'photobooth.prompt', 'photobooth.upload_label', 'photobooth.frameArt',
+      'footer.tagline',
+    ]) {
+      expect(keys.has(key), `${key} should be editable for template 12`).toBe(true);
+    }
+  });
 });

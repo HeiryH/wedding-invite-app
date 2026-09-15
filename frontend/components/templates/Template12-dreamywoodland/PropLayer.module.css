@@ -1,0 +1,10 @@
+.wrap {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  pointer-events: none;
+}
+
+.wrap :global([data-layer^='ground-'] img) {
+  object-fit: fill;
+}
