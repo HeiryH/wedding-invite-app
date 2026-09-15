@@ -46,9 +46,9 @@ function useCountdown(target: string) {
 
 interface Template11Props {
   wedding: Wedding;
-  onRSVP: (data: any) => Promise<void>;
-  onSubmitWish: (data: any) => Promise<void>;
-  onUploadPhoto?: (data: any) => Promise<void>;
+  onRSVP: SlotProps['onRSVP'];
+  onSubmitWish: SlotProps['onSubmitWish'];
+  onUploadPhoto?: SlotProps['onUploadPhoto'];
   wishes: Wish[];
   photos: Photo[];
   photoBoothEnabled: boolean;
@@ -262,6 +262,7 @@ export default function Template11({
                 key={code}
                 code={code}
                 {...overlayProps}
+                contentStyle={a('welcome', 'hero')}
                 extra={
                   <button
                     className={styles.scrollCue}
@@ -311,7 +312,7 @@ export default function Template11({
 
           case 'walimah':
             return (
-              <StageSection key={code} code={code} {...overlayProps}>
+              <StageSection key={code} code={code} {...overlayProps} contentStyle={a('walimah', 'ceremonyContent')}>
                 <h2
                   className={styles.heading}
                   style={{ fontSize: '1.8rem', ...a('walimah', 'title'), ...sx('walimah', 'title') }}
@@ -319,37 +320,37 @@ export default function Template11({
                   {t('walimah.title', 'Walimatul Urus')}
                 </h2>
                 {customConfig?.['walimah.body'] ? (
-                  <div className={styles.body} dangerouslySetInnerHTML={{ __html: customConfig['walimah.body'] }} />
+                  <div className={styles.body} style={{ ...a('walimah', 'body'), ...sx('walimah', 'body') }} dangerouslySetInnerHTML={{ __html: customConfig['walimah.body'] }} />
                 ) : (
-                  <div className={styles.body}>{dateLabel} · {wedding.venue}</div>
+                  <div className={styles.body} style={{ ...a('walimah', 'body'), ...sx('walimah', 'body') }}>{dateLabel} · {wedding.venue}</div>
                 )}
               </StageSection>
             );
 
           case 'rsvp':
             return (
-              <StageSection key={code} code={code} {...overlayProps} panelless>
+              <StageSection key={code} code={code} {...overlayProps} panelless contentStyle={a('rsvp', 'rsvpContent')}>
                 {flowSlotsFor('rsvp')}
               </StageSection>
             );
 
           case 'itinerary':
             return (
-              <StageSection key={code} code={code} {...overlayProps} panelless>
+              <StageSection key={code} code={code} {...overlayProps} panelless contentStyle={a('itinerary', 'itineraryContent')}>
                 {flowSlotsFor('itinerary')}
               </StageSection>
             );
 
           case 'wishes':
             return (
-              <StageSection key={code} code={code} {...overlayProps} panelless>
+              <StageSection key={code} code={code} {...overlayProps} panelless contentStyle={a('wishes', 'wishesContent')}>
                 {flowSlotsFor('wishes')}
               </StageSection>
             );
 
           case 'photobooth':
             return (
-              <StageSection key={code} code={code} {...overlayProps} panelless>
+              <StageSection key={code} code={code} {...overlayProps} panelless contentStyle={a('photobooth', 'photoboothContent')}>
                 {flowSlotsFor('photobooth')}
               </StageSection>
             );

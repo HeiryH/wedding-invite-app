@@ -137,7 +137,7 @@ export default function Template12({
           <FlowBackground src={pageBgSrc} tileWidth={1024} tileHeight={1536} parallaxRate={pageBgParallax} />
           {sectionOrder.map((code) => {
             if (code === 'welcome') return (
-              <StageSection key={code} code={code} {...overlayProps} extra={
+              <StageSection key={code} code={code} {...overlayProps} contentStyle={a('welcome', 'hero')} extra={
                 <button className={styles.scrollCue} onClick={() => scrollTo(sectionOrder[1] ?? 'rsvp')} aria-label="Continue to invitation details">↓</button>
               }>
                 <p className={styles.invitationLine} style={{ ...a('welcome', 'themeLabel'), ...sx('welcome', 'themeLabel') }}>
@@ -164,18 +164,18 @@ export default function Template12({
             );
 
             if (code === 'walimah') return (
-              <StageSection key={code} code={code} {...overlayProps}>
+              <StageSection key={code} code={code} {...overlayProps} contentStyle={a('walimah', 'ceremonyContent')}>
                 <h2 className={styles.sectionTitle} style={{ ...a('walimah', 'title'), ...sx('walimah', 'title') }}>
                   {t('walimah.title', 'Our Wedding Celebration')}
                 </h2>
                 {customConfig?.['walimah.body']
-                  ? <div className={styles.body} dangerouslySetInnerHTML={{ __html: customConfig['walimah.body'] }} />
-                  : <div className={styles.body}>We would be delighted by your presence as we begin our life together.<br /><br />{dateLabel}<br />{wedding.venue}</div>}
+                  ? <div className={styles.body} style={{ ...a('walimah', 'body'), ...sx('walimah', 'body') }} dangerouslySetInnerHTML={{ __html: customConfig['walimah.body'] }} />
+                  : <div className={styles.body} style={{ ...a('walimah', 'body'), ...sx('walimah', 'body') }}>We would be delighted by your presence as we begin our life together.<br /><br />{dateLabel}<br />{wedding.venue}</div>}
               </StageSection>
             );
 
             if (code === 'rsvp' || code === 'itinerary' || code === 'wishes' || code === 'photobooth') return (
-              <StageSection key={code} code={code} {...overlayProps} panelless>{flowSlotsFor(code)}</StageSection>
+              <StageSection key={code} code={code} {...overlayProps} panelless contentStyle={a(code, `${code}Content`)}>{flowSlotsFor(code)}</StageSection>
             );
             return null;
           })}

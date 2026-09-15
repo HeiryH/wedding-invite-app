@@ -162,6 +162,7 @@ export default function Layer({ layer, slotProps, eager, selected, editing, stag
 
   const anim = layer.anim || 'rise';
   const animOut = layer.animOut && layer.animOut !== 'none' ? layer.animOut : undefined;
+  const animOutDur = layer.animOutDur ?? layer.animDur ?? 1;
   const animIdle = layer.animIdle && layer.animIdle !== 'none' ? layer.animIdle : undefined;
   const idleStyle: CSSProperties & Record<string, string | number> | undefined = animIdle
     ? {
@@ -183,6 +184,7 @@ export default function Layer({ layer, slotProps, eager, selected, editing, stag
     '--sl-opacity': layer.opacity,
     '--sl-delay': staggerDelay(layer.order),
     ...(layer.animDur ? { '--sl-dur': `${layer.animDur}s` } : {}),
+    '--sl-out-dur': `${animOutDur}s`,
     ...(layer.rotation ? { '--sl-rot': `${layer.rotation}deg` } : {}),
     ...(layer.flipX ? { '--sl-flip-x': -1 } : {}),
     ...(layer.flipY ? { '--sl-flip-y': -1 } : {}),
@@ -201,6 +203,7 @@ export default function Layer({ layer, slotProps, eager, selected, editing, stag
     '--sl-opacity': layer.opacity,
     '--sl-delay': staggerDelay(layer.order),
     ...(layer.animDur ? { '--sl-dur': `${layer.animDur}s` } : {}),
+    '--sl-out-dur': `${animOutDur}s`,
   };
 
   const content = () => {

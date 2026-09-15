@@ -8,6 +8,10 @@ const anchor = (id: string, label: string): Layer => ({
   chain: true, hidden: false, opacity: 1,
 });
 
+/** Expandable parent row in Adjust; child layers remain individually editable. The matching
+ * content wrapper reads this anchor so moving/scaling/hiding it affects the complete block. */
+const group = (id: string, label: string): Layer => ({ ...anchor(id, label), styleable: false });
+
 const prop = (
   id: string, file: string, x: number, y: number, w: number, h: number, z: number,
   extra: Partial<Layer> = {},
@@ -79,13 +83,14 @@ export const T12_STAGES: Record<string, StageDef> = {
     prop('deer', 'deer.webp', 22, 78, 25, 14, 4),
     prop('doves', 'doves.webp', 78, 26, 18, 6, 4, { flipX: true }),
     prop('moon-stars', 'moon-stars.webp', 20, 19, 17, 8, 3),
-    anchor('themeLabel', 'Invitation Line'),
-    anchor('nameFirst', 'First Name'),
-    anchor('nameSecond', 'Second Name'),
-    anchor('date', 'Date'),
-    anchor('timer', 'Countdown Timer'),
-    anchor('hijri', 'Hijri Date'),
-    anchor('venue', 'Venue'),
+    group('hero', 'Couple Details'),
+    { ...anchor('themeLabel', 'Invitation Line'), parent: 'hero' },
+    { ...anchor('nameFirst', 'First Name'), parent: 'hero' },
+    { ...anchor('nameSecond', 'Second Name'), parent: 'hero' },
+    { ...anchor('date', 'Date'), parent: 'hero' },
+    { ...anchor('timer', 'Countdown Timer'), parent: 'hero' },
+    { ...anchor('hijri', 'Hijri Date'), parent: 'hero' },
+    { ...anchor('venue', 'Venue'), parent: 'hero' },
   ], {
     'ground-meadow': { x: 50, y: 82, w: 104, h: 70 },
     'rose-arch': { x: 50, y: 48, w: 39, h: 94 },
@@ -99,7 +104,9 @@ export const T12_STAGES: Record<string, StageDef> = {
     prop('potted-botanicals', 'potted-botanicals.webp', 50, 91, 58, 27, 3),
     prop('rose-sprig', 'rose-sprig.webp', 12, 22, 20, 9, 2),
     prop('doves', 'doves.webp', 85, 20, 15, 5, 3, { flipX: true }),
-    anchor('title', 'Ceremony Title'),
+    group('ceremonyContent', 'Ceremony Details'),
+    { ...anchor('title', 'Ceremony Title'), parent: 'ceremonyContent' },
+    { ...anchor('body', 'Ceremony Body'), parent: 'ceremonyContent' },
   ], {
     'ground-garden': { x: 50, y: 82, w: 104, h: 70 },
     'potted-botanicals': { w: 27, h: 43 },
@@ -110,11 +117,12 @@ export const T12_STAGES: Record<string, StageDef> = {
     ground('ground-meadow', 'ground-meadow-v2.webp'),
     prop('deer', 'deer.webp', 82, 76, 25, 14, 3, { flipX: true }),
     prop('rose-sprig', 'rose-sprig.webp', 14, 78, 22, 10, 2),
-    slot('rsvpTitle', 'rsvpTitle', 'RSVP Title', { order: 0, z: 14 }),
-    slot('rsvpPrompt', 'rsvpPrompt', 'RSVP Prompt', { order: 1, z: 13 }),
-    slot('rsvpForm', 'rsvpForm', 'RSVP Form · in pop-up', { order: 2, z: 12, presentation: 'sheet', sheetId: 'rsvp' }),
-    slot('rsvpSeating', 'rsvpSeating', 'Seating · in pop-up', { order: 2, z: 11, presentation: 'sheet', sheetId: 'rsvp' }),
-    slot('rsvpTrigger', 'sheetTrigger', 'RSVP Button', { order: 3, z: 10, sheetId: 'rsvp' }),
+    group('rsvpContent', 'RSVP'),
+    slot('rsvpTitle', 'rsvpTitle', 'RSVP Title', { parent: 'rsvpContent', order: 0, z: 14 }),
+    slot('rsvpPrompt', 'rsvpPrompt', 'RSVP Prompt', { parent: 'rsvpContent', order: 1, z: 13 }),
+    slot('rsvpForm', 'rsvpForm', 'RSVP Form · in pop-up', { parent: 'rsvpContent', order: 2, z: 12, presentation: 'sheet', sheetId: 'rsvp' }),
+    slot('rsvpSeating', 'rsvpSeating', 'Seating · in pop-up', { parent: 'rsvpContent', order: 2, z: 11, presentation: 'sheet', sheetId: 'rsvp' }),
+    slot('rsvpTrigger', 'sheetTrigger', 'RSVP Button', { parent: 'rsvpContent', order: 3, z: 10, sheetId: 'rsvp' }),
   ], {
     'ground-meadow': { x: 50, y: 82, w: 104, h: 70 },
     deer: { x: 76, y: 77, w: 13, h: 25 },
@@ -126,8 +134,9 @@ export const T12_STAGES: Record<string, StageDef> = {
     rightCorner('corner-rose-right', 'corner-rose-vine-v2.webp', 92, 45, 34, 76),
     prop('fox-rabbit', 'fox-rabbit.webp', 82, 82, 28, 13, 3),
     prop('moon-stars', 'moon-stars.webp', 15, 18, 16, 7, 2),
-    slot('itineraryTitle', 'itineraryTitle', 'Schedule Title', { order: 0, z: 12 }),
-    slot('itineraryList', 'itineraryList', 'Schedule List', { order: 1, z: 11 }),
+    group('itineraryContent', 'Schedule'),
+    slot('itineraryTitle', 'itineraryTitle', 'Schedule Title', { parent: 'itineraryContent', order: 0, z: 12 }),
+    slot('itineraryList', 'itineraryList', 'Schedule List', { parent: 'itineraryContent', order: 1, z: 11 }),
     { ...anchor('itin-time', 'Time'), parent: 'itineraryList' },
     { ...anchor('itin-title', 'Label'), parent: 'itineraryList' },
   ], {
@@ -143,12 +152,13 @@ export const T12_STAGES: Record<string, StageDef> = {
     rightCorner('corner-canopy-right', 'corner-flower-canopy-v2.webp', 84, 20, 48, 46),
     prop('flowering-tree', 'flowering-tree.webp', 84, 79, 34, 24, 2, { flipX: true }),
     prop('rose-sprig', 'rose-sprig.webp', 12, 19, 21, 10, 3),
-    slot('wishTitle', 'wishTitle', 'Wishes Title', { order: 0, z: 15 }),
-    slot('wishPrompt', 'wishPrompt', 'Wishes Prompt', { order: 1, z: 14 }),
-    slot('wishForm', 'wishForm', 'Wish Form · in pop-up', { order: 2, z: 13, presentation: 'sheet', sheetId: 'wish' }),
-    slot('wishPhoto', 'wishPhoto', 'Add a Photo · in pop-up', { order: 2, z: 12, presentation: 'sheet', sheetId: 'wish' }),
-    slot('wishTrigger', 'sheetTrigger', 'Write a Wish Button', { order: 3, z: 11, sheetId: 'wish' }),
-    slot('wishList', 'wishList', 'Wishes List', { order: 4, z: 10 }),
+    group('wishesContent', 'Wishes'),
+    slot('wishTitle', 'wishTitle', 'Wishes Title', { parent: 'wishesContent', order: 0, z: 15 }),
+    slot('wishPrompt', 'wishPrompt', 'Wishes Prompt', { parent: 'wishesContent', order: 1, z: 14 }),
+    slot('wishForm', 'wishForm', 'Wish Form · in pop-up', { parent: 'wishesContent', order: 2, z: 13, presentation: 'sheet', sheetId: 'wish' }),
+    slot('wishPhoto', 'wishPhoto', 'Add a Photo · in pop-up', { parent: 'wishesContent', order: 2, z: 12, presentation: 'sheet', sheetId: 'wish' }),
+    slot('wishTrigger', 'sheetTrigger', 'Write a Wish Button', { parent: 'wishesContent', order: 3, z: 11, sheetId: 'wish' }),
+    slot('wishList', 'wishList', 'Wishes List', { parent: 'wishesContent', order: 4, z: 10 }),
   ], {
     'ground-meadow': { x: 50, y: 82, w: 104, h: 70 },
     'corner-canopy-left': { x: 12, y: 24, w: 27, h: 68 },
@@ -160,7 +170,8 @@ export const T12_STAGES: Record<string, StageDef> = {
     ground('ground-gallery', 'ground-gallery-v2.webp'),
     prop('potted-botanicals', 'potted-botanicals.webp', 50, 94, 50, 23, 2),
     prop('doves', 'doves.webp', 86, 15, 15, 5, 2),
-    slot('photoBooth', 'photoBooth', 'Photo Booth', { order: 0, z: 10 }),
+    group('photoboothContent', 'Photo Booth'),
+    slot('photoBooth', 'photoBooth', 'Photo Booth', { parent: 'photoboothContent', order: 0, z: 10 }),
   ], {
     'ground-gallery': { x: 50, y: 82, w: 104, h: 70 },
     'potted-botanicals': { w: 25, h: 40 },

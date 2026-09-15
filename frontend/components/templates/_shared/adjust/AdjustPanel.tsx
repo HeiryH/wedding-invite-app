@@ -129,6 +129,7 @@ export default function AdjustPanel({
   const [detailTab, setDetailTab] = useState<'layout' | 'style' | 'anim'>('layout');
   const fileRef = useRef<HTMLInputElement>(null);
   const uploadTarget = useRef<'layer' | 'bg' | 'poster' | 'pageBg'>('layer');
+  const customLayerCounter = useRef(0);
   const slotIdCounter = useRef(0);
 
   const def = stages[selectedStage];
@@ -203,7 +204,10 @@ export default function AdjustPanel({
   };
 
   const addLayer = (kind: 'text' | 'shape' | 'img', extra?: Partial<Layer>) => {
-    const id = `custom-${Date.now().toString(36)}`;
+    let id = '';
+    do {
+      id = `custom-${selectedStage}-${customLayerCounter.current++}`;
+    } while (layers.some((layer) => layer.id === id));
     const maxZ = Math.max(0, ...layers.map((l) => l.z));
     const styled: Partial<Layer> =
       kind === 'text' ? { text: 'Your text here', color: '#3F3524', fontSize: 4, fontWeight: 600 }
@@ -1159,6 +1163,31 @@ export default function AdjustPanel({
                     ))}
                   </select>
                 </div>
+                {(current.animOut ?? 'none') !== 'none' && (
+                  <>
+                    <div className={styles.btnRow}>
+                      <button
+                        className={`${styles.btn} ${current.animOutDur === undefined ? '' : styles.btnGhost}`}
+                        onClick={() => patchLayer(current.id, { animOutDur: undefined })}
+                      >
+                        {current.animOutDur === undefined ? '✓ Same duration' : 'Same duration'}
+                      </button>
+                      <button
+                        className={`${styles.btn} ${current.animOutDur !== undefined ? '' : styles.btnGhost}`}
+                        onClick={() => patchLayer(current.id, { animOutDur: current.animOutDur ?? current.animDur ?? 1 })}
+                      >
+                        {current.animOutDur !== undefined ? '✓ Different' : 'Different'}
+                      </button>
+                    </div>
+                    {current.animOutDur === undefined ? (
+                      <p style={{ fontSize: 11.5, color: 'var(--text-muted)', margin: '4px 0 8px' }}>
+                        Scroll-out uses the enter duration ({current.animDur ?? 1}s).
+                      </p>
+                    ) : (
+                      <Slider label="Duration" value={current.animOutDur} min={0.2} max={3} step={0.1} onChange={set('animOutDur')} />
+                    )}
+                  </>
+                )}
               </>
             ) : current.animatable ? (
               <>

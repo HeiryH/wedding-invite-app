@@ -1,4 +1,4 @@
-import { useRef, type ReactNode } from 'react';
+import { useRef, type CSSProperties, type ReactNode } from 'react';
 import type { SectionCode } from '@/lib/templateUtils';
 import type { Breakpoint, EditorHandle } from '@/components/templates/_shared/types';
 import { PropLayer, usePanelZone } from './PropLayer';
@@ -22,6 +22,7 @@ export function StageSection({
   config,
   editor,
   panelless,
+  contentStyle,
 }: {
   code: SectionCode;
   children: ReactNode;
@@ -40,6 +41,8 @@ export function StageSection({
    * no background/blur/border/shadow of its own.
    */
   panelless?: boolean;
+  /** Group-layer transform/visibility applied to the complete editable content block. */
+  contentStyle?: CSSProperties;
 }) {
   const sectionRef = useRef<HTMLElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
@@ -55,7 +58,7 @@ export function StageSection({
     <section ref={sectionRef} id={code} data-stage={code} data-seen="true" className={styles.section}>
       <PropLayer section={code} reservedZone={zone} breakpoint={breakpoint} config={config} editor={editor} />
       <SectionOverlay stageId={code} breakpoint={breakpoint} config={config} editor={editor} />
-      <div ref={panelRef} className={panelless ? styles.flowZone : styles.panel} data-depth={0.4}>
+      <div ref={panelRef} className={panelless ? styles.flowZone : styles.panel} data-depth={0.4} style={contentStyle}>
         {children}
       </div>
       {extra}

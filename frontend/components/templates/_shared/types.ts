@@ -183,6 +183,9 @@ export interface Layer {
   animDur?: number;
   /** Exit animation, scroll-scrubbed as the layer leaves the viewport. `undefined` ⇒ `'none'`. */
   animOut?: AnimOutType;
+  /** Exit smoothing duration in seconds. `undefined` links it to `animDur`; setting a value lets
+   *  the Adjust panel tune enter and scroll-out timing independently. */
+  animOutDur?: number;
   /** Idle/looping animation, played continuously once seen. `undefined` ⇒ `'none'`. Not applied to
    *  `anchor`/`scrollVideo` kinds (see Layer.tsx). */
   animIdle?: AnimIdleType;

@@ -59,7 +59,9 @@
    `--sl-out` (0 = in view, 1 = scrolled out the top; written by useParallax). Reversible: scrolling
    back down runs it in reverse. The short transition just smooths the per-frame steps. */
 [data-sl-out] {
-  transition: opacity 0.1s linear, transform 0.1s linear;
+  transition:
+    opacity var(--sl-out-dur, 1s) linear,
+    transform var(--sl-out-dur, 1s) linear;
 }
 [data-sl-out='fade-out']        { opacity: calc(1 - var(--sl-out, 0)); }
 [data-sl-out='slide-out-up']    { transform: translateY(calc(var(--sl-out, 0) * -60%)); }
