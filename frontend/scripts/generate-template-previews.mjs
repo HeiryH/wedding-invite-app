@@ -24,6 +24,7 @@ const CODES = [
   'engraved-certificate',
   'sunny-safari',
   'rose-horizon',
+  'dreamy-woodland',
 ];
 
 const BASE = 'http://localhost:3000';

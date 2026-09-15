@@ -20,6 +20,9 @@ const ANIM_OUT_LABELS: Record<AnimOutType, string> = {
   none: 'None', 'fade-out': 'Fade out',
   'slide-out-up': 'Slide out up', 'slide-out-down': 'Slide out down',
   'slide-out-left': 'Slide out left', 'slide-out-right': 'Slide out right',
+  'slide-fade-out-down': 'Slide down + fade',
+  'slide-fade-out-left': 'Slide left + fade',
+  'slide-fade-out-right': 'Slide right + fade',
   'zoom-out': 'Shrink out', 'zoom-in': 'Grow out',
 };
 

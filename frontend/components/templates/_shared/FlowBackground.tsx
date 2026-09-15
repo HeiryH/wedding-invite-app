@@ -6,6 +6,8 @@ interface FlowBackgroundProps {
   src: string;
   /** Natural height of one tile, px — used to size the stack and pick the tile count. */
   tileHeight: number;
+  /** Natural width of one tile. When supplied, tile count follows its rendered responsive height. */
+  tileWidth?: number;
   /** Fraction of page scroll the background drifts at. 0 = pinned, 1 = scrolls with content. */
   parallaxRate?: number;
   className?: string;
@@ -31,7 +33,7 @@ interface FlowBackgroundProps {
  * this works for however long a given invite's content turns out to be, with no fixed assumption
  * baked in anywhere.
  */
-export function FlowBackground({ src, tileHeight, parallaxRate = 0.3, className }: FlowBackgroundProps) {
+export function FlowBackground({ src, tileHeight, tileWidth, parallaxRate = 0.3, className }: FlowBackgroundProps) {
   const innerRef = useRef<HTMLDivElement>(null);
   const [tileCount, setTileCount] = useState(3);
 
@@ -40,8 +42,12 @@ export function FlowBackground({ src, tileHeight, parallaxRate = 0.3, className 
       // Headroom: the inner stack must stay tall enough to cover the viewport across the whole
       // parallax range, i.e. content height's worth of scroll, drifted at parallaxRate.
       const contentHeight = document.documentElement.scrollHeight;
-      const needed = window.innerHeight + contentHeight * parallaxRate;
-      setTileCount(Math.max(2, Math.ceil(needed / tileHeight) + 1));
+      const viewportHeight = window.innerHeight;
+      const viewportWidth = innerRef.current?.parentElement?.getBoundingClientRect().width || window.innerWidth;
+      const renderedTileHeight = tileWidth ? viewportWidth * (tileHeight / tileWidth) : tileHeight;
+      const maxScroll = Math.max(0, contentHeight - viewportHeight);
+      const needed = viewportHeight + maxScroll * parallaxRate;
+      setTileCount(Math.max(2, Math.ceil(needed / renderedTileHeight) + 1));
     };
     recompute();
 
@@ -52,7 +58,7 @@ export function FlowBackground({ src, tileHeight, parallaxRate = 0.3, className 
       ro.disconnect();
       window.removeEventListener('resize', recompute);
     };
-  }, [tileHeight, parallaxRate]);
+  }, [tileHeight, tileWidth, parallaxRate]);
 
   useEffect(() => {
     const inner = innerRef.current;
@@ -80,6 +86,7 @@ export function FlowBackground({ src, tileHeight, parallaxRate = 0.3, className 
     <div className={`${styles.viewport} ${className ?? ''}`} aria-hidden="true">
       <div ref={innerRef} className={styles.inner}>
         {Array.from({ length: tileCount }, (_, i) => (
+          // eslint-disable-next-line @next/next/no-img-element
           <img
             key={i}
             src={src}

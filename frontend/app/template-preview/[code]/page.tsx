@@ -15,6 +15,7 @@ import Template8 from '@/components/templates/Template8';
 import Template9 from '@/components/templates/Template9';
 import Template10 from '@/components/templates/Template10';
 import Template11 from '@/components/templates/Template11';
+import Template12 from '@/components/templates/Template12';
 
 const DUMMY: Wedding = {
   weddingId: 0,
@@ -89,6 +90,16 @@ const BASE_PROPS = {
   photoBoothEnabled: false,
 };
 
+const DREAMY_WOODLAND_PROPS = {
+  ...BASE_PROPS,
+  photoBoothEnabled: true,
+  itinerary: [
+    { itineraryItemId: 1, eventId: 0, label: 'Guest arrival', detail: '10:30', sortOrder: 0 },
+    { itineraryItemId: 2, eventId: 0, label: 'Wedding ceremony', detail: '11:00', sortOrder: 1 },
+    { itineraryItemId: 3, eventId: 0, label: 'Celebration lunch', detail: '12:30', sortOrder: 2 },
+  ],
+};
+
 export default function TemplatePreviewPage() {
   const { code } = useParams<{ code: string }>();
   const [ready, setReady] = useState(false);
@@ -131,7 +142,13 @@ export default function TemplatePreviewPage() {
   return (
     <div
       ref={rootRef}
-      style={{ width: 390, height: 700, overflow: 'hidden', position: 'relative', margin: 0, padding: 0 }}
+      style={{
+        width: code === 'dreamy-woodland' ? '100%' : 390,
+        height: code === 'dreamy-woodland' ? 'auto' : 700,
+        minHeight: 700,
+        overflow: code === 'dreamy-woodland' ? 'visible' : 'hidden',
+        position: 'relative', margin: 0, padding: 0,
+      }}
       {...(ready ? { 'data-preview-ready': 'true' } : {})}
     >
       {code === 'classic-rose'          && <Template1 {...props} />}
@@ -145,6 +162,7 @@ export default function TemplatePreviewPage() {
       {code === 'engraved-certificate'  && <Template9 {...ceremonyProps} />}
       {code === 'sunny-safari'          && <Template10 {...sunnySafariProps} />}
       {code === 'rose-horizon'          && <Template11 {...props} />}
+      {code === 'dreamy-woodland'       && <Template12 {...DREAMY_WOODLAND_PROPS} customConfig={customConfig} />}
     </div>
   );
 }

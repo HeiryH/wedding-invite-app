@@ -56,11 +56,13 @@ export const ANIM_OPTIONS: AnimType[] = [
 export type AnimOutType =
   | 'none' | 'fade-out'
   | 'slide-out-up' | 'slide-out-down' | 'slide-out-left' | 'slide-out-right'
+  | 'slide-fade-out-down' | 'slide-fade-out-left' | 'slide-fade-out-right'
   | 'zoom-out' | 'zoom-in';
 
 /** Selectable exit animations, in the order the Adjust panel lists them. */
 export const ANIM_OUT_OPTIONS: AnimOutType[] = [
   'none', 'fade-out', 'slide-out-up', 'slide-out-down', 'slide-out-left', 'slide-out-right',
+  'slide-fade-out-down', 'slide-fade-out-left', 'slide-fade-out-right',
   'zoom-out', 'zoom-in',
 ];
 
