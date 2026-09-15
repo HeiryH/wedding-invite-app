@@ -11,6 +11,7 @@ import CurvedText from './CurvedText';
 import ScrollVideoLayer from './effects/ScrollVideoLayer';
 import PlayOnceVideoLayer from './effects/PlayOnceVideoLayer';
 import { resolveBindings } from './bindings';
+import { slotLayerStyle } from './slotLayerStyle';
 import styles from './Stage.module.css';
 import './reveal.css';
 
@@ -245,7 +246,7 @@ export default function Layer({ layer, slotProps, eager, selected, editing, stag
         // Read by slots.module.css's form text (.field/.choice/.wishTextarea) — a direct manual
         // multiplier on top of whatever the slot's own box-relative cqi sizing already gives them.
         const slotStyle: CSSProperties & Record<string, string | number> = {
-          '--slot-text-scale': layer.textScale ?? 1,
+          ...slotLayerStyle(layer),
           ...(chromeFixed ? { pointerEvents: 'none' } : null),
           // 'visible' lets content spill past the box's bottom edge uncropped instead of scrolling
           // internally — omitted (not set to `undefined`, which the CSSProperties/Record index

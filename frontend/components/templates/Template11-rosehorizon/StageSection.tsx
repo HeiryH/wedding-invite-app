@@ -23,6 +23,7 @@ export function StageSection({
   editor,
   panelless,
   contentStyle,
+  seen,
 }: {
   code: SectionCode;
   children: ReactNode;
@@ -43,19 +44,15 @@ export function StageSection({
   panelless?: boolean;
   /** Group-layer transform/visibility applied to the complete editable content block. */
   contentStyle?: CSSProperties;
+  /** Shared reveal state; starts false on reload so entrance animation has a painted start. */
+  seen: boolean;
 }) {
   const sectionRef = useRef<HTMLElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const zone = usePanelZone(sectionRef, panelRef);
 
   return (
-    // `data-seen="true"` unconditionally: hybrid-overlay Classic templates have no scroll-gated
-    // reveal (same reasoning as PropLayer.tsx / SectionOverlay.tsx) — without it, reveal.css's
-    // `[data-sl-anim]{opacity:0}` base rule leaves every `flowSlotsFor`-rendered slot layer
-    // (RSVP/Wishes/Schedule/Photos, since those now render through the shared Layer.tsx like any
-    // Stage-family layer) permanently invisible, since nothing ever flips it to "seen". Inert for
-    // welcome/walimah's plain anchored JSX, which doesn't carry `data-sl-anim` at all.
-    <section ref={sectionRef} id={code} data-stage={code} data-seen="true" className={styles.section}>
+    <section ref={sectionRef} id={code} data-stage={code} data-seen={seen} className={styles.section}>
       <PropLayer section={code} reservedZone={zone} breakpoint={breakpoint} config={config} editor={editor} />
       <SectionOverlay stageId={code} breakpoint={breakpoint} config={config} editor={editor} />
       <div ref={panelRef} className={panelless ? styles.flowZone : styles.panel} data-depth={0.4} style={contentStyle}>

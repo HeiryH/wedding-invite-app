@@ -1,10 +1,11 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
+import { useCallback, useEffect, useMemo, useState, type CSSProperties } from 'react';
 import type { Wedding, Wish, Photo, ItineraryItem, SeatingTable } from '@/lib/api';
 import { resolveSectionOrder, toHijriString, type SectionCode } from '@/lib/templateUtils';
 import { useReducedMotion } from '@/lib/useReducedMotion';
 import { useParallax } from '@/components/templates/_shared/hooks/useParallax';
+import { useStageReveal } from '@/components/templates/_shared/hooks/useStageReveal';
 import { useBreakpoint } from '@/components/templates/_shared/hooks/useBreakpoint';
 import { FlowBackground } from '@/components/templates/_shared/FlowBackground';
 import type { EditorHandle, SlotProps } from '@/components/templates/_shared/types';
@@ -71,8 +72,8 @@ export default function Template12({
     return fallback;
   }, [customConfig]);
   const sectionOrder = resolveSectionOrder(customConfig?.['section.order'], true, itinerary.length > 0, photoBoothEnabled);
-  const rootRef = useRef<HTMLDivElement>(null);
   const reduced = useReducedMotion();
+  const { rootRef, seen } = useStageReveal(reduced, sectionOrder.join(','));
   useParallax(rootRef, 'on', reduced);
 
   const editing = Boolean(editor?.enabled);
@@ -85,7 +86,7 @@ export default function Template12({
     ? Math.min(1, Math.max(0, configuredPageBgParallax))
     : defaultPageBgParallax;
   const pageBgSrc = customConfig?.['t12.layout.pageBg.src']
-    || '/templates/dreamy-woodland/backgrounds-v2/flow-clouds-v2.webp';
+    || '/templates/dreamy-woodland/backgrounds-v2/flow-clouds-v3.webp';
   const date = new Date(wedding.weddingDate);
   const dateLabel = date.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
   const countdown = useCountdown(wedding.weddingDate);
@@ -102,7 +103,6 @@ export default function Template12({
     '--slot-font-display': fontVar(customConfig?.['t12.layout.slotTheme.headingFont']) ?? 'var(--font-ae-cormorant), Georgia, serif',
     '--slot-font-serif': fontVar(customConfig?.['t12.layout.slotTheme.bodyFont']) ?? 'var(--font-ae-eb-garamond), Georgia, serif',
     '--slot-font-body': fontVar(customConfig?.['t12.layout.slotTheme.bodyFont']) ?? 'var(--font-ae-eb-garamond), Georgia, serif',
-    '--slot-panel-bg': 'radial-gradient(ellipse at center, rgba(242,239,232,.96) 0%, rgba(242,239,232,.82) 58%, transparent 86%)',
     '--slot-panel-shadow': 'none',
   } as CSSProperties;
 
@@ -134,10 +134,16 @@ export default function Template12({
     <SlotFlowProviders>
       <EngineProvider value={ENGINE}>
         <div ref={rootRef} className={styles.root} style={slotTheme}>
-          <FlowBackground src={pageBgSrc} tileWidth={1024} tileHeight={1536} parallaxRate={pageBgParallax} />
+          <FlowBackground
+            src={pageBgSrc}
+            tileWidth={1024}
+            tileHeight={1536}
+            parallaxRate={pageBgParallax}
+            mirrorAlternating={false}
+          />
           {sectionOrder.map((code) => {
             if (code === 'welcome') return (
-              <StageSection key={code} code={code} {...overlayProps} contentStyle={a('welcome', 'hero')} extra={
+              <StageSection key={code} code={code} {...overlayProps} seen={seen.has(code) || reduced} contentStyle={a('welcome', 'hero')} extra={
                 <button className={styles.scrollCue} onClick={() => scrollTo(sectionOrder[1] ?? 'rsvp')} aria-label="Continue to invitation details">↓</button>
               }>
                 <p className={styles.invitationLine} style={{ ...a('welcome', 'themeLabel'), ...sx('welcome', 'themeLabel') }}>
@@ -164,7 +170,7 @@ export default function Template12({
             );
 
             if (code === 'walimah') return (
-              <StageSection key={code} code={code} {...overlayProps} contentStyle={a('walimah', 'ceremonyContent')}>
+              <StageSection key={code} code={code} {...overlayProps} seen={seen.has(code) || reduced} contentStyle={a('walimah', 'ceremonyContent')}>
                 <h2 className={styles.sectionTitle} style={{ ...a('walimah', 'title'), ...sx('walimah', 'title') }}>
                   {t('walimah.title', 'Our Wedding Celebration')}
                 </h2>
@@ -175,7 +181,7 @@ export default function Template12({
             );
 
             if (code === 'rsvp' || code === 'itinerary' || code === 'wishes' || code === 'photobooth') return (
-              <StageSection key={code} code={code} {...overlayProps} panelless contentStyle={a(code, `${code}Content`)}>{flowSlotsFor(code)}</StageSection>
+              <StageSection key={code} code={code} {...overlayProps} seen={seen.has(code) || reduced} panelless contentStyle={a(code, `${code}Content`)}>{flowSlotsFor(code)}</StageSection>
             );
             return null;
           })}

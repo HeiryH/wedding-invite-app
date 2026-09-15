@@ -126,7 +126,7 @@ export default function AdjustPanel({
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
   const [blockMenuOpen, setBlockMenuOpen] = useState(false);
   // Layer-detail tab: geometry vs style vs animation. Sticky across layer selection.
-  const [detailTab, setDetailTab] = useState<'layout' | 'style' | 'anim'>('layout');
+  const [detailTab, setDetailTab] = useState<'layout' | 'style' | 'anim' | 'slotText' | 'slotContainer'>('layout');
   const fileRef = useRef<HTMLInputElement>(null);
   const uploadTarget = useRef<'layer' | 'bg' | 'poster' | 'pageBg'>('layer');
   const customLayerCounter = useRef(0);
@@ -403,12 +403,17 @@ export default function AdjustPanel({
   const NO_TEXT_SLOTS = new Set(['nav', 'music']);
   const hasSlotText = isSlot && Boolean(current?.slot) && !NO_TEXT_SLOTS.has(current!.slot!);
   const bgSelected = selectedLayer === BG_ID;
-  // Only text layers, sheetTrigger buttons, and anchors explicitly flagged `styleable` (Phase 3)
+  // Only text layers, sheet-trigger buttons, and anchors explicitly flagged `styleable` (Phase 3)
   // expose the Style tab — most anchors wrap a live component/name with no free-form text styling
   // to override. sheetTrigger (the RSVP/wish "open the sheet" button — SheetTriggerSlot.tsx) reads
   // the exact same field set text does (color/font/border/radius/shadow), so it gets the tab too
   // rather than a bespoke button-only control set.
   const canStyle = current?.kind === 'text' || current?.slot === 'sheetTrigger' || Boolean(current?.styleable);
+  // Detail selection is sticky across rows, but sheet forms have Text/Container instead of the
+  // generic Style/Animation pair. Falling back to Layout avoids landing in a hidden stale tab.
+  const activeDetailTab = isSheet
+    ? (detailTab === 'slotText' || detailTab === 'slotContainer' ? detailTab : 'layout')
+    : (detailTab === 'slotText' || detailTab === 'slotContainer' ? 'layout' : detailTab);
 
   const nameOf = (l: Layer) => {
     const n = l.label ?? (l.kind === 'slot' ? `▤ ${l.slot}` : l.id);
@@ -756,29 +761,46 @@ export default function AdjustPanel({
             {!current.locked && !isScrollVideo && (
               <div className={styles.tabs} style={{ marginBottom: 8 }}>
                 <button
-                  className={`${styles.tab} ${detailTab === 'layout' ? styles.tabActive : ''}`}
+                  className={`${styles.tab} ${activeDetailTab === 'layout' ? styles.tabActive : ''}`}
                   onClick={() => setDetailTab('layout')}
                 >
                   Layout
                 </button>
-                {canStyle && (
+                {isSheet ? (
+                  <>
+                    <button
+                      className={`${styles.tab} ${activeDetailTab === 'slotText' ? styles.tabActive : ''}`}
+                      onClick={() => setDetailTab('slotText')}
+                    >
+                      Text
+                    </button>
+                    <button
+                      className={`${styles.tab} ${activeDetailTab === 'slotContainer' ? styles.tabActive : ''}`}
+                      onClick={() => setDetailTab('slotContainer')}
+                    >
+                      Container
+                    </button>
+                  </>
+                ) : canStyle && (
                   <button
-                    className={`${styles.tab} ${detailTab === 'style' ? styles.tabActive : ''}`}
+                    className={`${styles.tab} ${activeDetailTab === 'style' ? styles.tabActive : ''}`}
                     onClick={() => setDetailTab('style')}
                   >
                     Style
                   </button>
                 )}
-                <button
-                  className={`${styles.tab} ${detailTab === 'anim' ? styles.tabActive : ''}`}
-                  onClick={() => setDetailTab('anim')}
-                >
-                  Animation
-                </button>
+                {!isSheet && (
+                  <button
+                    className={`${styles.tab} ${activeDetailTab === 'anim' ? styles.tabActive : ''}`}
+                    onClick={() => setDetailTab('anim')}
+                  >
+                    Animation
+                  </button>
+                )}
               </div>
             )}
 
-            {current.locked ? null : isScrollVideo || isSheet || detailTab === 'layout' ? (
+            {current.locked ? null : isScrollVideo || activeDetailTab === 'layout' ? (
               <>
                 <div className={styles.control} style={{ gridTemplateColumns: '54px 1fr' }}>
                   <span>Name</span>
@@ -1000,7 +1022,75 @@ export default function AdjustPanel({
                   )}
                 </>
               </>
-            ) : detailTab === 'style' && canStyle ? (
+            ) : activeDetailTab === 'slotText' && isSlot ? (
+              <>
+                <div className={styles.control} style={{ gridTemplateColumns: '54px 1fr' }}>
+                  <span>Font</span>
+                  <select
+                    className={styles.select}
+                    value={current.fontFamily ?? ''}
+                    onChange={(e) => patchLayer(current.id, { fontFamily: e.target.value || undefined })}
+                  >
+                    <option value="">Template default</option>
+                    {CURATED_FONTS.map((f) => (
+                      <option key={f.key} value={f.key}>{f.label}</option>
+                    ))}
+                  </select>
+                </div>
+                <Slider label="Text Size" value={current.textScale ?? 1} min={0.7} max={1.8} step={0.05} onChange={set('textScale')} />
+                <div className={styles.control} style={{ gridTemplateColumns: '54px 1fr' }}>
+                  <span>Text</span>
+                  <input type="color" value={current.color ?? '#2b2a28'} onChange={(e) => patchLayer(current.id, { color: e.target.value })} />
+                </div>
+                <div className={styles.control} style={{ gridTemplateColumns: '54px 1fr' }}>
+                  <span>Accent</span>
+                  <input type="color" value={current.accentColor ?? '#c98a54'} onChange={(e) => patchLayer(current.id, { accentColor: e.target.value })} />
+                </div>
+                <div className={styles.btnRow}>
+                  <button className={`${styles.btn} ${styles.btnGhost}`} onClick={() => patchLayer(current.id, {
+                    fontFamily: undefined, textScale: undefined, color: undefined, accentColor: undefined,
+                  })}>
+                    Reset text style
+                  </button>
+                </div>
+              </>
+            ) : activeDetailTab === 'slotContainer' && isSlot ? (
+              <>
+                <div className={styles.control} style={{ gridTemplateColumns: '72px 1fr' }}>
+                  <span>Background</span>
+                  <input type="color" value={current.fill ?? '#fffaf2'} onChange={(e) => patchLayer(current.id, { fill: e.target.value })} />
+                </div>
+                <div className={styles.btnRow}>
+                  <button
+                    className={`${styles.btn} ${current.fill === undefined ? '' : styles.btnGhost}`}
+                    onClick={() => patchLayer(current.id, { fill: undefined })}
+                  >
+                    {current.fill === undefined ? '✓ Transparent' : 'Transparent'}
+                  </button>
+                </div>
+                <div className={styles.label}>Border</div>
+                <Slider label="Width" value={current.borderWidth ?? 0} min={0} max={12} step={0.5} onChange={set('borderWidth')} />
+                <div className={styles.control} style={{ gridTemplateColumns: '54px 1fr' }}>
+                  <span>Color</span>
+                  <input type="color" value={current.borderColor ?? '#2b2a28'} onChange={(e) => patchLayer(current.id, { borderColor: e.target.value })} />
+                </div>
+                <Slider label="Radius" value={current.radius ?? 0} min={0} max={60} step={1} onChange={set('radius')} />
+                <div className={styles.label}>Size</div>
+                <Slider label="Min Height" value={current.containerMinHeight ?? 0} min={0} max={700} step={10} onChange={set('containerMinHeight')} />
+                <Slider label="Padding" value={current.containerPadding ?? 16} min={0} max={80} step={2} onChange={set('containerPadding')} />
+                <p style={{ fontSize: 11.5, color: 'var(--text-muted)', margin: '4px 0 8px' }}>
+                  A height of 0 keeps the form automatic and responsive.
+                </p>
+                <div className={styles.btnRow}>
+                  <button className={`${styles.btn} ${styles.btnGhost}`} onClick={() => patchLayer(current.id, {
+                    fill: undefined, borderWidth: undefined, borderColor: undefined, radius: undefined,
+                    containerMinHeight: undefined, containerPadding: undefined,
+                  })}>
+                    Reset container
+                  </button>
+                </div>
+              </>
+            ) : activeDetailTab === 'style' && canStyle ? (
               <>
                 <div className={styles.control} style={{ gridTemplateColumns: '54px 1fr' }}>
                   <span>Font</span>

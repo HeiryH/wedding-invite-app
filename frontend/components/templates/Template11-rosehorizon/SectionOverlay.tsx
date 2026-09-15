@@ -54,7 +54,7 @@ export default function SectionOverlay({
 
   return (
     <EngineProvider value={ENGINE}>
-      <div className={styles.overlay} data-stage={stageId} data-seen="true" data-editing={dockOpen || undefined}>
+      <div className={styles.overlay} data-editing={dockOpen || undefined}>
         {visible.map((l) => (
           <Layer
             key={l.id}

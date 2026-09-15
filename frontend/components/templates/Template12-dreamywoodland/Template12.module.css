@@ -36,7 +36,7 @@
 
 .panel {
   padding: clamp(1.5rem, 7cqi, 2.75rem) clamp(1rem, 5cqi, 2rem);
-  background: radial-gradient(ellipse at center, rgba(242, 239, 232, 0.94) 0%, rgba(242, 239, 232, 0.8) 58%, transparent 82%);
+  background: transparent;
 }
 
 .flowZone {

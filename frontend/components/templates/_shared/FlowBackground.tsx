@@ -10,12 +10,16 @@ interface FlowBackgroundProps {
   tileWidth?: number;
   /** Fraction of page scroll the background drifts at. 0 = pinned, 1 = scrolls with content. */
   parallaxRate?: number;
+  /** Alternates vertical mirroring for legacy tiles whose top/bottom edges do not match. New
+   * seamless tiles should set this false so directional artwork always stays upright. */
+  mirrorAlternating?: boolean;
   className?: string;
 }
 
 /**
- * A full-page background built from ONE tileable image, stacked with every other copy
- * vertically flipped ("mirror"/ping-pong tiling) instead of CSS `background-repeat`.
+ * A full-page background built from ONE tileable image. Legacy non-seamless art can alternate
+ * vertically flipped copies ("mirror"/ping-pong tiling); directional/seamless art repeats in its
+ * original orientation when `mirrorAlternating` is false.
  *
  * Why not `background-repeat: repeat-y`: that requires the tile's own top row to match its
  * bottom row, in the same orientation — a real constraint on the art, and one this specific
@@ -33,7 +37,9 @@ interface FlowBackgroundProps {
  * this works for however long a given invite's content turns out to be, with no fixed assumption
  * baked in anywhere.
  */
-export function FlowBackground({ src, tileHeight, tileWidth, parallaxRate = 0.3, className }: FlowBackgroundProps) {
+export function FlowBackground({
+  src, tileHeight, tileWidth, parallaxRate = 0.3, mirrorAlternating = true, className,
+}: FlowBackgroundProps) {
   const innerRef = useRef<HTMLDivElement>(null);
   const [tileCount, setTileCount] = useState(3);
 
@@ -92,7 +98,7 @@ export function FlowBackground({ src, tileHeight, tileWidth, parallaxRate = 0.3,
             src={src}
             alt=""
             className={styles.tile}
-            style={i % 2 === 1 ? { transform: 'scaleY(-1)' } : undefined}
+            style={mirrorAlternating && i % 2 === 1 ? { transform: 'scaleY(-1)' } : undefined}
             draggable={false}
           />
         ))}

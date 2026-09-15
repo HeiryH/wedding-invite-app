@@ -27,7 +27,7 @@ export default function SectionOverlay({ stageId, breakpoint, config, editor }: 
 
   return (
     <EngineProvider value={ENGINE}>
-      <div className={styles.overlay} data-seen="true" data-editing={editing || undefined}>
+      <div className={styles.overlay} data-editing={editing || undefined}>
         {visible.map((layer) => <Layer key={layer.id} layer={layer} eager={stageId === 'welcome'} editing={editing}
           stageActive={active} stageId={stageId} selected={active && editor?.selectedLayer === layer.id} />)}
       </div>

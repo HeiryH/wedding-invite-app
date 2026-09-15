@@ -34,6 +34,33 @@ describe('stage layout animation timing', () => {
   });
 });
 
+describe('stage layout form styling', () => {
+  it('persists sheet text and container controls', () => {
+    const form = {
+      ...baseLayer,
+      kind: 'slot' as const,
+      slot: 'rsvpForm',
+      presentation: 'sheet' as const,
+      fill: '#fffaf2',
+      color: '#123456',
+      accentColor: '#abcdef',
+      containerMinHeight: 360,
+      containerPadding: 24,
+    };
+    const formStage = { ...stage, layers: [form] };
+    const saved = serializeStage(formStage, 'mobile', [{ ...form, containerMinHeight: 420 }], { bgFit: 'cover' });
+    expect(saved).toContain('"containerMinHeight":420');
+
+    const resolved = resolveStage('t12', formStage, 'mobile', {
+      't12.layout.mobile.welcome': saved,
+    });
+    expect(resolved.layers[0]).toMatchObject({
+      fill: '#fffaf2', color: '#123456', accentColor: '#abcdef',
+      containerMinHeight: 420, containerPadding: 24,
+    });
+  });
+});
+
 const EXPECTED_GROUPS: Record<string, string[]> = {
   hero: ['themeLabel', 'nameFirst', 'nameSecond', 'date', 'timer', 'hijri', 'venue'],
   ceremonyContent: ['title', 'body'],

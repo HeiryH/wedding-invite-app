@@ -264,14 +264,14 @@
   display: flex;
   flex-direction: column;
   justify-content: center;
-  min-height: 100%;
-  padding: clamp(1rem, 3cqi, 1.6rem);
+  min-height: var(--slot-container-min-height, 100%);
+  padding: var(--slot-container-padding, clamp(1rem, 3cqi, 1.6rem));
   text-align: center;
-  background: var(--slot-panel-bg, transparent);
+  background: var(--slot-container-bg, var(--slot-panel-bg, transparent));
   backdrop-filter: var(--slot-panel-blur, none);
   -webkit-backdrop-filter: var(--slot-panel-blur, none);
-  border: var(--slot-panel-border, none);
-  border-radius: var(--slot-panel-radius, 0);
+  border: var(--slot-container-border, var(--slot-panel-border, none));
+  border-radius: var(--slot-container-radius, var(--slot-panel-radius, 0));
   box-shadow: var(--slot-panel-shadow, none);
 }
 .panelTitle {
@@ -614,8 +614,11 @@
   flex-direction: column;
   gap: 0.55rem;
   justify-content: center;
-  height: 100%;
-  padding: 0 clamp(0.5rem, 2cqi, 1.2rem);
+  min-height: var(--slot-container-min-height, 100%);
+  padding: var(--slot-container-padding, 0 clamp(0.5rem, 2cqi, 1.2rem));
+  background: var(--slot-container-bg, transparent);
+  border: var(--slot-container-border, none);
+  border-radius: var(--slot-container-radius, 0);
 }
 .wishTextarea {
   width: 100%;

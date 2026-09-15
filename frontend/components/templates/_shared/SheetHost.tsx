@@ -5,6 +5,7 @@ import type { CSSProperties } from 'react';
 import type { EditorHandle, Layer, SlotProps } from './types';
 import { useEngine } from './engine';
 import { useSheets } from './slots/sheets';
+import { slotLayerStyle } from './slotLayerStyle';
 import styles from './slots/slots.module.css';
 
 interface Props {
@@ -89,7 +90,7 @@ export default function SheetHost({ groups, slotProps, themeStyle, editor }: Pro
                   key={l.id}
                   // Mirrors Layer.tsx's slot wrapper so the Adjust panel's Text Size control keeps
                   // working on a layer that moved into a sheet.
-                  style={{ '--slot-text-scale': l.textScale ?? 1 } as CSSProperties}
+                  style={slotLayerStyle(l)}
                 >
                   <Slot {...slotProps} layer={l} />
                 </div>

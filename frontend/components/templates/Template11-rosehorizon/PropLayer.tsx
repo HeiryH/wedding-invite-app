@@ -118,15 +118,11 @@ export function PropLayer({
 
   return (
     <EngineProvider value={ENGINE}>
-      {/* `data-seen="true"` unconditionally: hybrid-overlay Classic templates have no scroll-
-          gated reveal for decorative art (same as SectionOverlay's own extras) — without an
-          ancestor carrying it, reveal.css's `[data-sl-anim]{opacity:0}` base rule leaves every
-          prop permanently invisible, since nothing ever flips it to "seen". `data-editing='true'`
-          on an ANCESTOR is separately what Stage.module.css's `.layerBox` pointer-events rule is
+      {/* `data-editing='true'` on an ANCESTOR is what Stage.module.css's `.layerBox` pointer-events rule is
           gated on (mirroring Stage.tsx's own `<section data-editing>`) — without it, art stays
           un-clickable even with `editing` wired in JS. See PropLayer.module.css's `.wrap` for the
           positioning/stacking-context half of this. */}
-      <div className={styles.wrap} data-seen="true" data-editing={dockOpen || undefined}>
+      <div className={styles.wrap} data-editing={dockOpen || undefined}>
         {imgLayers.map((l) => {
           const atDefault = l.y === defaultY.get(l.id);
           const y = atDefault

@@ -1,10 +1,11 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
+import { useCallback, useEffect, useMemo, useState, type CSSProperties } from 'react';
 import { Wedding, Wish, Photo, ItineraryItem, SeatingTable } from '@/lib/api';
 import { resolveSectionOrder, toHijriString, type SectionCode } from '@/lib/templateUtils';
 import { useReducedMotion } from '@/lib/useReducedMotion';
 import { useParallax } from '@/components/templates/_shared/hooks/useParallax';
+import { useStageReveal } from '@/components/templates/_shared/hooks/useStageReveal';
 import { useBreakpoint } from '@/components/templates/_shared/hooks/useBreakpoint';
 import { FlowBackground } from '@/components/templates/_shared/FlowBackground';
 import type { EditorHandle, SlotProps } from '@/components/templates/_shared/types';
@@ -115,8 +116,8 @@ export default function Template11({
     photoBoothEnabled,
   );
 
-  const rootRef = useRef<HTMLDivElement>(null);
   const reduced = useReducedMotion();
+  const { rootRef, seen } = useStageReveal(reduced, sectionOrder.join(','));
   useParallax(rootRef, 'on', reduced);
 
   const editing = Boolean(editor?.enabled);
@@ -262,6 +263,7 @@ export default function Template11({
                 key={code}
                 code={code}
                 {...overlayProps}
+                seen={seen.has(code) || reduced}
                 contentStyle={a('welcome', 'hero')}
                 extra={
                   <button
@@ -312,7 +314,7 @@ export default function Template11({
 
           case 'walimah':
             return (
-              <StageSection key={code} code={code} {...overlayProps} contentStyle={a('walimah', 'ceremonyContent')}>
+              <StageSection key={code} code={code} {...overlayProps} seen={seen.has(code) || reduced} contentStyle={a('walimah', 'ceremonyContent')}>
                 <h2
                   className={styles.heading}
                   style={{ fontSize: '1.8rem', ...a('walimah', 'title'), ...sx('walimah', 'title') }}
@@ -329,28 +331,28 @@ export default function Template11({
 
           case 'rsvp':
             return (
-              <StageSection key={code} code={code} {...overlayProps} panelless contentStyle={a('rsvp', 'rsvpContent')}>
+              <StageSection key={code} code={code} {...overlayProps} seen={seen.has(code) || reduced} panelless contentStyle={a('rsvp', 'rsvpContent')}>
                 {flowSlotsFor('rsvp')}
               </StageSection>
             );
 
           case 'itinerary':
             return (
-              <StageSection key={code} code={code} {...overlayProps} panelless contentStyle={a('itinerary', 'itineraryContent')}>
+              <StageSection key={code} code={code} {...overlayProps} seen={seen.has(code) || reduced} panelless contentStyle={a('itinerary', 'itineraryContent')}>
                 {flowSlotsFor('itinerary')}
               </StageSection>
             );
 
           case 'wishes':
             return (
-              <StageSection key={code} code={code} {...overlayProps} panelless contentStyle={a('wishes', 'wishesContent')}>
+              <StageSection key={code} code={code} {...overlayProps} seen={seen.has(code) || reduced} panelless contentStyle={a('wishes', 'wishesContent')}>
                 {flowSlotsFor('wishes')}
               </StageSection>
             );
 
           case 'photobooth':
             return (
-              <StageSection key={code} code={code} {...overlayProps} panelless contentStyle={a('photobooth', 'photoboothContent')}>
+              <StageSection key={code} code={code} {...overlayProps} seen={seen.has(code) || reduced} panelless contentStyle={a('photobooth', 'photoboothContent')}>
                 {flowSlotsFor('photobooth')}
               </StageSection>
             );

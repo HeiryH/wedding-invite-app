@@ -148,6 +148,12 @@ export interface Layer {
    * read" without having to keep widening the box past what the layout can fit. 1 = default.
    */
   textScale?: number;
+  /** kind 'slot' only. Per-block accent used by buttons and active controls. */
+  accentColor?: string;
+  /** kind 'slot' only. Minimum height of the rendered form/content container in px. */
+  containerMinHeight?: number;
+  /** kind 'slot' only. Inner padding of the rendered form/content container in px. */
+  containerPadding?: number;
   /** Parallax factor. 0 = welded to the background. Defaults to z/10 when absent. */
   depth?: number;
 
@@ -194,7 +200,8 @@ export interface Layer {
   /** Idle amplitude multiplier — 1 = each type's base intensity. */
   animIdleIntensity?: number;
 
-  // text / shape styling
+  // text / shape styling. Slot layers also reuse `color`/`fontFamily` for their text and
+  // `fill`/border/radius for their own content container (see slotLayerStyle.ts).
   color?: string;
   fill?: string;
   fontSize?: number;
