@@ -848,3 +848,48 @@ visible flash/pop the moment the real video frame replaces it).
 Verified: `tsc --noEmit` + `next build` clean, 30/30 pages. The capture mechanism itself was tested
 standalone against the real `arch_keyed.mp4` (not just read for correctness) — produced a correctly
 transparent PNG, pixel-accurate to the video's actual first frame.
+
+---
+
+## Issue 7 — Re-run security audit from runtime evidence
+
+**Branch:** `ae-unified` · **Status:** TODO · **Raised:** 2026-09-15
+
+The retired `founder-saas/exec-2026-09-13` branch added a broad audit and then attempted security
+headers, but runtime verification found that the report mixed valid findings with stale or false
+claims and that the header change introduced regressions. Do not restore or reuse that branch's
+documents as a release checklist. Start a new, evidence-backed audit from `ae-unified` when this
+issue is picked up.
+
+### Confirmed starting points
+
+- [ ] Design route-specific headers and test actual frontend pages, rewritten `/api/*` responses,
+      and `/uploads/*` responses. The retired implementation did not add headers to backend rewrite
+      responses, blocked the customize preview iframe, and blocked existing Google Maps embeds.
+- [ ] Harden authentication cookies consistently, stop returning the raw JWT in JSON if cookie-only
+      auth is retained, benchmark and pin BCrypt cost, and replace the six-character password rule
+      with the chosen current policy.
+- [ ] Threat-model public invitation data by field and route. Include the unauthenticated guest-by-ID
+      response and the event owner fields, not only wishes and photos; templates currently resolve a
+      slug and then use numeric event IDs for several calls.
+- [ ] Add CSRF/state-change protection independently of CORS. `WithOrigins(...)` is already an
+      explicit browser CORS allowlist; it is not an Origin-validation or CSRF mechanism.
+- [ ] Preserve existing upload protections while closing the remaining gaps. `PhotoService` already
+      enforces 10 MB, extension/content-type/magic-byte checks, and GUID names; add an early request
+      body cap and metadata/EXIF stripping rather than claiming no size validation exists.
+- [ ] Sanitize stored rich-text HTML before it reaches `dangerouslySetInnerHTML`, and replace the
+      photo approval `userId = 1` placeholder with authenticated identity plus an audit trail.
+- [ ] Review current production dependency advisories for npm and the transitive SQLite native
+      package, classifying exploitability before upgrading.
+- [ ] Add tests at the actual security boundaries: response headers, cookies, public PII access,
+      cross-event isolation, CSRF rejection, request-size rejection, sanitization, and EXIF removal.
+- [ ] Verify operational claims (production headers, backups, proxy/custom-domain path, health
+      exposure) against the deployed environment rather than inferring them from repository prose.
+
+### Baseline evidence from the retired audit attempt
+
+- Frontend Vitest: 17/17 passed; TypeScript passed.
+- Backend tests: 149/149 passed.
+- Those suites did not cover the security boundaries above.
+- A dependency scan reported 12 frontend production advisories and one high-severity transitive
+  backend advisory at the time of inspection; re-run scans because advisory data changes.
