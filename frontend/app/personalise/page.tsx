@@ -132,6 +132,21 @@ function LocalItineraryEditor({ rows, onChange }: { rows: ItineraryRow[]; onChan
   );
 }
 
+// Chunky chevron used by the mobile sheet handle and every section card — the old
+// 13px "▾" glyph was too small to read as a control on a phone.
+function Chevron({ size = 22, up = false }: { size?: number; up?: boolean }) {
+  return (
+    <svg
+      className="pers-chev"
+      width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden
+      style={{ flex: 'none', transform: up ? 'rotate(180deg)' : undefined, transition: 'transform .2s ease' }}
+    >
+      <path d="M6 9l6 6 6-6" />
+    </svg>
+  );
+}
+
 // ── Collapsible section card ─────────────────────────────────────────────────
 function SectionCard({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -140,10 +155,10 @@ function SectionCard({ title, children }: { title: string; children: React.React
     // spec gets an automatic min-height of 0. Without an explicit flexShrink:0 the
     // column flex layout would compress this card (and its siblings) to fit the
     // available height instead of letting the scroll parent grow and scroll.
-    <details className="mkt-card" style={{ padding: 0, overflow: 'hidden', flexShrink: 0 }}>
-      <summary style={{ listStyle: 'none', cursor: 'pointer', padding: '14px 16px', fontFamily: 'var(--mkt-serif)', fontWeight: 600, fontSize: 19, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+    <details className="mkt-card pers-section" style={{ padding: 0, overflow: 'hidden', flexShrink: 0 }}>
+      <summary style={{ listStyle: 'none', cursor: 'pointer', padding: '14px 16px', fontFamily: 'var(--mkt-serif)', fontWeight: 600, fontSize: 19, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
         {title}
-        <span style={{ fontSize: 13, color: 'var(--mkt-muted)' }}>▾</span>
+        <Chevron size={24} />
       </summary>
       <div style={{ padding: '4px 16px 16px', display: 'flex', flexDirection: 'column', gap: 14 }}>{children}</div>
     </details>
@@ -367,7 +382,7 @@ function PersonaliseEditor() {
           >
             <span style={{ position: 'absolute', top: 8, left: '50%', transform: 'translateX(-50%)', width: 40, height: 4, borderRadius: 999, background: 'var(--mkt-ink)', opacity: 0.4 }} />
             <span style={{ fontFamily: 'var(--mkt-sans)', fontWeight: 600, fontSize: 19, color: 'var(--mkt-ink)' }}>{sheetOpen ? 'Hide' : 'Personalise'}</span>
-            <span style={{ fontSize: 14, color: 'var(--mkt-muted)' }}>{sheetOpen ? '▾' : '▴'}</span>
+            <Chevron size={24} up={!sheetOpen} />
           </button>
 
           <div className="pers-form-header" style={{ padding: '14px 18px', borderBottom: '2px solid var(--mkt-ink)', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
@@ -430,8 +445,18 @@ function PersonaliseEditor() {
 
         {/* ── Live preview ──────────────────────────────────────────────────── */}
         <div className="pers-preview">
-          <div style={{ height: 44, flexShrink: 0, background: 'var(--mkt-card)', borderBottom: '2px solid var(--mkt-ink)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 16px' }}>
-            <span style={{ fontFamily: 'var(--mkt-sans)', fontSize: 13, color: 'var(--mkt-muted-2)' }}>
+          <div style={{ height: 44, flexShrink: 0, background: 'var(--mkt-card)', borderBottom: '2px solid var(--mkt-ink)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 16px', position: 'relative' }}>
+            {/* Mobile-only back button — the form header (which carries the desktop one) is
+                hidden under 768px, so without this a phone user has no way out of the page. */}
+            <button
+              className="pers-back-mobile"
+              onClick={() => router.push('/personalise/picker')}
+              aria-label="Back to templates"
+              style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', width: 32, height: 32, borderRadius: 999, border: '2px solid var(--mkt-ink)', background: 'var(--mkt-card)', cursor: 'pointer', fontSize: 18, lineHeight: 1, color: 'var(--mkt-ink)', alignItems: 'center', justifyContent: 'center', padding: 0 }}
+            >
+              ‹
+            </button>
+            <span style={{ fontFamily: 'var(--mkt-sans)', fontSize: 13, color: 'var(--mkt-muted-2)', paddingLeft: 36, paddingRight: 36, textAlign: 'center', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {selected ? `${selected.templateName} · Live preview` : 'Live preview'}{previewReady ? '' : ' · loading…'}
             </span>
           </div>

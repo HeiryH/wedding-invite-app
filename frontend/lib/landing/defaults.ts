@@ -6,7 +6,7 @@ export const LANDING_CONTENT_DEFAULTS: Record<string, string> = {
   'features.title': 'Features',
   'features.subtitle': 'Everything to send a beautiful invite.',
   'pricing.title': 'Pricing',
-  'pricing.subtitle': "Start free. Upgrade when you're ready.",
+  'pricing.subtitle': 'One simple price per tier. Pick the designs you love.',
   'stories.title': 'Stories',
   'stories.subtitle': 'Real celebrations, really sent.',
   'about.title': 'About',
@@ -37,11 +37,21 @@ export const DEFAULT_FEATURE_ITEMS: LandingDefaultItem[] = [
   { title: 'Share anywhere', body: 'One link works on WhatsApp, Instagram, SMS or email.', meta: '#e9c98a' },
 ];
 
+// `meta` on a pricing item is the tier code (BASIC/PREMIUM/PRO) — the landing page uses it to
+// build the "View templates" link into the picker filtered to that tier. It falls back to
+// matching the title when a CMS row leaves it blank.
 export const DEFAULT_PRICING_ITEMS: LandingDefaultItem[] = [
-  { title: 'Free', body: 'Try the editor and see how it feels before committing.', meta: '', price: 'Free forever', features: '1 free invitation template\nFull editor access\nPrivate preview (self-test only)\nTest RSVPs & wishes', cta: 'Get started free', ctaHref: '/personalise/picker', highlighted: false },
-  { title: 'Premium', body: 'Share your invitation with real guests and unlock premium designs.', meta: '', price: 'Contact us', features: 'All free features\nShareable public link\nAll premium templates\nRSVP management\nWishes & guestbook', cta: 'Contact us to upgrade', ctaHref: '/login', highlighted: true },
-  { title: 'Pro', body: 'The full experience for couples who want everything.', meta: '', price: 'Contact us', features: 'All premium features\nAll Pro templates\nPhoto booth\nSeating arrangement\nPriority support', cta: 'Contact us to upgrade', ctaHref: '/login', highlighted: false },
+  { title: 'Basic', body: 'Everything you need to send a beautiful invitation.', meta: 'BASIC', price: '$30', features: 'All Basic templates\nFull editor access\nShareable public link\nRSVP management\nWishes & guestbook', cta: 'Get started', ctaHref: '/personalise/picker?tier=BASIC', highlighted: false },
+  { title: 'Premium', body: 'Unlock the premium designs and richer customisation.', meta: 'PREMIUM', price: '$50', features: 'All Basic features\nAll Premium templates\nAdvanced customisation\nMusic & photo gallery\nPriority support', cta: 'Get started', ctaHref: '/personalise/picker?tier=PREMIUM', highlighted: true },
+  { title: 'Pro', body: 'The full experience for couples who want everything.', meta: 'PRO', price: '$80', features: 'All Premium features\nAll Pro templates\nAdjust editor (stage layouts)\nPhoto booth & seating\nCustom domain', cta: 'Get started', ctaHref: '/personalise/picker?tier=PRO', highlighted: false },
 ];
+
+/** Resolves a pricing item to a tier code for the "View templates" link. */
+export function pricingTierOf(item: LandingDefaultItem): 'BASIC' | 'PREMIUM' | 'PRO' | null {
+  const raw = (item.meta || item.title || '').trim().toUpperCase();
+  if (raw === 'BASIC' || raw === 'PREMIUM' || raw === 'PRO') return raw;
+  return null;
+}
 
 export const DEFAULT_STORY_ITEMS: LandingDefaultItem[] = [
   { body: 'Made our wedding invite in one lunch break. Everyone asked who designed it.', meta: '— Nur & Idris, Wedding' },

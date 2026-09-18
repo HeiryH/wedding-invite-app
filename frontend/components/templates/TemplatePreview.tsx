@@ -20,9 +20,13 @@ export function TemplatePreview({
       <img
         src={src}
         alt={templateCode}
+        // Never let the browser start a native image drag — it swallows the pointer sequence
+        // of any drag-to-scrub parent (marquee / card deck), so dragging "on" a thumbnail
+        // would do nothing while dragging in the gaps worked.
+        draggable={false}
         style={aspect
-          ? { width: '100%', height: '100%', objectFit: fit, display: 'block' }
-          : { width: '100%', height: 'auto', display: 'block' }}
+          ? { width: '100%', height: '100%', objectFit: fit, display: 'block', userSelect: 'none', WebkitUserDrag: 'none' } as React.CSSProperties
+          : { width: '100%', height: 'auto', display: 'block', userSelect: 'none', WebkitUserDrag: 'none' } as React.CSSProperties}
       />
     </div>
   );

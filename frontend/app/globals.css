@@ -452,6 +452,10 @@ body {
 }
 .pers-handle { display: none; } /* mobile-only drag/expand handle */
 .pers-form-header { display: flex; }
+.pers-back-mobile { display: none; } /* mobile-only back button in the preview bar */
+/* Section-card chevron flips when the <details> is open */
+.pers-section[open] > summary .pers-chev { transform: rotate(180deg); }
+.pers-section > summary::-webkit-details-marker { display: none; }
 
 @media (max-width: 768px) {
   .pers-shell { position: relative; }
@@ -466,4 +470,5 @@ body {
   .pers-form.open { height: 86dvh; }
   .pers-handle { display: flex; }
   .pers-form-header { display: none; } /* the handle replaces the header on mobile */
+  .pers-back-mobile { display: flex; }
 }

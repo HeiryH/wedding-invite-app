@@ -33,6 +33,9 @@ export function TemplateMarquee({ templates }: { templates: Template[] }) {
 
   const down = (e: React.PointerEvent) => {
     const s = state.current;
+    // Mouse: stop the default image/text drag from hijacking the gesture when the press
+    // lands on a thumbnail rather than in a gap between cards.
+    if (e.pointerType === 'mouse') e.preventDefault();
     s.dragging = true; s.lastX = e.clientX;
     try { e.currentTarget.setPointerCapture(e.pointerId); } catch {}
   };
@@ -53,7 +56,8 @@ export function TemplateMarquee({ templates }: { templates: Template[] }) {
       onPointerMove={move}
       onPointerUp={up}
       onPointerCancel={up}
-      style={{ position: 'relative', overflow: 'hidden', touchAction: 'pan-y', cursor: 'grab', width: '100%', maskImage: 'linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent)', WebkitMaskImage: 'linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent)' }}
+      onDragStart={(e) => e.preventDefault()}
+      style={{ position: 'relative', overflow: 'hidden', touchAction: 'pan-y', cursor: 'grab', userSelect: 'none', width: '100%', maskImage: 'linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent)', WebkitMaskImage: 'linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent)' }}
     >
       <div ref={trackRef} style={{ display: 'flex', gap: 22, alignItems: 'flex-start', padding: '4px 22px', willChange: 'transform' }}>
         {cards.map((t, i) => (
