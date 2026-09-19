@@ -899,25 +899,32 @@
 .photoFrame {
   position: relative;
   margin: 0;
-  aspect-ratio: 1;
-  border-radius: var(--slot-radius, 8px);
-  overflow: hidden;
+  cursor: pointer;
+  /* Cells follow their frame's own aspect (set inline by FramedPhoto); rows align by width. */
+  align-self: start;
 }
-.photoFrame img.photo {
+/* A photo masked into a frame's transparent opening, with the frame art (T7's two carved
+   borders — an accepted residual borrow, see PhotoBoothSlot.tsx) drawn on top and *around* it.
+   The box is sized by width; its aspect is the art's own, so the frame is never clipped or
+   stretched and the photo can't leak out past the border. */
+.framed {
+  position: relative;
+  width: 100%;
+}
+.framedPhoto {
+  position: absolute;
+  object-fit: cover;
+  display: block;
+}
+.framedArt {
+  position: absolute;
+  inset: 0;
   width: 100%;
   height: 100%;
-  object-fit: cover;
-}
-/* T7's own two frame overlays (square/oval carved borders) are an accepted residual borrow —
-   see PhotoBoothSlot.tsx. The neutral theme relies on .photoFrame's own border-radius/overflow
-   instead of a frame image, so this rule only matters when that borrowed <img> is present. */
-.photoFrameArt {
-  position: absolute;
-  inset: -6%;
-  width: 112%;
-  height: 112%;
   object-fit: contain;
   pointer-events: none;
+  /* a whisper of depth so the frame reads as sitting over the photo */
+  filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.18));
 }
 
 /* ── Stack/grid toggle + draggable polaroid deck + lightbox ──────────────────────────────────── */
@@ -966,6 +973,9 @@
   object-fit: cover;
   display: block;
 }
+/* Framed variant of the stack card (frameArt on): same footprint as the polaroid. */
+.stackFramedCard { width: 11rem; text-align: center; }
+.stackFramed { width: 11rem; }
 .stackGhost1, .stackGhost2 {
   position: absolute;
   pointer-events: none;
@@ -1050,6 +1060,10 @@
   max-height: calc(var(--fvh, 100vh) * 0.75);
   border-radius: var(--slot-radius, 8px);
   object-fit: contain;
+}
+.lightboxFramed {
+  width: min(calc(var(--fvw, 100vw) * 0.86), calc(var(--fvh, 100vh) * 0.6), 34rem);
+  margin: 0 auto;
 }
 .lightboxCaption {
   margin-top: 0.6rem;

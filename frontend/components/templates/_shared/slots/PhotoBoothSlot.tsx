@@ -1,15 +1,61 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useRef, useState, useSyncExternalStore } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { Photo } from '@/lib/api';
 import type { SlotProps } from '../types';
 // The two alternating frame overlays are a deliberate, accepted T7 art borrow (see
-// slots.module.css's .photoFrameArt comment) — not generalized to a neutral asset in this pass.
+// slots.module.css's .framedArt comment) — not generalized to a neutral asset in this pass.
 import { T7_ASSETS } from '../../Template7-romangarden/data/stages';
 import styles from './slots.module.css';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL?.replace('/api', '') ?? '';
+const subscribeNoop = () => () => {};
+
+/**
+ * The engraved T7 frames as *frames*: each entry records the art's own aspect and where its
+ * transparent opening sits (measured from the alpha channel, as % of the art box), so the photo
+ * is masked into the opening and the art surrounds it — rather than the old approach of filling
+ * a square cell with the photo and painting the frame on top, which let photo corners peek out
+ * around the oval and hid a ring of every photo under the border.
+ */
+const FRAMES = {
+  square: { src: 'square-frame.webp', ar: 500 / 501, open: { l: 13.2, t: 13.6, w: 73.6, h: 72.5 }, shape: 'rect' as const },
+  oval:   { src: 'oval-frame.webp',   ar: 600 / 772, open: { l: 12.2, t: 13.6, w: 75.3, h: 75.8 }, shape: 'ellipse' as const },
+};
+type FrameKey = keyof typeof FRAMES;
+const frameFor = (i: number): FrameKey => (i % 2 === 0 ? 'square' : 'oval');
+
+/** A photo sitting inside a frame's opening, frame art on top. Sized by width; height follows the
+ *  frame's aspect. Falls back to a plain cover-fit box when `frame` is undefined (frameArt 'none'). */
+function FramedPhoto({ photo, frame, className, style, sizes }: {
+  photo: Photo; frame?: FrameKey; className?: string; style?: React.CSSProperties; sizes?: string;
+}) {
+  const f = frame ? FRAMES[frame] : undefined;
+  return (
+    <div className={`${styles.framed} ${className ?? ''}`} style={{ aspectRatio: f ? f.ar : 1, ...style }}>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={`${API_BASE}${photo.photoUrl}`}
+        alt={photo.caption || 'Guest photo'}
+        className={styles.framedPhoto}
+        sizes={sizes}
+        loading="lazy"
+        decoding="async"
+        draggable={false}
+        style={f ? {
+          left: `${f.open.l}%`, top: `${f.open.t}%`, width: `${f.open.w}%`, height: `${f.open.h}%`,
+          borderRadius: f.shape === 'ellipse' ? '50%' : 'var(--slot-radius, 8px)',
+        } : { inset: 0, width: '100%', height: '100%', borderRadius: 'var(--slot-radius, 8px)' }}
+      />
+      {f && (
+        /* eslint-disable-next-line @next/next/no-img-element */
+        <img src={`${T7_ASSETS}/photobooth/${f.src}`} alt="" className={styles.framedArt} loading="lazy" decoding="async" draggable={false} />
+      )}
+    </div>
+  );
+}
 
 const stackVariants = {
   enter: (dir: number) => ({ x: dir > 0 ? 260 : -260, rotate: dir > 0 ? 10 : -10, opacity: 0, scale: 0.85 }),
@@ -28,11 +74,14 @@ function PhotoBoothBody({ photos, onUploadPhoto, t, editing, upload }: SlotProps
   // doesn't want it (e.g. Sunny Safari draws its own gallery board) sets `photobooth.frameArt` to
   // 'none' in its schema defaults. Any other value (including the unset default) keeps it.
   const frameArt = t('photobooth.frameArt', 'roman');
+  const framed = frameArt !== 'none';
   const inputRef = useRef<HTMLInputElement>(null);
   const [layout, setLayout] = useState<'stack' | 'grid'>(photos.length > 1 ? 'stack' : 'grid');
   const [index, setIndex] = useState(0);
   const [direction, setDirection] = useState(1);
   const [lightbox, setLightbox] = useState<Photo | null>(null);
+  // Portal target exists only on the client; SSR renders the lightbox nowhere (it's closed anyway).
+  const mounted = useSyncExternalStore(subscribeNoop, () => true, () => false);
 
   const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -87,18 +136,26 @@ function PhotoBoothBody({ photos, onUploadPhoto, t, editing, upload }: SlotProps
             <div className={styles.stackContainer}>
               {photos.length > 2 && (
                 <div className={styles.stackGhost2}>
-                  <div className={styles.stackPolaroid}>
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={`${API_BASE}${photos[(index + 2) % photos.length].photoUrl}`} className={styles.stackPhoto} alt="" draggable={false} />
-                  </div>
+                  {framed
+                    ? <FramedPhoto photo={photos[(index + 2) % photos.length]} frame={frameFor((index + 2) % photos.length)} className={styles.stackFramed} />
+                    : (
+                      <div className={styles.stackPolaroid}>
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={`${API_BASE}${photos[(index + 2) % photos.length].photoUrl}`} className={styles.stackPhoto} alt="" draggable={false} />
+                      </div>
+                    )}
                 </div>
               )}
               {photos.length > 1 && (
                 <div className={styles.stackGhost1}>
-                  <div className={styles.stackPolaroid}>
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={`${API_BASE}${photos[(index + 1) % photos.length].photoUrl}`} className={styles.stackPhoto} alt="" draggable={false} />
-                  </div>
+                  {framed
+                    ? <FramedPhoto photo={photos[(index + 1) % photos.length]} frame={frameFor((index + 1) % photos.length)} className={styles.stackFramed} />
+                    : (
+                      <div className={styles.stackPolaroid}>
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={`${API_BASE}${photos[(index + 1) % photos.length].photoUrl}`} className={styles.stackPhoto} alt="" draggable={false} />
+                      </div>
+                    )}
                 </div>
               )}
               <AnimatePresence custom={direction} mode="popLayout">
@@ -120,17 +177,25 @@ function PhotoBoothBody({ photos, onUploadPhoto, t, editing, upload }: SlotProps
                   }}
                   onClick={() => setLightbox(photos[index])}
                 >
-                  <div className={styles.stackPolaroid}>
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={`${API_BASE}${photos[index].photoUrl}`}
-                      alt={photos[index].caption ?? ''}
-                      className={styles.stackPhoto}
-                      draggable={false}
-                    />
-                    {photos[index].caption && <span className={styles.polaroidCaption}>{photos[index].caption}</span>}
-                    {photos[index].guestName && <span className={styles.polaroidBy}>— {photos[index].guestName}</span>}
-                  </div>
+                  {framed ? (
+                    <div className={styles.stackFramedCard}>
+                      <FramedPhoto photo={photos[index]} frame={frameFor(index)} className={styles.stackFramed} />
+                      {photos[index].caption && <span className={styles.polaroidCaption}>{photos[index].caption}</span>}
+                      {photos[index].guestName && <span className={styles.polaroidBy}>— {photos[index].guestName}</span>}
+                    </div>
+                  ) : (
+                    <div className={styles.stackPolaroid}>
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={`${API_BASE}${photos[index].photoUrl}`}
+                        alt={photos[index].caption ?? ''}
+                        className={styles.stackPhoto}
+                        draggable={false}
+                      />
+                      {photos[index].caption && <span className={styles.polaroidCaption}>{photos[index].caption}</span>}
+                      {photos[index].guestName && <span className={styles.polaroidBy}>— {photos[index].guestName}</span>}
+                    </div>
+                  )}
                 </motion.div>
               </AnimatePresence>
               {photos.length > 1 && (
@@ -151,27 +216,11 @@ function PhotoBoothBody({ photos, onUploadPhoto, t, editing, upload }: SlotProps
             </div>
           ) : (
             <div className={styles.gallery}>
+              {/* Alternate the two engraved frames so the grid doesn't read as a repeat; each cell
+                  takes its frame's own aspect (square ≈ 1:1, oval ≈ 3:4) and rows align by width. */}
               {photos.map((p, i) => (
                 <figure key={p.photoId} className={styles.photoFrame} onClick={() => setLightbox(p)}>
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={`${API_BASE}${p.photoUrl}`}
-                    alt={p.caption || 'Guest photo'}
-                    className={styles.photo}
-                    loading="lazy"
-                    decoding="async"
-                  />
-                  {/* Alternate the two engraved frames so the grid doesn't read as a repeat */}
-                  {frameArt !== 'none' && (
-                    /* eslint-disable-next-line @next/next/no-img-element */
-                    <img
-                      src={`${T7_ASSETS}/photobooth/${i % 2 === 0 ? 'square-frame' : 'oval-frame'}.webp`}
-                      alt=""
-                      className={styles.photoFrameArt}
-                      loading="lazy"
-                      decoding="async"
-                    />
-                  )}
+                  <FramedPhoto photo={p} frame={framed ? frameFor(i) : undefined} />
                 </figure>
               ))}
             </div>
@@ -179,6 +228,10 @@ function PhotoBoothBody({ photos, onUploadPhoto, t, editing, upload }: SlotProps
         </>
       )}
 
+      {/* Portaled to <body>: the slot sits inside `.stage`, whose `container-type` implies layout
+          containment and therefore becomes the containing block for `position: fixed` — left in
+          place, the overlay only ever covered the stage box and stage art painted over it. */}
+      {mounted && createPortal(
       <AnimatePresence>
         {lightbox && (
           <motion.div
@@ -187,14 +240,23 @@ function PhotoBoothBody({ photos, onUploadPhoto, t, editing, upload }: SlotProps
             onClick={() => setLightbox(null)}
           >
             <div className={styles.lightboxCard} onClick={(e) => e.stopPropagation()}>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={`${API_BASE}${lightbox.photoUrl}`} alt={lightbox.caption ?? ''} className={styles.lightboxPhoto} />
+              {framed ? (
+                <FramedPhoto
+                  photo={lightbox}
+                  frame={frameFor(Math.max(0, photos.findIndex((p) => p.photoId === lightbox.photoId)))}
+                  className={styles.lightboxFramed}
+                />
+              ) : (
+                /* eslint-disable-next-line @next/next/no-img-element */
+                <img src={`${API_BASE}${lightbox.photoUrl}`} alt={lightbox.caption ?? ''} className={styles.lightboxPhoto} />
+              )}
               {lightbox.caption && <p className={styles.lightboxCaption}>{lightbox.caption}</p>}
               <button className={styles.lightboxClose} onClick={() => setLightbox(null)}>×</button>
             </div>
           </motion.div>
         )}
-      </AnimatePresence>
+      </AnimatePresence>,
+      document.body)}
     </div>
   );
 }
