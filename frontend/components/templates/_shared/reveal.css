@@ -127,11 +127,101 @@
   95% { transform: translate(calc(var(--sl-idle-intensity, 1) * -2px), 0);   opacity: 1;    clip-path: inset(0 0 0 0); }
 }
 
-[data-seen='true'] [data-sl-idle='wave']   { animation: sl-idle-wave   var(--sl-idle-dur, 2.6s) ease-in-out infinite; }
-[data-seen='true'] [data-sl-idle='sway']   { animation: sl-idle-sway   var(--sl-idle-dur, 3.2s) ease-in-out infinite; }
-[data-seen='true'] [data-sl-idle='pulse']  { animation: sl-idle-pulse  var(--sl-idle-dur, 1.8s) ease-in-out infinite; }
-[data-seen='true'] [data-sl-idle='jitter'] { animation: sl-idle-jitter var(--sl-idle-dur, 2.4s) linear infinite; }
-[data-seen='true'] [data-sl-idle='glitch'] { animation: sl-idle-glitch var(--sl-idle-dur, 3.6s) steps(1, end) infinite; }
+
+/* Anchored types (rotate/scale) read their pivot from the inline `transform-origin` Layer.tsx /
+   useAnchors set via idle.ts — a sign swaying from its hook vs. its middle. Translation-only
+   types ignore it. */
+@keyframes sl-idle-pendulum {
+  0%, 100% { transform: rotate(calc(var(--sl-idle-intensity, 1) * -9deg)); }
+  50%      { transform: rotate(calc(var(--sl-idle-intensity, 1) * 9deg)); }
+}
+@keyframes sl-idle-float {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(calc(var(--sl-idle-intensity, 1) * -10px)); }
+}
+@keyframes sl-idle-drift {
+  0%, 100% { transform: translateX(calc(var(--sl-idle-intensity, 1) * -8px)); }
+  50%      { transform: translateX(calc(var(--sl-idle-intensity, 1) * 8px)); }
+}
+@keyframes sl-idle-bounce {
+  0%, 100% { transform: translateY(0) scale(1, 1); animation-timing-function: ease-out; }
+  40%      { transform: translateY(calc(var(--sl-idle-intensity, 1) * -14px)) scale(0.98, 1.02); animation-timing-function: ease-in; }
+  80%      { transform: translateY(0) scale(1, 1); }
+  88%      { transform: translateY(0) scale(calc(1 + var(--sl-idle-intensity, 1) * 0.04), calc(1 - var(--sl-idle-intensity, 1) * 0.04)); }
+}
+@keyframes sl-idle-wobble {
+  0%, 100% { transform: translateX(0) rotate(0deg); }
+  15%  { transform: translateX(calc(var(--sl-idle-intensity, 1) * -6px)) rotate(calc(var(--sl-idle-intensity, 1) * -4deg)); }
+  30%  { transform: translateX(calc(var(--sl-idle-intensity, 1) * 5px))  rotate(calc(var(--sl-idle-intensity, 1) * 3deg)); }
+  45%  { transform: translateX(calc(var(--sl-idle-intensity, 1) * -3px)) rotate(calc(var(--sl-idle-intensity, 1) * -2deg)); }
+  60%  { transform: translateX(calc(var(--sl-idle-intensity, 1) * 2px))  rotate(calc(var(--sl-idle-intensity, 1) * 1deg)); }
+  75%  { transform: translateX(0) rotate(0deg); }
+}
+@keyframes sl-idle-spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+@keyframes sl-idle-tilt {
+  0%, 100% { transform: perspective(600px) rotateY(calc(var(--sl-idle-intensity, 1) * -12deg)); }
+  50%      { transform: perspective(600px) rotateY(calc(var(--sl-idle-intensity, 1) * 12deg)); }
+}
+@keyframes sl-idle-breathe {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50%      { transform: scale(calc(1 + var(--sl-idle-intensity, 1) * 0.04)); opacity: calc(1 - var(--sl-idle-intensity, 1) * 0.15); }
+}
+@keyframes sl-idle-heartbeat {
+  0%, 40%, 100% { transform: scale(1); }
+  10%  { transform: scale(calc(1 + var(--sl-idle-intensity, 1) * 0.1)); }
+  20%  { transform: scale(1); }
+  30%  { transform: scale(calc(1 + var(--sl-idle-intensity, 1) * 0.07)); }
+}
+@keyframes sl-idle-shake {
+  0%, 70%, 100% { transform: translateX(0); }
+  74% { transform: translateX(calc(var(--sl-idle-intensity, 1) * -5px)); }
+  78% { transform: translateX(calc(var(--sl-idle-intensity, 1) * 5px)); }
+  82% { transform: translateX(calc(var(--sl-idle-intensity, 1) * -4px)); }
+  86% { transform: translateX(calc(var(--sl-idle-intensity, 1) * 4px)); }
+  90% { transform: translateX(calc(var(--sl-idle-intensity, 1) * -2px)); }
+  94% { transform: translateX(calc(var(--sl-idle-intensity, 1) * 2px)); }
+}
+@keyframes sl-idle-flicker {
+  0%, 100% { opacity: 1; }
+  8%  { opacity: calc(1 - var(--sl-idle-intensity, 1) * 0.35); }
+  10% { opacity: 1; }
+  22% { opacity: calc(1 - var(--sl-idle-intensity, 1) * 0.15); }
+  25% { opacity: 1; }
+  57% { opacity: calc(1 - var(--sl-idle-intensity, 1) * 0.45); }
+  60% { opacity: 1; }
+  78% { opacity: calc(1 - var(--sl-idle-intensity, 1) * 0.2); }
+  80% { opacity: 1; }
+}
+@keyframes sl-idle-blink {
+  0%, 49%   { opacity: 1; }
+  50%, 100% { opacity: calc(1 - var(--sl-idle-intensity, 1) * 0.4); }
+}
+@keyframes sl-idle-hue {
+  from { filter: hue-rotate(0deg); }
+  to   { filter: hue-rotate(calc(var(--sl-idle-intensity, 1) * 360deg)); }
+}
+
+[data-seen='true'] [data-sl-idle='wave']      { animation: sl-idle-wave      var(--sl-idle-dur, 2.6s) ease-in-out infinite; }
+[data-seen='true'] [data-sl-idle='sway']      { animation: sl-idle-sway      var(--sl-idle-dur, 3.2s) ease-in-out infinite; }
+[data-seen='true'] [data-sl-idle='pendulum']  { animation: sl-idle-pendulum  var(--sl-idle-dur, 2.8s) ease-in-out infinite; }
+[data-seen='true'] [data-sl-idle='float']     { animation: sl-idle-float     var(--sl-idle-dur, 3.4s) ease-in-out infinite; }
+[data-seen='true'] [data-sl-idle='drift']     { animation: sl-idle-drift     var(--sl-idle-dur, 4.2s) ease-in-out infinite; }
+[data-seen='true'] [data-sl-idle='bounce']    { animation: sl-idle-bounce    var(--sl-idle-dur, 1.6s) linear infinite; }
+[data-seen='true'] [data-sl-idle='wobble']    { animation: sl-idle-wobble    var(--sl-idle-dur, 2.2s) ease-in-out infinite; }
+[data-seen='true'] [data-sl-idle='spin']      { animation: sl-idle-spin      var(--sl-idle-dur, 6s) linear infinite; }
+[data-seen='true'] [data-sl-idle='tilt']      { animation: sl-idle-tilt      var(--sl-idle-dur, 4s) ease-in-out infinite; }
+[data-seen='true'] [data-sl-idle='pulse']     { animation: sl-idle-pulse     var(--sl-idle-dur, 1.8s) ease-in-out infinite; }
+[data-seen='true'] [data-sl-idle='breathe']   { animation: sl-idle-breathe   var(--sl-idle-dur, 3.6s) ease-in-out infinite; }
+[data-seen='true'] [data-sl-idle='heartbeat'] { animation: sl-idle-heartbeat var(--sl-idle-dur, 1.4s) ease-in-out infinite; }
+[data-seen='true'] [data-sl-idle='jitter']    { animation: sl-idle-jitter    var(--sl-idle-dur, 2.4s) linear infinite; }
+[data-seen='true'] [data-sl-idle='shake']     { animation: sl-idle-shake     var(--sl-idle-dur, 3s) linear infinite; }
+[data-seen='true'] [data-sl-idle='glitch']    { animation: sl-idle-glitch    var(--sl-idle-dur, 3.6s) steps(1, end) infinite; }
+[data-seen='true'] [data-sl-idle='flicker']   { animation: sl-idle-flicker   var(--sl-idle-dur, 2.2s) linear infinite; }
+[data-seen='true'] [data-sl-idle='blink']     { animation: sl-idle-blink     var(--sl-idle-dur, 1.2s) steps(1, end) infinite; }
+[data-seen='true'] [data-sl-idle='hue']       { animation: sl-idle-hue       var(--sl-idle-dur, 5s) linear infinite; }
 
 @media (prefers-reduced-motion: reduce) {
   [data-sl-anim],

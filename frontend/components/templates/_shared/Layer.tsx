@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent } from 'react';
 import type { Layer as LayerModel, SlotProps } from './types';
-import { IDLE_BASE_DUR } from './idle';
+import { idleInlineStyle } from './idle';
 import { staggerDelay } from './reveal';
 import { useEngine } from './engine';
 import { DEFAULT_SHEET, useSheets } from './slots/sheets';
@@ -165,11 +165,8 @@ export default function Layer({ layer, slotProps, eager, selected, editing, stag
   const animOut = layer.animOut && layer.animOut !== 'none' ? layer.animOut : undefined;
   const animOutDur = layer.animOutDur ?? layer.animDur ?? 1;
   const animIdle = layer.animIdle && layer.animIdle !== 'none' ? layer.animIdle : undefined;
-  const idleStyle: CSSProperties & Record<string, string | number> | undefined = animIdle
-    ? {
-        '--sl-idle-intensity': layer.animIdleIntensity ?? 1,
-        '--sl-idle-dur': `${IDLE_BASE_DUR[animIdle] / (layer.animIdleSpeed ?? 1)}s`,
-      }
+  const idleStyle: CSSProperties | undefined = animIdle
+    ? idleInlineStyle(animIdle, { speed: layer.animIdleSpeed, intensity: layer.animIdleIntensity, origin: layer.animIdleOrigin })
     : undefined;
   const box: CSSProperties & Record<string, string | number> = {
     left: `${layer.x}%`,

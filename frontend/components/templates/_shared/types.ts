@@ -69,10 +69,36 @@ export const ANIM_OUT_OPTIONS: AnimOutType[] = [
 /** Continuous loop played while a layer's stage has been seen, independent of scroll position —
  *  layered on top of the one-shot entrance and the scroll-scrubbed exit. Scoped to real
  *  `Layer.tsx`-rendered kinds (img/text/shape/slot); not applied to `anchor`/`scrollVideo`. */
-export type AnimIdleType = 'none' | 'wave' | 'sway' | 'pulse' | 'jitter' | 'glitch';
+export type AnimIdleType =
+  | 'none'
+  // motion
+  | 'wave' | 'sway' | 'pendulum' | 'float' | 'drift' | 'bounce' | 'wobble' | 'spin' | 'tilt'
+  // scale
+  | 'pulse' | 'breathe' | 'heartbeat'
+  // twitchy
+  | 'jitter' | 'shake' | 'glitch'
+  // opacity / colour
+  | 'flicker' | 'blink' | 'hue';
 
 /** Selectable idle animations, in the order the Adjust panel lists them. */
-export const ANIM_IDLE_OPTIONS: AnimIdleType[] = ['none', 'wave', 'sway', 'pulse', 'jitter', 'glitch'];
+export const ANIM_IDLE_OPTIONS: AnimIdleType[] = [
+  'none',
+  'wave', 'sway', 'pendulum', 'float', 'drift', 'bounce', 'wobble', 'spin', 'tilt',
+  'pulse', 'breathe', 'heartbeat',
+  'jitter', 'shake', 'glitch',
+  'flicker', 'blink', 'hue',
+];
+
+/** Pivot for idle types that rotate or scale (see `IDLE_ANCHORED` in idle.ts) — a 3×3 grid of
+ *  `transform-origin` presets. `undefined` ⇒ the type's own default (centre for almost all). */
+export type AnimIdleOrigin =
+  | 'top-left' | 'top' | 'top-right'
+  | 'left' | 'center' | 'right'
+  | 'bottom-left' | 'bottom' | 'bottom-right';
+
+export const ANIM_IDLE_ORIGINS: AnimIdleOrigin[] = [
+  'top-left', 'top', 'top-right', 'left', 'center', 'right', 'bottom-left', 'bottom', 'bottom-right',
+];
 
 export type StageId = string;
 export type SlotId = string;
@@ -199,6 +225,9 @@ export interface Layer {
   animIdleSpeed?: number;
   /** Idle amplitude multiplier — 1 = each type's base intensity. */
   animIdleIntensity?: number;
+  /** Pivot for rotating/scaling idle types (e.g. a sign that sways from its left edge). Ignored
+   *  by translation-only types. `undefined` ⇒ the type's default origin. */
+  animIdleOrigin?: AnimIdleOrigin;
 
   // text / shape styling. Slot layers also reuse `color`/`fontFamily` for their text and
   // `fill`/border/radius for their own content container (see slotLayerStyle.ts).

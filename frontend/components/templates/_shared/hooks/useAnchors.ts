@@ -3,7 +3,7 @@ import type { CSSProperties } from 'react';
 import type { AnimIdleType, Breakpoint, EditorHandle, Layer, StageDef } from '../types';
 import { resolveStage } from '../layout';
 import { fontVar } from '@/lib/fonts/registry';
-import { IDLE_BASE_DUR } from '../idle';
+import { idleInlineStyle } from '../idle';
 
 /**
  * Shared factory behind every per-template `useAnchors` hook (Template1-classicrose/useAnchors.ts
@@ -102,10 +102,7 @@ export function useAnchorsFor(
     const type = layer.animIdle;
     return {
       'data-sl-idle': type,
-      style: {
-        '--sl-idle-intensity': layer.animIdleIntensity ?? 1,
-        '--sl-idle-dur': `${IDLE_BASE_DUR[type] / (layer.animIdleSpeed ?? 1)}s`,
-      } as CSSProperties,
+      style: idleInlineStyle(type, { speed: layer.animIdleSpeed, intensity: layer.animIdleIntensity, origin: layer.animIdleOrigin }),
     };
   };
 

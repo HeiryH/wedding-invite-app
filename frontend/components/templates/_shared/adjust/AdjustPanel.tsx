@@ -1,8 +1,9 @@
 'use client';
 
 import { useCallback, useMemo, useRef, useState } from 'react';
-import type { AnimIdleType, AnimOutType, AnimType, Breakpoint, Layer, ObjectFit, StageDef, StageId } from '../types';
-import { ANIM_OPTIONS, ANIM_OUT_OPTIONS, ANIM_IDLE_OPTIONS } from '../types';
+import type { AnimIdleOrigin, AnimIdleType, AnimOutType, AnimType, Breakpoint, Layer, ObjectFit, StageDef, StageId } from '../types';
+import { ANIM_OPTIONS, ANIM_OUT_OPTIONS, ANIM_IDLE_ORIGINS } from '../types';
+import { IDLE_ANCHORED, IDLE_DEFAULT_ORIGIN } from '../idle';
 import { resolveStage, serializeStage, baseStage, layoutKey, type StageBg } from '../layout';
 import { SLOT_CATALOG_GROUPS, type SlotCatalogEntry } from '../slots/catalog';
 import { BINDING_TOKENS } from '../bindings';
@@ -27,8 +28,87 @@ const ANIM_OUT_LABELS: Record<AnimOutType, string> = {
 };
 
 const ANIM_IDLE_LABELS: Record<AnimIdleType, string> = {
-  none: 'None', wave: 'Wave', sway: 'Sway', pulse: 'Pulse', jitter: 'Jitter', glitch: 'Glitch',
+  none: 'None',
+  wave: 'Wave', sway: 'Sway', pendulum: 'Pendulum', float: 'Float', drift: 'Drift',
+  bounce: 'Bounce', wobble: 'Wobble', spin: 'Spin', tilt: 'Tilt (3D)',
+  pulse: 'Pulse', breathe: 'Breathe', heartbeat: 'Heartbeat',
+  jitter: 'Jitter', shake: 'Shake', glitch: 'Glitch',
+  flicker: 'Flicker', blink: 'Blink', hue: 'Hue cycle',
 };
+
+// Grouped <optgroup>s for the idle picker — same members/order as ANIM_IDLE_OPTIONS.
+const ANIM_IDLE_GROUPS: Array<{ label: string; types: AnimIdleType[] }> = [
+  { label: 'Motion', types: ['wave', 'sway', 'pendulum', 'float', 'drift', 'bounce', 'wobble', 'spin', 'tilt'] },
+  { label: 'Scale', types: ['pulse', 'breathe', 'heartbeat'] },
+  { label: 'Twitchy', types: ['jitter', 'shake', 'glitch'] },
+  { label: 'Opacity & colour', types: ['flicker', 'blink', 'hue'] },
+];
+
+const ORIGIN_TITLE: Record<AnimIdleOrigin, string> = {
+  'top-left': 'Top left', top: 'Top', 'top-right': 'Top right',
+  left: 'Left', center: 'Centre', right: 'Right',
+  'bottom-left': 'Bottom left', bottom: 'Bottom', 'bottom-right': 'Bottom right',
+};
+
+/** "While on screen" controls — the idle loop type, its speed/intensity, and (for types that
+ *  rotate or scale) a 3×3 anchor picker for the pivot. Shared by both animation tabs. */
+function IdleControls({ layer, patch }: { layer: Layer; patch: (p: Partial<Layer>) => void }) {
+  const type = layer.animIdle ?? 'none';
+  const anchored = IDLE_ANCHORED.has(type);
+  const effectiveOrigin: AnimIdleOrigin = layer.animIdleOrigin ?? IDLE_DEFAULT_ORIGIN[type] ?? 'center';
+  return (
+    <>
+      <div className={styles.control} style={{ gridTemplateColumns: '54px 1fr' }}>
+        <span>Type</span>
+        <select
+          className={styles.select}
+          value={type}
+          onChange={(e) => patch({ animIdle: e.target.value as AnimIdleType })}
+        >
+          <option value="none">{ANIM_IDLE_LABELS.none}</option>
+          {ANIM_IDLE_GROUPS.map((g) => (
+            <optgroup key={g.label} label={g.label}>
+              {g.types.map((a) => <option key={a} value={a}>{ANIM_IDLE_LABELS[a]}</option>)}
+            </optgroup>
+          ))}
+        </select>
+      </div>
+      {type !== 'none' && (
+        <>
+          <Slider label="Speed" value={layer.animIdleSpeed ?? 1} min={0.25} max={3} step={0.05} onChange={(v) => patch({ animIdleSpeed: v })} />
+          <Slider label="Intensity" value={layer.animIdleIntensity ?? 1} min={0.25} max={2.5} step={0.05} onChange={(v) => patch({ animIdleIntensity: v })} />
+          {anchored && (
+            <div className={styles.control} style={{ gridTemplateColumns: '54px 1fr', alignItems: 'start' }}>
+              <span title="Where the motion pivots — e.g. a hanging sign sways from its top edge">Anchor</span>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 22px)', gap: 3 }}>
+                {ANIM_IDLE_ORIGINS.map((o) => {
+                  const on = effectiveOrigin === o;
+                  return (
+                    <button
+                      key={o}
+                      type="button"
+                      title={ORIGIN_TITLE[o]}
+                      aria-pressed={on}
+                      onClick={() => patch({ animIdleOrigin: o })}
+                      style={{
+                        width: 22, height: 22, padding: 0, cursor: 'pointer', borderRadius: 4,
+                        border: `1px solid ${on ? 'var(--brand)' : 'var(--border-default)'}`,
+                        background: on ? 'var(--brand)' : 'var(--surface-sunken)',
+                        display: 'grid', placeItems: 'center',
+                      }}
+                    >
+                      <span style={{ width: 6, height: 6, borderRadius: 999, background: on ? '#fff' : 'var(--text-muted)' }} />
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </>
+      )}
+    </>
+  );
+}
 
 interface Props {
   /** The template's stage-definition map (e.g. T7_STAGES). */
@@ -1220,24 +1300,7 @@ export default function AdjustPanel({
 
                 {/* Idle — a continuous loop once the layer has been seen, independent of scroll. */}
                 <div className={styles.label} style={{ marginTop: 4 }}>While on screen</div>
-                <div className={styles.control} style={{ gridTemplateColumns: '54px 1fr' }}>
-                  <span>Type</span>
-                  <select
-                    className={styles.select}
-                    value={current.animIdle ?? 'none'}
-                    onChange={(e) => patchLayer(current.id, { animIdle: e.target.value as AnimIdleType })}
-                  >
-                    {ANIM_IDLE_OPTIONS.map((a) => (
-                      <option key={a} value={a}>{ANIM_IDLE_LABELS[a]}</option>
-                    ))}
-                  </select>
-                </div>
-                {(current.animIdle ?? 'none') !== 'none' && (
-                  <>
-                    <Slider label="Speed" value={current.animIdleSpeed ?? 1} min={0.25} max={3} step={0.05} onChange={set('animIdleSpeed')} />
-                    <Slider label="Intensity" value={current.animIdleIntensity ?? 1} min={0.25} max={2.5} step={0.05} onChange={set('animIdleIntensity')} />
-                  </>
-                )}
+                <IdleControls layer={current} patch={(p) => patchLayer(current.id, p)} />
 
                 {/* Exit — scroll-scrubbed as the layer leaves the top of the viewport (reversible). */}
                 <div className={styles.label} style={{ marginTop: 4 }}>On scroll out</div>
@@ -1285,24 +1348,7 @@ export default function AdjustPanel({
                     bespoke framer-motion entrance, which a generic enter/exit system would fight
                     or double up on. */}
                 <div className={styles.label}>While on screen</div>
-                <div className={styles.control} style={{ gridTemplateColumns: '54px 1fr' }}>
-                  <span>Type</span>
-                  <select
-                    className={styles.select}
-                    value={current.animIdle ?? 'none'}
-                    onChange={(e) => patchLayer(current.id, { animIdle: e.target.value as AnimIdleType })}
-                  >
-                    {ANIM_IDLE_OPTIONS.map((a) => (
-                      <option key={a} value={a}>{ANIM_IDLE_LABELS[a]}</option>
-                    ))}
-                  </select>
-                </div>
-                {(current.animIdle ?? 'none') !== 'none' && (
-                  <>
-                    <Slider label="Speed" value={current.animIdleSpeed ?? 1} min={0.25} max={3} step={0.05} onChange={set('animIdleSpeed')} />
-                    <Slider label="Intensity" value={current.animIdleIntensity ?? 1} min={0.25} max={2.5} step={0.05} onChange={set('animIdleIntensity')} />
-                  </>
-                )}
+                <IdleControls layer={current} patch={(p) => patchLayer(current.id, p)} />
               </>
             ) : (
               <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 8 }}>

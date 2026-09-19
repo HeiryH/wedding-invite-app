@@ -455,6 +455,16 @@ other breakpoint, and reset.
     `useParallax` writes each frame from `up = -progress` (only the *leaving* side ramps, so the
     one-shot entrance is untouched; scrolling back reverses). Types: `fade-out`,
     `slide-out-{up,down,left,right}`, `zoom-out` (shrink), `zoom-in` (grow), `none`.
+  - **Idle** (`animIdle` + `animIdleSpeed`/`animIdleIntensity`/`animIdleOrigin`) — "While on
+    screen": a pure-CSS loop on its own `.layerIdle` element once `data-seen`. 18 types in four
+    groups (motion: wave/sway/pendulum/float/drift/bounce/wobble/spin/tilt; scale:
+    pulse/breathe/heartbeat; twitchy: jitter/shake/glitch; opacity/colour: flicker/blink/hue).
+    Types that rotate or scale are **anchored** — `IDLE_ANCHORED` in `_shared/idle.ts` — and
+    read a `transform-origin` from `animIdleOrigin` (3×3 preset grid in the panel; default
+    centre, pendulum hangs from `top`). Translation-only types ignore it and the panel hides the
+    picker. Add a type in three places: `types.ts` (`AnimIdleType`/`ANIM_IDLE_OPTIONS`),
+    `idle.ts` (`IDLE_BASE_DUR`, and `IDLE_ANCHORED` if it pivots), `reveal.css` (keyframes +
+    `[data-sl-idle=…]` binding), plus a label/group in `AdjustPanel.tsx`.
   - Each of position/parallax, entrance, and exit owns a **separate element** so their transforms
     never fight: `.layerBox` → `.layerInner` (enter) → `.layerExit` (exit); the T7 hero mirrors this
     (nudge wrapper → exit wrapper → `cloneElement` inner). Animation controls show for anchors too.

@@ -23,7 +23,7 @@ export const OVERRIDABLE: (keyof Layer)[] = [
   // text shaping (kind 'text' only) — see CurvedText.tsx.
   'textShape', 'curvature',
   // idle/looping animation (kinds 'img'/'text'/'shape'/'slot') — see reveal.css.
-  'animIdle', 'animIdleSpeed', 'animIdleIntensity',
+  'animIdle', 'animIdleSpeed', 'animIdleIntensity', 'animIdleOrigin',
   // kind 'scrollVideo' effect params (types.ts) — same delta mechanism, no geometry involved.
   'videoSrc', 'triggerStart', 'triggerEnd', 'scrub', 'pivot', 'holdWidth', 'videoStartSec',
   'openThreshold', 'resetSec', 'chromaThreshold', 'chromaFade',
