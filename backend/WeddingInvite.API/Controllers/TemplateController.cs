@@ -12,13 +12,68 @@ namespace WeddingInvite.API.Controllers
     {
         private readonly ITemplateService _templateService;
         private readonly ITemplateConfigService _templateConfigService;
+        private readonly ITemplateDesignService _templateDesignService;
 
         public TemplateController(
             ITemplateService templateService,
-            ITemplateConfigService templateConfigService)
+            ITemplateConfigService templateConfigService,
+            ITemplateDesignService templateDesignService)
         {
             _templateService = templateService;
             _templateConfigService = templateConfigService;
+            _templateDesignService = templateDesignService;
+        }
+
+        // ── Design bundles: move a tuned template between environments (local → prod) ────────
+
+        // GET: api/template/design-export?ids=7,11 — zip of starting designs, authored stages,
+        // thumbnails and every /uploads asset they reference. No ids ⇒ every template.
+        [HttpGet("design-export")]
+        [Authorize(Roles = "SUPER_ADMIN")]
+        public async Task<IActionResult> ExportDesign([FromQuery] string? ids)
+        {
+            var list = (ids ?? string.Empty)
+                .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .Select(s => int.TryParse(s, out var n) ? n : (int?)null)
+                .Where(n => n.HasValue).Select(n => n!.Value).ToList();
+            var bytes = await _templateDesignService.ExportAsync(list);
+            var name = list.Count == 1 ? $"template-design-{list[0]}" : "template-designs";
+            return File(bytes, "application/zip", $"{name}-{DateTime.UtcNow:yyyyMMdd-HHmmss}.zip");
+        }
+
+        // POST: api/template/design-import (multipart: file, applyMeta) — apply a bundle. Matches
+        // templates by code; unknown codes are reported in `skipped`, not created.
+        [HttpPost("design-import")]
+        [Authorize(Roles = "SUPER_ADMIN")]
+        [RequestSizeLimit(200L * 1024 * 1024)]
+        public async Task<ActionResult<TemplateDesignImportResult>> ImportDesign(IFormFile file, [FromForm] bool applyMeta = false)
+        {
+            if (file == null || file.Length == 0)
+                return BadRequest(new { message = "A bundle zip is required" });
+            try
+            {
+                await using var stream = file.OpenReadStream();
+                var result = await _templateDesignService.ImportAsync(stream, applyMeta);
+                return Ok(result);
+            }
+            // ZipArchive reports garbage input as ArgumentOutOfRange/InvalidData — fold both
+            // into one friendly message; our own validation errors are plain ArgumentException.
+            catch (ArgumentOutOfRangeException)
+            {
+                return BadRequest(new { message = "File is not a valid zip bundle" });
+            }
+            catch (InvalidDataException)
+            {
+                return BadRequest(new { message = "File is not a valid zip bundle" });
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+            catch (System.Text.Json.JsonException)
+            {
+                return BadRequest(new { message = "design.json in the bundle is malformed" });
+            }
         }
         
         [HttpGet]

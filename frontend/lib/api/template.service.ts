@@ -75,6 +75,30 @@ export const templateService = {
     return response.data;
   },
 
+  // ── Design bundles: move a tuned template's design between environments ───────
+  // Zip of the starting design, authored stages, thumbnail and referenced /uploads assets.
+  // No ids ⇒ every template.
+  exportDesign: async (ids: number[] = []): Promise<Blob> => {
+    const response = await apiClient.get('/template/design-export', {
+      params: ids.length ? { ids: ids.join(',') } : undefined,
+      responseType: 'blob',
+    });
+    return response.data;
+  },
+
+  // Apply a bundle exported elsewhere (matched by templateCode). `applyMeta` also copies
+  // name/description/tier/event types.
+  importDesign: async (file: File, applyMeta = false): Promise<TemplateDesignImportResult> => {
+    const form = new FormData();
+    form.append('file', file, file.name);
+    form.append('applyMeta', applyMeta ? 'true' : 'false');
+    const response = await apiClient.post<TemplateDesignImportResult>('/template/design-import', form, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+      timeout: 120000,
+    });
+    return response.data;
+  },
+
   // ── Authored templates (data, not code — see _shared/DataTemplate.tsx) ───────
   // Upload an image for a stage background or layer while authoring — not tied to a wedding
   // (PhotoService requires a real one; a template being authored may have none yet).
@@ -103,4 +127,18 @@ export const templateService = {
 export interface TemplateDefaultConfigStatus {
   templateId: number;
   keyCount: number;
+}
+export interface TemplateDesignImportEntry {
+  templateId: number;
+  templateCode: string;
+  defaultKeyCount: number;
+  stagesApplied: boolean;
+  thumbnailApplied: boolean;
+  assetsWritten: number;
+}
+
+export interface TemplateDesignImportResult {
+  applied: TemplateDesignImportEntry[];
+  /** Template codes in the bundle that don't exist on this server (not created). */
+  skipped: string[];
 }

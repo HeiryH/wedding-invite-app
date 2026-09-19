@@ -295,7 +295,7 @@ namespace WeddingInvite.Core.Services
 
         // Upper-cases, splits, trims, and keeps only recognised event-type codes — never
         // trusts the client string directly. Falls back to WEDDING if nothing survives.
-        private static string NormalizeEventTypes(string? raw)
+        internal static string NormalizeEventTypes(string? raw)
         {
             var kept = (raw ?? string.Empty)
                 .Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries)

@@ -172,6 +172,21 @@ inspector renders itself from `getConfigFields(templateId, role)` — there are 
   `/template-preview/[code]` (the no-real-wedding sample/thumbnail render), via
   `GET /api/template-config/template/{id}/default`, so a template's picker thumbnail reflects its
   captured design instead of raw code defaults.
+- **Moving a tuned design local → prod: design bundles** (`TemplateDesignService`,
+  `GET /api/template/design-export?ids=7,11` / `POST /api/template/design-import`, SUPER_ADMIN;
+  surfaced on `/super-admin/themes` as "Export design" per theme, "Export all designs" +
+  "Import bundle…" in the header). A bundle is a zip: `design.json` (per template: the
+  `TemplateConfigDefault` bag, `IsAuthored`/`StagesJson`, `ThumbnailUrl`, and name/tier/event types)
+  plus `assets/uploads/…` for every `/uploads/` path those reference. **Import matches by
+  `templateCode`, never id** (ids differ per DB; unknown codes are reported as `skipped`, not
+  created), whole-bag replaces the starting design, and **rehomes every shipped asset to
+  `/uploads/templates/<code>-import-<sha256[..16]>.ext`**, rewriting the references — a design
+  captured from a local test event points at `/uploads/{eventId}/…`, which `EventService.DeleteAsync`
+  would wipe on prod if that id were ever deleted there. Content-hashed names make re-imports
+  idempotent. Meta (name/description/tier/event types) is only applied with `applyMeta=true`;
+  an authored composition is never stripped by importing a hand-coded source. Note: this moves
+  the *design data*, not code — a template's React component/assets under `public/templates/` still
+  ship via deploy.
 
 ## Stage + layer engine (`components/templates/_shared/`)
 

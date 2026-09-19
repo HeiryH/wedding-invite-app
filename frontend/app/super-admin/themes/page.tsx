@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { templateService, eventService, TemplateWithUsage, UpdateTemplate, Event } from '@/lib/api';
+import { templateService, eventService, TemplateWithUsage, UpdateTemplate, Event, TemplateDesignImportResult } from '@/lib/api';
 import { TemplatePreview } from '@/components/templates/TemplatePreview';
 import { Icon } from '@/components/ui/Icon';
 import { Button } from '@/components/ui/Button';
@@ -52,6 +52,12 @@ export default function ThemesPage() {
 
   // Manual thumbnail upload.
   const [thumbBusyId, setThumbBusyId] = useState<number | null>(null);
+
+  // Design bundles (local → prod). Export downloads a zip; import applies one and reports.
+  const [exportBusyId, setExportBusyId] = useState<number | 'all' | null>(null);
+  const [importBusy, setImportBusy] = useState(false);
+  const [importMeta, setImportMeta] = useState(false);
+  const [importReport, setImportReport] = useState<TemplateDesignImportResult | null>(null);
 
   useEffect(() => { fetchData(); }, []);
 
@@ -117,6 +123,48 @@ export default function ThemesPage() {
       setError('Failed to upload thumbnail');
     } finally {
       setThumbBusyId(null);
+    }
+  };
+
+  const downloadBlob = (blob: Blob, name: string) => {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = name; a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  };
+
+  const handleExportDesign = async (theme?: TemplateWithUsage) => {
+    setExportBusyId(theme ? theme.templateId : 'all');
+    setError(null);
+    try {
+      const blob = await templateService.exportDesign(theme ? [theme.templateId] : []);
+      const stamp = new Date().toISOString().slice(0, 10);
+      downloadBlob(blob, theme ? `design-${theme.templateCode}-${stamp}.zip` : `designs-all-${stamp}.zip`);
+    } catch {
+      setError('Failed to export design bundle');
+    } finally {
+      setExportBusyId(null);
+    }
+  };
+
+  const handleImportDesign = async (file: File) => {
+    if (!window.confirm(
+      `Import "${file.name}"? Each template in the bundle will have its starting design` +
+      ` (and authored stages / thumbnail, if present) REPLACED on this server.` +
+      (importMeta ? ' Name, description, tier and event types will be overwritten too.' : ''),
+    )) return;
+    setImportBusy(true);
+    setError(null);
+    setImportReport(null);
+    try {
+      const report = await templateService.importDesign(file, importMeta);
+      setImportReport(report);
+      await fetchData(); // refresh key counts + thumbnails
+    } catch (err) {
+      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
+      setError(msg ? `Import failed: ${msg}` : 'Failed to import design bundle');
+    } finally {
+      setImportBusy(false);
     }
   };
 
@@ -192,7 +240,62 @@ export default function ThemesPage() {
             {activeCount} active · ranked by how many weddings use each theme.
           </p>
         </div>
+        {/* Design bundles — carry tuned designs from a local install to production. */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+          <Button variant="secondary" tone="neutral" size="sm" disabled={exportBusyId !== null} onClick={() => handleExportDesign()}>
+            {exportBusyId === 'all' ? 'Exporting…' : 'Export all designs'}
+          </Button>
+          <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontFamily: 'var(--font-ui)', fontSize: 'var(--text-xs)', color: 'var(--text-subtle)', cursor: 'pointer' }}>
+            <input type="checkbox" checked={importMeta} onChange={e => setImportMeta(e.target.checked)} disabled={importBusy} />
+            also name / tier / event types
+          </label>
+          <label>
+            <input
+              type="file"
+              accept=".zip,application/zip"
+              disabled={importBusy}
+              style={{ display: 'none' }}
+              onChange={e => {
+                const f = e.target.files?.[0];
+                e.target.value = '';
+                if (f) handleImportDesign(f);
+              }}
+            />
+            <span
+              role="button"
+              aria-disabled={importBusy}
+              style={{
+                display: 'inline-flex', alignItems: 'center', padding: '7px 12px', fontFamily: 'var(--font-ui)',
+                fontSize: 'var(--text-sm)', fontWeight: 600, color: '#fff', background: importBusy ? 'var(--text-subtle)' : 'var(--brand)',
+                borderRadius: 'var(--radius-md)', cursor: importBusy ? 'default' : 'pointer',
+              }}
+            >
+              {importBusy ? 'Importing…' : 'Import bundle…'}
+            </span>
+          </label>
+        </div>
       </div>
+
+      {importReport && (
+        <div style={{ background: 'color-mix(in srgb, var(--brand) 8%, transparent)', border: '1px solid color-mix(in srgb, var(--brand) 30%, transparent)', borderRadius: 'var(--radius-md)', padding: '10px 14px', marginBottom: 16, fontFamily: 'var(--font-ui)', fontSize: 'var(--text-sm)', color: 'var(--text-body)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+            <strong>Import applied to {importReport.applied.length} template{importReport.applied.length === 1 ? '' : 's'}</strong>
+            <button onClick={() => setImportReport(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-subtle)' }} aria-label="Dismiss">✕</button>
+          </div>
+          <ul style={{ margin: '6px 0 0', paddingLeft: 18, lineHeight: 1.6 }}>
+            {importReport.applied.map(a => (
+              <li key={a.templateCode}>
+                <code>{a.templateCode}</code> — {a.defaultKeyCount} design keys
+                {a.stagesApplied ? ' · stages' : ''}{a.thumbnailApplied ? ' · thumbnail' : ''}
+                {a.assetsWritten > 0 ? ` · ${a.assetsWritten} asset${a.assetsWritten === 1 ? '' : 's'} written` : ''}
+              </li>
+            ))}
+            {importReport.skipped.map(c => (
+              <li key={c} style={{ color: 'var(--text-subtle)' }}><code>{c}</code> — not on this server, skipped</li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       {error && (
         <div style={{ background: 'color-mix(in srgb, var(--danger) 8%, transparent)', border: '1px solid color-mix(in srgb, var(--danger) 30%, transparent)', borderRadius: 'var(--radius-md)', padding: '10px 14px', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -320,6 +423,14 @@ export default function ThemesPage() {
                               Clear
                             </Button>
                           )}
+                          <Button
+                            variant="secondary" tone="neutral" size="sm"
+                            disabled={exportBusyId !== null}
+                            title="Download this theme's design as a bundle to import on another server"
+                            onClick={() => handleExportDesign(theme)}
+                          >
+                            {exportBusyId === theme.templateId ? 'Exporting…' : 'Export design'}
+                          </Button>
                         </div>
                       </div>
                     );

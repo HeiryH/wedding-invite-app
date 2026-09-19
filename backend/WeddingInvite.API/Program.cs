@@ -67,6 +67,7 @@ builder.Services.AddScoped<IAuthService, AuthService>(); // ADD THIS
 builder.Services.AddScoped<IEventAuthorizationService, EventAuthorizationService>(); // ✅ RENAMED
 builder.Services.AddScoped<ITemplateConfigService, TemplateConfigService>();
 builder.Services.AddScoped<IEventExportService, EventExportService>();
+builder.Services.AddScoped<ITemplateDesignService, TemplateDesignService>();
 builder.Services.AddScoped<ITableService, TableService>();
 builder.Services.AddScoped<IItineraryService, ItineraryService>();
 builder.Services.AddScoped<IEmailService, EmailService>();
