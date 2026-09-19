@@ -292,7 +292,7 @@ function PersonaliseEditor() {
     // AuthController.SelfRegister would persist onto the real Event row for this event type.
     const name1 = eventType === 'WEDDING' || eventType === 'PARTY' ? (wedding.brideName || null) : null;
     const name2 = eventType === 'WEDDING' ? (wedding.groomName || null) : null;
-    const eventTitle = eventType === 'CEREMONY' ? (wedding.eventTitle || null) : null;
+    const eventTitle = eventType === 'CEREMONY' || eventType === 'PARTY' ? (wedding.eventTitle || null) : null;
     const coupleName =
       eventType === 'WEDDING' ? `${slugify(wedding.brideName || 'bride')}-and-${slugify(wedding.groomName || 'groom')}`
       : eventType === 'PARTY' ? slugify(wedding.brideName || 'party')
@@ -350,7 +350,7 @@ function PersonaliseEditor() {
         email, password,
         name1: eventType === 'WEDDING' || eventType === 'PARTY' ? wedding.brideName : undefined,
         name2: eventType === 'WEDDING' ? wedding.groomName : undefined,
-        eventTitle: eventType === 'CEREMONY' ? wedding.eventTitle : undefined,
+        eventTitle: eventType === 'CEREMONY' || eventType === 'PARTY' ? wedding.eventTitle : undefined,
         eventType,
         eventDate: wedding.weddingDate ? `${wedding.weddingDate}T10:00:00Z` : '',
         venue: wedding.venue, venueAddress: wedding.venueAddress, templateId,
@@ -401,7 +401,10 @@ function PersonaliseEditor() {
                 </>
               )}
               {eventType === 'PARTY' && (
-                <MText label="Honoree's name" value={wedding.brideName} onChange={(v) => setWedding((w) => ({ ...w, brideName: v }))} placeholder="e.g. Aiman" />
+                <>
+                  <MText label="Event title" value={wedding.eventTitle} onChange={(v) => setWedding((w) => ({ ...w, eventTitle: v }))} placeholder="e.g. Aiman's 21st Birthday" />
+                  <MText label="Honoree's name" value={wedding.brideName} onChange={(v) => setWedding((w) => ({ ...w, brideName: v }))} placeholder="e.g. Aiman" />
+                </>
               )}
               {eventType === 'CEREMONY' && (
                 <MText label="Event title" value={wedding.eventTitle} onChange={(v) => setWedding((w) => ({ ...w, eventTitle: v }))} placeholder="e.g. Ali's Aqiqah" />

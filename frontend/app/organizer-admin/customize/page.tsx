@@ -1499,8 +1499,12 @@ export default function CustomizePage() {
                 {recordField('wedding.groomName', "Groom's Name", weddingDraft.groomName, 100, (v) => setWeddingDraft((d) => ({ ...d, groomName: v })), undefined, "Groom's full name")}
               </>
             )}
-            {eventType === 'PARTY' &&
-              recordField('event.name1', "Honoree's Name", weddingDraft.brideName, 100, (v) => setWeddingDraft((d) => ({ ...d, brideName: v })), undefined, "e.g. Aiman")}
+            {eventType === 'PARTY' && (
+              <>
+                {recordField('event.eventTitle', 'Event Title', weddingDraft.eventTitle, 150, (v) => setWeddingDraft((d) => ({ ...d, eventTitle: v })), undefined, "e.g. Aiman's 21st Birthday")}
+                {recordField('event.name1', "Honoree's Name", weddingDraft.brideName, 100, (v) => setWeddingDraft((d) => ({ ...d, brideName: v })), undefined, "e.g. Aiman")}
+              </>
+            )}
             {eventType === 'CEREMONY' &&
               recordField('event.eventTitle', 'Event Title', weddingDraft.eventTitle, 150, (v) => setWeddingDraft((d) => ({ ...d, eventTitle: v })), undefined, "e.g. Ali's Aqiqah")}
             {recordField('wedding.weddingDate', eventType === 'WEDDING' ? 'Wedding Date & Time' : 'Event Date & Time', weddingDraft.weddingDate, 16, (v) => setWeddingDraft((d) => ({ ...d, weddingDate: v })), 'datetime-local')}

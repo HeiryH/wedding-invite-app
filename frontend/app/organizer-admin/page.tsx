@@ -426,7 +426,10 @@ export default function OrganizerAdminDashboard() {
               </div>
             )}
             {wedding.eventType === 'PARTY' && (
-              <input className="hero-inp" value={editData.brideName} onChange={e => setEditData({ ...editData, brideName: e.target.value })} placeholder="Honoree's Name" style={{ ...heroInp, width: '100%', boxSizing: 'border-box', fontSize: 16 }} />
+              <>
+                <input className="hero-inp" value={editData.eventTitle} onChange={e => setEditData({ ...editData, eventTitle: e.target.value })} placeholder="Event Title" style={{ ...heroInp, width: '100%', boxSizing: 'border-box', fontSize: 16 }} />
+                <input className="hero-inp" value={editData.brideName} onChange={e => setEditData({ ...editData, brideName: e.target.value })} placeholder="Honoree's Name" style={{ ...heroInp, width: '100%', boxSizing: 'border-box', fontSize: 16 }} />
+              </>
             )}
             {wedding.eventType === 'CEREMONY' && (
               <input className="hero-inp" value={editData.eventTitle} onChange={e => setEditData({ ...editData, eventTitle: e.target.value })} placeholder="Event Title" style={{ ...heroInp, width: '100%', boxSizing: 'border-box', fontSize: 16 }} />

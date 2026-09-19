@@ -8,7 +8,7 @@ import { TemplatePreview } from '@/components/templates/TemplatePreview';
 import { MarketingNav } from '@/components/marketing/MarketingNav';
 import { TemplateMarquee } from '@/components/marketing/TemplateMarquee';
 import { Wordmark } from '@/components/marketing/Wordmark';
-import { LANDING_CONTENT_DEFAULTS, DEFAULT_FEATURE_ITEMS, DEFAULT_STORY_ITEMS, DEFAULT_PRICING_ITEMS, DEFAULT_MIDDLE_SECTIONS, LandingDefaultItem, pricingTierOf } from '@/lib/landing/defaults';
+import { LANDING_CONTENT_DEFAULTS, DEFAULT_FEATURE_ITEMS, DEFAULT_STORY_ITEMS, DEFAULT_PRICING_ITEMS, DEFAULT_MIDDLE_SECTIONS, LandingDefaultItem } from '@/lib/landing/defaults';
 
 const SECTION_PAD = 'clamp(56px, 8vw, 96px) clamp(20px, 5vw, 72px)';
 const DEFAULT_MIDDLE = DEFAULT_MIDDLE_SECTIONS;
@@ -80,7 +80,6 @@ export default function HomePage() {
               <div style={{ marginTop: 28, display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 18 }}>
                 {pricing.map((plan, i) => {
                   const planFeatures = (plan.features ?? '').split('\n').map((f) => f.trim()).filter(Boolean);
-                  const tier = pricingTierOf(plan);
                   return (
                     <motion.div key={plan.title ?? i} initial={{ opacity: 0, y: 18 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.09, duration: 0.45 }} style={{ position: 'relative', background: plan.highlighted ? '#faedcf' : 'var(--mkt-card)', border: '2.5px solid var(--mkt-ink)', borderRadius: 22, padding: 22, boxShadow: '0 7px 0 rgba(23,19,13,.12)' }}>
                       {plan.highlighted && <div style={{ position: 'absolute', top: -13, right: 18, fontFamily: 'var(--mkt-sans)', fontWeight: 600, fontSize: 12, letterSpacing: '.06em', background: 'var(--mkt-gold)', color: 'var(--mkt-ink)', border: '2px solid var(--mkt-ink)', borderRadius: 999, padding: '4px 12px' }}>POPULAR</div>}
@@ -93,15 +92,6 @@ export default function HomePage() {
                         ))}
                       </ul>
                       <a href={plan.ctaHref || '/login'} className={plan.highlighted ? 'mkt-btn mkt-btn-dark' : 'mkt-btn'} style={{ display: 'block', textAlign: 'center', marginTop: 18, fontSize: 15, padding: '12px', boxShadow: plan.highlighted ? '0 5px 0 rgba(23,19,13,.18)' : '0 5px 0 rgba(23,19,13,.14)' }}>{plan.cta}</a>
-                      {tier && (
-                        <a
-                          href={`/personalise/picker?tier=${tier}&view=grid`}
-                          className="mkt-btn"
-                          style={{ display: 'block', textAlign: 'center', marginTop: 10, fontSize: 14, padding: '10px', background: 'transparent', boxShadow: 'none', color: 'var(--mkt-ink)' }}
-                        >
-                          View {plan.title} templates →
-                        </a>
-                      )}
                     </motion.div>
                   );
                 })}
