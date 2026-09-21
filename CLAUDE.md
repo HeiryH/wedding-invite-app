@@ -319,6 +319,15 @@ prop WebPs, 4.2 MB). Migration `AddSandyBeachTemplate` seeds `TemplateId 14` / c
   covers the next ~8%, so anything placed at the design's literal 96–99% vanished in QA.
 - `TemplateEngine.slotThemeAccentDefault` (registry) replaced the `templateId === N` accent chain
   the customize page used to hold — add a new Stage template's default there, not in the page.
+- **`StageDef.bgVideo`** (engine, added for T14's welcome): a looping, muted, inline `<video>` in
+  place of the background `<img>`, with `bg` as its poster — so `bg` must be the clip's own first
+  frame (`welcome/background-poster.webp`, 480×832) or the swap flashes. An uploaded `bgSrc`
+  replacement wins over it, and reduced-motion / autoplay-refusal (iOS Low Power Mode) fall back
+  to the poster. The clip (`welcome/background.mp4`, 4.7 s, 780 KB, H.264 yuv420p, audio stripped)
+  was crossfade-looped in ffmpeg (last 0.5 s → first 0.5 s, then the head trimmed) so the seam is
+  below the source's own first↔last-frame delta. It paints its own sun and clouds, so the welcome
+  sky props ship `hidden: true`. The original 941×1672 still is kept as `welcome/background.webp`
+  for anyone who switches back to a static background.
 - **`kind: 'water'` (`_shared/effects/WaterLayer.tsx`)** — the first generated-visual layer kind
   built to the `scrollVideo` recipe: ambient motion over water *painted into the background*
   (drifting turbulence texture blended soft-light, staggered ripple rings, a capped handful of

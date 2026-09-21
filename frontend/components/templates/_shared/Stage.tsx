@@ -3,6 +3,7 @@
 import type { Layer as LayerModel, ObjectFit, SlotProps, StageDef } from './types';
 import { REVEAL_VPAD } from './types';
 import { useEngine } from './engine';
+import { useReducedMotion } from '@/lib/useReducedMotion';
 import Layer from './Layer';
 import styles from './Stage.module.css';
 
@@ -47,6 +48,7 @@ export default function Stage({
   revealOverflow, revealFrameW, revealFrameH, selectedLayer, suppressId, transparent,
 }: Props) {
   const { assetRoot, assetSizes } = useEngine();
+  const reducedMotion = useReducedMotion();
   const bgSize = def.bg ? assetSizes[def.bg] : undefined;
   // An uploaded replacement lives under /uploads (absolute); shipped art is relative to the root.
   const bgUrl = bgSrc
@@ -145,7 +147,27 @@ export default function Stage({
       }}
       aria-label={def.label}
     >
-      {bgUrl && (
+      {bgUrl && def.bgVideo && !bgSrc && !reducedMotion ? (
+        // Looping ambient background (StageDef.bgVideo). `poster` is the still `bg`, so a browser
+        // that won't autoplay (iOS Low Power Mode) degrades to exactly the image it replaces.
+        <video
+          className={styles.bg}
+          style={{
+            objectFit: bgFit,
+            objectPosition: bgPosition,
+            transform: bgScale && bgScale !== 1 ? `scale(${bgScale})` : undefined,
+          }}
+          src={`${assetRoot}/${def.bgVideo}`}
+          poster={bgUrl}
+          autoPlay
+          muted
+          loop
+          playsInline
+          preload={eager ? 'auto' : 'metadata'}
+          disablePictureInPicture
+          aria-hidden
+        />
+      ) : bgUrl && (
         // eslint-disable-next-line @next/next/no-img-element
         <img
           src={bgUrl}

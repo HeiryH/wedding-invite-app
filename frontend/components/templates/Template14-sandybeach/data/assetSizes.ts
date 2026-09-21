@@ -41,6 +41,7 @@ export const T14_ASSET_SIZES: Record<string, [number, number]> = {
   'walimah/shell.webp': [79,65],
   'walimah/signpost.webp': [390,526],
   'welcome/arch.webp': [781,960],
+  'welcome/background-poster.webp': [480,832],
   'welcome/background.webp': [941,1672],
   'welcome/blossom.webp': [127,121],
   'welcome/cloud-large.webp': [657,272],

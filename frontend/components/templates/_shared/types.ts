@@ -373,6 +373,15 @@ export interface StageDef {
   bg: string;
   bgFit: ObjectFit;
   /**
+   * Optional looping ambient video behind the stage (a template asset path, like `bg`). Renders a
+   * muted, autoplaying, inline `<video>` in place of the background `<img>`, with `bg` as its
+   * poster — so `bg` should be the video's own first frame, or the swap flashes. Same fit/position/
+   * scale as the image, so the Adjust panel's Background row still applies; an uploaded `bgSrc`
+   * replacement wins over it (a couple swapping the background gets a still, by design). Reduced
+   * motion, or a browser that refuses autoplay (iOS Low Power Mode), shows the poster instead.
+   */
+  bgVideo?: string;
+  /**
    * Opt-in **aspect-locked art canvas**. When set, the stage's scenery (`img`/`shape`/`text`
    * layers, plus any layer flagged `canvasAnchor`) is composed inside one box of exactly this
    * aspect ratio, which is then cover-fitted to the device — the same crop `bgFit: 'cover'`

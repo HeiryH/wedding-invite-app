@@ -70,16 +70,22 @@ export const T14_STAGES: Record<string, StageDef> = {
   welcome: {
     id: 'welcome',
     label: 'Welcome',
-    bg: 'welcome/background.webp',
+    // A looping ambient clip of the shoreline (waves washing in and out, 4.7 s, crossfade-looped,
+    // silent) plays behind the arch; `bg` is that clip's own first frame so the poster→video swap is
+    // invisible and a browser that refuses autoplay just shows the still. The clip already paints
+    // the sun and clouds, so the sky props below ship hidden — a couple can switch them back on in
+    // Adjust if they replace the background with a still.
+    bg: 'welcome/background-poster.webp',
+    bgVideo: 'welcome/background.mp4',
     bgFit: 'cover',
     canvas: CANVAS,
     layers: [
-      // ── Sky (behind the arch) ────────────────────────────────────────────
-      L({ id: 'cloud-large', kind: 'img', src: 'welcome/cloud-large.webp', x: 20, y: 6, w: 56, z: 2, order: 0, depth: 0.6 }),
-      L({ id: 'cloud-wisp', kind: 'img', src: 'welcome/cloud-wisp.webp', x: 62, y: 16, w: 44, z: 2, order: 0, depth: 0.6, opacity: 0.9 }),
-      L({ id: 'cloud-small', kind: 'img', src: 'welcome/cloud-small.webp', x: 86, y: 9, w: 28, z: 2, order: 0, depth: 0.6 }),
+      // ── Sky (behind the arch) — hidden while the video background carries its own sky ── ────────────────────────────────────────────
+      L({ id: 'cloud-large', kind: 'img', hidden: true, src: 'welcome/cloud-large.webp', x: 20, y: 6, w: 56, z: 2, order: 0, depth: 0.6 }),
+      L({ id: 'cloud-wisp', kind: 'img', hidden: true, src: 'welcome/cloud-wisp.webp', x: 62, y: 16, w: 44, z: 2, order: 0, depth: 0.6, opacity: 0.9 }),
+      L({ id: 'cloud-small', kind: 'img', hidden: true, src: 'welcome/cloud-small.webp', x: 86, y: 9, w: 28, z: 2, order: 0, depth: 0.6 }),
       // The sun sits on the background's horizon (~30%); its reflection stripes run down the sea.
-      L({ id: 'sun', kind: 'img', src: 'welcome/sun.webp', x: 69, y: 33, w: 25, z: 2, order: 0, depth: 0.7 }),
+      L({ id: 'sun', kind: 'img', hidden: true, src: 'welcome/sun.webp', x: 69, y: 33, w: 25, z: 2, order: 0, depth: 0.7 }),
       // ── The driftwood arch frames the whole stage; the sheet's arch is squatter than the
       //    design's (0.81 vs 0.55 aspect) so it stands on the sand line at ~63% rather than
       //    running to the bottom edge, and the hero text sits in and under its opening. ──
