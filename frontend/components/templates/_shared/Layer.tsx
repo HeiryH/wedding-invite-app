@@ -10,6 +10,7 @@ import { fontVar } from '@/lib/fonts/registry';
 import CurvedText from './CurvedText';
 import ScrollVideoLayer from './effects/ScrollVideoLayer';
 import PlayOnceVideoLayer from './effects/PlayOnceVideoLayer';
+import WaterLayer from './effects/WaterLayer';
 import { resolveBindings } from './bindings';
 import { slotLayerStyle } from './slotLayerStyle';
 import styles from './Stage.module.css';
@@ -328,6 +329,10 @@ export default function Layer({ layer, slotProps, eager, selected, editing, stag
           />
         );
       }
+
+      case 'water':
+        // Generated ambient motion over a painted pool — a positioned box like `img`, no asset.
+        return <WaterLayer layer={layer} />;
 
       case 'scrollVideo': {
         if (!layer.videoSrc) return null;

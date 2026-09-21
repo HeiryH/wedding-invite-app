@@ -4,6 +4,7 @@ import { useCallback, useMemo, useRef, useState } from 'react';
 import type { AnimIdleOrigin, AnimIdleType, AnimOutType, AnimType, Breakpoint, Layer, ObjectFit, StageDef, StageId } from '../types';
 import { ANIM_OPTIONS, ANIM_OUT_OPTIONS, ANIM_IDLE_ORIGINS } from '../types';
 import { IDLE_ANCHORED, IDLE_DEFAULT_ORIGIN } from '../idle';
+import { WATER_DEFAULTS } from '../effects/WaterLayer';
 import { resolveStage, serializeStage, baseStage, layoutKey, type StageBg } from '../layout';
 import { SLOT_CATALOG_GROUPS, type SlotCatalogEntry } from '../slots/catalog';
 import { BINDING_TOKENS } from '../bindings';
@@ -283,7 +284,7 @@ export default function AdjustPanel({
     restack(ids);
   };
 
-  const addLayer = (kind: 'text' | 'shape' | 'img', extra?: Partial<Layer>) => {
+  const addLayer = (kind: 'text' | 'shape' | 'img' | 'water', extra?: Partial<Layer>) => {
     let id = '';
     do {
       id = `custom-${selectedStage}-${customLayerCounter.current++}`;
@@ -292,10 +293,11 @@ export default function AdjustPanel({
     const styled: Partial<Layer> =
       kind === 'text' ? { text: 'Your text here', color: '#3F3524', fontSize: 4, fontWeight: 600 }
       : kind === 'shape' ? { shape: 'rect', fill: '#C98A54', radius: 0 }
+      : kind === 'water' ? { label: 'Water', anim: 'none' } // effect fields fall back to WATER_DEFAULTS
       : {}; // img — src comes in via `extra`
     const layer: Layer = {
       id, kind,
-      x: 50, y: 50, w: kind === 'text' ? 60 : 30, h: 22, s: 1,
+      x: 50, y: 50, w: kind === 'text' ? 60 : kind === 'water' ? 70 : 30, h: kind === 'water' ? 40 : 22, s: 1,
       z: maxZ + 1, order: layers.length,
       // Uploaded images have no size manifest, so an aspect-linked box has no intrinsic height to
       // follow — start them fixed-box (the Link toggle can switch it). Text stays aspect-free.
@@ -454,6 +456,8 @@ export default function AdjustPanel({
   // gets, and only adds the two chromakey knobs plus its start delay. Unlike scrollVideo it DOES
   // get the Animation tab — its entrance animation is what the play delay waits on.
   const isPlayOnceVideo = current?.kind === 'video';
+  // Ambient water (kind 'water') is a positioned effect box: full geometry set plus its own knobs.
+  const isWater = current?.kind === 'water';
   // A slot holds real content (a form, a list) that reflows to fill its box — unlike art, it
   // can't be safely cropped. `s` (Scale) is a paint-only `transform: scale()`, so it grows the
   // rendered box without growing what the stage reserves for it: past a certain Scale/Height
@@ -737,6 +741,7 @@ export default function AdjustPanel({
         <div className={styles.btnRow}>
           <button className={styles.btn} onClick={() => addLayer('text')}>+ Text</button>
           <button className={styles.btn} onClick={() => addLayer('shape')}>+ Shape</button>
+          <button className={styles.btn} onClick={() => addLayer('water')} title="Ambient drift, ripples and glints over water painted into the background">+ Water</button>
           {onUploadImage && (
             <button className={styles.btn} onClick={() => pickImage('layer')}>+ Image</button>
           )}
@@ -1060,6 +1065,24 @@ export default function AdjustPanel({
                       <Slider label="Reset Time (s)" value={current.resetSec ?? 0.2} min={0} max={2} step={0.1} onChange={set('resetSec')} />
                       <Slider label="Chroma Threshold" value={current.chromaThreshold ?? 30} min={0} max={100} step={1} onChange={set('chromaThreshold')} />
                       <Slider label="Chroma Fade" value={current.chromaFade ?? 20} min={0} max={100} step={1} onChange={set('chromaFade')} />
+                    </>
+                  )}
+
+                  {isWater && (
+                    <>
+                      {/* See effects/WaterLayer.tsx — 0 switches an effect off. */}
+                      <Slider label="Drift Loop (s)" value={current.waterDrift ?? WATER_DEFAULTS.drift} min={0} max={30} step={1} onChange={set('waterDrift')} />
+                      <Slider label="Ripples" value={current.waterRipples ?? WATER_DEFAULTS.ripples} min={0} max={6} step={1} onChange={set('waterRipples')} />
+                      <Slider label="Glints" value={current.waterGlints ?? WATER_DEFAULTS.glints} min={0} max={10} step={1} onChange={set('waterGlints')} />
+                      <Slider label="Light Glow" value={current.waterGlow ?? WATER_DEFAULTS.glow} min={0} max={0.2} step={0.01} onChange={set('waterGlow')} />
+                      <div className={styles.control} style={{ gridTemplateColumns: '54px 1fr' }}>
+                        <span>Glow Color</span>
+                        <input
+                          type="color"
+                          value={current.waterGlowColor ?? WATER_DEFAULTS.glowColor}
+                          onChange={(e) => patchLayer(current.id, { waterGlowColor: e.target.value })}
+                        />
+                      </div>
                     </>
                   )}
 

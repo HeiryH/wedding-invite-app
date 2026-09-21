@@ -319,6 +319,14 @@ prop WebPs, 4.2 MB). Migration `AddSandyBeachTemplate` seeds `TemplateId 14` / c
   covers the next ~8%, so anything placed at the design's literal 96–99% vanished in QA.
 - `TemplateEngine.slotThemeAccentDefault` (registry) replaced the `templateId === N` accent chain
   the customize page used to hold — add a new Stage template's default there, not in the page.
+- **`kind: 'water'` (`_shared/effects/WaterLayer.tsx`)** — the first generated-visual layer kind
+  built to the `scrollVideo` recipe: ambient motion over water *painted into the background*
+  (drifting turbulence texture blended soft-light, staggered ripple rings, a capped handful of
+  glints, a slow reflected-light glow), all CSS/SVG, positions derived deterministically from the
+  layer id, `prefers-reduced-motion` holds a still frame. Tuned via `water*` fields (in
+  `OVERRIDABLE`; Adjust panel sliders + `+ Water` button); 0 disables an effect. Ships on T14's
+  RSVP rock pool. Things that *rest* on something (bottle, lantern, crab, rocks) stay static; only
+  the floating blossoms carry `animIdle: 'float'`.
 
 ## Template 7 — Roman Garden (full stage compositor)
 

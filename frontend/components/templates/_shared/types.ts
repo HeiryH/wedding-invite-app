@@ -34,8 +34,13 @@ export const REVEAL_VPAD = 0.25;
  * reverse: the opposite of `scrollVideo`. Unlike `scrollVideo` it *does* use the geometry fields
  * and positions/scales exactly like an `img` (it's scenery, so it also joins the stage's art
  * canvas). Uses `videoSrc`, `chroma*` and `playDelaySec`. See `_shared/effects/PlayOnceVideoLayer.tsx`.
+ *
+ * `water` is generated ambient motion for a patch of still water painted into the background —
+ * drift texture, ripple rings, glints and a drifting reflected-light glow, all CSS/SVG. It positions
+ * like an `img` (a box over where the water is; joins the art canvas) and is tuned through the
+ * `water*` fields. See `_shared/effects/WaterLayer.tsx`.
  */
-export type LayerKind = 'img' | 'text' | 'shape' | 'slot' | 'anchor' | 'scrollVideo' | 'video';
+export type LayerKind = 'img' | 'text' | 'shape' | 'slot' | 'anchor' | 'scrollVideo' | 'video' | 'water';
 
 export type ObjectFit = 'cover' | 'contain' | 'fill';
 
@@ -298,6 +303,19 @@ export interface Layer {
   chromaThreshold?: number;
   /** Luminance band above `chromaThreshold` over which alpha ramps 0→255. */
   chromaFade?: number;
+
+  // kind 'water' — ambient water motion (see effects/WaterLayer.tsx). All optional; each falls back
+  // to WATER_DEFAULTS there, and 0 switches that effect off.
+  /** Seconds per drift loop of the translucent water texture. */
+  waterDrift?: number;
+  /** Number of faint ripple rings surfacing independently (0–6 is the sensible range). */
+  waterRipples?: number;
+  /** Number of tiny fading highlights (keep under ~10 or it reads as glitter). */
+  waterGlints?: number;
+  /** Peak opacity (0–0.2) of the drifting reflected-light gradient. */
+  waterGlow?: number;
+  /** Colour of that gradient — the painting's own sunset tone. */
+  waterGlowColor?: string;
 
   /** kind 'video' — seconds to wait after the layer is first seen (and the document has loaded)
    *  before playing. Defaults to this layer's own entrance timing, `0.35 + order * 0.22 + animDur`,

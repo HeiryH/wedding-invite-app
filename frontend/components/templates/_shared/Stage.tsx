@@ -63,7 +63,7 @@ export default function Stage({
   // to the actual screen — except a slot explicitly flagged `canvasAnchor`, which is composed
   // against the art and has to crop with it.
   const inCanvas = (l: LayerModel) =>
-    l.canvasAnchor || l.kind === 'img' || l.kind === 'shape' || l.kind === 'text' || l.kind === 'video';
+    l.canvasAnchor || l.kind === 'img' || l.kind === 'shape' || l.kind === 'text' || l.kind === 'video' || l.kind === 'water';
   // A stage that declares `canvas.mobile` but not `canvas.desktop` falls back to the mobile
   // aspect rather than getting no desktop canvas at all — the drift bug this whole mechanism
   // exists to prevent otherwise silently comes back for any template whose author didn't think

@@ -211,6 +211,13 @@ export const T14_STAGES: Record<string, StageDef> = {
     bgFit: 'cover',
     canvas: CANVAS,
     layers: [
+      // Ambient motion over the painted pool (see _shared/effects/WaterLayer.tsx): a drifting
+      // translucent water texture, three faint ripple rings, a few glints and a slow peach light
+      // drift. The box covers the pool's interior; the layer's radial mask fades it out before the
+      // rock rim. Bottle/lantern/crab/rocks stay static — they rest on something; only the floating
+      // blossoms carry an idle float.
+      L({ id: 'water', kind: 'water', x: 50, y: 44, w: 76, h: 52, z: 3, order: 0, chain: false, anim: 'none', label: 'Pool Water',
+          waterDrift: 15, waterRipples: 3, waterGlints: 6, waterGlow: 0.08, waterGlowColor: '#f8bfb1' }),
       L({ id: 'crab', kind: 'img', src: 'rsvp/crab.webp', x: 6, y: 9, w: 13, z: 4, order: 0, animIdle: 'sway', animIdleSpeed: 0.6, animIdleIntensity: 0.5 }),
       eyebrow('eyebrow', 'Kindly Respond', 38, 'RSVP Label'),
       heading('title', 'Will you join us by the sea?', 46, 'RSVP Title', { h: 16 }),
@@ -229,6 +236,7 @@ export const T14_STAGES: Record<string, StageDef> = {
       L({ id: 'pebbles-starfish', kind: 'img', src: 'rsvp/pebbles-starfish.webp', x: 30, y: 92, w: 20, z: 6, order: 5 }),
     ],
     desktop: {
+      water: { x: 50, y: 50, w: 70, h: 80 },
       crab: { x: 6, y: 12, w: 6 },
       eyebrow: { y: 30, fontSize: 1.5 },
       title: { y: 40, w: 60, fontSize: 4 },
