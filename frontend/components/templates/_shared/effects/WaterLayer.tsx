@@ -14,11 +14,14 @@ import styles from './WaterLayer.module.css';
  * - **drift** — a second, semi-transparent water texture (SVG turbulence, blended soft-light) that
  *   translates and breathes over `waterDrift` seconds. Movement without the background sliding.
  * - **ripples** — `waterRipples` faint elliptical rings, each scaling 0.4 → 1.4 while fading
- *   0 → .25 → 0, staggered so they surface independently.
+ *   0 → .6 → 0 (× intensity), staggered so they surface independently.
  * - **glints** — `waterGlints` tiny white highlights fading in and out at fixed pseudo-random spots.
  *   Deliberately capped: past ~10 it reads as glitter.
  * - **glow** — a soft peach translucent gradient (`waterGlowColor`, `waterGlow` opacity) drifting
  *   across the centre, so a painted sunset reflection seems to shift with the water.
+ *
+ * `waterIntensity` scales all four at once (the one knob a couple actually reaches for): the
+ * defaults are tuned to be *noticed* on a phone at arm's length, not to be hunted for.
  *
  * Positions are derived from the layer id + index with a tiny hash, so the same layer always
  * renders the same arrangement (no hydration mismatch, no re-randomising on every edit). Honours
@@ -31,7 +34,8 @@ export const WATER_DEFAULTS = {
   drift: 15,     // seconds per drift loop; 0 disables
   ripples: 3,
   glints: 6,
-  glow: 0.08,    // peak opacity of the reflected-light gradient; 0 disables
+  glow: 0.14,    // peak opacity of the reflected-light gradient; 0 disables
+  intensity: 1,  // multiplies ripple/glint/drift/glow strength; 0.5 = whisper, 1.5 = obvious
   glowColor: '#f8bfb1',
 };
 
@@ -49,6 +53,7 @@ export default function WaterLayer({ layer }: { layer: Layer }) {
   const glints = Math.max(0, Math.round(layer.waterGlints ?? WATER_DEFAULTS.glints));
   const glow = layer.waterGlow ?? WATER_DEFAULTS.glow;
   const glowColor = layer.waterGlowColor ?? WATER_DEFAULTS.glowColor;
+  const intensity = layer.waterIntensity ?? WATER_DEFAULTS.intensity;
   const filterId = useId();
 
   const rippleSpots = useMemo(
@@ -68,7 +73,7 @@ export default function WaterLayer({ layer }: { layer: Layer }) {
       y: 8 + unit(layer.id, 131 + i) * 84,
       delay: unit(layer.id, 151 + i) * 6,
       dur: 3 + unit(layer.id, 173 + i) * 3,
-      len: 1.2 + unit(layer.id, 191 + i) * 1.8,
+      len: 2 + unit(layer.id, 191 + i) * 2.5,
       rot: -30 + unit(layer.id, 211 + i) * 60,
     })),
     [layer.id, glints],
@@ -77,7 +82,7 @@ export default function WaterLayer({ layer }: { layer: Layer }) {
   return (
     <div
       className={styles.water}
-      style={{ '--water-drift': `${drift}s`, '--water-glow': glow, '--water-glow-color': glowColor } as CSSProperties}
+      style={{ '--water-drift': `${drift}s`, '--water-glow': glow, '--water-glow-color': glowColor, '--water-intensity': intensity } as CSSProperties}
       aria-hidden
     >
       {drift > 0 && (
@@ -112,7 +117,7 @@ export default function WaterLayer({ layer }: { layer: Layer }) {
           style={{
             left: `${g.x}%`, top: `${g.y}%`,
             width: `${g.len}%`,
-            transform: `rotate(${g.rot}deg)`,
+            ['--glint-rot' as string]: `rotate(${g.rot}deg)`,
             animationDelay: `${g.delay}s`, animationDuration: `${g.dur}s`,
           }}
         />

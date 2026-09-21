@@ -30,7 +30,7 @@ export const OVERRIDABLE: (keyof Layer)[] = [
   // kind 'video' (play-once) — see PlayOnceVideoLayer.tsx.
   'playDelaySec', 'posterSrc',
   // kind 'water' — see WaterLayer.tsx.
-  'waterDrift', 'waterRipples', 'waterGlints', 'waterGlow', 'waterGlowColor',
+  'waterDrift', 'waterRipples', 'waterGlints', 'waterGlow', 'waterGlowColor', 'waterIntensity',
   // kind 'slot' presentation mode ('inline' | 'sheet') and which named sheet it belongs to /
   // opens — see _shared/SheetHost.tsx and _shared/slots/sheets.tsx.
   'presentation', 'sheetId',

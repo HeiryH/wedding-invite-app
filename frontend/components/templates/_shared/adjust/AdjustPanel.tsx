@@ -1071,6 +1071,7 @@ export default function AdjustPanel({
                   {isWater && (
                     <>
                       {/* See effects/WaterLayer.tsx — 0 switches an effect off. */}
+                      <Slider label="Intensity" value={current.waterIntensity ?? WATER_DEFAULTS.intensity} min={0.25} max={2} step={0.05} onChange={set('waterIntensity')} />
                       <Slider label="Drift Loop (s)" value={current.waterDrift ?? WATER_DEFAULTS.drift} min={0} max={30} step={1} onChange={set('waterDrift')} />
                       <Slider label="Ripples" value={current.waterRipples ?? WATER_DEFAULTS.ripples} min={0} max={6} step={1} onChange={set('waterRipples')} />
                       <Slider label="Glints" value={current.waterGlints ?? WATER_DEFAULTS.glints} min={0} max={10} step={1} onChange={set('waterGlints')} />

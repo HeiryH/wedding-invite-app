@@ -316,6 +316,8 @@ export interface Layer {
   waterGlow?: number;
   /** Colour of that gradient — the painting's own sunset tone. */
   waterGlowColor?: string;
+  /** Overall strength multiplier for every water effect (0.5 whisper … 1.5 obvious; default 1). */
+  waterIntensity?: number;
 
   /** kind 'video' — seconds to wait after the layer is first seen (and the document has loaded)
    *  before playing. Defaults to this layer's own entrance timing, `0.35 + order * 0.22 + animDur`,
