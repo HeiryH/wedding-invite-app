@@ -1,0 +1,57 @@
+/* Layer geometry lives in data/stages.ts, not here — this file only styles what a layer
+   *contains*. If you find yourself writing a `top:` or `left:` for a piece of art, it belongs
+   in the stage data instead, where the Adjust panel can reach it.
+
+   Fonts come from the curated registry (`fontVar('cormorant')` etc. in index.tsx / stages.ts — the
+   self-hosted next/font copies), so unlike Template 10 there is no Google Fonts @import here. */
+
+/* ── Tokens (spec/style.json palette) ──────────────────────────────────────── */
+.wrapper {
+  --t14-sand:     #e6e7e4; /* near-white paper sand — page base behind/below the stages */
+  --t14-ink:      #8c6858; /* dark brown ink line */
+  --t14-ink-soft: #a58e80; /* taupe */
+
+  position: relative;
+  width: 100%;
+  overflow-x: clip; /* wide props (the arch, the garlands) must never widen the page */
+  background: var(--t14-sand);
+  color: var(--t14-ink);
+  font-family: var(--font-ae-eb-garamond), 'EB Garamond', Georgia, serif;
+}
+
+.footer {
+  position: relative;
+  z-index: 5;
+  padding: 2rem 1rem 2.5rem;
+  text-align: center;
+  background: var(--t14-sand);
+}
+.footerTagline {
+  font-family: var(--font-ae-cormorant), 'Cormorant Garamond', Georgia, serif;
+  font-style: italic;
+  font-weight: 500;
+  font-size: 1rem;
+  letter-spacing: 0.02em;
+  color: var(--t14-ink-soft);
+  margin: 0;
+}
+
+/* Nav bar itself is the shared _shared/nav/TemplateNav — this template only supplies its
+   theme tokens (--nav-*), passed inline as the `vars` prop at the render site in index.tsx. */
+
+.musicBtn {
+  position: fixed;
+  right: 1rem;
+  top: 1rem;
+  z-index: 40;
+  width: 2.4rem;
+  height: 2.4rem;
+  display: grid;
+  place-items: center;
+  background: rgba(243, 232, 219, 0.9);
+  border: 1px solid rgba(140, 104, 88, 0.3);
+  border-radius: 50%;
+  color: var(--t14-ink);
+  cursor: pointer;
+  font-size: 0.85rem;
+}

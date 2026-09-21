@@ -9,6 +9,7 @@ import { T7_STAGES, T7_ASSETS, STAGE_GROUPS } from '../Template7-romangarden/dat
 import { T10_STAGES, T10_ASSETS, STAGE_GROUPS as T10_STAGE_GROUPS } from '../Template10-sunnysafari/data/stages';
 import { T11_STAGES, t11StageIds } from '../Template11-rosehorizon/data/roseHorizonStages';
 import { T12_STAGES, t12StageIds } from '../Template12-dreamywoodland/data/dreamyWoodlandStages';
+import { T14_STAGES, T14_ASSETS, STAGE_GROUPS as T14_STAGE_GROUPS } from '../Template14-sandybeach/data/stages';
 
 /**
  * Everything a template's `layout` resolution needs, computed once per render in the customize
@@ -38,6 +39,10 @@ export interface TemplateEngine {
    *  section (accent color + heading font, via `--slot-*` CSS custom properties). T1-T6 have their
    *  own bespoke, non-slot RSVP/wishes markup this doesn't reach. */
   slotTheme?: boolean;
+  /** Default for the Theme section's Accent picker (`${keyPrefix}.layout.slotTheme.accentColor`) —
+   *  the template's own button/highlight colour, so "reset" lands on the shipped look rather
+   *  than a neutral grey. Only meaningful with `slotTheme: true`. */
+  slotThemeAccentDefault?: string;
   /** Public path prefix this template's shipped art/video is served from (e.g. `/templates/t7`) —
    *  absent for templates with no such shared prefix. Lets the Adjust panel resolve a layer's
    *  `videoSrc` into a real URL for things like the "Capture from video" poster control, without
@@ -76,6 +81,7 @@ export const TEMPLATE_ENGINES: Record<number, TemplateEngine> = {
     keyPrefix: 't7',
     reveal: true,
     slotTheme: true,
+    slotThemeAccentDefault: '#3d3833',
     assetRoot: T7_ASSETS,
     resolveStages(ctx) {
       // In the compiled ceremony row the frame art is deduped into the shared "Ceremony Backdrop"
@@ -103,6 +109,7 @@ export const TEMPLATE_ENGINES: Record<number, TemplateEngine> = {
     keyPrefix: 't10',
     reveal: true,
     slotTheme: true,
+    slotThemeAccentDefault: '#D9481B',
     assetRoot: T10_ASSETS,
     resolveStages: () => T10_STAGES,
     stageIds: (ctx) => ctx.codes.flatMap((c) => T10_STAGE_GROUPS[c] ?? []),
@@ -121,6 +128,17 @@ export const TEMPLATE_ENGINES: Record<number, TemplateEngine> = {
     keyPrefix: 't12', reveal: false, pageBackground: true, slotTheme: true,
     assetRoot: '/templates/dreamy-woodland',
     resolveStages: () => T12_STAGES, stageIds: (ctx) => t12StageIds(ctx.codes),
+  },
+  // Sandy Beach — same Stage compositor shape as T10 (one stage per section, no ceremony-row
+  // feature), WEDDING. Slot theme accent defaults to the design's pale-sand button fill.
+  14: {
+    keyPrefix: 't14',
+    reveal: true,
+    slotTheme: true,
+    slotThemeAccentDefault: '#f3e6d6',
+    assetRoot: T14_ASSETS,
+    resolveStages: () => T14_STAGES,
+    stageIds: (ctx) => ctx.codes.flatMap((c) => T14_STAGE_GROUPS[c] ?? []),
   },
 };
 

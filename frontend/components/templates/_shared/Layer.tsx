@@ -278,6 +278,8 @@ export default function Layer({ layer, slotProps, eager, selected, editing, stag
               color: layer.color ?? '#3F3524',
               fontSize: `${layer.fontSize ?? 4}cqi`,
               fontWeight: layer.fontWeight ?? 600,
+              fontStyle: layer.fontStyle,
+              textTransform: layer.textTransform,
               lineHeight: layer.lineHeight,
               fontFamily: fontVar(layer.fontFamily),
               letterSpacing: layer.letterSpacing !== undefined ? `${layer.letterSpacing}em` : undefined,

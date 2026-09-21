@@ -333,6 +333,55 @@ together, plus a running list of known issues.
   the human, not silently waved through). Migration scaffolded, not applied. Deploy not
   attempted — a separate manual step, per this repo's own convention.
 
+- **2026-09-20 — local ComfyUI backend: built, proven, and retired the same day.** With Recraft
+  and OpenAI ImageGen out, a free local stage was built around Comfy Desktop + FLUX.2 klein 4B
+  (Apache-2.0, GGUF Q8) + SAM3.1 + macOS Vision OCR, driven from the approved section-spec verbatim.
+  It worked mechanically on the **Sandy Beach** probe (`docs/sandy-beach-probe/`, WEDDING/Stage) —
+  design ~75 s, 5/5 props cut pixel-identically from the design with measured placement, a plate
+  byte-identical outside the mask — and a real T14 run (worktree `wt/sandy-beach-20260920`, brief +
+  six approved section specs + art for four sections) got to the plate stage. **Then the user
+  ditched it**: the M4 Pro ran hot, macOS killed Comfy after ~40 consecutive model loads (swap
+  6.9/8 GB), and the 4-step distilled model's art wasn't good enough — garbled text, ghost furniture
+  and a second horizon painted into inpaint holes, a whole beach painted into a cropped grass tuft.
+  Comfy Desktop, its models and shared dir were deleted. **Do not propose local diffusion on this
+  Mac again.** The pipeline is back to spec → *human renders* → `ingest`; `render-task-body.md`
+  lives in `retired/`; the `~/.hermes/scripts/comfy-triad/` scripts remain as reference.
+  Findings that outlive the backend:
+  - **A full-frame reference image is read as "edit this picture"** — reconfirmed on klein's
+    `ReferenceLatent` exactly as on OpenRouter 2026-09-03: the render copied the Pinterest scene with
+    props swapped. Style-lock *text* alone carried the hand.
+  - **Every `kind:prop` must be placed fully inside the frame** (now a rule in
+    `section-spec-task-body.md`); only `kind:scenery` may bleed off an edge. Regenerating a cropped
+    prop failed on every mechanism tried (inpaint the missing side; whole-object re-render).
+  - **The background plate must lose text *and* drawn UI** (buttons, placeholder boxes), not only
+    props — the most common plate defect. OCR (`VNRecognizeTextRequest`) finds every text line where
+    SAM3 "text" finds only the largest; drawn boxes need a geometric rectangle detector.
+  - **Cutting props from the design's own pixels** (SAM3 per prop name + band filter + unique
+    assignment) is a better locator than diffing design vs background; `ingest`'s diff becomes a
+    cross-check. Alternate short-noun prompts and a duplicate guard were both necessary — long
+    compound names matched the wrong object.
+  - fp8 safetensors do not run on MPS; GGUF Q8 was lossless vs bf16 and cut peak RAM 21.5 → 19.9 GB
+    with swap flat — but "flat" is not "cool", and sustained batches still got the process killed.
+
+- **2026-09-21 — Sandy Beach shipped as Template14 (WEDDING, Stage, PRO)** from the human-rendered
+  art in `~/Documents/sandy-beach/` (design + background plate + prop sheet per section, rendered
+  in ChatGPT from the re-specced Gate 2 text). Not run through the kanban board; `ingest`/`assemble`
+  were done by hand because the prop sheets were *catalogues* (each prop drawn once, arbitrary
+  layout) rather than same-size overlays of the design, so the design-vs-background diff `ingest`
+  relies on had nothing to measure — positions were read off the design instead. Two findings:
+  - **The first Gate 1 pass produced six versions of one scene** (shoreline + sea horizon at six
+    times of day) and the renders came back near-identical. Root cause was structural: every
+    contract in the pipeline is *within* a section, nothing compares sections, and the brief's
+    "progress through the day" device steered the researcher toward varying the clock, not the
+    place. Fixed by a **distinct-location rule** in `scene-research-task-body.md` (different place
+    or vantage per section; time-of-day/angle changes don't count; ≥2 sections with no horizon)
+    and a re-spec (palm / jetty / rock pool / dunes / sand close-up). A cross-section lint in
+    `scene-validate.mjs` (all `horizon_pct` within ~10 pts, or backgrounds sharing a leading noun
+    phrase) would have caught it at Gate 1 and is still to do.
+  - **Ask the renderer for the prop sheet as a same-size overlay of the design**, not a catalogue —
+    that is what makes `ingest` measurable and is what Template10's sheets were. Worth adding to the
+    human-step row of the stage table.
+
 ## How the kanban mechanics actually work
 
 - **Board**: `invite-pipeline` (`hermes kanban --board invite-pipeline <cmd>`, or set it
@@ -403,7 +452,7 @@ Telegram thread or cached number.
 | 2 | `scene-research` — **Gate 1** | `researcher` | yes | Proposes, per section, candidate props and background scenes plus the physical geometry (`band`, `size_in_anchor_units`, `horizon_pct`, `empty_band_pct`). Human picks. No generation. |
 | 3 | `scene-manifest` | `researcher` | no | Writes the picks to `spec/assets.json` (content) and `spec/scene.json` (geometry) |
 | 4 | `section-spec` — **Gate 2** | `designer` | yes | Writes one full render specification per section (`spec/sections/<NN>-<section>.md`). **This document is the Recraft prompt** — it is written to be rendered, not merely read. Human confirms as text. |
-| — | *human step* | — | — | Paste the approved spec into Recraft; render three consistent images per section (full design, background with props removed, transparent prop sheet); drop them in `docs/<slug>-art/<section>/` |
+| — | *human step* | — | — | Paste the approved spec into a rendering tool (Recraft's custom-style binding is the proven one); render three consistent images per section (full design, background with props removed, transparent prop sheet); drop them in `docs/<slug>-art/<section>/`. **Text and drawn UI must be gone from the background plate, not just props.** |
 | 5 | `ingest` | `designer` | no | Splits the prop sheet, locates each prop by differencing design against background, writes `manifest.json` with each prop's measured box. Worker verifies every cutout visually before committing. |
 | 6 | `assemble` | `designer` | no | Writes `data/stages.ts`/`data/assetSizes.ts`, registers the template. **Placement is read from `manifest.json`, not computed.** |
 | 7 | `visual-qa` — **Gate 3** | `image-reviewer` | yes | Screenshots every section at both breakpoints and compares against `design.png` — a real target now, rather than against text |
@@ -419,6 +468,11 @@ retired — see the Timeline entry for why. Trust this table and each stage's ow
 `## NEXT STAGE` section over any older Telegram thread, note, or profile memory.
 
 ## Image generation backend
+
+> **Current: none in the pipeline.** The human renders from the approved section-spec in a tool of
+> their choice (Recraft custom-style binding is the proven one). A local ComfyUI backend was tried and
+> retired on 2026-09-20 — see that timeline entry. Everything below records the Recraft → OpenRouter
+> history and the findings that still apply (reference-as-edit, isolation clause, 3-ref cap).
 
 ### Why it changed
 

@@ -18,7 +18,7 @@ export const OVERRIDABLE: (keyof Layer)[] = [
   'color', 'fill', 'fontSize', 'fontWeight', 'lineHeight', 'radius', 'text', 'src', 'shape', 'label',
   'anim', 'animDur', 'animOut', 'animOutDur',
   // text styling (types.ts) — usable by kind 'text', and by kind 'anchor' when `styleable`.
-  'fontFamily', 'letterSpacing', 'wordSpacing', 'borderWidth', 'borderColor',
+  'fontFamily', 'fontStyle', 'textTransform', 'letterSpacing', 'wordSpacing', 'borderWidth', 'borderColor',
   'shadowColor', 'shadowBlur', 'shadowX', 'shadowY',
   // text shaping (kind 'text' only) — see CurvedText.tsx.
   'textShape', 'curvature',

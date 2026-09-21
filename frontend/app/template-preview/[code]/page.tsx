@@ -16,6 +16,7 @@ import Template9 from '@/components/templates/Template9';
 import Template10 from '@/components/templates/Template10';
 import Template11 from '@/components/templates/Template11';
 import Template12 from '@/components/templates/Template12';
+import Template14 from '@/components/templates/Template14';
 
 const DUMMY: Wedding = {
   weddingId: 0,
@@ -163,6 +164,7 @@ export default function TemplatePreviewPage() {
       {code === 'sunny-safari'          && <Template10 {...sunnySafariProps} />}
       {code === 'rose-horizon'          && <Template11 {...props} />}
       {code === 'dreamy-woodland'       && <Template12 {...DREAMY_WOODLAND_PROPS} customConfig={customConfig} />}
+      {code === 'sandy-beach'           && <Template14 {...props} />}
     </div>
   );
 }

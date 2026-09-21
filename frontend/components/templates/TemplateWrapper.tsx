@@ -14,6 +14,7 @@ import Template9 from './Template9';
 import Template10 from './Template10';
 import Template11 from './Template11';
 import Template12 from './Template12';
+import Template14 from './Template14';
 import DataTemplate from './_shared/DataTemplate';
 import { useBreakpoint } from './_shared/hooks/useBreakpoint';
 import type { StageDef, SlotProps, EditorHandle } from './_shared/types';
@@ -129,6 +130,8 @@ export default function TemplateWrapper({
         return Template11;
       case 12:
         return Template12;
+      case 14:
+        return Template14;
       default:
         return Template1; // Fallback to Template1
     }

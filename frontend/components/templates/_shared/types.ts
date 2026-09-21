@@ -235,6 +235,13 @@ export interface Layer {
   fill?: string;
   fontSize?: number;
   fontWeight?: number;
+  /** kind 'text' (and styleable anchors) — CSS `font-style`. `undefined` inherits the element's own
+   *  default, so existing layers are unchanged; templates whose type is italic serif (Sandy Beach)
+   *  set it on their shipped text layers. */
+  fontStyle?: 'normal' | 'italic';
+  /** kind 'text' (and styleable anchors) — CSS `text-transform`, for small-caps-style labels whose
+   *  copy is a data binding (a date, a venue) and so can't simply be typed in upper case. */
+  textTransform?: 'none' | 'uppercase';
   /** kind 'text' — unitless multiplier (CSS `line-height`, e.g. 1.25). `undefined` inherits
    *  Stage.module.css's own default (1.25). */
   lineHeight?: number;

@@ -31,6 +31,8 @@ export function subLayerStyle(layer?: Layer): CSSProperties {
     color: layer.color,
     fontSize: layer.fontSize !== undefined ? `${layer.fontSize}cqi` : undefined,
     fontWeight: layer.fontWeight,
+    fontStyle: layer.fontStyle,
+    textTransform: layer.textTransform,
     lineHeight: layer.lineHeight,
     fontFamily: layer.fontFamily ? fontVar(layer.fontFamily) : undefined,
     letterSpacing: layer.letterSpacing !== undefined ? `${layer.letterSpacing}em` : undefined,

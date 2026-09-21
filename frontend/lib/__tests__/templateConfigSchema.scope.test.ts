@@ -45,6 +45,7 @@ const TEMPLATE_ROOTS: Record<number, string[]> = {
   9: ['Template9.tsx'],
   10: ['Template10.tsx', 'Template10-sunnysafari', '_shared'],
   12: ['Template12.tsx', 'Template12-dreamywoodland', '_shared'],
+  14: ['Template14.tsx', 'Template14-sandybeach', '_shared'],
 };
 
 /** Keys with no literal call site anywhere in template markup — read some other way (a backend-

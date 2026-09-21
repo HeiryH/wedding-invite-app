@@ -229,7 +229,7 @@ There are **no `templateId === N` branches** in `customize/page.tsx` any more �
 them; add a registry entry. Two deliberately different geometry families live behind it:
 
 - **Fixed-stage compositor** (`reveal: true`, `slotTheme: true`) — full-screen `100svh` stages,
-  absolute layer positions as data (`{x,y,w,h,z}`, not CSS). Templates 7 and 10.
+  absolute layer positions as data (`{x,y,w,h,z}`, not CSS). Templates 7, 10 and 14.
   `"Reveal off-screen"` only applies here.
 - **Flow + overlay** (`reveal: false`) — Templates 1–6: real DOM flow with a `SectionOverlay` per
   section plus `anchor` pseudo-layers (`useAnchors`) that nudge existing elements by transform.
@@ -242,7 +242,7 @@ engine parity for them without an explicit decision to productionize first.)
 
 **Product-facing family names — locked 2026-09-08** (shown alongside tier, e.g. "Pro · Stage"):
 - **Classic** = the flow + overlay family above (T1–T6).
-- **Stage** = the fixed-stage compositor family above (T7, T10) — named for the code's own
+- **Stage** = the fixed-stage compositor family above (T7, T10, T14) — named for the code's own
   `Stage.tsx`/`StageDef` vocabulary already in place, not a new coinage.
 - **Cinematic** = a **third family that does not exist in the engine yet**. Do not apply
   "Cinematic" to T7/T10 — Stage is discrete full-screen scenes you scroll between (theater set
@@ -289,6 +289,36 @@ templates get neutral defaults while T7 pins them to its own values.
   second one crashes the public page with `Cannot find module 'Template8'`.
 - Authored layout keys use the `ta<id>` prefix, so `TemplateConfigPolicy.LayoutKeyPattern` is
   `^ta?\d+\.layout\.` — a `^t\d+` regex silently skips the PRO gate for them.
+
+## Template 14 — Sandy Beach (Stage family, WEDDING, PRO)
+
+`frontend/components/templates/Template14-sandybeach/` — the T10 shape exactly (one stage per
+section, `EventHeroSlot` hero, sheet-hosted forms, `--slot-*` theme block in `index.tsx`), so read
+T10's notes first. Art: `public/templates/sandy-beach/<section>/` (six 941×1672 backgrounds + 55
+prop WebPs, 4.2 MB). Migration `AddSandyBeachTemplate` seeds `TemplateId 14` / code `sandy-beach`
+(13 is reserved by the Dino Doodle Party pipeline run, which has produced no code).
+
+- **Art provenance is a catalogue, not an overlay.** The pipeline's human-render step produced,
+  per section, a design / background plate / transparent prop sheet — but the sheets lay each prop
+  out once at arbitrary positions, so `data/stages.ts` positions were *read off the design*, not
+  measured like T10's. The sheet was cut by connected-component analysis of alpha (per-pixel
+  labels, so overlapping bounding boxes don't bleed); the arch and dune grass shared a sand skirt
+  and were split at a hand-picked x.
+- **Canvas aspect deliberately differs from the background's.** `canvas.mobile = 836×1672` (0.5)
+  sits between the 9:16 art and 9:19.5 phones so the welcome arch's posts survive the side crop;
+  `Stage` cover-fits the background independently, so props can drift a few % against it — fine
+  here because nothing is registered to a background feature. `canvas.desktop = 1440×900` with
+  per-layer `desktop` overrides on every stage (a portrait background is a sea/sand band on a
+  landscape screen, so the props are re-composed as a wide frame).
+- **`fontStyle` / `textTransform` were added to the engine for this template** (`Layer` fields, in
+  `OVERRIDABLE`, `subLayerStyle`, `Layer.tsx` text, and Style/Case selects in the Adjust panel):
+  the style lock is italic Cormorant for names/headings and letter-spaced small caps for labels,
+  and bound copy (`{{date:long}}`) can't be typed in upper case. `curated.ts` now loads
+  Cormorant's true italic faces (+4 preloaded files, still far under the Issue 4 header budget).
+- Foreground props stop at `y ≤ 93`: a 9:16 device crops the canvas's bottom ~5% and the nav pill
+  covers the next ~8%, so anything placed at the design's literal 96–99% vanished in QA.
+- `TemplateEngine.slotThemeAccentDefault` (registry) replaced the `templateId === N` accent chain
+  the customize page used to hold — add a new Stage template's default there, not in the page.
 
 ## Template 7 — Roman Garden (full stage compositor)
 

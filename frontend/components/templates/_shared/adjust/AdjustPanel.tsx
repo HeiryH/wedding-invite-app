@@ -1200,6 +1200,30 @@ export default function AdjustPanel({
                   </select>
                 </div>
                 <div className={styles.control} style={{ gridTemplateColumns: '54px 1fr' }}>
+                  <span>Style</span>
+                  <select
+                    className={styles.select}
+                    value={current.fontStyle ?? ''}
+                    onChange={(e) => patchLayer(current.id, { fontStyle: (e.target.value || undefined) as Layer['fontStyle'] })}
+                  >
+                    <option value="">Default</option>
+                    <option value="normal">Regular</option>
+                    <option value="italic">Italic</option>
+                  </select>
+                </div>
+                <div className={styles.control} style={{ gridTemplateColumns: '54px 1fr' }}>
+                  <span>Case</span>
+                  <select
+                    className={styles.select}
+                    value={current.textTransform ?? ''}
+                    onChange={(e) => patchLayer(current.id, { textTransform: (e.target.value || undefined) as Layer['textTransform'] })}
+                  >
+                    <option value="">Default</option>
+                    <option value="none">As typed</option>
+                    <option value="uppercase">UPPERCASE</option>
+                  </select>
+                </div>
+                <div className={styles.control} style={{ gridTemplateColumns: '54px 1fr' }}>
                   <span>Color</span>
                   <input
                     type="color"

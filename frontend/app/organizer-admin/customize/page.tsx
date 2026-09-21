@@ -868,6 +868,7 @@ export default function CustomizePage() {
         stageIds: engine.stageIds(ctx),
         reveal: engine.reveal,
         slotTheme: Boolean(engine.slotTheme),
+        slotThemeAccentDefault: engine.slotThemeAccentDefault,
         pageBackground: Boolean(engine.pageBackground),
         cardStyle: Boolean(engine.cardStyle),
         assetRoot: engine.assetRoot,
@@ -1865,12 +1866,7 @@ export default function CustomizePage() {
               onToggleReveal={() => setRevealOverflow((r) => !r)}
               onUploadImage={handleAdjustUpload}
               slotTheme={Boolean(layout?.slotTheme)}
-              slotThemeAccentDefault={
-                wedding.templateId === 7 ? '#3d3833'
-                : wedding.templateId === 10 ? '#D9481B'
-                : wedding.templateId === 11 ? '#fcb887'
-                : '#2b2a28'
-              }
+              slotThemeAccentDefault={layout?.slotThemeAccentDefault ?? '#2b2a28'}
               pageBackground={Boolean(layout?.pageBackground)}
               cardControl={Boolean(layout?.cardStyle)}
             />

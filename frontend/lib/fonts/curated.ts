@@ -38,7 +38,11 @@ import type { CuratedFontKey } from './registry';
  * curated font should default to `preload: false` unless it becomes a new template's own default.
  */
 const playfair = Playfair_Display({ subsets: ['latin'], weight: ['400', '500', '600', '700'], variable: '--font-ae-playfair', display: 'swap', preload: false });
-const cormorant = Cormorant_Garamond({ subsets: ['latin'], weight: ['400', '500', '600', '700'], variable: '--font-ae-cormorant', display: 'swap', preload: true });
+// Cormorant is the one curated face that also ships its true italic: Template 14 (Sandy Beach) sets
+// its names/headings in Cormorant italic, and without the italic files the browser synthesises a
+// slanted roman. Four extra preloaded files (latin subset) — still well inside the header budget
+// docs/FIX_QUEUE.md Issue 4 set (12 → 16 files, vs the 34 that broke production).
+const cormorant = Cormorant_Garamond({ subsets: ['latin'], weight: ['400', '500', '600', '700'], style: ['normal', 'italic'], variable: '--font-ae-cormorant', display: 'swap', preload: true });
 const greatVibes = Great_Vibes({ subsets: ['latin'], weight: ['400'], variable: '--font-ae-great-vibes', display: 'swap', preload: false });
 const dancingScript = Dancing_Script({ subsets: ['latin'], weight: ['400', '500', '600', '700'], variable: '--font-ae-dancing-script', display: 'swap', preload: false });
 const sacramento = Sacramento({ subsets: ['latin'], weight: ['400'], variable: '--font-ae-sacramento', display: 'swap', preload: false });
