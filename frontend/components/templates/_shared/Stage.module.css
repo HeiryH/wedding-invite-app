@@ -75,22 +75,6 @@
   container-type: inline-size;
 }
 
-/* Editor-only: "Reveal off-screen". The preview widens the iframe and this pins the stage to the
-   real device width (set inline), centred, with overflow unclipped — so art that bleeds past the
-   phone's edges spills into the space around it at full size (no zoom-out). The dashed frame marks
-   the true device bounds; anything outside it is what gets cropped on the real invitation. */
-.stage[data-reveal='true'] {
-  overflow: visible;
-}
-.stage[data-reveal='true']::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  border: 2px dashed #c98a54;
-  pointer-events: none;
-  z-index: 900;
-}
-
  /* ── Aspect-locked art canvas (StageDef.canvas) ──────────────────────────────────────────────
    The stage's scenery composed as ONE picture and cover-fitted to the device, exactly like `.bg`
    above — so the pieces scale and crop together instead of drifting apart on an unusual screen

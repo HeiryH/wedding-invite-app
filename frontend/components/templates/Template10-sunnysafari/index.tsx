@@ -60,9 +60,6 @@ interface Template10Props {
 
 /** Fallback device dims per breakpoint, used only when the customize preview hasn't sent its own
  *  (see EditorHandle.frame) — see T7's identical constants and docs/FIX_QUEUE.md Issue 2. */
-const REVEAL_FRAME_W: Record<Breakpoint, number> = { mobile: 390, desktop: 1440 };
-const REVEAL_FRAME_H: Record<Breakpoint, number> = { mobile: 664, desktop: 900 };
-
 /** nav.size / nav.textSize (templateConfigSchema.ts) — a `select`, not a slider, so friendly
  *  words map to the actual multiplier here. */
 const NAV_SIZE_SCALE: Record<string, number> = {
@@ -348,9 +345,6 @@ export default function Template10({
             // drag/resize and which layer's outline actually shows as selected.
             editing={editing}
             stageActive={editing && editor?.selectedStage === r.def.id}
-            revealOverflow={editing && Boolean(editor?.revealOverflow)}
-            revealFrameW={editor?.frame?.w ?? editor?.frameW ?? REVEAL_FRAME_W[breakpoint]}
-            revealFrameH={editor?.frame?.svh ?? editor?.frameH ?? REVEAL_FRAME_H[breakpoint]}
             selectedLayer={editor?.selectedLayer}
           />
         );

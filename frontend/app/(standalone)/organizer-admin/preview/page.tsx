@@ -26,7 +26,6 @@ interface PreviewPayload {
     breakpoint: 'mobile' | 'desktop';
     selectedStage?: string;
     selectedLayer?: string;
-    revealOverflow?: boolean;
     /** @deprecated superseded by `frame`. Kept so a `preview_draft_v2` written by an older build
      *  still pins the reveal frame instead of silently falling back to the template's own 390×844
      *  constants — see the derivation below. */
@@ -139,7 +138,6 @@ export default function PreviewPage() {
                 breakpoint: payload.editor.breakpoint,
                 selectedStage: payload.editor.selectedStage,
                 selectedLayer: payload.editor.selectedLayer,
-                revealOverflow: payload.editor.revealOverflow,
                 frameW: payload.editor.frameW,
                 frameH: payload.editor.frameH,
                 frame,

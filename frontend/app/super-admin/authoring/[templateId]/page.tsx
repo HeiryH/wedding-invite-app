@@ -230,7 +230,6 @@ export default function AuthoringEditorPage() {
         breakpoint,
         selectedStage: activeStage,
         selectedLayer,
-        revealOverflow: false,
       },
     };
     payloadRef.current = payload;
@@ -441,7 +440,7 @@ export default function AuthoringEditorPage() {
         </div>
 
         {/* Adjust dock */}
-        <div style={{ width: 320, flexShrink: 0, overflowY: 'auto' }}>
+        <div style={{ width: 320, flexShrink: 0, position: 'relative', overflow: 'visible', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
           {activeDef && (
             <AdjustPanel
               stages={skeleton}
@@ -455,9 +454,6 @@ export default function AuthoringEditorPage() {
               onSelectStage={selectStage}
               onSelectLayer={setSelectedLayer}
               onClose={() => router.push('/super-admin/authoring')}
-              canReveal={false}
-              revealOverflow={false}
-              onToggleReveal={() => {}}
               onUploadImage={handleUploadImage}
               slotCatalog={SLOT_CATALOG}
             />

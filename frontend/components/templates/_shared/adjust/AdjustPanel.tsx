@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { AnimIdleOrigin, AnimIdleType, AnimOutType, AnimType, Breakpoint, Layer, ObjectFit, StageDef, StageId } from '../types';
 import { ANIM_OPTIONS, ANIM_OUT_OPTIONS, ANIM_IDLE_ORIGINS } from '../types';
 import { IDLE_ANCHORED, IDLE_DEFAULT_ORIGIN } from '../idle';
@@ -10,6 +10,7 @@ import { SLOT_CATALOG_GROUPS, type SlotCatalogEntry } from '../slots/catalog';
 import { BINDING_TOKENS } from '../bindings';
 import { CURATED_FONTS } from '@/lib/fonts/registry';
 import { drawKeyedFrame, hasDecodedFrame } from '../effects/chromaKey';
+import { Icon } from '@/components/ui/Icon';
 import styles from './AdjustPanel.module.css';
 
 const ANIM_LABELS: Record<AnimType, string> = {
@@ -131,12 +132,6 @@ interface Props {
   onSelectLayer: (id: string | undefined) => void;
   /** Close the dock (the parent turns Adjust off). */
   onClose: () => void;
-  /** True only for full-screen Stage-compositor templates (T7). "Reveal off-screen" widens the
-   *  preview canvas and pins the stage — meaningless for fluid DOM overlays (T5), so hide it. */
-  canReveal: boolean;
-  /** Editor-only overflow reveal — lets you see/grab layers nudged past the viewport. */
-  revealOverflow: boolean;
-  onToggleReveal: () => void;
   /** Uploads a file and resolves to its /uploads/… URL. Absent ⇒ image controls are hidden. */
   onUploadImage?: (file: File) => Promise<string>;
   /** Present only in the super-admin authoring editor — shows "+ Block" for dropping in a
@@ -192,7 +187,7 @@ function Slider({ label, value, min, max, step, onChange }: {
 export default function AdjustPanel({
   stages, keyPrefix, assetRoot, stageIds, breakpoint, config, onLayoutChange,
   selectedStage, selectedLayer, onSelectStage, onSelectLayer, onClose,
-  canReveal, revealOverflow, onToggleReveal, onUploadImage, slotCatalog,
+  onUploadImage, slotCatalog,
   slotTheme, slotThemeAccentDefault, pageBackground, cardControl,
 }: Props) {
   // Namespaced under `.layout.` purely to inherit the existing PRO-gate regex — not a stage layer.
@@ -205,7 +200,10 @@ export default function AdjustPanel({
   const [note, setNote] = useState('');
   const [dragId, setDragId] = useState<string | null>(null);
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
-  const [blockMenuOpen, setBlockMenuOpen] = useState(false);
+  // Which floating card sits to the left of the dock. Theme (gear) and Add (+) are explicit
+  // pop-overs; when neither is open, selecting a layer/background shows the detail card instead.
+  const [popover, setPopover] = useState<'theme' | 'add' | null>(null);
+  const layersRef = useRef<HTMLDivElement>(null);
   // Layer-detail tab: geometry vs style vs animation. Sticky across layer selection.
   const [detailTab, setDetailTab] = useState<'layout' | 'style' | 'anim' | 'slotText' | 'slotContainer'>('layout');
   const fileRef = useRef<HTMLInputElement>(null);
@@ -307,6 +305,7 @@ export default function AdjustPanel({
     };
     commit([...layers, layer]);
     onSelectLayer(id);
+    setPopover(null);
   };
 
   // Authoring-only: drop a functional block (RSVP, countdown, itinerary, wishes, photo booth...)
@@ -318,7 +317,7 @@ export default function AdjustPanel({
     const layer: Layer = { id, kind: 'slot', slot: entry.id, ...entry.defaultLayer };
     commit([...layers, layer]);
     onSelectLayer(id);
-    setBlockMenuOpen(false);
+    setPopover(null);
   };
 
   // Deleting an anchor can't tombstone it — resolveStage would then drop the anchor and the real
@@ -441,6 +440,16 @@ export default function AdjustPanel({
       return next;
     });
 
+  // A click on a prop in the preview selects it here; make sure its row is actually in view. A
+  // collapsed parent is forced open while one of its sub-layers is selected (see renderRow) so
+  // the row exists to scroll to.
+  useEffect(() => {
+    if (!selectedLayer) return;
+    const row = layersRef.current?.querySelector<HTMLElement>(`[data-layer-row="${CSS.escape(selectedLayer)}"]`);
+    if (typeof row?.scrollIntoView === 'function') row.scrollIntoView({ block: 'nearest' });
+  }, [selectedLayer, layers]);
+  const selectedParent = layers.find((l) => l.id === selectedLayer)?.parent;
+
   const dirty = Boolean(config[layoutKey(keyPrefix, breakpoint, def.id)]);
   const isImage = current?.kind === 'img';
   // Anchors are existing DOM elements, not overlay art: they can't be resized (only nudged), so
@@ -510,15 +519,16 @@ export default function AdjustPanel({
   const renderRow = (l: Layer, indent: boolean) => {
     const kids = childrenOf.get(l.id);
     const hasKids = !!kids?.length;
-    const isOpen = !collapsed.has(l.id);
+    const isOpen = !collapsed.has(l.id) || l.id === selectedParent;
     // A locked layer can't be reordered by drag any more than it can be dragged on canvas — the
     // lock/hide/select/delete-block affordances are still reachable by clicking (not dragging).
     const draggable = l.kind !== 'anchor' && !l.locked;
     return (
       <div key={l.id}>
         <div
-          className={`${styles.row} ${l.id === selectedLayer ? styles.rowActive : ''} ${dragId === l.id ? styles.rowDragging : ''}`}
+          className={`${styles.row} ${l.id === selectedLayer ? styles.rowActive : ''} ${dragId === l.id ? styles.rowDragging : ''} ${l.locked ? styles.rowLocked : ''}`}
           style={indent ? { marginLeft: 16 } : undefined}
+          data-layer-row={l.id}
           draggable={draggable}
           onDragStart={draggable ? () => setDragId(l.id) : undefined}
           onDragEnd={draggable ? () => setDragId(null) : undefined}
@@ -545,14 +555,15 @@ export default function AdjustPanel({
             onClick={() => patchLayer(l.id, { locked: !l.locked })}
             title={l.locked ? 'Unlock — allow canvas click/drag again' : 'Lock — protect from accidental canvas click/drag'}
           >
-            {l.locked ? '🔒' : '🔓'}
+            <Icon name={l.locked ? 'lock' : 'unlock'} size={14} />
           </button>
           <button
             className={`${styles.iconBtn} ${l.hidden ? styles.iconBtnOff : ''}`}
             onClick={() => patchLayer(l.id, { hidden: !l.hidden })}
             title={l.hidden ? 'Show' : 'Hide'}
+            aria-label={l.hidden ? 'Show' : 'Hide'}
           >
-            {l.hidden ? '○' : '●'}
+            <Icon name={l.hidden ? 'eye-off' : 'eye'} size={14} />
           </button>
           <button
             className={`${styles.iconBtn} ${styles.iconBtnDanger} ${l.locked ? styles.iconBtnDisabled : ''}`}
@@ -567,6 +578,17 @@ export default function AdjustPanel({
     );
   };
 
+  const hasThemeCard = Boolean(slotTheme || cardControl || pageBackground);
+  const cardTitle = popover === 'theme' ? 'Theme & style'
+    : popover === 'add' ? 'Add to stage'
+    : bgSelected && def.bg ? 'Background'
+    : current ? (current.label ?? current.id)
+    : null;
+  const closeCard = () => {
+    if (popover) setPopover(null);
+    else onSelectLayer(undefined);
+  };
+
   return (
     <div className={styles.panel} data-adjust-panel>
       <input ref={fileRef} type="file" accept="image/*" hidden onChange={onFile} />
@@ -579,6 +601,89 @@ export default function AdjustPanel({
       </div>
 
       <div className={styles.body}>
+        {hasThemeCard && (
+          <div className={styles.toolbar}>
+            <button
+              className={`${styles.toolBtn} ${popover === 'theme' ? styles.toolBtnActive : ''}`}
+              onClick={() => setPopover((p) => (p === 'theme' ? null : 'theme'))}
+              title="Theme & style — accent, fonts, card look"
+              aria-label="Theme & style"
+              aria-pressed={popover === 'theme'}
+            >
+              <Icon name="settings" size={15} /> Theme &amp; style
+            </button>
+          </div>
+        )}
+
+        <div className={styles.label} style={{ marginTop: hasThemeCard ? undefined : 0 }}>Stage</div>
+        <div className={styles.tabs}>
+          {stageIds.map((id) => (
+            <button
+              key={id}
+              className={`${styles.tab} ${id === selectedStage ? styles.tabActive : ''}`}
+              onClick={() => {
+                // Scrolling the preview to this stage is the parent's job now — the stage lives in
+                // the preview iframe, which this panel (in the parent tree) can't reach directly.
+                onSelectStage(id);
+                onSelectLayer(undefined);
+              }}
+            >
+              {stages[id].label}
+            </button>
+          ))}
+        </div>
+
+        <div className={styles.label}>Layers · front to back</div>
+        <div className={styles.layers} ref={layersRef}>
+          {roots.map((l) => renderRow(l, false))}
+          {def.bg && (
+            <div
+              className={`${styles.row} ${bgSelected ? styles.rowActive : ''}`}
+              onClick={() => onSelectLayer(BG_ID)}
+              role="button"
+              data-layer-row={BG_ID}
+            >
+              <span className={styles.grip}> </span>
+              <span className={`${styles.name} ${styles.bgRow}`}>▦ Background</span>
+            </div>
+          )}
+        </div>
+
+        <button
+          className={`${styles.addBtn} ${popover === 'add' ? styles.addBtnActive : ''}`}
+          onClick={() => setPopover((p) => (p === 'add' ? null : 'add'))}
+          title="Add text, a shape, an image or an effect to this stage"
+          aria-label="Add to stage"
+          aria-pressed={popover === 'add'}
+        >
+          <Icon name="plus" size={16} />
+        </button>
+
+        <div className={styles.divider}>
+          <div className={styles.btnRow}>
+            <button className={styles.btn} onClick={copyToOther}>
+              Copy to {breakpoint === 'mobile' ? 'desktop' : 'mobile'}
+            </button>
+            <button className={`${styles.btn} ${styles.btnGhost}`} onClick={resetStage} disabled={!dirty}>
+              Reset stage
+            </button>
+          </div>
+          <div className={styles.note}>{note}</div>
+        </div>
+      </div>
+
+      {/* Floating card to the LEFT of the dock, over the preview. One at a time: the Theme and
+          Add pop-overs when toggled, otherwise the detail editor for whatever's selected. Lives
+          outside `.body` so the dock's own scrolling never clips it. */}
+      {cardTitle && (
+        <div className={styles.card} data-adjust-card={popover ?? 'detail'}>
+          <div className={styles.cardHeader}>
+            <span className={styles.cardTitle}>{cardTitle}</span>
+            <button className={styles.close} onClick={closeCard} aria-label="Close card">×</button>
+          </div>
+          <div className={styles.cardBody}>
+            {popover === 'theme' ? (
+              <>
         {slotTheme && (
           <>
             <div className={styles.label} style={{ marginTop: 0 }}>Theme · RSVP &amp; wishes</div>
@@ -705,60 +810,26 @@ export default function AdjustPanel({
           </>
         )}
 
-        <div className={styles.label}>Stage</div>
-        <div className={styles.tabs}>
-          {stageIds.map((id) => (
-            <button
-              key={id}
-              className={`${styles.tab} ${id === selectedStage ? styles.tabActive : ''}`}
-              onClick={() => {
-                // Scrolling the preview to this stage is the parent's job now — the stage lives in
-                // the preview iframe, which this panel (in the parent tree) can't reach directly.
-                onSelectStage(id);
-                onSelectLayer(undefined);
-              }}
-            >
-              {stages[id].label}
-            </button>
-          ))}
-        </div>
-
-        <div className={styles.label}>Layers · front to back</div>
-        <div className={styles.layers}>
-          {roots.map((l) => renderRow(l, false))}
-          {def.bg && (
-            <div
-              className={`${styles.row} ${bgSelected ? styles.rowActive : ''}`}
-              onClick={() => onSelectLayer(BG_ID)}
-              role="button"
-            >
-              <span className={styles.grip}> </span>
-              <span className={`${styles.name} ${styles.bgRow}`}>▦ Background</span>
-            </div>
-          )}
-        </div>
-
-        <div className={styles.btnRow}>
-          <button className={styles.btn} onClick={() => addLayer('text')}>+ Text</button>
-          <button className={styles.btn} onClick={() => addLayer('shape')}>+ Shape</button>
-          <button className={styles.btn} onClick={() => addLayer('water')} title="Ambient drift, ripples and glints over water painted into the background">+ Water</button>
-          {onUploadImage && (
-            <button className={styles.btn} onClick={() => pickImage('layer')}>+ Image</button>
-          )}
-        </div>
-
-        {slotCatalog && slotCatalog.length > 0 && (
-          <>
-            <button
-              className={`${styles.btn} ${styles.btnGhost}`}
-              onClick={() => setBlockMenuOpen((o) => !o)}
-              style={{ width: '100%', marginTop: 6 }}
-            >
-              {blockMenuOpen ? '✕ Close block menu' : '+ Block (RSVP, wishes, itinerary…)'}
-            </button>
-            {blockMenuOpen && (
-              <div style={{ marginTop: 6 }}>
-                {SLOT_CATALOG_GROUPS.map((group) => {
+              </>
+            ) : popover === 'add' ? (
+              <>
+                <div className={styles.addGrid}>
+                  <button className={styles.addTile} onClick={() => addLayer('text')}>
+                    <Icon name="type" size={18} /> Text
+                  </button>
+                  <button className={styles.addTile} onClick={() => addLayer('shape')}>
+                    <Icon name="grid" size={18} /> Shape
+                  </button>
+                  {onUploadImage && (
+                    <button className={styles.addTile} onClick={() => pickImage('layer')}>
+                      <Icon name="image" size={18} /> Image
+                    </button>
+                  )}
+                  <button className={styles.addTile} onClick={() => addLayer('water')} title="Ambient drift, ripples and glints over water painted into the background">
+                    <Icon name="sparkles" size={18} /> Water
+                  </button>
+                </div>
+                {slotCatalog && slotCatalog.length > 0 && SLOT_CATALOG_GROUPS.map((group) => {
                   const entries = slotCatalog.filter((e) => e.group === group);
                   if (!entries.length) return null;
                   return (
@@ -778,25 +849,11 @@ export default function AdjustPanel({
                     </div>
                   );
                 })}
-              </div>
-            )}
-          </>
-        )}
-
-        {canReveal && (
-          <button
-            className={`${styles.btn} ${revealOverflow ? '' : styles.btnGhost}`}
-            onClick={onToggleReveal}
-            style={{ width: '100%', marginTop: 6 }}
-            title="Show art cropped by the device edge"
-          >
-            {revealOverflow ? '✓ Revealing off-screen' : 'Reveal off-screen'}
-          </button>
-        )}
-
+              </>
+            ) : (
+              <>
         {bgSelected && def.bg ? (
           <>
-            <div className={styles.label}>Background</div>
             <div className={styles.control} style={{ gridTemplateColumns: '54px 1fr' }}>
               <span>Fit</span>
               <select
@@ -832,8 +889,6 @@ export default function AdjustPanel({
           </>
         ) : current ? (
           <>
-            <div className={styles.label}>{current.label ?? current.id}</div>
-
             {current.locked && (
               <p className={styles.lockedNote}>
                 🔒 Locked — protected from canvas click/drag and from edits here. Click 🔓 in the
@@ -1410,24 +1465,13 @@ export default function AdjustPanel({
               </button>
             )}
           </>
-        ) : (
-          <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 8 }}>
-            Pick a layer above, or add one with + Text / + Shape / + Image.
-          </p>
-        )}
+        ) : null}
 
-        <div className={styles.divider}>
-          <div className={styles.btnRow}>
-            <button className={styles.btn} onClick={copyToOther}>
-              Copy to {breakpoint === 'mobile' ? 'desktop' : 'mobile'}
-            </button>
-            <button className={`${styles.btn} ${styles.btnGhost}`} onClick={resetStage} disabled={!dirty}>
-              Reset stage
-            </button>
+              </>
+            )}
           </div>
-          <div className={styles.note}>{note}</div>
         </div>
-      </div>
+      )}
     </div>
   );
 }

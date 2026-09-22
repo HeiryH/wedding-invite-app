@@ -4,7 +4,6 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Icon } from '@/components/ui/Icon';
 import type { Wedding } from '@/lib/api';
 import { urlSegmentForEventType } from '@/lib/eventTypes';
-import { REVEAL_VPAD } from '@/components/templates/_shared/types';
 import {
   DEVICE_PRESETS, defaultPresetFor, type Device, type DevicePreset, type SafeAreaInsets,
 } from '@/lib/devicePresets';
@@ -63,17 +62,11 @@ interface PreviewPanelProps {
   editorMode: EditorMode;
   onShowEditor: () => void;
   wedding: Wedding | null;
-  /** Previewed device box. Lifted to the customize page because the template needs it too —
-   *  "Reveal off-screen" pins each stage to `frame.svh`, not the raw device box. */
+  /** Previewed device box. Lifted to the customize page because the template needs it too (the
+   *  frame-scoped `--f*` units the standalone preview derives from it). */
   frame: PreviewFrame;
   setFrame: (f: PreviewFrame) => void;
-  /** "Reveal off-screen" (PRO Adjust): widen the canvas so art cropped by the device edge spills
-   *  into view around the (dashed-framed) device column instead of being clipped. */
-  revealOverflow?: boolean;
 }
-
-/** How much wider than the device the reveal canvas is (extra room = bleed you can see). */
-const REVEAL_FACTOR = 2.2;
 
 const numInputStyle: React.CSSProperties = {
   width: 54, padding: '3px 6px',
@@ -90,7 +83,6 @@ export function PreviewPanel({
   iframeRef, device, setDevice, manualZoom, setManualZoom,
   activeBlock, onSelectBlock, sectionOrder, editorMode, onShowEditor, wedding,
   frame, setFrame,
-  revealOverflow = false,
 }: PreviewPanelProps) {
   const stageRef = useRef<HTMLDivElement>(null);
   const [autoZoom, setAutoZoom] = useState(80);
@@ -106,12 +98,10 @@ export function PreviewPanel({
   const visibleW = frame.w;
   const visibleH = frame.svh;
 
-  // Reveal mode enlarges the canvas around a pinned device-sized stage so cropped art spills into
-  // the extra room on all four sides. Width uses REVEAL_FACTOR; height adds REVEAL_VPAD top+bottom
-  // (kept in sync with Stage's margin-block). This is the *visual* device box: what the clip box
-  // and auto-fit math size themselves to, and what should appear on screen at 100% zoom.
-  const iframeW = revealOverflow ? Math.round(visibleW * REVEAL_FACTOR) : visibleW;
-  const iframeH = revealOverflow ? Math.round(visibleH * (1 + 2 * REVEAL_VPAD)) : visibleH;
+  // The *visual* device box: what the clip box and auto-fit math size themselves to, and what
+  // should appear on screen at 100% zoom.
+  const iframeW = visibleW;
+  const iframeH = visibleH;
 
   // The real invitation *requests* `initial-scale: 0.9`, but a real-device measurement showed an
   // iPhone actually renders at `frame.scale` (0.765, not 0.9 — see the long comment in
@@ -334,14 +324,13 @@ export function PreviewPanel({
         flex: 1, display: 'grid', placeItems: 'center',
         padding: '72px 56px 80px', overflow: 'hidden', minHeight: 0, minWidth: 0,
       }}>
-        {/* Clip box sized exactly to the scaled iframe — no bezel, no padding. In reveal mode it
-            grows to the widened canvas; the per-stage dashed frame marks the real device bounds. */}
+        {/* Clip box sized exactly to the scaled iframe — no bezel, no padding. */}
         <div style={{
           width: iframeW * zoom / 100,
           height: iframeH * zoom / 100,
           overflow: 'hidden',
-          background: revealOverflow ? 'var(--surface-sunken)' : '#fff',
-          borderRadius: revealOverflow ? 8 : DEVICE_RADIUS[device],
+          background: '#fff',
+          borderRadius: DEVICE_RADIUS[device],
           boxShadow: '0 32px 80px -16px rgba(26,23,24,0.22), 0 12px 24px -8px rgba(26,23,24,0.10)',
           flexShrink: 0,
         }}>

@@ -13,12 +13,6 @@ import type { Wedding, Wish, Photo, ItineraryItem, SeatingTable, CreateWish } fr
 
 export type Breakpoint = 'mobile' | 'desktop';
 
-/**
- * "Reveal off-screen" vertical padding, as a fraction of the device height, added above and below
- * each pinned stage so top/bottom bleed shows. Shared by `Stage` (the stage's margin-block) and
- * `PreviewPanel` (the widened iframe height) — they must agree, so keep it here.
- */
-export const REVEAL_VPAD = 0.25;
 
 /**
  * `slot` layers render live React content (a form, the countdown) but position like art.
@@ -502,8 +496,6 @@ export interface EditorHandle {
   breakpoint: Breakpoint;
   selectedStage?: string;
   selectedLayer?: string;
-  /** Editor-only: relax the stage's overflow clip so layers nudged off-screen stay visible. */
-  revealOverflow?: boolean;
   /** @deprecated superseded by `frame.w`/`frame.svh`. Kept for one release so a stale cached
    *  payload degrades gracefully instead of silently falling back to the template's own 390×844
    *  constants — see `app/(standalone)/organizer-admin/preview/page.tsx`'s derivation. */
@@ -511,7 +503,7 @@ export interface EditorHandle {
   /** @deprecated superseded by `frame.svh`. Note this used to mean the *screen* height; `frame.svh`
    *  means the Safari-*visible* height, which is ~20% shorter — see docs/FIX_QUEUE.md Issue 2. */
   frameH?: number;
-  /** Editor-only: the previewed device box each stage pins itself to while revealing, so bleed
-   *  spills around it. Falls back to the template's own constants when absent. */
+  /** Editor-only: the previewed device box (the emulated layout size), which the standalone
+   *  preview turns into the frame-scoped `--f*` units (see `_shared/FrameViewportVars.tsx`). */
   frame?: FrameViewport;
 }

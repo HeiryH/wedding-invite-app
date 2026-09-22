@@ -18,9 +18,6 @@ describe('AdjustPanel sheet form controls', () => {
         onSelectStage={vi.fn()}
         onSelectLayer={vi.fn()}
         onClose={vi.fn()}
-        canReveal={false}
-        revealOverflow={false}
-        onToggleReveal={vi.fn()}
       />,
     );
 

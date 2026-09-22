@@ -806,8 +806,6 @@ export default function CustomizePage() {
   const [adjusting, setAdjusting] = useState(false);
   const [selectedStage, setSelectedStage] = useState<string>('');
   const [selectedLayer, setSelectedLayer] = useState<string | undefined>();
-  // "Reveal off-screen" relaxes the stage clip in the preview so nudged-out layers stay grabbable.
-  const [revealOverflow, setRevealOverflow] = useState(false);
 
   // Undo/redo — a linear history of snapshots over the whole "unsaved draft" surface
   // (draftConfig/weddingDraft/sectionOrder). Snapshot-based rather than per-action, so it needs no
@@ -890,7 +888,6 @@ export default function CustomizePage() {
   }, [wedding?.templateId, wedding?.templateStagesJson, sectionOrder, draftConfig, itinerary.length, photoBoothEnabled]);
 
   const canAdjust = isPro && !!layout;
-  const canReveal = Boolean(layout?.reveal);
   const stageIds = layout?.stageIds ?? [];
   const activeStage = selectedStage && stageIds.includes(selectedStage) ? selectedStage : stageIds[0];
 
@@ -931,7 +928,6 @@ export default function CustomizePage() {
     setAdjusting((a) => {
       const next = !a;
       setEditorMode(next ? 'collapsed' : 'expanded');
-      if (!next) setRevealOverflow(false); // don't leave the clip relaxed after closing the dock
       return next;
     });
   }, []);
@@ -987,7 +983,6 @@ export default function CustomizePage() {
         breakpoint: previewBreakpoint,
         selectedStage: activeStage,
         selectedLayer,
-        revealOverflow: revealOverflow && canReveal,
         // The device box the stage pins itself to while revealing — the *emulated* layout size
         // (see previewBreakpoint above / lib/inviteViewport.ts), not the raw device box, so a
         // sheet or any other cqi/%-sized content pinned against this frame matches what a guest's
@@ -1020,7 +1015,7 @@ export default function CustomizePage() {
         { type: 'PREVIEW_UPDATE', payload: payloadRef.current }, window.location.origin,
       );
     });
-  }, [draftConfig, weddingDraft, coupleMedia, photoBoothEnabled, itinerary, wedding, adjusting, previewBreakpoint, activeStage, selectedLayer, revealOverflow, canReveal, frame]);
+  }, [draftConfig, weddingDraft, coupleMedia, photoBoothEnabled, itinerary, wedding, adjusting, previewBreakpoint, activeStage, selectedLayer, frame]);
 
   // Replay the latest payload when the iframe (re)mounts, and handle canvas-originated selection
   // + drag/resize. Layer.tsx posts these directly (it has no callback prop into this tree — it's
@@ -1829,7 +1824,6 @@ export default function CustomizePage() {
           wedding={wedding}
           frame={frame}
           setFrame={setFrame}
-          revealOverflow={canAdjust && adjusting && revealOverflow && canReveal}
         />
 
         {/* Right: stage-layout Adjust dock (PRO, Template 7). Config flows straight into
@@ -1840,6 +1834,8 @@ export default function CustomizePage() {
             borderLeft: '1px solid var(--border-subtle)',
             background: 'var(--surface-card)',
             display: 'flex', flexDirection: 'column', minHeight: 0,
+            // The dock's floating detail/theme/add card hangs off its LEFT edge over the preview.
+            position: 'relative', overflow: 'visible',
           }}>
             <AdjustPanel
               stages={layout!.stages}
@@ -1861,9 +1857,6 @@ export default function CustomizePage() {
               }}
               onSelectLayer={setSelectedLayer}
               onClose={toggleAdjust}
-              canReveal={canReveal}
-              revealOverflow={revealOverflow}
-              onToggleReveal={() => setRevealOverflow((r) => !r)}
               onUploadImage={handleAdjustUpload}
               slotTheme={Boolean(layout?.slotTheme)}
               slotThemeAccentDefault={layout?.slotThemeAccentDefault ?? '#2b2a28'}

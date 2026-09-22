@@ -58,14 +58,6 @@ interface Template7Props {
   editor?: EditorHandle;
 }
 
-/** Fallback device dims per breakpoint. In "Reveal off-screen" mode the stage is pinned to the
- *  real device size so bleed spills around it in the widened preview iframe; the customize page
- *  sends the size actually being previewed as `editor.frame.{w,svh}` and these are only used when
- *  it doesn't (e.g. the authoring preview, which never reveals). Height is the Safari-*visible*
- *  (svh) height, not the whole screen — see docs/FIX_QUEUE.md Issue 2. */
-const REVEAL_FRAME_W: Record<Breakpoint, number> = { mobile: 390, desktop: 1440 };
-const REVEAL_FRAME_H: Record<Breakpoint, number> = { mobile: 664, desktop: 900 };
-
 /** The shared-art stage for the compiled ceremony row (see `data/stages.ts`). Stable identity so
  *  the `useStageLayout` memo below isn't invalidated every render. */
 const CEREMONY_RAIL_IDS: StageId[] = ['ceremony-rail'];
@@ -376,9 +368,6 @@ export default function Template7({
             // drag/resize and which layer's outline actually shows as selected.
             editing={editing}
             stageActive={editing && editor?.selectedStage === r.def.id}
-            revealOverflow={editing && Boolean(editor?.revealOverflow)}
-            revealFrameW={editor?.frame?.w ?? editor?.frameW ?? REVEAL_FRAME_W[breakpoint]}
-            revealFrameH={editor?.frame?.svh ?? editor?.frameH ?? REVEAL_FRAME_H[breakpoint]}
             selectedLayer={editor?.selectedLayer}
           />
         ));

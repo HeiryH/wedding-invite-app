@@ -215,8 +215,9 @@ See `docs/FIX_QUEUE.md` Issue 2. Two facts every new stage/template should build
   `var(--f*, <unit>)`, never a raw `vw`/`vh`/`svh`.** `--fvw`/`--fvh`/`--fsvh`/`--fsat../--fsal` are
   defined only inside the Adjust Editor's standalone preview (`_shared/FrameViewportVars.tsx`) and
   every use site falls back to the literal unit (`var(--fsvh, 100svh)`), so this costs a guest's
-  browser nothing. It matters because the editor's preview iframe deliberately widens beyond the
-  device box it's simulating under "Reveal off-screen" (2.2x/1.5x) — a raw viewport unit inside that
+  browser nothing. It matters because the editor's preview iframe can be a different size from
+  the device box it's simulating (the H slider edits the *visible* `svh` box; the old "Reveal
+  off-screen" mode, removed 2026-09-22, widened it outright) — a raw viewport unit inside that
   iframe reads the *ambient* iframe size, not the device box being previewed. `.stage`/`.slot`/
   `.artCanvas`/`.sheetCard` are already `container-type` boxes, so `cqi` inside them is safe as-is;
   it's specifically `position: fixed` content (sheets, lightboxes, `HorizontalRail`) and section
@@ -229,8 +230,7 @@ There are **no `templateId === N` branches** in `customize/page.tsx` any more �
 them; add a registry entry. Two deliberately different geometry families live behind it:
 
 - **Fixed-stage compositor** (`reveal: true`, `slotTheme: true`) — full-screen `100svh` stages,
-  absolute layer positions as data (`{x,y,w,h,z}`, not CSS). Templates 7, 10 and 14.
-  `"Reveal off-screen"` only applies here.
+  absolute layer positions as data (`{x,y,w,h,z}`, not CSS). Templates 7, 10, 13 and 14.
 - **Flow + overlay** (`reveal: false`) — Templates 1–6: real DOM flow with a `SectionOverlay` per
   section plus `anchor` pseudo-layers (`useAnchors`) that nudge existing elements by transform.
 
@@ -412,8 +412,7 @@ and wires them into the shared engine via `<EngineProvider>` in `index.tsx`.
   - **Transparency fix**: rail panels pass `transparent` to `Stage` so `.stage`'s opaque `#E8E0D2`
     fill doesn't hide the shared background beneath.
   - Notes: `useParallax` skips `[data-rail]` descendants (the rail owns their motion); reduced-motion
-    / `<2` beats fall back to the stack; "Reveal off-screen" is **not** applied to rail panels (its
-    `overflow:visible`/`margin:auto` pinning fights the scroller — a known limitation). A single
+    / `<2` beats fall back to the stack. A single
     stored delta per `stageId`/breakpoint means shared-art positions are tuned for one layout —
     switching stack↔row may want re-tuning; and no per-beat layer can sit *in front of* its slot in
     row mode (plane z:1 < track z:2).
@@ -450,13 +449,25 @@ GSAP-scrubbed canvas is not a safe target).
 
 ### The Adjust panel (`_shared/adjust/AdjustPanel.tsx`)
 
-PRO-tier stage editor. The selected-layer detail is split into two tabs: **Layout** (rename, slide
-X/Y/W/H/scale/opacity/depth, chain) and **Animation** (see the animation note below). In the layer
-list: **drag rows to reorder z** (anchors don't drag — they don't z-stack), hide, delete (originals
-included; see the anchor-delete note above), and a **nested sub-layer tree** (a layer with children
-shows a disclosure caret). Stage-wide: `+ Text` / `+ Shape` / `+ Image`, a synthetic **Background**
-row (fit + position + scale + replace image), a **Reveal off-screen** toggle, copy a layout to the
-other breakpoint, and reset.
+PRO-tier stage editor. **Layout (reworked 2026-09-22):** the dock column itself holds only the
+*navigation* — a "Theme & style" gear button, the Stage tabs, the layer list, a `+` button under
+it, and Copy/Reset. Everything else lives in **one floating card that hangs off the dock's LEFT
+edge over the preview** (`.card` in `AdjustPanel.module.css`, `position:absolute; right:100%`,
+rendered outside `.body` so the dock's own scroll can't clip it; the host `<aside>` on the
+customize/authoring pages must stay `position:relative; overflow:visible`). The card shows one of:
+- **Theme & style** (gear): slot-theme accent / heading & body font, Card style (None/Radial/
+  Glass), and Background·Flow for `pageBackground` templates. Gear only renders when at least one
+  of `slotTheme`/`cardControl`/`pageBackground` is set.
+- **Add to stage** (`+`): Text / Shape / Image / Water tiles, plus the slot-catalog Block groups
+  in the authoring editor.
+- **Detail** (whenever a layer or the Background row is selected and no pop-over is open): the
+  selected layer's **Layout** / **Style** / **Animation** tabs (or Text/Container for a sheet
+  form), or the Background fit/position/scale/replace controls. Closing the card deselects.
+In the layer list: **drag rows to reorder z** (anchors don't drag — they don't z-stack), an
+**eye** toggle for hidden, a lock toggle (a **locked row renders dimmed**), delete (originals
+included; see the anchor-delete note above), and a **nested sub-layer tree** (a layer with
+children shows a disclosure caret). **Selecting a layer from the preview scrolls its row into
+view** (`data-layer-row` + `scrollIntoView`), force-expanding a collapsed parent.
 
 - **It's a right-docked column on the customize page, NOT inside the preview.** The customize
   page (`app/couple-admin/customize/page.tsx`) picks a per-template `{stages, keyPrefix}` engine
@@ -471,23 +482,20 @@ other breakpoint, and reset.
   mirrors config into the preview iframe, which re-renders. Template7's old in-iframe optimistic
   shadow / `PREVIEW_CONFIG_PATCH` / echo-guard is **gone** — don't reintroduce it.
 - The `editor` prop (an `EditorHandle`) is display-only: `{ enabled, breakpoint, selectedStage,
-  selectedLayer, revealOverflow }`, used to outline the selected layer and drive "Reveal
-  off-screen". It rides the `PREVIEW_UPDATE` payload, so **any new editor field must also be
+  selectedLayer, frame }`, used to outline the selected layer and derive the frame-scoped `--f*`
+  units. It rides the `PREVIEW_UPDATE` payload, so **any new editor field must also be
   forwarded in the standalone preview page** (`app/(standalone)/couple-admin/preview/page.tsx`),
   which rebuilds the object field-by-field. Selecting a stage tab scrolls the preview via a
   `PREVIEW_SCROLL {sectionId}` message from the parent.
-- **"Reveal off-screen"** shows art cropped by the device edge. It's **T7-only** (`canReveal`,
-  gated on the full-screen Stage compositor — T5 is fluid DOM overlay, so widening would just
-  reflow it larger; the toggle is hidden there). The iframe is a hard clip, so the fix spans two
-  places: `PreviewPanel` **enlarges the preview canvas** (`REVEAL_FACTOR` wide, `REVEAL_VPAD`
-  top+bottom) while `Stage` **pins each stage to the real device size** (`REVEAL_FRAME_W/H` in
-  Template7's `index.tsx`, applied inline when `data-reveal`) centred with `overflow: visible` and
-  `margin-block: REVEAL_VPAD`, so bleed spills on all four sides around a dashed device frame
-  (`Stage.module.css` `::after`) at full size — *not* a zoom-out.
+- **"Reveal off-screen" was removed on 2026-09-22** (`revealOverflow`/`canReveal`,
+  `REVEAL_FACTOR`/`REVEAL_VPAD`/`REVEAL_FRAME_W/H`, `Stage`'s `data-reveal` pinning and its dashed
+  `::after` frame are all gone — `git log` if you need the mechanism back). `TemplateEngine.reveal`
+  in `registry.ts` still exists purely as the Stage-family marker.
 - **Type must be `cqi`, not `vw`/`vmin`** in Stage content (`.stage` is `container-type:
-  inline-size`; see `Stage.module.css`, `Layer.tsx`, `Template7.module.css`). Reveal pins the stage
-  narrower than the widened iframe, so viewport units would inflate the countdown/names; `cqi`
-  resolves against the stage and equals `vw` whenever the stage fills the viewport (normal mode).
+  inline-size`; see `Stage.module.css`, `Layer.tsx`, `Template7.module.css`). The preview iframe
+  isn't always the size of the device box being simulated, so viewport units would inflate the
+  countdown/names; `cqi` resolves against the stage and equals `vw` whenever the stage fills the
+  viewport.
 - **Animation** is per-layer, split into **enter** and **exit**, both persisted on `Layer`
   (`anim` + `animDur`, `animOut`; all in `OVERRIDABLE`). The reveal engine is a shared,
   data-attribute-driven **`_shared/reveal.css`** (imported once by `Layer.tsx`):
@@ -659,10 +667,9 @@ ScrollTrigger.create({
   plus device presets (`lib/devicePresets.ts`) including **Fold cover 344×882** and **Landscape
   844×390**, so odd shapes are testable without hardware. The H slider edits the *visible* (`svh`)
   box, not the whole screen — see `docs/FIX_QUEUE.md` Issue 2, which also covers why the iframe is
-  now sized to `svh` in normal mode, not just under Reveal. "Reveal off-screen" honours those
-  dimensions: the frame rides `EditorHandle.frame` (`{w, h, svh, safe}`, `frameW/frameH` kept as a
-  deprecated fallback) through `PREVIEW_UPDATE` (and the standalone preview page's field-by-field
-  rebuild) to the template, which previously pinned its own hardcoded 390×844.
+  now sized to `svh`. The frame rides `EditorHandle.frame` (`{w, h, svh, safe}`, `frameW/frameH`
+  kept as a deprecated fallback) through `PREVIEW_UPDATE` (and the standalone preview page's
+  field-by-field rebuild) to the template, where `FrameViewportVars` turns it into the `--f*` units.
 
 ## Content Roadmap — SHIPPED (approved Apr 2026, delivered)
 Phases 1–4 are done and in production:

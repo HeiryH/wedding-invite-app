@@ -1,7 +1,6 @@
 'use client';
 
 import type { Layer as LayerModel, ObjectFit, SlotProps, StageDef } from './types';
-import { REVEAL_VPAD } from './types';
 import { useEngine } from './engine';
 import { useReducedMotion } from '@/lib/useReducedMotion';
 import Layer from './Layer';
@@ -26,12 +25,6 @@ interface Props {
   /** True only when this stage is the one currently open in the Adjust dock — gates full
    *  drag/resize and which layer's outline actually shows as "selected" (see Layer.tsx). */
   stageActive?: boolean;
-  /** Editor-only: relax the overflow clip so off-screen layers stay grabbable. */
-  revealOverflow?: boolean;
-  /** Editor-only: the real device width/height (px) to pin the stage to while revealing, so bleed
-   *  spills around it in the widened preview iframe rather than being clipped. */
-  revealFrameW?: number;
-  revealFrameH?: number;
   selectedLayer?: string;
   /** When true the `<section>` omits its `id` — a horizontal rail carries the scroll-target id on
    *  its own per-panel anchor instead, to avoid duplicate ids. `data-stage` is kept for observers. */
@@ -45,7 +38,7 @@ interface Props {
 
 export default function Stage({
   def, layers, bgFit, bgPosition, bgScale, bgSrc, seen, slotProps, eager, editing, stageActive,
-  revealOverflow, revealFrameW, revealFrameH, selectedLayer, suppressId, transparent,
+  selectedLayer, suppressId, transparent,
 }: Props) {
   const { assetRoot, assetSizes } = useEngine();
   const reducedMotion = useReducedMotion();
@@ -128,23 +121,7 @@ export default function Stage({
       data-seen={seen}
       data-editing={editing || undefined}
       data-stage-active={stageActive || undefined}
-      data-reveal={revealOverflow || undefined}
-      style={{
-        ...(transparent ? { background: 'transparent' } : null),
-        ...(revealOverflow && revealFrameW && revealFrameH
-          ? {
-              width: revealFrameW,
-              maxWidth: 'none',
-              height: revealFrameH,
-              minHeight: revealFrameH,
-              marginLeft: 'auto',
-              marginRight: 'auto',
-              // Vertical room above/below so top/bottom bleed shows (matches the widened iframe).
-              marginTop: revealFrameH * REVEAL_VPAD,
-              marginBottom: revealFrameH * REVEAL_VPAD,
-            }
-          : null),
-      }}
+      style={transparent ? { background: 'transparent' } : undefined}
       aria-label={def.label}
     >
       {bgUrl && def.bgVideo && !bgSrc && !reducedMotion ? (
