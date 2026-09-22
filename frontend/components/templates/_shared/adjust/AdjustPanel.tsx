@@ -593,10 +593,11 @@ export default function AdjustPanel({
     <div className={styles.panel} data-adjust-panel>
       <input ref={fileRef} type="file" accept="image/*" hidden onChange={onFile} />
 
-      {/* Card column to the LEFT of the dock, in normal flow (not floating over the preview — the
-          preview's auto-fit zoom observes its own box and shrinks to make room). One at a time:
-          the Theme and Add pop-overs when toggled, otherwise the detail editor for whatever's
-          selected. Rendered before the dock so it lands on the dock's left. */}
+      {/* Pop-up card floating to the LEFT of the dock, over the preview — it never takes layout
+          space, so the preview doesn't shift when it opens. One at a time: the Theme and Add
+          pop-overs when toggled, otherwise the detail editor for whatever's selected. Lives
+          outside `.dock`'s scrolling body so it can't be clipped; the host <aside> must keep
+          `overflow: visible`. */}
       {cardTitle && (
         <div className={styles.card} data-adjust-card={popover ?? 'detail'}>
           <div className={styles.cardHeader}>

@@ -440,7 +440,7 @@ export default function AuthoringEditorPage() {
         </div>
 
         {/* Adjust dock */}
-        <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+        <div style={{ width: 320, flexShrink: 0, position: 'relative', overflow: 'visible', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
           {activeDef && (
             <AdjustPanel
               stages={skeleton}
