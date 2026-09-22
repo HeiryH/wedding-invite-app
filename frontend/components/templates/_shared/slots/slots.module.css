@@ -74,7 +74,7 @@
 .countdown {
   display: flex;
   gap: clamp(0.5rem, 2.5cqi, 1.4rem);
-  margin-top: 1.1rem;
+  /* margin-top: 1.1rem; */
 }
 .countUnit {
   display: flex;

@@ -45,6 +45,7 @@ const TEMPLATE_ROOTS: Record<number, string[]> = {
   9: ['Template9.tsx'],
   10: ['Template10.tsx', 'Template10-sunnysafari', '_shared'],
   12: ['Template12.tsx', 'Template12-dreamywoodland', '_shared'],
+  13: ['Template13.tsx', 'Template13-dinodoodle', '_shared'],
 };
 
 /** Keys with no literal call site anywhere in template markup — read some other way (a backend-
@@ -126,6 +127,17 @@ describe('templateConfigSchema field scoping', () => {
       'footer.tagline',
     ]) {
       expect(keys.has(key), `${key} should be editable for template 12`).toBe(true);
+    }
+  });
+
+  it('exposes Dino Doodle stage, form, and gallery controls', () => {
+    const keys = new Set(getConfigFields(13, 'SUPER_ADMIN').map((field) => field.key));
+    for (const key of [
+      'section.order', 'walimah.body', 'rsvp.name_placeholder', 'rsvp.submit_label',
+      'wish.form_title', 'wish.submit_label', 'photobooth.upload_label',
+      'photobooth.frameArt', 'nav.layout', 'scene.parallax', 'music.url', 'footer.tagline',
+    ]) {
+      expect(keys.has(key), `${key} should be editable for template 13`).toBe(true);
     }
   });
 });

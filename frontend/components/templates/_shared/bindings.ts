@@ -52,6 +52,8 @@ function resolveToken(token: string, slotProps: SlotProps): string | undefined {
     case 'venue': return wedding.venue;
     case 'venueAddress': return wedding.venueAddress ?? '';
     case 'date': return formatDate(new Date(wedding.weddingDate), arg);
+    case 'time': return new Date(wedding.weddingDate).toLocaleTimeString('en-GB', { hour: 'numeric', minute: '2-digit' });
+    case 'walimah.body': return t('walimah.body', '');
     // Native Event fields (see Wedding's own comment) — a PARTY has one honoree and no "sides",
     // a CEREMONY has no individual names at all. `honoree` mirrors Template8's proven fallback
     // chain so a text layer reading it behaves the same as that hand-coded template.
@@ -77,6 +79,8 @@ export const BINDING_TOKENS = [
   { token: 'date:ordinal', label: 'Date — ordinal (12th December 2026)' },
   { token: 'date:weekday', label: 'Date — weekday (Saturday)' },
   { token: 'date:hijri', label: 'Date — Hijri' },
+  { token: 'time', label: 'Event time' },
+  { token: 'walimah.body', label: 'Ceremony / event details' },
   { token: 'eventTitle', label: 'Event title (CEREMONY)' },
   { token: 'name1', label: 'Name 1' },
   { token: 'name2', label: 'Name 2' },

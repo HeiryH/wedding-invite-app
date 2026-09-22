@@ -1,0 +1,42 @@
+.wrapper {
+  position: relative;
+  width: 100%;
+  overflow-x: clip;
+  background: #173f33;
+  color: #173f33;
+  font-family: var(--slot-font-body), system-ui, sans-serif;
+}
+
+.footer {
+  position: relative;
+  z-index: 5;
+  padding: 2rem 1rem 5.5rem;
+  text-align: center;
+  background: #173f33;
+}
+
+.footerTagline {
+  margin: 0;
+  color: #f6e5b6;
+  font-family: var(--slot-font-display), system-ui, sans-serif;
+  font-size: .82rem;
+  font-weight: 800;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+
+.musicBtn {
+  position: fixed;
+  top: 1rem;
+  right: 1rem;
+  z-index: 40;
+  display: grid;
+  width: 2.5rem;
+  height: 2.5rem;
+  place-items: center;
+  color: #fff1c5;
+  background: rgba(12, 47, 38, .92);
+  border: 1px solid rgba(255, 241, 197, .35);
+  border-radius: 50%;
+  cursor: pointer;
+}

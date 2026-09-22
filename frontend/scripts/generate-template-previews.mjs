@@ -25,6 +25,7 @@ const CODES = [
   'sunny-safari',
   'rose-horizon',
   'dreamy-woodland',
+  'dino-doodle-party',
 ];
 
 const BASE = 'http://localhost:3000';

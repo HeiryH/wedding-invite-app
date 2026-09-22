@@ -1,0 +1,58 @@
+.composite {
+  width: 100%;
+  text-align: center;
+  color: #183f32;
+  font-family: var(--slot-font-body), system-ui, sans-serif;
+  text-wrap: balance;
+}
+
+.composite > div { margin: 0.28rem 0; }
+.hero { color: #173d34; text-shadow: 0 1px rgba(255,255,255,.55); }
+.eyebrow, .age, .cue, .note, .detailLine, .copy, .fact { margin: 0; }
+.eyebrow { font: 800 clamp(.65rem, 2.3cqi, .92rem)/1.05 var(--slot-font-display); letter-spacing: .08em; text-transform: uppercase; }
+.heroTitle { margin: .1rem 0; font: 900 clamp(1rem, 4.2cqi, 1.7rem)/.98 var(--slot-font-display); text-transform: uppercase; }
+.honoree { margin: .08rem 0; color: #0f514d; font: 900 clamp(2.2rem, 10cqi, 4.2rem)/.82 var(--slot-font-display); letter-spacing: .025em; text-transform: uppercase; }
+.age { color: #6e281e; font: 900 clamp(.85rem, 3.2cqi, 1.25rem)/1 var(--slot-font-display); text-transform: uppercase; }
+.detailLine { font-size: clamp(.66rem, 2.15cqi, .88rem); font-weight: 800; letter-spacing: .02em; text-transform: uppercase; }
+.countdown { display: flex; justify-content: center; gap: clamp(.42rem, 2cqi, .85rem); margin: .55rem auto; }
+.countUnit { display: grid; min-width: 3.4rem; aspect-ratio: 226 / 239; align-content: center; padding: .42rem .5rem .36rem; background: url('/templates/dino-doodle-party/props/countdown-stone-days.png') center / contain no-repeat; }
+.countUnit strong { font: 900 clamp(1rem, 4cqi, 1.55rem)/1 var(--slot-font-display); }
+.countUnit small { margin-top: .18rem; font-size: .48rem; font-weight: 900; letter-spacing: .08em; text-transform: uppercase; }
+.cue { margin-top: .55rem; font-size: .58rem; font-weight: 900; letter-spacing: .12em; text-transform: uppercase; }
+.cue span { display: block; font-size: 1.1rem; line-height: .7; }
+
+.sectionTitle { margin: 0; color: #173f33; font: 900 clamp(1.45rem, 6.4cqi, 2.6rem)/.92 var(--slot-font-display); letter-spacing: .015em; text-transform: uppercase; text-shadow: 0 2px rgba(255,247,218,.8); }
+.copy { max-width: 31rem; margin-inline: auto; font-size: clamp(.78rem, 2.5cqi, 1rem); font-weight: 700; line-height: 1.4; }
+.details { padding: 1rem .35rem; }
+.factGrid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .5rem; margin: 1rem auto !important; max-width: 33rem; }
+.fact { display: grid; gap: .18rem; padding: .55rem .35rem; background: rgba(246,229,182,.82); border: 2px solid rgba(37,70,49,.5); border-radius: .55rem; font-size: clamp(.62rem, 2cqi, .84rem); font-weight: 800; }
+.fact small { color: #8b3d25; font-size: .52rem; font-weight: 900; letter-spacing: .09em; text-transform: uppercase; }
+.note { font-size: .65rem; font-weight: 900; letter-spacing: .08em; text-transform: uppercase; }
+
+.itinerary { max-width: 31rem; margin-inline: auto; }
+.routeList { display: grid; gap: .62rem; margin: .85rem auto 0; padding: 0; list-style: none; }
+.routeList li { display: grid; grid-template-columns: minmax(4.2rem, .8fr) 1.5fr; align-items: center; gap: .75rem; padding: .45rem .7rem; background: rgba(245,225,174,.86); border: 2px solid rgba(49,57,31,.48); border-radius: .45rem; box-shadow: 0 .18rem 0 rgba(45,39,24,.18); text-align: left; }
+.routeList time { color: #8d3b25; font-size: .72rem; font-weight: 900; text-align: right; text-transform: uppercase; }
+.routeList strong { font: 900 clamp(.72rem, 2.4cqi, .95rem)/1.05 var(--slot-font-display); text-transform: uppercase; }
+
+.actionSection { display: grid; justify-items: center; gap: .25rem; }
+.actionButton, .textButton { border: 0; cursor: pointer; font-family: var(--slot-font-display); font-weight: 900; text-transform: uppercase; }
+.actionButton { min-width: 12rem; margin-top: .45rem; padding: .78rem 1.25rem; color: #fff1c5; background: #9c3e25; border: 2px solid #4c271e; border-radius: .5rem; box-shadow: 0 .28rem 0 #4c271e, 0 .55rem 1.2rem rgba(22,48,33,.22); }
+.actionButton:hover { transform: translateY(-1px); }
+.textButton { padding: .25rem; color: #173f33; background: transparent; text-decoration: underline; text-underline-offset: .2rem; }
+.wishList { max-height: 9rem; margin-top: .45rem; overflow: auto; font-size: .78rem; }
+.galleryWrap { margin-top: .4rem; }
+.galleryWrap > div > h3,
+.galleryWrap > div > p { display: none; }
+.photoBooth { max-width: 33rem; margin-inline: auto; }
+.photoBooth .sectionTitle,
+.photoBooth .copy { color: #f6e5b6; text-shadow: 0 2px #14382f, 0 0 .65rem rgba(8, 30, 24, .8); }
+
+@media (min-width: 800px) {
+  .composite { font-size: 1.08rem; }
+  .countUnit { min-width: 4.2rem; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .actionButton { transition: none; }
+}
