@@ -15,7 +15,7 @@
 .age { color: #6e281e; font: 900 clamp(.85rem, 3.2cqi, 1.25rem)/1 var(--slot-font-display); text-transform: uppercase; }
 .detailLine { font-size: clamp(.66rem, 2.15cqi, .88rem); font-weight: 800; letter-spacing: .02em; text-transform: uppercase; }
 .countdown { display: flex; justify-content: center; gap: clamp(.42rem, 2cqi, .85rem); margin: .55rem auto; }
-.countUnit { display: grid; min-width: 3.4rem; aspect-ratio: 226 / 239; align-content: center; padding: .42rem .5rem .36rem; background: url('/templates/dino-doodle-party/props/countdown-stone-days.png') center / contain no-repeat; }
+.countUnit { display: grid; min-width: 3.4rem; aspect-ratio: 226 / 239; align-content: center; padding: .42rem .5rem .36rem; background: url('/templates/dino-doodle-party/props/countdown-stone-days.webp') center / contain no-repeat; }
 .countUnit strong { font: 900 clamp(1rem, 4cqi, 1.55rem)/1 var(--slot-font-display); }
 .countUnit small { margin-top: .18rem; font-size: .48rem; font-weight: 900; letter-spacing: .08em; text-transform: uppercase; }
 .cue { margin-top: .55rem; font-size: .58rem; font-weight: 900; letter-spacing: .12em; text-transform: uppercase; }
