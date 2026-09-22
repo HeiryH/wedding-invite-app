@@ -6,7 +6,7 @@ export const T13_ASSET_SIZES: Record<string, [number, number]> = {
   'backgrounds/rsvp.webp': [1024, 1696],
   'backgrounds/wishes.webp': [1024, 1696],
   'backgrounds/photobooth.webp': [1024, 1696],
-  'props/stone-timber-entrance.webp': [1068, 842],
+  'props/stone-timber-entrance.webp': [1536, 1024],
   'props/blank-hero-ribbon.webp': [653, 219],
   'props/blank-name-plaque.webp': [405, 165],
   'props/countdown-stone-days.webp': [226, 239],
