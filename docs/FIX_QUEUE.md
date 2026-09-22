@@ -896,7 +896,7 @@ issue is picked up.
 
 ## Issue 8 — Repo cleanup: redundant docs, art working files, stray artefacts
 
-**Branch:** `ae-unified` · **Status:** TODO — inventory only, nothing removed yet · **Raised:** 2026-09-22
+**Branch:** `ae-unified` · **Status:** PARTIALLY DONE (2026-09-22) — see checklist · **Raised:** 2026-09-22
 
 The repo has accumulated a lot of material that isn't code and isn't current documentation:
 per-template art *working files* committed under `docs/`, planning docs superseded by
@@ -951,12 +951,16 @@ Pick one and apply it to rose-horizon / sandy-beach-probe / any future template 
 Either way the 126 MB of rose-horizon PNGs stays in git history unless it's rewritten — that's a
 separate decision (`git filter-repo`), not part of this cleanup.
 
-### Order of work once decisions are made
+### Order of work — what was done 2026-09-22
 
-- [ ] `.gitignore`: `.worktrees/`, `.einvite-run/`, `*.db`, `__pycache__/`, `*.tsbuildinfo`, `.codex/`, `.hermes/`
-- [ ] Remove the dead infra trio (`Caddyfile`, `CUSTOM_DOMAINS.md`, `nginx.conf`) and fix the `CLAUDE.md` paragraph that references them
-- [ ] Merge `GO_LIVE.md` + `DEPLOYMENT.md` into one current runbook
-- [ ] Apply the art-working-file rule to `docs/rose-horizon-*`, `frontend/docs/rose-horizon-qa`, `docs/sandy-beach-probe`, `spec/`, `tools-flowbg/`
-- [ ] Delete `create-next-app` leftovers, empty dirs, stray `.db` files
-- [ ] `git worktree remove` the three merged worktrees
+- [x] `.gitignore`: `.worktrees/`, `.einvite-run/`, `.codex/`, `.claude/`, `__pycache__/`, `*.tsbuildinfo` (`*.db` was already there)
+- [x] Removed the dead infra trio (`Caddyfile`, `CUSTOM_DOMAINS.md`, `nginx.conf`); `CLAUDE.md` Quick Deploy and `GO_LIVE.md` §4 rewritten to say NPM is the only mechanism
+- [x] Applied rule **(b)** to rose-horizon: deleted `docs/rose-horizon-art/`, `docs/rose-horizon-props/`, `frontend/docs/rose-horizon-qa/` (−135 MB tracked); kept `docs/rose-horizon-design-brief.md` + `docs/rose-horizon-refs/`
+- [x] Deleted `create-next-app` leftovers (5 SVGs + `frontend/README.md`), both stray 0-byte `wedding.db`, `tsconfig.tsbuildinfo`, `tools-flowbg/__pycache__`, empty `docs/sunny-safari-reference/`, all `.DS_Store`
+- [x] `git worktree remove` + branch delete for `wt/rose-horizon-20260908` (clean, merged)
+- [ ] **Kept deliberately:** `spec/` and `tools-flowbg/` — both are referenced by `docs/invite-pipeline.md` as live pipeline steps (Gate 2 section specs, `flowbg.py` fallback, `ingest-by-sheet-position.py`)
+- [ ] **Not touched — other sessions' uncommitted work:** `.worktrees/sandy-beach-20260920` (16 dirty files: rewritten `spec/`, untracked `docs/sandy-beach-art/`, `-refs/`, `-design-brief.md`) and `.worktrees/dreamy-woodland-20260914` (`.einvite-run/` scratch). Both branches are merged; remove once whoever owns those files has moved them. `docs/sandy-beach-probe/` (untracked, 9 MB, `welcome/` plates) is the same class — apply rule (b) when T14's probe is confirmed finished.
+- [ ] Merge `GO_LIVE.md` + `DEPLOYMENT.md` into one current runbook (writing task, not a delete)
+- [ ] `AGENTS.md` (untracked Codex mirror) — decide whether to generate it from `CLAUDE.md` or drop it
 - [ ] Archive closed issues in this file
+- [ ] History still carries the 135 MB — `git filter-repo` is a separate decision

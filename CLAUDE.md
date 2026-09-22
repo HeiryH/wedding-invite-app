@@ -701,11 +701,11 @@ The script handles: `git add frontend/` → commit → push to GitHub → SSH to
   Changing the domain again means updating both the `.env` value *and* rebuilding, not just
   restarting.
 - ⚠️ **The actual reverse proxy in production is Nginx Proxy Manager** (`npm-npm-1` container,
-  GUI admin on `127.0.0.1:81`, SSH-tunnel only), **not** the `Caddyfile`/`CUSTOM_DOMAINS.md` in
-  this repo — that describes an on-demand-TLS migration that was drafted but never deployed.
-  Adding/editing a domain means logging into the NPM UI and adding/editing a **Proxy Host**, not
-  touching the Caddyfile. `CUSTOM_DOMAINS.md`'s Caddy plan (and the PRO custom-domain auto-TLS
-  `ask` flow it describes) is not actually wired up live.
+  GUI admin on `127.0.0.1:81`, SSH-tunnel only). Adding/editing a domain means logging into the
+  NPM UI and adding/editing a **Proxy Host**. (A Caddy on-demand-TLS plan — `Caddyfile` +
+  `CUSTOM_DOMAINS.md`, with a PRO custom-domain auto-TLS `ask` flow — was drafted but never
+  deployed, and was removed from the repo on 2026-09-22; see `git log` if you need it. There is
+  no automated custom-domain TLS flow live.)
 - **This VPS now also hosts an unrelated second app**: ODDSTUDIO's own marketing site (Next.js +
   headless WordPress), at `/opt/oddstudio/` — see that project's own `CLAUDE.md` /
   `DEPLOYMENT.md`. It owns the bare `oddstudio.app`/`www.oddstudio.app` apex (which is why this

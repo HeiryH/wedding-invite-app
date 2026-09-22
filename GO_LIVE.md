@@ -88,9 +88,9 @@ up healthy (`curl https://oddstudio.app/health` → `Healthy`), you're set.
 
 ## 4. Custom domains (couples' own web addresses) — biggest one, do last
 
-The application + middleware are already deployed. The remaining one-time infrastructure
-setup (adding a **Caddy** service for automatic HTTPS + per-couple DNS) is documented
-separately in **[CUSTOM_DOMAINS.md](./CUSTOM_DOMAINS.md)**. Follow that guide when ready.
+The application + middleware are already deployed. There is no automated per-couple TLS flow:
+a custom domain is added by hand as a **Proxy Host** in Nginx Proxy Manager (see `CLAUDE.md`
+→ Quick Deploy). A Caddy on-demand-TLS plan was drafted but never deployed and has been removed.
 
 ---
 

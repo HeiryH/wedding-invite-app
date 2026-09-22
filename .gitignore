@@ -49,3 +49,12 @@ backend/**/bin\
 # notes — not application code, see docs/invite-pipeline.md instead)
 ############################
 .hermes/
+############################
+# Local tooling / scratch (never application code)
+############################
+.worktrees/
+.einvite-run/
+.codex/
+.claude/
+__pycache__/
+*.tsbuildinfo
