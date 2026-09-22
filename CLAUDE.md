@@ -451,10 +451,11 @@ GSAP-scrubbed canvas is not a safe target).
 
 PRO-tier stage editor. **Layout (reworked 2026-09-22):** the dock column itself holds only the
 *navigation* — a "Theme & style" gear button, the Stage tabs, the layer list, a `+` button under
-it, and Copy/Reset. Everything else lives in **one floating card that hangs off the dock's LEFT
-edge over the preview** (`.card` in `AdjustPanel.module.css`, `position:absolute; right:100%`,
-rendered outside `.body` so the dock's own scroll can't clip it; the host `<aside>` on the
-customize/authoring pages must stay `position:relative; overflow:visible`). The card shows one of:
+it, and Copy/Reset. Everything else lives in **a second column that opens to the dock's LEFT**
+(`.card` in `AdjustPanel.module.css` — a normal flex sibling of `.dock`, **not** a floating
+overlay: an earlier floating version covered the preview device on a 1280px laptop, so the host
+`<aside>` is content-sized and `PreviewPanel`'s ResizeObserver auto-fit shrinks the preview to
+make room). The card shows one of:
 - **Theme & style** (gear): slot-theme accent / heading & body font, Card style (None/Radial/
   Glass), and Background·Flow for `pageBackground` templates. Gear only renders when at least one
   of `slotTheme`/`cardControl`/`pageBackground` is set.

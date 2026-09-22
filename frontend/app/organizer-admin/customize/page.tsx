@@ -1830,12 +1830,12 @@ export default function CustomizePage() {
             draftConfig; the Save button persists it like any other change. */}
         {canAdjust && adjusting && activeStage && (
           <aside style={{
-            width: 340, flexShrink: 0,
+            // Content-sized: the dock column plus, when open, its detail/theme/add card column
+            // to the left (AdjustPanel owns both). The preview auto-fits to whatever's left.
+            flexShrink: 0,
             borderLeft: '1px solid var(--border-subtle)',
             background: 'var(--surface-card)',
             display: 'flex', flexDirection: 'column', minHeight: 0,
-            // The dock's floating detail/theme/add card hangs off its LEFT edge over the preview.
-            position: 'relative', overflow: 'visible',
           }}>
             <AdjustPanel
               stages={layout!.stages}

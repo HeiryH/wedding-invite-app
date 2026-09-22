@@ -593,88 +593,10 @@ export default function AdjustPanel({
     <div className={styles.panel} data-adjust-panel>
       <input ref={fileRef} type="file" accept="image/*" hidden onChange={onFile} />
 
-      <div className={styles.header}>
-        <span className={styles.title}>Adjust · {breakpoint}</span>
-        <button className={styles.close} onClick={onClose} aria-label="Close">
-          ×
-        </button>
-      </div>
-
-      <div className={styles.body}>
-        {hasThemeCard && (
-          <div className={styles.toolbar}>
-            <button
-              className={`${styles.toolBtn} ${popover === 'theme' ? styles.toolBtnActive : ''}`}
-              onClick={() => setPopover((p) => (p === 'theme' ? null : 'theme'))}
-              title="Theme & style — accent, fonts, card look"
-              aria-label="Theme & style"
-              aria-pressed={popover === 'theme'}
-            >
-              <Icon name="settings" size={15} /> Theme &amp; style
-            </button>
-          </div>
-        )}
-
-        <div className={styles.label} style={{ marginTop: hasThemeCard ? undefined : 0 }}>Stage</div>
-        <div className={styles.tabs}>
-          {stageIds.map((id) => (
-            <button
-              key={id}
-              className={`${styles.tab} ${id === selectedStage ? styles.tabActive : ''}`}
-              onClick={() => {
-                // Scrolling the preview to this stage is the parent's job now — the stage lives in
-                // the preview iframe, which this panel (in the parent tree) can't reach directly.
-                onSelectStage(id);
-                onSelectLayer(undefined);
-              }}
-            >
-              {stages[id].label}
-            </button>
-          ))}
-        </div>
-
-        <div className={styles.label}>Layers · front to back</div>
-        <div className={styles.layers} ref={layersRef}>
-          {roots.map((l) => renderRow(l, false))}
-          {def.bg && (
-            <div
-              className={`${styles.row} ${bgSelected ? styles.rowActive : ''}`}
-              onClick={() => onSelectLayer(BG_ID)}
-              role="button"
-              data-layer-row={BG_ID}
-            >
-              <span className={styles.grip}> </span>
-              <span className={`${styles.name} ${styles.bgRow}`}>▦ Background</span>
-            </div>
-          )}
-        </div>
-
-        <button
-          className={`${styles.addBtn} ${popover === 'add' ? styles.addBtnActive : ''}`}
-          onClick={() => setPopover((p) => (p === 'add' ? null : 'add'))}
-          title="Add text, a shape, an image or an effect to this stage"
-          aria-label="Add to stage"
-          aria-pressed={popover === 'add'}
-        >
-          <Icon name="plus" size={16} />
-        </button>
-
-        <div className={styles.divider}>
-          <div className={styles.btnRow}>
-            <button className={styles.btn} onClick={copyToOther}>
-              Copy to {breakpoint === 'mobile' ? 'desktop' : 'mobile'}
-            </button>
-            <button className={`${styles.btn} ${styles.btnGhost}`} onClick={resetStage} disabled={!dirty}>
-              Reset stage
-            </button>
-          </div>
-          <div className={styles.note}>{note}</div>
-        </div>
-      </div>
-
-      {/* Floating card to the LEFT of the dock, over the preview. One at a time: the Theme and
-          Add pop-overs when toggled, otherwise the detail editor for whatever's selected. Lives
-          outside `.body` so the dock's own scrolling never clips it. */}
+      {/* Card column to the LEFT of the dock, in normal flow (not floating over the preview — the
+          preview's auto-fit zoom observes its own box and shrinks to make room). One at a time:
+          the Theme and Add pop-overs when toggled, otherwise the detail editor for whatever's
+          selected. Rendered before the dock so it lands on the dock's left. */}
       {cardTitle && (
         <div className={styles.card} data-adjust-card={popover ?? 'detail'}>
           <div className={styles.cardHeader}>
@@ -1472,6 +1394,87 @@ export default function AdjustPanel({
           </div>
         </div>
       )}
+
+      <div className={styles.dock}>
+      <div className={styles.header}>
+        <span className={styles.title}>Adjust · {breakpoint}</span>
+        <button className={styles.close} onClick={onClose} aria-label="Close">
+          ×
+        </button>
+      </div>
+
+      <div className={styles.body}>
+        {hasThemeCard && (
+          <div className={styles.toolbar}>
+            <button
+              className={`${styles.toolBtn} ${popover === 'theme' ? styles.toolBtnActive : ''}`}
+              onClick={() => setPopover((p) => (p === 'theme' ? null : 'theme'))}
+              title="Theme & style — accent, fonts, card look"
+              aria-label="Theme & style"
+              aria-pressed={popover === 'theme'}
+            >
+              <Icon name="settings" size={15} /> Theme &amp; style
+            </button>
+          </div>
+        )}
+
+        <div className={styles.label} style={{ marginTop: hasThemeCard ? undefined : 0 }}>Stage</div>
+        <div className={styles.tabs}>
+          {stageIds.map((id) => (
+            <button
+              key={id}
+              className={`${styles.tab} ${id === selectedStage ? styles.tabActive : ''}`}
+              onClick={() => {
+                // Scrolling the preview to this stage is the parent's job now — the stage lives in
+                // the preview iframe, which this panel (in the parent tree) can't reach directly.
+                onSelectStage(id);
+                onSelectLayer(undefined);
+              }}
+            >
+              {stages[id].label}
+            </button>
+          ))}
+        </div>
+
+        <div className={styles.label}>Layers · front to back</div>
+        <div className={styles.layers} ref={layersRef}>
+          {roots.map((l) => renderRow(l, false))}
+          {def.bg && (
+            <div
+              className={`${styles.row} ${bgSelected ? styles.rowActive : ''}`}
+              onClick={() => onSelectLayer(BG_ID)}
+              role="button"
+              data-layer-row={BG_ID}
+            >
+              <span className={styles.grip}> </span>
+              <span className={`${styles.name} ${styles.bgRow}`}>▦ Background</span>
+            </div>
+          )}
+        </div>
+
+        <button
+          className={`${styles.addBtn} ${popover === 'add' ? styles.addBtnActive : ''}`}
+          onClick={() => setPopover((p) => (p === 'add' ? null : 'add'))}
+          title="Add text, a shape, an image or an effect to this stage"
+          aria-label="Add to stage"
+          aria-pressed={popover === 'add'}
+        >
+          <Icon name="plus" size={16} />
+        </button>
+
+        <div className={styles.divider}>
+          <div className={styles.btnRow}>
+            <button className={styles.btn} onClick={copyToOther}>
+              Copy to {breakpoint === 'mobile' ? 'desktop' : 'mobile'}
+            </button>
+            <button className={`${styles.btn} ${styles.btnGhost}`} onClick={resetStage} disabled={!dirty}>
+              Reset stage
+            </button>
+          </div>
+          <div className={styles.note}>{note}</div>
+        </div>
+      </div>
+      </div>
     </div>
   );
 }
