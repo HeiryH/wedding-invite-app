@@ -34,8 +34,14 @@ export const T13_STAGES: Record<string, StageDef> = {
       L({ id: 'blank-name-plaque', kind: 'img', src: 'props/blank-name-plaque.webp', x: 50, y: 42.5, w: 31, z: 4, order: 2, anim: 'zoom-in', animOut: 'slide-fade-out-down', depth: 0.15 }),
       L({ id: 'egg-nest', kind: 'img', src: 'props/egg-nest.webp', x: 15, y: 77.5, w: 29, z: 5, order: 5, anim: 'slide-right', animOut: 'slide-fade-out-left', depth: 0.35 }),
       L({ id: 'trex-greeter', kind: 'img', src: 'props/trex-greeter.webp', x: 79, y: 75.5, w: 45, z: 5, order: 6, anim: 'slide-left', animOut: 'slide-fade-out-right', depth: 0.4 }),
-      L({ id: 'foreground-fern-left', kind: 'img', src: 'props/foreground-fern-left.webp', x: 14.5, y: 86, w: 30, z: 6, order: 7, anim: 'slide-up', animOut: 'slide-out-down', depth: 0.55 }),
-      L({ id: 'foreground-fern-right', kind: 'img', src: 'props/foreground-fern-right.webp', x: 87, y: 88, w: 30, z: 6, order: 7, anim: 'slide-up', animOut: 'slide-out-down', depth: 0.55 }),
+      // Foreground foliage set (2026-09-22): hanging border leaves in the top corners, fern clusters
+      // flanking the trail, and one wide foliage+stone strip along the bottom edge that grounds the
+      // nest/T-rex. Bottom strip deliberately overhangs the canvas edge (a 9:16 device crops it).
+      L({ id: 'left-border-upper-foliage', kind: 'img', src: 'props/left-border-upper-foliage.webp', x: 11, y: 13, w: 40, z: 6, order: 3, anim: 'slide-down', animOut: 'slide-out-up', depth: 0.5 }),
+      L({ id: 'right-border-upper-foliage', kind: 'img', src: 'props/right-border-upper-foliage.webp', x: 89, y: 13, w: 40, z: 6, order: 3, anim: 'slide-down', animOut: 'slide-out-up', depth: 0.5 }),
+      L({ id: 'left-side-fern-leaf-cluster-lower', kind: 'img', src: 'props/left-side-fern-leaf-cluster-lower.webp', x: 9, y: 73, w: 34, z: 6, order: 7, anim: 'slide-right', animOut: 'slide-fade-out-left', depth: 0.55 }),
+      L({ id: 'right-side-fern-leaf-cluster-lower', kind: 'img', src: 'props/right-side-fern-leaf-cluster-lower.webp', x: 91, y: 73, w: 34, z: 6, order: 7, anim: 'slide-left', animOut: 'slide-fade-out-right', depth: 0.55 }),
+      L({ id: 'bottom-foreground-foliage-stones', kind: 'img', src: 'props/bottom-foreground-foliage-stones.webp', x: 50, y: 89, w: 106, z: 7, order: 8, anim: 'slide-up', animOut: 'slide-out-down', depth: 0.6 }),
       L({ id: 'hero', kind: 'slot', slot: 'eventHero', label: 'Party Details', x: 50, y: 47, w: 84, h: 42, z: 7, order: 4, chain: false, anim: 'none', depth: 0.2, canvasAnchor: true }),
       A('hero-eyebrow', 'hero', 'Eyebrow', 0, 'Welcome to the Expedition'),
       A('hero-title', 'hero', 'Event Title', 1, 'The Roarsome Birthday'),
@@ -46,6 +52,15 @@ export const T13_STAGES: Record<string, StageDef> = {
       A('hero-timer', 'hero', 'Countdown Timer', 6),
       A('hero-cue', 'hero', 'Scroll Cue', 7, 'Scroll to begin'),
     ],
+    // The square desktop canvas cover-fits a 1440×900 window at ~1440px wide, so a 40%-wide
+    // foliage prop becomes a 576px leaf over the title. Pull the foreground set out to the edges.
+    desktop: {
+      'left-border-upper-foliage': { x: 5, y: 24, w: 18 },
+      'right-border-upper-foliage': { x: 95, y: 24, w: 18 },
+      'left-side-fern-leaf-cluster-lower': { x: 4, y: 70, w: 15 },
+      'right-side-fern-leaf-cluster-lower': { x: 96, y: 70, w: 15 },
+      'bottom-foreground-foliage-stones': { x: 50, y: 87, w: 50 },
+    },
   },
   details: {
     id: 'details', label: 'Expedition Briefing', bg: 'backgrounds/details.webp', bgFit: 'cover', canvas: CANVAS,
