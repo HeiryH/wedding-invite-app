@@ -16,6 +16,7 @@ import Template9 from '@/components/templates/Template9';
 import Template10 from '@/components/templates/Template10';
 import Template11 from '@/components/templates/Template11';
 import Template12 from '@/components/templates/Template12';
+import Template13 from '@/components/templates/Template13';
 import Template14 from '@/components/templates/Template14';
 
 const DUMMY: Wedding = {
@@ -79,6 +80,20 @@ const DUMMY_SUNNY_SAFARI: Wedding = {
   venue: 'The Treehouse Garden, Nairobi',
 };
 
+const DUMMY_DINO_DOODLE: Wedding = {
+  ...DUMMY,
+  brideName: 'Elliot',
+  groomName: '',
+  name1: 'Elliot',
+  name2: null,
+  eventTitle: 'The Roarsome Birthday',
+  eventType: 'PARTY',
+  displayName: 'Elliot Turns 7',
+  weddingDate: '2027-10-18T15:00:00+08:00',
+  venue: 'The Jungle Basecamp',
+  venueAddress: 'Bandar Seri Begawan, Brunei',
+};
+
 const noOp = () => Promise.resolve();
 
 // Minimal props required by all templates
@@ -98,6 +113,20 @@ const DREAMY_WOODLAND_PROPS = {
     { itineraryItemId: 1, eventId: 0, label: 'Guest arrival', detail: '10:30', sortOrder: 0 },
     { itineraryItemId: 2, eventId: 0, label: 'Wedding ceremony', detail: '11:00', sortOrder: 1 },
     { itineraryItemId: 3, eventId: 0, label: 'Celebration lunch', detail: '12:30', sortOrder: 2 },
+  ],
+};
+
+const DINO_DOODLE_PROPS = {
+  ...BASE_PROPS,
+  wedding: DUMMY_DINO_DOODLE,
+  photoBoothEnabled: true,
+  onUploadPhoto: noOp,
+  seatingEnabled: true,
+  tables: [],
+  itinerary: [
+    { itineraryItemId: 1, eventId: 0, label: 'Explorer check-in', detail: '2:30 PM', sortOrder: 0 },
+    { itineraryItemId: 2, eventId: 0, label: 'Dinosaur discovery', detail: '3:00 PM', sortOrder: 1 },
+    { itineraryItemId: 3, eventId: 0, label: 'Basecamp feast', detail: '4:30 PM', sortOrder: 2 },
   ],
 };
 
@@ -144,10 +173,10 @@ export default function TemplatePreviewPage() {
     <div
       ref={rootRef}
       style={{
-        width: code === 'dreamy-woodland' ? '100%' : 390,
-        height: code === 'dreamy-woodland' ? 'auto' : 700,
+        width: code === 'dreamy-woodland' || code === 'dino-doodle-party' ? '100%' : 390,
+        height: code === 'dreamy-woodland' || code === 'dino-doodle-party' ? 'auto' : 700,
         minHeight: 700,
-        overflow: code === 'dreamy-woodland' ? 'visible' : 'hidden',
+        overflow: code === 'dreamy-woodland' || code === 'dino-doodle-party' ? 'visible' : 'hidden',
         position: 'relative', margin: 0, padding: 0,
       }}
       {...(ready ? { 'data-preview-ready': 'true' } : {})}
@@ -164,6 +193,7 @@ export default function TemplatePreviewPage() {
       {code === 'sunny-safari'          && <Template10 {...sunnySafariProps} />}
       {code === 'rose-horizon'          && <Template11 {...props} />}
       {code === 'dreamy-woodland'       && <Template12 {...DREAMY_WOODLAND_PROPS} customConfig={customConfig} />}
+      {code === 'dino-doodle-party'     && <Template13 {...DINO_DOODLE_PROPS} customConfig={{ 'walimah.body': 'Meet the expedition crew, collect your field kit, and prepare for a wild afternoon of discovery.', ...customConfig }} />}
       {code === 'sandy-beach'           && <Template14 {...props} />}
     </div>
   );

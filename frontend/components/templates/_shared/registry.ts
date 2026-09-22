@@ -9,6 +9,7 @@ import { T7_STAGES, T7_ASSETS, STAGE_GROUPS } from '../Template7-romangarden/dat
 import { T10_STAGES, T10_ASSETS, STAGE_GROUPS as T10_STAGE_GROUPS } from '../Template10-sunnysafari/data/stages';
 import { T11_STAGES, t11StageIds } from '../Template11-rosehorizon/data/roseHorizonStages';
 import { T12_STAGES, t12StageIds } from '../Template12-dreamywoodland/data/dreamyWoodlandStages';
+import { T13_STAGES, T13_ASSETS, STAGE_GROUPS as T13_STAGE_GROUPS } from '../Template13-dinodoodle/data/stages';
 import { T14_STAGES, T14_ASSETS, STAGE_GROUPS as T14_STAGE_GROUPS } from '../Template14-sandybeach/data/stages';
 
 /**
@@ -129,6 +130,14 @@ export const TEMPLATE_ENGINES: Record<number, TemplateEngine> = {
     assetRoot: '/templates/dreamy-woodland',
     resolveStages: () => T12_STAGES, stageIds: (ctx) => t12StageIds(ctx.codes),
   },
+  13: {
+    keyPrefix: 't13',
+    reveal: true,
+    slotTheme: true,
+    assetRoot: T13_ASSETS,
+    resolveStages: () => T13_STAGES,
+    stageIds: (ctx) => ctx.codes.flatMap((c) => T13_STAGE_GROUPS[c] ?? []),
+  },
   // Sandy Beach — same Stage compositor shape as T10 (one stage per section, no ceremony-row
   // feature), WEDDING. Slot theme accent defaults to the design's pale-sand button fill.
   14: {
@@ -189,5 +198,6 @@ export function sectionAnchorId(
     return STAGE_GROUPS[block]?.[0];
   }
   if (templateId === 10) return T10_STAGE_GROUPS[block]?.[0];
+  if (templateId === 13) return T13_STAGE_GROUPS[block]?.[0];
   return block;
 }
