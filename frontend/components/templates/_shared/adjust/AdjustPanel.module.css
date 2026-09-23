@@ -46,6 +46,9 @@
 
 .body {
   flex: 1;
+  min-height: 0;
+  display: flex;          /* so .layers can take the leftover height */
+  flex-direction: column;
   overflow-y: auto;
   padding: 12px 15px 16px;
 }
@@ -82,7 +85,10 @@
 }
 
 .layers {
-  max-height: min(46vh, 420px);
+  /* Fills whatever height is left under the Stage tabs, down to the "+" and Copy/Reset footer —
+     a long stage's layer list is the thing you actually work in, so it gets the room. */
+  flex: 1;
+  min-height: 140px;
   overflow-y: auto;
   background: var(--surface-sunken);
   border: 1px solid var(--border-subtle);
@@ -241,6 +247,12 @@
 .btn:disabled {
   opacity: 0.4;
   cursor: default;
+}
+
+.btnDanger {
+  background: var(--danger-subtle, var(--surface-card));
+  border-color: var(--danger);
+  color: var(--danger);
 }
 
 .btnGhost {

@@ -33,6 +33,29 @@ function formatDate(date: Date, style?: string): string {
   }
 }
 
+/**
+ * `invite.body`/`walimah.body` are TipTap rich text (HTML), but a `kind:'text'` layer renders its
+ * resolved string as plain text — so the raw `<p></p>` markup showed up on the stage. Flatten to
+ * text, turning block boundaries into newlines (`.text`/CurvedText keep `white-space: pre-wrap`),
+ * and decode the handful of entities TipTap emits. Not a sanitiser: the output is inserted as
+ * text, never as HTML.
+ */
+function htmlToText(html: string): string {
+  return html
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<\/(p|div|h[1-6]|li|blockquote)>/gi, '\n')
+    .replace(/<li[^>]*>/gi, '• ')
+    .replace(/<[^>]+>/g, '')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
+
 function resolveToken(token: string, slotProps: SlotProps): string | undefined {
   const { wedding, t } = slotProps;
   const [name, arg] = token.split(':');
@@ -53,7 +76,8 @@ function resolveToken(token: string, slotProps: SlotProps): string | undefined {
     case 'venueAddress': return wedding.venueAddress ?? '';
     case 'date': return formatDate(new Date(wedding.weddingDate), arg);
     case 'time': return new Date(wedding.weddingDate).toLocaleTimeString('en-GB', { hour: 'numeric', minute: '2-digit' });
-    case 'walimah.body': return t('walimah.body', '');
+    case 'walimah.body': return htmlToText(t('walimah.body', ''));
+    case 'invite.body': return htmlToText(t('invite.body', ''));
     // Native Event fields (see Wedding's own comment) — a PARTY has one honoree and no "sides",
     // a CEREMONY has no individual names at all. `honoree` mirrors Template8's proven fallback
     // chain so a text layer reading it behaves the same as that hand-coded template.
@@ -81,6 +105,7 @@ export const BINDING_TOKENS = [
   { token: 'date:hijri', label: 'Date — Hijri' },
   { token: 'time', label: 'Event time' },
   { token: 'walimah.body', label: 'Ceremony / event details' },
+  { token: 'invite.body', label: 'Invitation body' },
   { token: 'eventTitle', label: 'Event title (CEREMONY)' },
   { token: 'name1', label: 'Name 1' },
   { token: 'name2', label: 'Name 2' },

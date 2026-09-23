@@ -6,6 +6,7 @@ import { resolveBindings } from '@/components/templates/_shared/bindings';
 import type { EditorHandle, Layer, SlotProps } from './types';
 import { staggerDelay } from '@/components/templates/_shared/reveal';
 import { subLayerStyle, subLayersOf } from '@/components/templates/_shared/slots/subLayerStyle';
+import { CurvedPiece, curvedTextOf } from '@/components/templates/_shared/slots/CurvedPiece';
 import { useSheets } from '@/components/templates/_shared/slots/sheets';
 import { WishListSlot } from '@/components/templates/_shared/slots/WishSlots';
 import PhotoBoothSlot from '@/components/templates/_shared/slots/PhotoBoothSlot';
@@ -44,8 +45,12 @@ function Piece({ layer, editor, id, children }: {
   const anim = layer?.anim || 'rise';
   const animOut = layer?.animOut && layer.animOut !== 'none' ? layer.animOut : undefined;
   const selected = Boolean(editor?.enabled && editor.selectedLayer === id);
+  // Shape (arc/circle) from the Style tab — see CurvedPiece.tsx.
+  const curveText = curvedTextOf(layer, children);
   const childStyle = (children.props as { style?: CSSProperties }).style ?? {};
-  const child = cloneElement(children as ReactElement<Record<string, unknown>>, {
+  const child = curveText !== undefined
+    ? <CurvedPiece layer={layer!} text={curveText} anim={anim} />
+    : cloneElement(children as ReactElement<Record<string, unknown>>, {
     'data-sl-anim': anim,
     'data-scroll-fade': anim === 'scroll-fade' ? true : undefined,
     style: {

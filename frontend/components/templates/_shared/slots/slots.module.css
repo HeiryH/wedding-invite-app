@@ -71,10 +71,16 @@
   flex-direction: column;
   align-items: center;
 }
+/* The type defaults live HERE, not on .countNum/.countLabel, and the children inherit them — a
+   `hero-timer` sub-layer's Style tab writes inline styles onto this wrapper (subLayerStyle.ts),
+   and a child with its own font-family/size/colour rule would silently out-specify them. */
 .countdown {
   display: flex;
   gap: clamp(0.5rem, 2.5cqi, 1.4rem);
-  /* margin-top: 1.1rem; */
+  font-family: var(--slot-font-display, system-ui, sans-serif);
+  font-weight: 600;
+  font-size: calc(clamp(1rem, 3cqi, 1.6rem) * var(--slot-text-scale, 1));
+  color: var(--slot-ink, #2b2a28);
 }
 .countUnit {
   display: flex;
@@ -83,19 +89,19 @@
   min-width: 2.6rem;
 }
 .countNum {
-  font-family: var(--slot-font-display, system-ui, sans-serif);
-  font-weight: 600;
-  font-size: calc(clamp(1rem, 3cqi, 1.6rem) * var(--slot-text-scale, 1));
+  font: inherit;
   font-variant-numeric: tabular-nums;
   line-height: 1;
-  color: var(--slot-ink, #2b2a28);
+  color: inherit;
 }
 .countLabel {
-  font-family: var(--slot-font-serif, Georgia, serif);
-  font-size: calc(clamp(0.55rem, 1.2cqi, 0.68rem) * var(--slot-text-scale, 1));
+  /* Relative to the wrapper so a Style-tab Text Size scales the pair together. */
+  font-size: 0.42em;
+  font-weight: 500;
   letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: var(--slot-ink-soft, #6b6863);
+  color: inherit;
+  opacity: 0.72;
   margin-top: 0.3rem;
 }
 

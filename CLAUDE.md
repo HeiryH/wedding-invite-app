@@ -466,18 +466,15 @@ it opens — so on a narrow window it overlaps the preview device; that's the ac
   selected layer's **Layout** / **Style** / **Animation** tabs (or Text/Container for a sheet
   form), or the Background fit/position/scale/replace controls. Closing the card deselects.
 In the layer list: **drag rows to reorder z** (anchors don't drag — they don't z-stack), an
-**eye** toggle for hidden, a lock toggle (a **locked row renders dimmed**), delete (originals
-included; see the anchor-delete note above), and a **nested sub-layer tree** (a layer with
-children shows a disclosure caret). **Selecting a layer from the preview scrolls its row into
-view** (`data-layer-row` + `scrollIntoView`), force-expanding a collapsed parent.
+**eye** toggle for hidden, a lock toggle (a **locked row renders dimmed**), and a **nested
+sub-layer tree** (a layer with children shows a disclosure caret). The list **fills the dock's
+remaining height**. **Selecting a layer from the preview scrolls its row into view**
+(`data-layer-row` + `scrollIntoView`). **Exactly one card is open at a time** — opening a
+pop-over clears the layer selection, selecting a layer closes the pop-over. **Delete lives in the
+detail card**, not as a row ✕: for an anchor the old ✕ was just a second hide button, and for art
+it was a one-click destroy next to the eye (anchors have no Delete at all — hiding is the only
+sensible removal).
 
-- **It's a right-docked column on the customize page, NOT inside the preview.** The customize
-  page (`app/couple-admin/customize/page.tsx`) picks a per-template `{stages, keyPrefix}` engine
-  by `templateId` (T7 or T5) and renders `<AdjustPanel>` as a third flex column when
-  `adjusting && canAdjust && tier === 'PRO'`, collapsing the left inspector to its icon rail while
-  it's open. It's launched by a **dedicated "Adjust" button in the page header** (gated by
-  `canAdjust`) — the old `LayoutField` schema-field launcher and the `t{5,7}.layout.__panel`
-  fields are **gone**; don't reintroduce them.
 - **Config flows one way, no cross-iframe echo.** Because the panel lives in the parent tree that
   owns `draftConfig`, `onLayoutChange(key, value)` just calls `setDraftConfig` directly (`''`
   deletes the key → restores defaults). The existing `PREVIEW_UPDATE` effect (rAF-coalesced)
@@ -498,6 +495,25 @@ view** (`data-layer-row` + `scrollIntoView`), force-expanding a collapsed parent
   isn't always the size of the device box being simulated, so viewport units would inflate the
   countdown/names; `cqi` resolves against the stage and equals `vw` whenever the stage fills the
   viewport.
+- **Curved text (`textShape` arc/circle) reaches sub-layers, not just `kind:'text'`.**
+  `_shared/slots/CurvedPiece.tsx` is the shared opt-in: a piece whose child renders **one plain
+  string** (`<p>{bound(...)}</p>` — the shape every text piece uses) swaps that child for
+  `<CurvedText>`; a composite child (the countdown grid, a line with an inline icon) keeps its flat
+  rendering, which is why the Shape control only shows for `kind:'text'` or a sub-layer with
+  `hasText`. Wired into `HeroSlots`'s `HeroPiece` and T13's `Piece` — **a new template's own piece
+  wrapper must call `curvedTextOf`/`CurvedPiece` too**, or its text pieces silently ignore Shape.
+  Note `CurvedText` sizes its glyphs in **SVG user units** (`fontSize * 2`, since 200 units span
+  the box): a CSS `cqi` there was multiplied again by the viewBox→box scale, so curved text grew
+  quadratically with the box and rendered roughly twice the size of the same text flat.
+- **A sub-layer's Style tab only reaches text the *wrapper* owns.** `subLayerStyle` writes inline
+  styles onto the piece's own element, so any child with its own `font`/`color`/`font-size` rule
+  silently out-specifies the couple's choice — that's why the countdown's digits ignored the Style
+  tab until `.countdown` took the type defaults and `.countNum`/`.countLabel` (and T13's
+  `.countUnit strong`/`small`) became `font: inherit` / `color: inherit` with `em` sizes. **Put a
+  composite piece's type defaults on the wrapper, never on its children.**
+- **Rich-text tokens are flattened** — `{{walimah.body}}`/`{{invite.body}}` resolve TipTap HTML, and
+  a text layer renders a plain string, so `bindings.ts`'s `htmlToText` strips the markup (blocks →
+  newlines; `.text` is `white-space: pre-wrap`). Without it the stage literally showed `<p></p>`.
 - **Animation** is per-layer, split into **enter** and **exit**, both persisted on `Layer`
   (`anim` + `animDur`, `animOut`; all in `OVERRIDABLE`). The reveal engine is a shared,
   data-attribute-driven **`_shared/reveal.css`** (imported once by `Layer.tsx`):

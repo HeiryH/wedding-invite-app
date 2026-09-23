@@ -190,6 +190,9 @@
   text-align: center;
   line-height: 1.25;
   letter-spacing: 0.01em;
+  /* Rich-text tokens ({{walimah.body}}) flatten to newline-separated paragraphs — see
+     bindings.ts's htmlToText — and a couple can type a multi-line text layer by hand. */
+  white-space: pre-wrap;
 }
 
 .shape {

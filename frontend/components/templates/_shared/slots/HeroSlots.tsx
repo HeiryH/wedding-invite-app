@@ -7,6 +7,7 @@ import { resolveBindings } from '../bindings';
 import type { EditorHandle, Layer, SlotProps } from '../types';
 import { staggerDelay } from '../reveal';
 import { subLayerStyle, subLayersOf } from './subLayerStyle';
+import { CurvedPiece, curvedTextOf } from './CurvedPiece';
 import styles from './slots.module.css';
 
 /** Returns null once the date has passed, so the hero never shows a dead 00:00:00. */
@@ -52,21 +53,25 @@ function HeroPiece({ layer, editor, id, children }: {
   const selected =
     Boolean(editor?.enabled) && editor?.selectedStage === 'welcome' && editor?.selectedLayer === id;
 
+  // Shape (arc/circle) from the Style tab, when this piece's child is one plain string.
+  const curveText = curvedTextOf(layer, children);
   const childStyle = (children.props as { style?: CSSProperties }).style ?? {};
-  const inner = cloneElement(children as ReactElement<Record<string, unknown>>, {
-    'data-sl-anim': anim,
-    'data-scroll-fade': anim === 'scroll-fade' ? true : undefined,
-    style: {
-      ...childStyle,
-      // Style-tab fields (color/font/size/spacing/border/shadow) — present only when the sub-layer
-      // is flagged `styleable` (all of these are), so this is a no-op until the couple actually
-      // touches the Style tab.
-      ...subLayerStyle(layer),
-      '--sl-opacity': layer?.opacity ?? 1,
-      '--sl-delay': staggerDelay(layer?.order ?? 0),
-      ...(layer?.animDur ? { '--sl-dur': `${layer.animDur}s` } : {}),
-    } as CSSProperties,
-  });
+  const inner = curveText !== undefined
+    ? <CurvedPiece layer={layer!} text={curveText} anim={anim} />
+    : cloneElement(children as ReactElement<Record<string, unknown>>, {
+      'data-sl-anim': anim,
+      'data-scroll-fade': anim === 'scroll-fade' ? true : undefined,
+      style: {
+        ...childStyle,
+        // Style-tab fields (color/font/size/spacing/border/shadow) — present only when the
+        // sub-layer is flagged `styleable` (all of these are), so this is a no-op until the
+        // couple actually touches the Style tab.
+        ...subLayerStyle(layer),
+        '--sl-opacity': layer?.opacity ?? 1,
+        '--sl-delay': staggerDelay(layer?.order ?? 0),
+        ...(layer?.animDur ? { '--sl-dur': `${layer.animDur}s` } : {}),
+      } as CSSProperties,
+    });
 
   // nudge wrapper · optional exit wrapper (scroll-scrubbed via --sl-out) · entrance inner — three
   // elements so nudge/exit/entrance transforms never collide.

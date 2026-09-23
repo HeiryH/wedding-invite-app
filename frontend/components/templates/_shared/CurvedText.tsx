@@ -71,7 +71,12 @@ export default function CurvedText({ layer, text }: Props) {
       </defs>
       <text
         style={{
-          fontSize: `${layer.fontSize ?? 4}cqi`,
+          // USER UNITS, not a CSS length. A CSS `cqi` here computes against the container and is
+          // *then* multiplied by the viewBox→box scale (box/200), so the glyphs grew quadratically
+          // with the box — a curved title rendered roughly twice the size of the same text flat.
+          // 200 user units span the box's full width, so `fontSize * 2` units == `fontSize`% of the
+          // box == the `Ncqi` the flat `.text` path uses.
+          fontSize: (layer.fontSize ?? 4) * 2,
           fontFamily: fontVar(layer.fontFamily),
           fontWeight: layer.fontWeight ?? 600,
           letterSpacing: layer.letterSpacing !== undefined ? `${layer.letterSpacing}em` : undefined,

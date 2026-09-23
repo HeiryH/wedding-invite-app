@@ -203,6 +203,18 @@ export default function AdjustPanel({
   // Which floating card sits to the left of the dock. Theme (gear) and Add (+) are explicit
   // pop-overs; when neither is open, selecting a layer/background shows the detail card instead.
   const [popover, setPopover] = useState<'theme' | 'add' | null>(null);
+  // Exactly one card is ever open. Opening a pop-over clears the layer selection (whose detail
+  // card would otherwise still be behind it), and selecting a layer closes the pop-over.
+  const openPopover = (which: 'theme' | 'add') =>
+    setPopover((prev) => {
+      if (prev === which) return null;
+      onSelectLayer(undefined);
+      return which;
+    });
+  const selectLayer = (id: string | undefined) => {
+    setPopover(null);
+    onSelectLayer(id);
+  };
   const layersRef = useRef<HTMLDivElement>(null);
   // Layer-detail tab: geometry vs style vs animation. Sticky across layer selection.
   const [detailTab, setDetailTab] = useState<'layout' | 'style' | 'anim' | 'slotText' | 'slotContainer'>('layout');
@@ -546,7 +558,7 @@ export default function AdjustPanel({
           )}
           <button
             className={`${styles.name} ${l.hidden ? styles.nameHidden : ''}`}
-            onClick={() => onSelectLayer(l.id)}
+            onClick={() => selectLayer(l.id)}
           >
             {nameOf(l)}
           </button>
@@ -564,13 +576,6 @@ export default function AdjustPanel({
             aria-label={l.hidden ? 'Show' : 'Hide'}
           >
             <Icon name={l.hidden ? 'eye-off' : 'eye'} size={14} />
-          </button>
-          <button
-            className={`${styles.iconBtn} ${styles.iconBtnDanger} ${l.locked ? styles.iconBtnDisabled : ''}`}
-            onClick={() => { if (!l.locked) removeLayer(l.id); }}
-            title={l.locked ? 'Locked — unlock to delete' : l.kind === 'anchor' ? 'Remove from invitation' : 'Delete layer'}
-          >
-            ✕
           </button>
         </div>
         {hasKids && isOpen && kids!.map((c) => renderRow(c, true))}
@@ -1280,7 +1285,10 @@ export default function AdjustPanel({
                 <Slider label="Offset X" value={current.shadowX ?? 0} min={-20} max={20} step={1} onChange={set('shadowX')} />
                 <Slider label="Offset Y" value={current.shadowY ?? 0} min={-20} max={20} step={1} onChange={set('shadowY')} />
 
-                {current.kind === 'text' && (
+                {/* Curve: real text layers, and sub-layers that own their own text string (the
+                    hero pieces — HeroSlots.tsx swaps in <CurvedText> for those). Not offered for a
+                    piece whose child is a composite block (the timer grid), which can't curve. */}
+                {(current.kind === 'text' || current.hasText) && (
                   <>
                     <div className={styles.label}>Shape</div>
                     <div className={styles.control} style={{ gridTemplateColumns: '54px 1fr' }}>
@@ -1383,9 +1391,21 @@ export default function AdjustPanel({
             )}
 
             {!current.locked && (
-              <button className={`${styles.btn} ${styles.btnGhost}`} onClick={resetLayer} style={{ width: '100%', marginTop: 8 }}>
-                {isAnchor ? 'Reset position' : 'Reset layer'}
-              </button>
+              <div className={styles.btnRow}>
+                <button className={`${styles.btn} ${styles.btnGhost}`} onClick={resetLayer}>
+                  {isAnchor ? 'Reset position' : 'Reset layer'}
+                </button>
+                {/* Anchors have nothing to delete — they're a nudge on an element the template
+                    renders anyway; hiding one is what the eye in the list already does. */}
+                {!isAnchor && (
+                  <button
+                    className={`${styles.btn} ${styles.btnDanger}`}
+                    onClick={() => removeLayer(current.id)}
+                  >
+                    Delete layer
+                  </button>
+                )}
+              </div>
             )}
           </>
         ) : null}
@@ -1409,7 +1429,7 @@ export default function AdjustPanel({
           <div className={styles.toolbar}>
             <button
               className={`${styles.toolBtn} ${popover === 'theme' ? styles.toolBtnActive : ''}`}
-              onClick={() => setPopover((p) => (p === 'theme' ? null : 'theme'))}
+              onClick={() => openPopover('theme')}
               title="Theme & style — accent, fonts, card look"
               aria-label="Theme & style"
               aria-pressed={popover === 'theme'}
@@ -1443,7 +1463,7 @@ export default function AdjustPanel({
           {def.bg && (
             <div
               className={`${styles.row} ${bgSelected ? styles.rowActive : ''}`}
-              onClick={() => onSelectLayer(BG_ID)}
+              onClick={() => selectLayer(BG_ID)}
               role="button"
               data-layer-row={BG_ID}
             >
@@ -1455,7 +1475,7 @@ export default function AdjustPanel({
 
         <button
           className={`${styles.addBtn} ${popover === 'add' ? styles.addBtnActive : ''}`}
-          onClick={() => setPopover((p) => (p === 'add' ? null : 'add'))}
+          onClick={() => openPopover('add')}
           title="Add text, a shape, an image or an effect to this stage"
           aria-label="Add to stage"
           aria-pressed={popover === 'add'}
