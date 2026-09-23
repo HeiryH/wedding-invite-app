@@ -201,9 +201,9 @@ export default function LandingAdminPage() {
   const subHeading: React.CSSProperties = { fontFamily: 'var(--font-display)', fontSize: 16, color: 'var(--text-strong)', margin: 0 };
 
   const contentFields = (fields: ContentField[]) => (
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 12 }}>
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(240px, 100%), 1fr))', gap: 12 }}>
       {fields.map(([key, label, area]) => area
-        ? <Textarea key={key} label={label} value={content[key] ?? ''} onChange={(e) => setKey(key, e.target.value)} rows={2} />
+        ? <Textarea key={key} label={label} value={content[key] ?? ''} onChange={(e) => setKey(key, e.target.value)} rows={3} />
         : <Input key={key} label={label} value={content[key] ?? ''} onChange={(e) => setKey(key, e.target.value)} />)}
     </div>
   );
@@ -214,31 +214,38 @@ export default function LandingAdminPage() {
       <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
         {(itemsBy[sectionKey] ?? []).map((it) => (
           <div key={it.id} style={{ padding: 14, border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-md)', display: 'flex', flexDirection: 'column', gap: 10 }}>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 10 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(200px, 100%), 1fr))', gap: 10 }}>
               <Input label={g.hasPrice ? 'Tier name' : 'Title'} value={it.title} onChange={(e) => patchItem(it.id, { title: e.target.value })} />
               {g.hasPrice && <Input label="Price" placeholder="e.g. Contact us, $99/mo" value={it.price} onChange={(e) => patchItem(it.id, { price: e.target.value })} />}
               {g.metaLabel && <Input label={g.metaLabel} value={it.meta} onChange={(e) => patchItem(it.id, { meta: e.target.value })} />}
             </div>
-            <Textarea label={g.hasPrice ? 'Description' : 'Body'} value={it.body} onChange={(e) => patchItem(it.id, { body: e.target.value })} rows={2} />
+            <Textarea label={g.hasPrice ? 'Description' : 'Body'} value={it.body} onChange={(e) => patchItem(it.id, { body: e.target.value })} rows={3} />
             {g.hasFeatures && (
               <Textarea label="Features (one per line)" value={it.features} onChange={(e) => patchItem(it.id, { features: e.target.value })} rows={4} />
             )}
             {g.hasCta && (
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 10 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(200px, 100%), 1fr))', gap: 10 }}>
                 <Input label="Button label" placeholder="e.g. Get started free" value={it.cta} onChange={(e) => patchItem(it.id, { cta: e.target.value })} />
                 <Input label="Button link" placeholder="e.g. /personalise/picker" value={it.ctaHref} onChange={(e) => patchItem(it.id, { ctaHref: e.target.value })} />
               </div>
             )}
             {g.hasImage && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <Input label="Image URL" value={it.imageUrl} onChange={(e) => patchItem(it.id, { imageUrl: e.target.value })} />
-                <input type="file" accept="image/*" onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadImage(it, f); }} />
+              <div style={{ display: 'flex', alignItems: 'flex-end', gap: 10, flexWrap: 'wrap' }}>
+                <div style={{ flex: '1 1 200px', minWidth: 0 }}>
+                  <Input label="Image URL" value={it.imageUrl} onChange={(e) => patchItem(it.id, { imageUrl: e.target.value })} />
+                </div>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadImage(it, f); }}
+                  style={{ maxWidth: '100%', fontSize: 12 }}
+                />
               </div>
             )}
-            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
               <Switch checked={it.isActive} onChange={() => patchItem(it.id, { isActive: !it.isActive })} label={it.isActive ? 'Active' : 'Hidden'} />
               {g.hasHighlight && <Switch checked={it.highlighted} onChange={() => patchItem(it.id, { highlighted: !it.highlighted })} label={it.highlighted ? 'Popular' : 'Not popular'} />}
-              <div style={{ flex: 1 }} />
+              <div style={{ flex: '1 0 auto' }} />
               <Button variant="ghost" onClick={() => removeItem(it.id)}>Delete</Button>
             </div>
           </div>
@@ -251,7 +258,13 @@ export default function LandingAdminPage() {
   );
 
   return (
-    <div style={{ padding: '24px clamp(16px, 4vw, 40px)', maxWidth: 900, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 28 }}>
+    <div style={{
+      maxWidth: 900, margin: '0 auto', width: '100%', minWidth: 0,
+      display: 'flex', flexDirection: 'column', gap: 24,
+      // Clears the floating Save button (and, on mobile, the tab bar under it) so the last
+      // card's fields stay reachable.
+      paddingBottom: 96,
+    }}>
       <div>
         <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 30, color: 'var(--text-strong)', margin: 0 }}>Landing page</h1>
         <p style={{ color: 'var(--text-muted)', fontSize: 14, margin: '6px 0 0' }}>Each card below is one section of the public page — its text, its visibility &amp; order, and its list of cards, all in one place. Visibility, order, adding and deleting apply right away; edit any field, then hit the save button in the corner to store your changes.</p>
@@ -259,7 +272,7 @@ export default function LandingAdminPage() {
 
       {/* Hero — always shown, no visibility/order control, no item list. */}
       <Card style={{ padding: 20 }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', margin: '0 0 14px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap', margin: '0 0 14px' }}>
           <h2 style={sectionHeading}>Hero</h2>
           <Button variant="ghost" size="sm" onClick={() => resetGroup(HERO_FIELDS.map(([key]) => key))}>Reset to default</Button>
         </div>
@@ -274,13 +287,16 @@ export default function LandingAdminPage() {
         if (!cfg) return null;
         return (
           <Card key={s.sectionKey} style={{ padding: 20 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '0 0 14px' }}>
-              <h2 style={sectionHeading}>{cfg.label}</h2>
-              <div style={{ flex: 1 }} />
-              <Switch checked={s.isVisible} onChange={() => toggleVisible(s.sectionKey)} label={s.isVisible ? 'Visible' : 'Hidden'} />
-              <Button variant="ghost" onClick={() => move(s.sectionKey, -1)} disabled={i === 0} title="Move up">↑</Button>
-              <Button variant="ghost" onClick={() => move(s.sectionKey, 1)} disabled={i === sections.length - 1} title="Move down">↓</Button>
-              <Button variant="ghost" size="sm" onClick={() => resetGroup(cfg.fields.map(([key]) => key))}>Reset to default</Button>
+            {/* Wraps: the heading keeps its own line on a phone and the four controls flow
+                underneath, rather than forcing the card wider than the screen. */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', margin: '0 0 14px' }}>
+              <h2 style={{ ...sectionHeading, flex: '1 1 auto', minWidth: 0 }}>{cfg.label}</h2>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginLeft: 'auto' }}>
+                <Switch checked={s.isVisible} onChange={() => toggleVisible(s.sectionKey)} label={s.isVisible ? 'Visible' : 'Hidden'} />
+                <Button variant="ghost" onClick={() => move(s.sectionKey, -1)} disabled={i === 0} title="Move up">↑</Button>
+                <Button variant="ghost" onClick={() => move(s.sectionKey, 1)} disabled={i === sections.length - 1} title="Move down">↓</Button>
+                <Button variant="ghost" size="sm" onClick={() => resetGroup(cfg.fields.map(([key]) => key))}>Reset to default</Button>
+              </div>
             </div>
             {contentFields(cfg.fields)}
             {cfg.items && itemRows(cfg.items, s.sectionKey)}
@@ -290,7 +306,7 @@ export default function LandingAdminPage() {
 
       {/* Footer — always shown, no visibility/order control, no item list. */}
       <Card style={{ padding: 20 }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', margin: '0 0 14px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap', margin: '0 0 14px' }}>
           <h2 style={sectionHeading}>Footer</h2>
           <Button variant="ghost" size="sm" onClick={() => resetGroup(FOOTER_FIELDS.map(([key]) => key))}>Reset to default</Button>
         </div>
