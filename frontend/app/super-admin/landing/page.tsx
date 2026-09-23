@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Textarea } from '@/components/ui/Textarea';
 import { Switch } from '@/components/ui/Switch';
+import { IconButton } from '@/components/ui/IconButton';
 import { Card } from '@/components/ui/Card';
 import { Icon } from '@/components/ui/Icon';
 import { LANDING_CONTENT_DEFAULTS, DEFAULT_FEATURE_ITEMS, DEFAULT_STORY_ITEMS, DEFAULT_PRICING_ITEMS, LandingDefaultItem } from '@/lib/landing/defaults';
@@ -272,9 +273,9 @@ export default function LandingAdminPage() {
 
       {/* Hero — always shown, no visibility/order control, no item list. */}
       <Card style={{ padding: 20 }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap', margin: '0 0 14px' }}>
-          <h2 style={sectionHeading}>Hero</h2>
-          <Button variant="ghost" size="sm" onClick={() => resetGroup(HERO_FIELDS.map(([key]) => key))}>Reset to default</Button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '0 0 14px' }}>
+          <h2 style={{ ...sectionHeading, flex: '1 1 auto', minWidth: 0 }}>Hero</h2>
+          <IconButton name="refresh-cw" label="Reset to default" size="sm" onClick={() => resetGroup(HERO_FIELDS.map(([key]) => key))} />
         </div>
         {contentFields(HERO_FIELDS)}
       </Card>
@@ -287,16 +288,30 @@ export default function LandingAdminPage() {
         if (!cfg) return null;
         return (
           <Card key={s.sectionKey} style={{ padding: 20 }}>
-            {/* Wraps: the heading keeps its own line on a phone and the four controls flow
-                underneath, rather than forcing the card wider than the screen. */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', margin: '0 0 14px' }}>
-              <h2 style={{ ...sectionHeading, flex: '1 1 auto', minWidth: 0 }}>{cfg.label}</h2>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginLeft: 'auto' }}>
-                <Switch checked={s.isVisible} onChange={() => toggleVisible(s.sectionKey)} label={s.isVisible ? 'Visible' : 'Hidden'} />
-                <Button variant="ghost" onClick={() => move(s.sectionKey, -1)} disabled={i === 0} title="Move up">↑</Button>
-                <Button variant="ghost" onClick={() => move(s.sectionKey, 1)} disabled={i === sections.length - 1} title="Move down">↓</Button>
-                <Button variant="ghost" size="sm" onClick={() => resetGroup(cfg.fields.map(([key]) => key))}>Reset to default</Button>
-              </div>
+            {/* All four controls are icon-sized and sit on the heading's own line — the words
+                ("Visible", "Reset to default") and the default Button padding made this row wider
+                than a phone. The switch still says what it does through its title/aria-label. */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 4, margin: '0 0 14px' }}>
+              <h2 style={{ ...sectionHeading, flex: '1 1 auto', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{cfg.label}</h2>
+              {/* `title` has to ride a wrapper: Switch spreads the rest of its props onto its
+                  visually-hidden <input>, so a title there would never be hoverable. */}
+              <span
+                title={s.isVisible ? 'Visible on the landing page — click to hide' : 'Hidden — click to show'}
+                style={{ display: 'inline-flex', marginRight: 4 }}
+              >
+                <Switch
+                  size="sm"
+                  checked={s.isVisible}
+                  onChange={() => toggleVisible(s.sectionKey)}
+                  aria-label={s.isVisible ? 'Section visible' : 'Section hidden'}
+                />
+              </span>
+              {/* The two reorder arrows read as one control, so no gap between them. */}
+              <span style={{ display: 'inline-flex' }}>
+                <IconButton name="chevron-up" label="Move up" size="sm" onClick={() => move(s.sectionKey, -1)} disabled={i === 0} />
+                <IconButton name="chevron-down" label="Move down" size="sm" onClick={() => move(s.sectionKey, 1)} disabled={i === sections.length - 1} />
+              </span>
+              <IconButton name="refresh-cw" label="Reset to default" size="sm" onClick={() => resetGroup(cfg.fields.map(([key]) => key))} />
             </div>
             {contentFields(cfg.fields)}
             {cfg.items && itemRows(cfg.items, s.sectionKey)}
@@ -306,9 +321,9 @@ export default function LandingAdminPage() {
 
       {/* Footer — always shown, no visibility/order control, no item list. */}
       <Card style={{ padding: 20 }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap', margin: '0 0 14px' }}>
-          <h2 style={sectionHeading}>Footer</h2>
-          <Button variant="ghost" size="sm" onClick={() => resetGroup(FOOTER_FIELDS.map(([key]) => key))}>Reset to default</Button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '0 0 14px' }}>
+          <h2 style={{ ...sectionHeading, flex: '1 1 auto', minWidth: 0 }}>Footer</h2>
+          <IconButton name="refresh-cw" label="Reset to default" size="sm" onClick={() => resetGroup(FOOTER_FIELDS.map(([key]) => key))} />
         </div>
         {contentFields(FOOTER_FIELDS)}
       </Card>
