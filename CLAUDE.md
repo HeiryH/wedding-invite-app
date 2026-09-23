@@ -502,9 +502,17 @@ sensible removal).
   rendering, which is why the Shape control only shows for `kind:'text'` or a sub-layer with
   `hasText`. Wired into `HeroSlots`'s `HeroPiece` and T13's `Piece` — **a new template's own piece
   wrapper must call `curvedTextOf`/`CurvedPiece` too**, or its text pieces silently ignore Shape.
-  Note `CurvedText` sizes its glyphs in **SVG user units** (`fontSize * 2`, since 200 units span
-  the box): a CSS `cqi` there was multiplied again by the viewBox→box scale, so curved text grew
-  quadratically with the box and rendered roughly twice the size of the same text flat.
+  Two geometry fixes came with it: `CurvedText` sizes its glyphs in **SVG user units**
+  (`fontSize * 2`, since 200 units span the box) — a CSS `cqi` there was multiplied again by the
+  viewBox→box scale, so curved text grew quadratically with the box; and the **viewBox height is
+  computed from the geometry** (one line of type + the arc's sagitta) instead of a fixed 200×100.
+  That second one is what makes the piece behave: `CurvedPiece` keeps a **flat line's height in
+  flow** and positions the curve absolutely over it, so switching a piece to arc/circle **overlaps
+  its neighbours instead of pushing them down** (measured: 4px of drift on T13's hero, vs the whole
+  hero collapsing before). The tight box also matters because `.slot` is `overflow-y: auto` — an
+  oversized absolute box is simply **clipped away**, which is exactly how the first attempt
+  rendered nothing at all. A full `circle` ring is capped at 10 lines tall for the same reason and
+  fits itself inside (`preserveAspectRatio`).
 - **A sub-layer's Style tab only reaches text the *wrapper* owns.** `subLayerStyle` writes inline
   styles onto the piece's own element, so any child with its own `font`/`color`/`font-size` rule
   silently out-specifies the couple's choice — that's why the countdown's digits ignored the Style

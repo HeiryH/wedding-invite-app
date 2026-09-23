@@ -2,7 +2,7 @@
 
 import type { CSSProperties, ReactElement, ReactNode } from 'react';
 import type { Layer } from '../types';
-import CurvedText from '../CurvedText';
+import CurvedText, { curvedAspect } from '../CurvedText';
 import { staggerDelay } from '../reveal';
 
 /**
@@ -27,22 +27,42 @@ export function curvedTextOf(layer: Layer | undefined, children: ReactElement): 
 /** The curved replacement for a piece's flat child, carrying the same entrance-animation hooks
  *  the `cloneElement` path applies (see each slot file's `Piece`/`HeroPiece`). */
 export function CurvedPiece({ layer, text, anim }: { layer: Layer; text: string; anim: string }) {
+  // The piece keeps roughly the FLAT line's height in flow, and the curve is absolutely positioned
+  // and centred on it — so switching a piece to arc/circle overlaps its neighbours instead of
+  // pushing them down the hero. The curve's own box is only as tall as the geometry needs
+  // (`curvedAspect`), which also keeps the overhang small enough to stay inside the slot's
+  // `overflow-y: auto` box — a fixed 2:1 box was clipped away entirely.
+  const line = (layer.fontSize ?? 4) * (layer.lineHeight ?? 1.25);
   return (
     <div
       data-sl-anim={anim}
       data-scroll-fade={anim === 'scroll-fade' ? true : undefined}
       style={{
-        // CurvedText is an SVG with a 200×100 viewBox and `height: 100%`; a sub-layer piece is a
-        // flow element with no height of its own, so give the box that same 2:1 aspect or the
-        // glyphs render against a collapsed height and spill over the neighbours.
+        position: 'relative',
         width: '100%',
-        aspectRatio: '2 / 1',
+        height: `${line}cqi`,
         '--sl-opacity': layer.opacity ?? 1,
         '--sl-delay': staggerDelay(layer.order ?? 0),
         ...(layer.animDur ? { '--sl-dur': `${layer.animDur}s` } : {}),
       } as CSSProperties}
     >
-      <CurvedText layer={layer} text={text} />
+      <div
+        style={{
+          position: 'absolute',
+          left: 0,
+          right: 0,
+          top: '50%',
+          transform: 'translateY(-50%)',
+          aspectRatio: String(curvedAspect(layer)),
+          // A full `circle` ring is as tall as it is wide; cap the overhang so it can't reach past
+          // the slot's own clip. The SVG's default `preserveAspectRatio` then fits the ring inside
+          // (smaller, fully visible) rather than cropping it.
+          maxHeight: `${line * 10}cqi`,
+          pointerEvents: 'none',
+        }}
+      >
+        <CurvedText layer={layer} text={text} />
+      </div>
     </div>
   );
 }
