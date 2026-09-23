@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect, useRef, useState } from 'react';
 import Icon from './Icon';
 import { tierLabel } from '@/lib/tierRank';
 
@@ -150,44 +151,114 @@ export default function WeddingCard({ wedding, onManage, onPreview, onToggleActi
             {status === 'live' && <span style={{ color: 'var(--success)', fontWeight: 500 }}>Live now</span>}
             {status === 'draft' && <span style={{ color: 'var(--text-subtle)' }}>Not published</span>}
           </div>
-          <div style={{ display: 'flex', gap: 6, flexShrink: 0 }} onClick={e => e.stopPropagation()}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }} onClick={e => e.stopPropagation()}>
             <button
               onClick={() => onPreview(wedding.slug, wedding.eventType)}
-              style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '6px 10px', borderRadius: 'var(--radius-md)', fontSize: 12, fontWeight: 500, fontFamily: 'var(--font-ui)', background: 'var(--surface-card)', border: '1px solid var(--border-default)', color: 'var(--text-body)', cursor: 'pointer', transition: 'var(--transition-control)' }}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '6px 10px', borderRadius: 'var(--radius-md)', fontSize: 12, fontWeight: 500, fontFamily: 'var(--font-ui)', background: 'var(--surface-card)', border: '1px solid var(--border-default)', color: 'var(--text-body)', cursor: 'pointer', whiteSpace: 'nowrap', transition: 'var(--transition-control)' }}
               onMouseEnter={e => (e.currentTarget.style.borderColor = 'var(--brand-border)')}
               onMouseLeave={e => (e.currentTarget.style.borderColor = 'var(--border-default)')}
             >
-              <Icon name="external-link" size={12} /> Visit Website
+              <Icon name="external-link" size={12} /> Visit
             </button>
-            <button
-              onClick={() => onToggleActive(wedding.eventId, wedding.isActive)}
-              style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '6px 10px', borderRadius: 'var(--radius-md)', fontSize: 12, fontWeight: 500, fontFamily: 'var(--font-ui)', background: wedding.isActive ? 'var(--surface-sunken)' : '#e5f1ea', color: wedding.isActive ? 'var(--text-subtle)' : 'var(--success)', border: '1px solid var(--border-default)', cursor: 'pointer', transition: 'var(--transition-control)' }}
-            >
-              <Icon name={wedding.isActive ? 'pause' : 'play'} size={12} />
-              {wedding.isActive ? 'Deactivate' : 'Activate'}
-            </button>
-            <button
-              onClick={() => onExport(wedding.eventId, wedding.slug)}
-              style={{ display: 'inline-flex', alignItems: 'center', padding: '6px 8px', borderRadius: 'var(--radius-md)', background: 'var(--surface-card)', border: '1px solid var(--border-default)', color: 'var(--text-subtle)', cursor: 'pointer', transition: 'background var(--dur-fast) var(--ease-standard)' }}
-              onMouseEnter={e => (e.currentTarget.style.background = 'var(--surface-sunken)')}
-              onMouseLeave={e => (e.currentTarget.style.background = 'var(--surface-card)')}
-              aria-label="Export data"
-              title="Export data"
-            >
-              <Icon name="download" size={12} />
-            </button>
-            <button
-              onClick={() => onDelete(wedding.eventId, wedding.slug)}
-              style={{ display: 'inline-flex', alignItems: 'center', padding: '6px 8px', borderRadius: 'var(--radius-md)', background: 'var(--surface-card)', border: '1px solid var(--border-default)', color: 'var(--danger)', cursor: 'pointer', transition: 'background var(--dur-fast) var(--ease-standard)' }}
-              onMouseEnter={e => (e.currentTarget.style.background = 'color-mix(in srgb, var(--danger) 8%, transparent)')}
-              onMouseLeave={e => (e.currentTarget.style.background = 'var(--surface-card)')}
-              aria-label="Delete"
-            >
-              <Icon name="trash" size={12} />
-            </button>
+            {/* Activate/Export/Delete live behind one kebab: four inline buttons overflowed the
+                card on a phone (and crowded it on desktop), and a one-click Delete sitting next to
+                Export is its own hazard. */}
+            <CardMenu
+              isActive={wedding.isActive}
+              onToggleActive={() => onToggleActive(wedding.eventId, wedding.isActive)}
+              onExport={() => onExport(wedding.eventId, wedding.slug)}
+              onDelete={() => onDelete(wedding.eventId, wedding.slug)}
+            />
           </div>
         </div>
       </div>
     </article>
+  );
+}
+
+/** The card's overflow menu — activate/deactivate, export, delete. */
+function CardMenu({ isActive, onToggleActive, onExport, onDelete }: {
+  isActive: boolean;
+  onToggleActive: () => void;
+  onExport: () => void;
+  onDelete: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const close = (e: MouseEvent) => { if (!ref.current?.contains(e.target as Node)) setOpen(false); };
+    const esc = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(false); };
+    document.addEventListener('mousedown', close);
+    document.addEventListener('keydown', esc);
+    return () => { document.removeEventListener('mousedown', close); document.removeEventListener('keydown', esc); };
+  }, [open]);
+
+  return (
+    <div ref={ref} style={{ position: 'relative' }}>
+      <button
+        onClick={() => setOpen(o => !o)}
+        aria-label="More actions"
+        aria-expanded={open}
+        title="More actions"
+        style={{
+          display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+          width: 30, height: 30, borderRadius: 'var(--radius-md)',
+          background: open ? 'var(--surface-sunken)' : 'var(--surface-card)',
+          border: '1px solid var(--border-default)', color: 'var(--text-muted)',
+          cursor: 'pointer', transition: 'var(--transition-control)',
+        }}
+      >
+        <Icon name="more-vertical" size={15} />
+      </button>
+      {open && (
+        <div
+          role="menu"
+          style={{
+            position: 'absolute', bottom: 'calc(100% + 6px)', right: 0,
+            minWidth: 176, padding: 5, zIndex: 40,
+            background: 'var(--surface-card)', border: '1px solid var(--border-subtle)',
+            borderRadius: 'var(--radius-lg)', boxShadow: 'var(--shadow-lg)',
+          }}
+        >
+          <CardMenuItem icon={isActive ? 'pause' : 'play'} onClick={() => { setOpen(false); onToggleActive(); }}>
+            {isActive ? 'Deactivate' : 'Activate'}
+          </CardMenuItem>
+          <CardMenuItem icon="download" onClick={() => { setOpen(false); onExport(); }}>
+            Export data
+          </CardMenuItem>
+          <div style={{ height: 1, background: 'var(--border-subtle)', margin: '4px 0' }} />
+          <CardMenuItem icon="trash" danger onClick={() => { setOpen(false); onDelete(); }}>
+            Delete
+          </CardMenuItem>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function CardMenuItem({ icon, danger, onClick, children }: {
+  icon: string; danger?: boolean; onClick: () => void; children: React.ReactNode;
+}) {
+  const [hover, setHover] = useState(false);
+  return (
+    <button
+      role="menuitem"
+      onClick={onClick}
+      onMouseEnter={() => setHover(true)}
+      onMouseLeave={() => setHover(false)}
+      style={{
+        display: 'flex', alignItems: 'center', gap: 9, width: '100%',
+        padding: '8px 11px', borderRadius: 'var(--radius-sm)',
+        background: hover ? (danger ? 'color-mix(in srgb, var(--danger) 8%, transparent)' : 'var(--surface-sunken)') : 'transparent',
+        border: 'none', cursor: 'pointer', textAlign: 'left',
+        color: danger ? 'var(--danger)' : 'var(--text-body)',
+        fontSize: 13, fontWeight: 500, fontFamily: 'var(--font-ui)',
+        transition: 'var(--transition-control)',
+      }}
+    >
+      <Icon name={icon} size={13} /> {children}
+    </button>
   );
 }

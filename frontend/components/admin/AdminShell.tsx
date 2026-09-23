@@ -15,11 +15,21 @@ export interface NavItem {
 
 interface AdminShellProps {
   children: React.ReactNode;
+  /** Primary destinations: the desktop rail AND the mobile tab bar. Keep this short — the tab bar
+   *  gives every item an equal slice, so past ~4 it stops being tappable and starts being a wall
+   *  of icons. Everything else belongs in `menuItems`. */
   navItems: NavItem[];
+  /** Secondary destinations. Desktop still lists them in the rail (there's room); mobile reaches
+   *  them through the avatar menu instead of the tab bar. */
+  menuItems?: NavItem[];
   onLogout: () => void;
   userInitials?: string;
   role?: 'Super Admin' | 'Host Admin' | 'Event Organizer';
+  /** Renders the Create FAB, docked bottom-right over the content (`.admin-fab-dock`). */
   fabHref?: string;
+  /** Route prefixes whose own page owns that corner — the FAB hides there rather than stacking
+   *  on top of the page's own action (the landing editor's Save). */
+  fabHiddenOn?: string[];
   sidePillLinks?: { label: string; href: string }[];
   homeHref?: string;
 }
@@ -29,10 +39,12 @@ const isSuperAdmin = (role: string) => role === 'Super Admin';
 export default function AdminShell({
   children,
   navItems,
+  menuItems,
   onLogout,
   userInitials = 'SA',
   role = 'Super Admin',
   fabHref,
+  fabHiddenOn,
   sidePillLinks,
   homeHref,
 }: AdminShellProps) {
@@ -52,12 +64,14 @@ export default function AdminShell({
     return () => document.removeEventListener('mousedown', close);
   }, [menuOpen]);
 
-  const activeId = navItems.reduce<string>((best, item) => {
-    if (pathname.startsWith(item.href) && item.href.length > (navItems.find(n => n.id === best)?.href.length ?? 0)) {
+  const allItems = [...navItems, ...(menuItems ?? [])];
+  const activeId = allItems.reduce<string>((best, item) => {
+    if (pathname.startsWith(item.href) && item.href.length > (allItems.find(n => n.id === best)?.href.length ?? 0)) {
       return item.id;
     }
     return best;
   }, navItems[0]?.id ?? '');
+  const showFab = Boolean(fabHref) && !(fabHiddenOn ?? []).some(p => pathname.startsWith(p));
 
   // ── Topbar ───────────────────────────────────────────────────────────────
   const topbar = (
@@ -141,6 +155,21 @@ export default function AdminShell({
                 {userInitials}
               </p>
             </div>
+            {/* Secondary destinations live here on mobile — the tab bar only carries the few
+                things you switch between constantly. */}
+            {menuItems?.map(item => (
+              <MenuBtn
+                key={item.id}
+                icon={item.icon}
+                active={item.id === activeId}
+                onClick={() => { setMenuOpen(false); router.push(item.href); }}
+              >
+                {item.label}
+              </MenuBtn>
+            ))}
+            {menuItems && menuItems.length > 0 && (
+              <div style={{ height: 1, background: 'var(--border-subtle)', margin: '6px 0' }} />
+            )}
             <MenuBtn icon="log-out" danger onClick={() => { setMenuOpen(false); onLogout(); }}>
               Log out
             </MenuBtn>
@@ -163,8 +192,8 @@ export default function AdminShell({
         width: 240, flexShrink: 0,
       }}
     >
-      {/* Nav items */}
-      {navItems.map(item => {
+      {/* Nav items — the rail has room for the secondary destinations too. */}
+      {allItems.map(item => {
         const isActive = item.id === activeId;
         return (
           <button
@@ -299,46 +328,58 @@ export default function AdminShell({
           backdropFilter: 'blur(20px) saturate(140%)',
           WebkitBackdropFilter: 'blur(20px) saturate(140%)',
           borderTop: '1px solid var(--border-subtle)',
-          padding: 'calc(6px + env(safe-area-inset-bottom)) 12px 6px',
+          minHeight: 'var(--tabbar-h)',
+          padding: '6px 12px calc(6px + env(safe-area-inset-bottom))',
           gap: 4, zIndex: 50,
         }}
       >
-        {navItems.map((item, idx) => {
+        {navItems.map(item => {
           const isActive = item.id === activeId;
-          const isMid = fabHref !== undefined && idx === Math.floor(navItems.length / 2);
           return (
-            <div key={item.id} style={{ display: 'contents' }}>
-              {isMid && (
-                <button
-                  onClick={() => router.push(fabHref!)}
-                  style={{
-                    flex: '0 0 auto', width: 36, height: 36, borderRadius: 'var(--radius-md)',
-                    background: 'var(--brand)', color: '#fff',
-                    display: 'grid', placeItems: 'center', border: 'none', cursor: 'pointer',
-                    boxShadow: 'var(--shadow-md)',
-                  }}
-                  aria-label="Create"
-                >
-                  <Icon name="plus" size={16} />
-                </button>
-              )}
-              <button
-                onClick={() => router.push(item.href)}
-                style={{
-                  flex: 1, height: 40, borderRadius: 'var(--radius-md)',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  color: isActive ? 'var(--brand)' : 'var(--text-muted)',
-                  background: isActive ? 'var(--brand-subtle)' : 'transparent',
-                  border: 'none', cursor: 'pointer',
-                  transition: 'var(--transition-control)',
-                }}
-              >
-                <Icon name={item.icon} size={19} />
-              </button>
-            </div>
+            <button
+              key={item.id}
+              onClick={() => router.push(item.href)}
+              style={{
+                flex: 1, height: 44, borderRadius: 'var(--radius-md)',
+                display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 2,
+                color: isActive ? 'var(--brand)' : 'var(--text-muted)',
+                background: isActive ? 'var(--brand-subtle)' : 'transparent',
+                border: 'none', cursor: 'pointer', minWidth: 0,
+                transition: 'var(--transition-control)',
+              }}
+            >
+              <Icon name={item.icon} size={18} />
+              <span style={{
+                fontSize: 10, fontFamily: 'var(--font-ui)', fontWeight: isActive ? 600 : 500,
+                maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+              }}>
+                {item.label}
+              </span>
+            </button>
           );
         })}
       </nav>
+
+      {/* Create — one floating action, same corner on mobile and desktop. It used to be wedged
+          into the middle of the mobile tab bar, which cost a nav slot and hid it on desktop. */}
+      {showFab && (
+        <div className="admin-fab-dock">
+          <button
+            onClick={() => router.push(fabHref!)}
+            aria-label="Create"
+            title="Create"
+            style={{
+              width: 56, height: 56, borderRadius: '50%',
+              background: 'var(--brand)', color: 'var(--brand-on)',
+              display: 'grid', placeItems: 'center', border: 'none', cursor: 'pointer',
+              boxShadow: '0 8px 24px rgba(0,0,0,.28)',
+              transition: 'var(--transition-control)',
+            }}
+          >
+            <Icon name="plus" size={22} />
+          </button>
+        </div>
+      )}
     </div>
   );
 }
@@ -366,7 +407,7 @@ function HomeLink({ href }: { href: string }) {
   );
 }
 
-function MenuBtn({ icon, danger, onClick, children }: { icon: string; danger?: boolean; onClick: () => void; children: React.ReactNode }) {
+function MenuBtn({ icon, danger, active, onClick, children }: { icon: string; danger?: boolean; active?: boolean; onClick: () => void; children: React.ReactNode }) {
   const [hover, setHover] = useState(false);
   return (
     <button
@@ -376,10 +417,10 @@ function MenuBtn({ icon, danger, onClick, children }: { icon: string; danger?: b
       style={{
         display: 'flex', alignItems: 'center', gap: 8, width: '100%',
         padding: '8px 12px', borderRadius: 'var(--radius-sm)',
-        background: hover ? 'var(--surface-sunken)' : 'transparent',
+        background: active ? 'var(--brand-subtle)' : hover ? 'var(--surface-sunken)' : 'transparent',
         border: 'none', cursor: 'pointer',
-        color: danger ? 'var(--danger)' : 'var(--text-body)',
-        fontSize: 'var(--text-sm)', fontWeight: 500, textAlign: 'left',
+        color: danger ? 'var(--danger)' : active ? 'var(--brand)' : 'var(--text-body)',
+        fontSize: 'var(--text-sm)', fontWeight: active ? 600 : 500, textAlign: 'left',
         fontFamily: 'var(--font-ui)',
         transition: 'var(--transition-control)',
       }}

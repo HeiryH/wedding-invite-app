@@ -6,14 +6,19 @@ import { getUser, logout } from '@/lib/auth';
 import { authService } from '@/lib/api';
 import AdminShell from '@/components/admin/AdminShell';
 
+// The mobile tab bar carries only what you switch between constantly; seven icons made it a wall.
+// Everything else moves to the avatar menu (and still shows in the desktop rail) — see AdminShell.
 const NAV_ITEMS = [
-  { id: 'dashboard', label: 'Dashboard', icon: 'home', href: '/super-admin' },
-  { id: 'hosts',     label: 'Hosts',     icon: 'users',       href: '/super-admin/hosts' },
-  { id: 'packages',  label: 'Packages',  icon: 'gift',        href: '/super-admin/packages' },
-  { id: 'features',  label: 'Features',  icon: 'sliders',     href: '/super-admin/features' },
-  { id: 'themes',    label: 'Themes',    icon: 'palette',     href: '/super-admin/themes' },
-  { id: 'authoring', label: 'Authoring', icon: 'pen-tool',    href: '/super-admin/authoring' },
-  { id: 'landing',   label: 'Landing',   icon: 'layout-grid', href: '/super-admin/landing' },
+  { id: 'dashboard', label: 'Events',  icon: 'home',        href: '/super-admin' },
+  { id: 'themes',    label: 'Themes',  icon: 'palette',     href: '/super-admin/themes' },
+  { id: 'landing',   label: 'Landing', icon: 'layout-grid', href: '/super-admin/landing' },
+];
+
+const MENU_ITEMS = [
+  { id: 'hosts',     label: 'Host admins',      icon: 'users',    href: '/super-admin/hosts' },
+  { id: 'packages',  label: 'Manage tiers',     icon: 'gift',     href: '/super-admin/packages' },
+  { id: 'features',  label: 'Manage features',  icon: 'sliders',  href: '/super-admin/features' },
+  { id: 'authoring', label: 'Template authoring', icon: 'pen-tool', href: '/super-admin/authoring' },
 ];
 
 export default function SuperAdminLayout({ children }: { children: React.ReactNode }) {
@@ -52,10 +57,13 @@ export default function SuperAdminLayout({ children }: { children: React.ReactNo
   return (
     <AdminShell
       navItems={NAV_ITEMS}
+      menuItems={MENU_ITEMS}
       onLogout={handleLogout}
       userInitials="SA"
       role="Super Admin"
       fabHref="/super-admin/wedding/create"
+      // The landing editor owns that corner with its own Save button.
+      fabHiddenOn={['/super-admin/landing']}
       homeHref="/home"
       sidePillLinks={[
         { label: 'New event', href: '/super-admin/wedding/create' },

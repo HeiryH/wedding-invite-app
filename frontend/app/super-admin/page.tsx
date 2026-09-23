@@ -16,29 +16,43 @@ type Filter = 'all' | 'upcoming' | 'active' | 'inactive';
 type TierFilter = 'ALL' | 'BASIC' | 'PREMIUM' | 'PRO';
 const TIER_FILTERS: TierFilter[] = ['BASIC', 'PREMIUM', 'PRO'];
 
-function FilterChip({ active, onClick, children, count }: { active: boolean; onClick: () => void; children: React.ReactNode; count: number }) {
+/** One labelled dropdown in the filter row. Replaces the three rows of count chips — a dozen
+ *  buttons that wrapped and side-scrolled on a phone. Counts move into the option labels, so
+ *  nothing is lost. */
+function FilterSelect<T extends string>({ label, value, onChange, options }: {
+  label: string;
+  value: T;
+  onChange: (v: T) => void;
+  options: { value: T; label: string; count: number }[];
+}) {
+  const dirty = value !== options[0]?.value;
   return (
-    <button
-      onClick={onClick}
-      style={{
-        display: 'inline-flex', alignItems: 'center', gap: 6,
-        padding: '7px 13px', borderRadius: 'var(--radius-full)',
-        background: active ? 'var(--brand)' : 'var(--surface-card)',
-        border: `1px solid ${active ? 'var(--brand)' : 'var(--border-default)'}`,
-        color: active ? 'var(--brand-on)' : 'var(--text-body)',
-        fontSize: 'var(--text-sm)', fontFamily: 'var(--font-ui)',
-        fontWeight: active ? 600 : 500, whiteSpace: 'nowrap', cursor: 'pointer',
-        transition: 'var(--transition-control)',
-      }}
-    >
-      {children}
+    <label style={{ display: 'flex', flexDirection: 'column', gap: 4, flex: '1 1 150px', minWidth: 0 }}>
       <span style={{
-        fontFamily: 'var(--font-mono)', fontSize: 11,
-        background: active ? 'rgba(255,255,255,.18)' : 'var(--surface-sunken)',
-        color: active ? '#fff' : 'var(--text-subtle)',
-        padding: '1px 6px', borderRadius: 'var(--radius-full)',
-      }}>{count}</span>
-    </button>
+        fontSize: 10, letterSpacing: 'var(--tracking-caps)', textTransform: 'uppercase',
+        color: 'var(--text-subtle)', fontFamily: 'var(--font-ui)', fontWeight: 600,
+      }}>
+        {label}
+      </span>
+      <select
+        value={value}
+        onChange={e => onChange(e.target.value as T)}
+        style={{
+          width: '100%', padding: '9px 10px', borderRadius: 'var(--radius-md)',
+          background: 'var(--surface-card)',
+          border: `1px solid ${dirty ? 'var(--brand)' : 'var(--border-default)'}`,
+          color: dirty ? 'var(--brand)' : 'var(--text-body)',
+          fontWeight: dirty ? 600 : 500,
+          fontSize: 'var(--text-sm)', fontFamily: 'var(--font-ui)',
+          boxShadow: 'var(--shadow-xs)', cursor: 'pointer',
+          transition: 'var(--transition-control)',
+        }}
+      >
+        {options.map(o => (
+          <option key={o.value} value={o.value}>{o.label} ({o.count})</option>
+        ))}
+      </select>
+    </label>
   );
 }
 
@@ -196,16 +210,8 @@ export default function SuperAdminDashboard() {
             Manage every invitation in one place.
           </p>
         </div>
-        <div className="hidden lg:block">
-          <Button
-            variant="primary"
-            tone="brand"
-            iconLeft={<Icon name="plus" size={15} />}
-            onClick={() => router.push('/super-admin/wedding/create')}
-          >
-            New event
-          </Button>
-        </div>
+        {/* No "New event" button here — AdminShell's floating Create FAB owns that action on
+            every breakpoint now, and two of them side by side just competed. */}
       </div>
 
       {/* Stat cards */}
@@ -217,8 +223,8 @@ export default function SuperAdminDashboard() {
       </div>
 
       {/* Toolbar */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 14 }} className="md:flex-row md:items-center">
-        <div style={{ position: 'relative', flex: '1 1 auto' }}>
+      <div style={{ marginBottom: 10 }}>
+        <div style={{ position: 'relative' }}>
           <div style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none', display: 'flex' }}>
             <Icon name="search" size={16} />
           </div>
@@ -240,28 +246,39 @@ export default function SuperAdminDashboard() {
             }}
           />
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6, overflowX: 'auto', scrollbarWidth: 'none', paddingBottom: 2, flexShrink: 0 }}>
-          <FilterChip active={filter === 'all'} onClick={() => setFilter('all')} count={counts.all}>All</FilterChip>
-          <FilterChip active={filter === 'upcoming'} onClick={() => setFilter('upcoming')} count={counts.upcoming}>Upcoming</FilterChip>
-          <FilterChip active={filter === 'active'} onClick={() => setFilter('active')} count={counts.active}>Live</FilterChip>
-          <FilterChip active={filter === 'inactive'} onClick={() => setFilter('inactive')} count={counts.inactive}>Drafts</FilterChip>
-        </div>
       </div>
 
-      {/* Event type filter */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 6, overflowX: 'auto', scrollbarWidth: 'none', paddingBottom: 2, marginBottom: 10 }}>
-        <FilterChip active={eventTypeFilter === 'ALL'} onClick={() => setEventTypeFilter('ALL')} count={eventTypeCounts.ALL}>All types</FilterChip>
-        {EVENT_TYPES.map(t => (
-          <FilterChip key={t.key} active={eventTypeFilter === t.key} onClick={() => setEventTypeFilter(t.key)} count={eventTypeCounts[t.key] ?? 0}>{t.label}</FilterChip>
-        ))}
-      </div>
-
-      {/* Tier filter */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 6, overflowX: 'auto', scrollbarWidth: 'none', paddingBottom: 2, marginBottom: 14 }}>
-        <FilterChip active={tierFilter === 'ALL'} onClick={() => setTierFilter('ALL')} count={tierCounts.ALL}>All tiers</FilterChip>
-        {TIER_FILTERS.map(t => (
-          <FilterChip key={t} active={tierFilter === t} onClick={() => setTierFilter(t)} count={tierCounts[t] ?? 0}>{tierLabel[t]}</FilterChip>
-        ))}
+      {/* Filters */}
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, marginBottom: 16 }}>
+        <FilterSelect
+          label="Status"
+          value={filter}
+          onChange={setFilter}
+          options={[
+            { value: 'all', label: 'All events', count: counts.all },
+            { value: 'upcoming', label: 'Upcoming', count: counts.upcoming },
+            { value: 'active', label: 'Live', count: counts.active },
+            { value: 'inactive', label: 'Drafts', count: counts.inactive },
+          ]}
+        />
+        <FilterSelect
+          label="Event type"
+          value={eventTypeFilter}
+          onChange={setEventTypeFilter}
+          options={[
+            { value: 'ALL' as const, label: 'All types', count: eventTypeCounts.ALL },
+            ...EVENT_TYPES.map(t => ({ value: t.key, label: t.label, count: eventTypeCounts[t.key] ?? 0 })),
+          ]}
+        />
+        <FilterSelect
+          label="Tier"
+          value={tierFilter}
+          onChange={setTierFilter}
+          options={[
+            { value: 'ALL' as const, label: 'All tiers', count: tierCounts.ALL },
+            ...TIER_FILTERS.map(t => ({ value: t, label: tierLabel[t], count: tierCounts[t] ?? 0 })),
+          ]}
+        />
       </div>
 
       {/* Grouped wedding cards */}

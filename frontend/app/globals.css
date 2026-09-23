@@ -252,6 +252,9 @@
   --container-prose: 680px;
   --sidebar-w:       264px;
   --topbar-h:        60px;
+  /* Mobile tab-bar height (AdminShell). Any fixed bottom-right action — the Create FAB, the
+     landing editor's Save — docks above it via `.admin-fab-dock`, so nothing overlaps the nav. */
+  --tabbar-h:        56px;
 
   /* ── Z-index ──────────────────────────────────────────────── */
   --z-base:    0;
@@ -472,3 +475,25 @@ body {
   .pers-form-header { display: none; } /* the handle replaces the header on mobile */
   .pers-back-mobile { display: flex; }
 }
+
+
+/* ── Floating action dock (admin) ─────────────────────────────────────────────
+   One place that knows how high the mobile tab bar is. Anything fixed to the
+   bottom-right of an admin page uses this instead of its own `bottom`, so a page
+   with its own action (the landing editor's Save) lands exactly where the shell's
+   Create FAB would have, and neither can sit under the nav. */
+.admin-fab-dock {
+  position: fixed;
+  right: 20px;
+  bottom: calc(20px + env(safe-area-inset-bottom));
+  z-index: var(--z-overlay);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+@media (max-width: 1023px) {
+  .admin-fab-dock {
+    bottom: calc(var(--tabbar-h) + 16px + env(safe-area-inset-bottom));
+  }
+}
+

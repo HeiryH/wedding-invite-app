@@ -5,6 +5,7 @@ import React from "react";
 const PATHS: Record<string, string> = {
   // nav / chrome
   menu: "M4 6h16M4 12h16M4 18h16",
+  "more-vertical": "M12 5m-1 0a1 1 0 1 0 2 0a1 1 0 1 0-2 0 M12 12m-1 0a1 1 0 1 0 2 0a1 1 0 1 0-2 0 M12 19m-1 0a1 1 0 1 0 2 0a1 1 0 1 0-2 0",
   x: "M18 6 6 18M6 6l12 12",
   search: "M11 11m-7 0a7 7 0 1 0 14 0a7 7 0 1 0-14 0 M21 21l-4.3-4.3",
   plus: "M12 5v14M5 12h14",

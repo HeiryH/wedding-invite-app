@@ -299,8 +299,11 @@ export default function LandingAdminPage() {
 
       {/* Save button + its toast share one fixed-position row so the toast floats
           to the button's left, vertically centred against it, instead of
-          appearing separately at bottom-centre of the page. */}
-      <div style={{ position: 'fixed', bottom: 28, right: 28, display: 'flex', alignItems: 'center', gap: 12, zIndex: 1000 }}>
+          appearing separately at bottom-centre of the page. `.admin-fab-dock`
+          (globals.css) keeps it clear of the mobile tab bar — it used to sit on
+          top of the nav — and puts it exactly where the shell's Create FAB sits
+          on every other page. */}
+      <div className="admin-fab-dock">
         {toast && (
           <div style={{ background: 'var(--text-strong)', color: '#fff', padding: '10px 18px', borderRadius: 999, fontSize: 14, whiteSpace: 'nowrap', boxShadow: '0 4px 14px rgba(0,0,0,.2)' }}>{toast}</div>
         )}
