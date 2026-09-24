@@ -8,6 +8,7 @@ import { staggerDelay } from '@/components/templates/_shared/reveal';
 import { subLayerStyle, subLayersOf } from '@/components/templates/_shared/slots/subLayerStyle';
 import { CurvedPiece, curvedTextOf } from '@/components/templates/_shared/slots/CurvedPiece';
 import { useSheets } from '@/components/templates/_shared/slots/sheets';
+import { useEngine } from '@/components/templates/_shared/engine';
 import { WishListSlot } from '@/components/templates/_shared/slots/WishSlots';
 import PhotoBoothSlot from '@/components/templates/_shared/slots/PhotoBoothSlot';
 import styles from './DinoSlots.module.css';
@@ -37,6 +38,7 @@ function Piece({ layer, editor, id, children }: {
   id: string;
   children: ReactElement;
 }) {
+  const { assetRoot } = useEngine();
   if (layer?.hidden) return null;
   const dx = (layer?.x ?? 50) - 50;
   const dy = (layer?.y ?? 50) - 50;
@@ -55,7 +57,7 @@ function Piece({ layer, editor, id, children }: {
     'data-scroll-fade': anim === 'scroll-fade' ? true : undefined,
     style: {
       ...childStyle,
-      ...subLayerStyle(layer),
+      ...subLayerStyle(layer, assetRoot),
       '--sl-opacity': layer?.opacity ?? 1,
       '--sl-delay': staggerDelay(layer?.order ?? 0),
       ...(layer?.animDur ? { '--sl-dur': `${layer.animDur}s` } : {}),
@@ -80,6 +82,7 @@ function bound(props: SlotProps, sub: Record<string, Layer>, id: string, fallbac
 export function DinoHeroSlot(props: SlotProps) {
   const { wedding, stageLayers, layer, editor } = props;
   const sub = usePieces(stageLayers, layer?.id ?? 'hero');
+  const units = usePieces(stageLayers, 'hero-timer');
   const left = useCountdown(wedding.weddingDate);
   return (
     <div className={`${styles.composite} ${styles.hero}`}>
@@ -92,8 +95,16 @@ export function DinoHeroSlot(props: SlotProps) {
       {left && (
         <Piece layer={sub['hero-timer']} editor={editor} id="hero-timer">
           <div className={styles.countdown}>
-            {([['Days', left.days], ['Hours', left.hours], ['Minutes', left.minutes]] as const).map(([label, value]) => (
-              <span className={styles.countUnit} key={label}><strong>{String(value).padStart(2, '0')}</strong><small>{label}</small></span>
+            {/* Each unit is its own sub-layer of `hero-timer`, so a couple can nudge, restyle,
+                back with a plate or hide Days/Hours/Minutes individually — the group itself still
+                moves them as one. `units` resolves children of hero-timer, not of hero. */}
+            {([['hero-timer-days', 'Days', left.days], ['hero-timer-hours', 'Hours', left.hours], ['hero-timer-minutes', 'Minutes', left.minutes]] as const).map(([pid, label, value]) => (
+              <Piece key={pid} layer={units[pid]} editor={editor} id={pid}>
+                <span className={styles.countUnit}>
+                  <strong>{String(value).padStart(2, '0')}</strong>
+                  <small>{units[pid]?.text ?? label}</small>
+                </span>
+              </Piece>
             ))}
           </div>
         </Piece>

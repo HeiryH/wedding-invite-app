@@ -533,6 +533,25 @@ from a failed attempt would suddenly lose that layer on the next render.
   collapsing anything sized `width: 100%`. That rendered T13's curved eyebrow 0×0 the first time
   round. Horizontal alignment of text is `--slot-text-align`'s job; `CurvedPiece` additionally
   pins `align-self: stretch` so no alignment choice can collapse it.
+- **Text can carry its own art: `backdropSrc`** (+ `backdropFit`/`backdropPad`/`backdropBleed`/
+  `backdropHeight`, `_shared/backdrop.ts`, Style tab → Backdrop). A ribbon/plate/banner is painted
+  as the text element's own `background-image`, so the two move, scale, animate and curve as one
+  thing. **Prefer this over a separate `img` layer for anything that frames text** — T13 shipped
+  its hero ribbon and name plaque as free-floating `img` layers that had to be kept in register by
+  hand and drifted the moment either was moved; both are now backdrops on `hero-eyebrow` and
+  `hero-honoree`. Two non-obvious bits: the box is `width: max-content` + `margin-inline: auto`
+  (a full-width box makes `contain` fit the art to the box's *height* and leaves a thumbnail
+  floating in empty space), and `backdropHeight` exists because the art is usually several times
+  taller than the line it frames — without it a banner shrinks to nothing in a one-line box.
+  Works for `kind:'text'` (Layer.tsx) and for `styleable` sub-layers (`subLayerStyle`, which now
+  takes `assetRoot` so template-relative paths resolve).
+- **A slot's sub-layers can nest further.** The countdown is a group: `hero-timer` holds
+  `hero-timer-{days,hours,min,sec}` (T13: `-minutes`), each its own adjustable/styleable piece,
+  resolved with a second `subLayersOf(stageLayers, 'hero-timer')` call. The panel's layer tree
+  already recurses, so they show indented under Countdown Timer. A template opts in by declaring
+  those ids with `parent: 'hero-timer'` in its stage data — a template that doesn't is unchanged
+  (the lookup returns undefined and the unit renders with its shipped defaults). Each unit's
+  `text` is its caption, so "Days" can become "Sleeps".
 - **`--slot-text-scale` only works if the CSS multiplies by it.** T13 shipped its own
   `DinoSlots.module.css` with plain `font:`/`font-size:` declarations, so the panel's Text Size
   slider was a no-op for every T13 block — the control was real, the template just never read it.

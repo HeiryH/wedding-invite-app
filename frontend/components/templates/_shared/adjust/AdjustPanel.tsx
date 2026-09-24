@@ -221,7 +221,7 @@ export default function AdjustPanel({
   // Layer-detail tab: geometry vs style vs animation. Sticky across layer selection.
   const [detailTab, setDetailTab] = useState<'layout' | 'style' | 'anim' | 'slotText' | 'slotContainer'>('layout');
   const fileRef = useRef<HTMLInputElement>(null);
-  const uploadTarget = useRef<'layer' | 'bg' | 'poster' | 'pageBg'>('layer');
+  const uploadTarget = useRef<'layer' | 'bg' | 'poster' | 'pageBg' | 'backdrop'>('layer');
   const customLayerCounter = useRef(0);
   const slotIdCounter = useRef(0);
 
@@ -368,7 +368,7 @@ export default function AdjustPanel({
     flash(`Copied to ${other}`);
   };
 
-  const pickImage = (target: 'layer' | 'bg' | 'poster' | 'pageBg') => {
+  const pickImage = (target: 'layer' | 'bg' | 'poster' | 'pageBg' | 'backdrop') => {
     uploadTarget.current = target;
     fileRef.current?.click();
   };
@@ -383,8 +383,11 @@ export default function AdjustPanel({
       else if (uploadTarget.current === 'pageBg') onLayoutChange(pageBgKey('src'), url);
       else if (uploadTarget.current === 'poster') {
         if (current) patchLayer(current.id, { posterSrc: url });
+      } else if (uploadTarget.current === 'backdrop') {
+        if (current) patchLayer(current.id, { backdropSrc: url });
       } else addLayer('img', { src: url });
-      flash(uploadTarget.current === 'poster' ? 'Poster image set' : 'Image added');
+      flash(uploadTarget.current === 'poster' ? 'Poster image set'
+        : uploadTarget.current === 'backdrop' ? 'Backdrop set' : 'Image added');
     } catch (err) {
       // Surface the server's reason (e.g. an unsupported format) instead of a blank failure.
       const msg =
@@ -1336,6 +1339,45 @@ export default function AdjustPanel({
                 {/* Curve: real text layers, and sub-layers that own their own text string (the
                     hero pieces — HeroSlots.tsx swaps in <CurvedText> for those). Not offered for a
                     piece whose child is a composite block (the timer grid), which can't curve. */}
+                {/* A plate/ribbon/banner painted behind this text, as part of the same element —
+                    so it moves, scales and animates with the words instead of being a separate
+                    art layer that has to be kept in register (see backdrop.ts). */}
+                <div className={styles.label}>Backdrop</div>
+                {current.backdropSrc ? (
+                  <>
+                    <div className={styles.control} style={{ gridTemplateColumns: '54px 1fr' }}>
+                      <span>Fit</span>
+                      <select
+                        className={styles.select}
+                        value={current.backdropFit ?? 'contain'}
+                        onChange={(e) => patchLayer(current.id, { backdropFit: e.target.value as Layer['backdropFit'] })}
+                      >
+                        <option value="contain">Whole (contain)</option>
+                        <option value="cover">Fill (crop)</option>
+                        <option value="stretch">Stretch</option>
+                      </select>
+                    </div>
+                    <Slider label="Padding" value={current.backdropPad ?? 0.4} min={0} max={3} step={0.05} onChange={set('backdropPad')} title="Space between the words and the art's edges, in em" />
+                    <Slider label="Bleed" value={current.backdropBleed ?? 0} min={0} max={6} step={0.1} onChange={set('backdropBleed')} title="How far the art extends past the text's own box — a ribbon's tails" />
+                    <Slider label="Height" value={current.backdropHeight ?? 2.6} min={1} max={14} step={0.1} onChange={set('backdropHeight')} title="How tall the backed box is, in em — a ribbon needs more height than its line of text" />
+                    <div className={styles.btnRow}>
+                      {onUploadImage && (
+                        <button className={styles.btn} onClick={() => pickImage('backdrop')}>Replace</button>
+                      )}
+                      <button
+                        className={`${styles.btn} ${styles.btnGhost}`}
+                        onClick={() => patchLayer(current.id, { backdropSrc: '' })}
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  </>
+                ) : onUploadImage ? (
+                  <div className={styles.btnRow}>
+                    <button className={styles.btn} onClick={() => pickImage('backdrop')}>Set backdrop image…</button>
+                  </div>
+                ) : null}
+
                 {(current.kind === 'text' || current.hasText) && (
                   <>
                     <div className={styles.label}>Shape</div>

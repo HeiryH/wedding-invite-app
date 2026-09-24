@@ -19,10 +19,12 @@ const A = (
   label: string,
   order: number,
   text?: string,
+  extra?: Partial<Layer>,
 ): Layer => L({
   id, kind: 'anchor', parent, label, order,
   styleable: true, hasText: text !== undefined, text,
   anim: 'rise', animOut: 'fade-out',
+  ...extra,
 });
 
 export const T13_STAGES: Record<string, StageDef> = {
@@ -30,8 +32,8 @@ export const T13_STAGES: Record<string, StageDef> = {
     id: 'welcome', label: 'Park Entrance', bg: 'backgrounds/welcome.webp', bgFit: 'cover', canvas: CANVAS,
     layers: [
       L({ id: 'stone-timber-entrance', kind: 'img', src: 'props/stone-timber-entrance.webp', x: 50, y: 26.5, w: 102, z: 3, order: 0, anim: 'fade', animOut: 'fade-out', depth: 0.05 }),
-      L({ id: 'blank-hero-ribbon', kind: 'img', src: 'props/blank-hero-ribbon.webp', x: 50, y: 28.3, w: 55, z: 4, order: 1, anim: 'zoom-in', animOut: 'slide-fade-out-down', depth: 0.15 }),
-      L({ id: 'blank-name-plaque', kind: 'img', src: 'props/blank-name-plaque.webp', x: 50, y: 42.5, w: 31, z: 4, order: 2, anim: 'zoom-in', animOut: 'slide-fade-out-down', depth: 0.15 }),
+
+
       L({ id: 'egg-nest', kind: 'img', src: 'props/egg-nest.webp', x: 15, y: 77.5, w: 29, z: 5, order: 5, anim: 'slide-right', animOut: 'slide-fade-out-left', depth: 0.35 }),
       L({ id: 'trex-greeter', kind: 'img', src: 'props/trex-greeter.webp', x: 79, y: 75.5, w: 45, z: 5, order: 6, anim: 'slide-left', animOut: 'slide-fade-out-right', depth: 0.4 }),
       // Foreground foliage set (2026-09-22): hanging border leaves in the top corners, fern clusters
@@ -43,13 +45,24 @@ export const T13_STAGES: Record<string, StageDef> = {
       L({ id: 'right-side-fern-leaf-cluster-lower', kind: 'img', src: 'props/right-side-fern-leaf-cluster-lower.webp', x: 91, y: 73, w: 34, z: 6, order: 7, anim: 'slide-left', animOut: 'slide-fade-out-right', depth: 0.55 }),
       L({ id: 'bottom-foreground-foliage-stones', kind: 'img', src: 'props/bottom-foreground-foliage-stones.webp', x: 50, y: 89, w: 106, z: 7, order: 8, anim: 'slide-up', animOut: 'slide-out-down', depth: 0.6 }),
       L({ id: 'hero', kind: 'slot', slot: 'eventHero', label: 'Party Details', x: 50, y: 47, w: 84, h: 42, z: 7, order: 4, chain: false, anim: 'none', depth: 0.2, canvasAnchor: true }),
-      A('hero-eyebrow', 'hero', 'Eyebrow', 0, 'Welcome to the Expedition'),
+      // The ribbon rides the eyebrow as its backdrop (see Layer.backdropSrc) instead of being a
+      // separate `blank-hero-ribbon` img layer that had to be kept in register by hand.
+      A('hero-eyebrow', 'hero', 'Eyebrow', 0, 'Welcome to the Expedition', {
+        backdropSrc: 'props/blank-hero-ribbon.webp', backdropPad: 0.3, backdropBleed: 1.4, backdropHeight: 7.5,
+      }),
       A('hero-title', 'hero', 'Event Title', 1, 'The Roarsome Birthday'),
-      A('hero-honoree', 'hero', 'Honoree', 2, '{{name1}}'),
+      A('hero-honoree', 'hero', 'Honoree', 2, '{{name1}}', {
+        backdropSrc: 'props/blank-name-plaque.webp', backdropPad: 0.12, backdropBleed: 0.45, backdropHeight: 2.3,
+      }),
       A('hero-age', 'hero', 'Age Line', 3, 'Turns 7'),
       A('hero-date', 'hero', 'Date & Time', 4, '{{date:long}} · {{time}}'),
       A('hero-venue', 'hero', 'Venue', 5, '{{venue}}'),
       A('hero-timer', 'hero', 'Countdown Timer', 6),
+      // The timer's own units — nested one level deeper, so the group moves them together while
+      // each stays individually adjustable. `text` is the unit's caption.
+      A('hero-timer-days', 'hero-timer', 'Days', 0, 'Days'),
+      A('hero-timer-hours', 'hero-timer', 'Hours', 1, 'Hours'),
+      A('hero-timer-minutes', 'hero-timer', 'Minutes', 2, 'Minutes'),
       A('hero-cue', 'hero', 'Scroll Cue', 7, 'Scroll to begin'),
     ],
     // The square desktop canvas cover-fits a 1440×900 window at ~1440px wide, so a 40%-wide

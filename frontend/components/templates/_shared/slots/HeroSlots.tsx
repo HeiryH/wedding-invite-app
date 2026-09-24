@@ -8,6 +8,7 @@ import type { EditorHandle, Layer, SlotProps } from '../types';
 import { staggerDelay } from '../reveal';
 import { subLayerStyle, subLayersOf } from './subLayerStyle';
 import { CurvedPiece, curvedTextOf } from './CurvedPiece';
+import { useEngine } from '../engine';
 import styles from './slots.module.css';
 
 /** Returns null once the date has passed, so the hero never shows a dead 00:00:00. */
@@ -42,6 +43,7 @@ function HeroPiece({ layer, editor, id, children }: {
   id: string;
   children: ReactElement;
 }) {
+  const { assetRoot } = useEngine();
   if (layer?.hidden) return null;
 
   const dx = (layer?.x ?? 50) - 50;
@@ -66,7 +68,7 @@ function HeroPiece({ layer, editor, id, children }: {
         // Style-tab fields (color/font/size/spacing/border/shadow) — present only when the
         // sub-layer is flagged `styleable` (all of these are), so this is a no-op until the
         // couple actually touches the Style tab.
-        ...subLayerStyle(layer),
+        ...subLayerStyle(layer, assetRoot),
         '--sl-opacity': layer?.opacity ?? 1,
         '--sl-delay': staggerDelay(layer?.order ?? 0),
         ...(layer?.animDur ? { '--sl-dur': `${layer.animDur}s` } : {}),
@@ -102,6 +104,7 @@ export function CountdownSlot({ wedding, t, stageLayers, layer, editor }: SlotPr
   const firstId = brideFirst ? 'hero-bride' : 'hero-groom';
   const secondId = brideFirst ? 'hero-groom' : 'hero-bride';
 
+  const units = useMemo(() => subLayersOf(stageLayers, 'hero-timer'), [stageLayers]);
   // Resolve the hero's own sub-layer anchors (bride/groom/date/timer) out of the stage's already-
   // resolved siblings — see SlotProps.stageLayers. Template-neutral: works the same whichever
   // template's stage this slot happens to be rendering in.
@@ -136,16 +139,21 @@ export function CountdownSlot({ wedding, t, stageLayers, layer, editor }: SlotPr
       {left && (
         <HeroPiece layer={sub['hero-timer']} editor={editor} id="hero-timer">
           <div className={styles.countdown}>
+            {/* Each unit is a sub-layer of `hero-timer` — nudge/restyle/back/hide one at a time
+                while the group still moves them together. A template opts in by declaring
+                `hero-timer-{days,hours,min,sec}` with `parent: 'hero-timer'` in its stage data. */}
             {([
-              ['Days', left.days],
-              ['Hrs', left.hours],
-              ['Min', left.minutes],
-              ['Sec', left.seconds],
-            ] as const).map(([label, val]) => (
-              <div key={label} className={styles.countUnit}>
-                <span className={styles.countNum}>{String(val).padStart(2, '0')}</span>
-                <span className={styles.countLabel}>{label}</span>
-              </div>
+              ['hero-timer-days', 'Days', left.days],
+              ['hero-timer-hours', 'Hrs', left.hours],
+              ['hero-timer-min', 'Min', left.minutes],
+              ['hero-timer-sec', 'Sec', left.seconds],
+            ] as const).map(([pid, label, val]) => (
+              <HeroPiece key={pid} layer={units[pid]} editor={editor} id={pid}>
+                <div className={styles.countUnit}>
+                  <span className={styles.countNum}>{String(val).padStart(2, '0')}</span>
+                  <span className={styles.countLabel}>{units[pid]?.text ?? label}</span>
+                </div>
+              </HeroPiece>
             ))}
           </div>
         </HeroPiece>
@@ -175,6 +183,7 @@ export function EventHeroSlot(props: SlotProps) {
     () => subLayersOf(stageLayers, layer?.id ?? 'hero'),
     [stageLayers, layer?.id],
   );
+  const units = useMemo(() => subLayersOf(stageLayers, 'hero-timer'), [stageLayers]);
 
   const text = (id: string, fallback: string) => resolveBindings(sub[id]?.text ?? fallback, props);
 
@@ -198,16 +207,21 @@ export function EventHeroSlot(props: SlotProps) {
       {left && (
         <HeroPiece layer={sub['hero-timer']} editor={editor} id="hero-timer">
           <div className={styles.countdown}>
+            {/* Each unit is a sub-layer of `hero-timer` — nudge/restyle/back/hide one at a time
+                while the group still moves them together. A template opts in by declaring
+                `hero-timer-{days,hours,min,sec}` with `parent: 'hero-timer'` in its stage data. */}
             {([
-              ['Days', left.days],
-              ['Hrs', left.hours],
-              ['Min', left.minutes],
-              ['Sec', left.seconds],
-            ] as const).map(([label, val]) => (
-              <div key={label} className={styles.countUnit}>
-                <span className={styles.countNum}>{String(val).padStart(2, '0')}</span>
-                <span className={styles.countLabel}>{label}</span>
-              </div>
+              ['hero-timer-days', 'Days', left.days],
+              ['hero-timer-hours', 'Hrs', left.hours],
+              ['hero-timer-min', 'Min', left.minutes],
+              ['hero-timer-sec', 'Sec', left.seconds],
+            ] as const).map(([pid, label, val]) => (
+              <HeroPiece key={pid} layer={units[pid]} editor={editor} id={pid}>
+                <div className={styles.countUnit}>
+                  <span className={styles.countNum}>{String(val).padStart(2, '0')}</span>
+                  <span className={styles.countLabel}>{units[pid]?.text ?? label}</span>
+                </div>
+              </HeroPiece>
             ))}
           </div>
         </HeroPiece>

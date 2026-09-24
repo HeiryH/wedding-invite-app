@@ -1,6 +1,7 @@
 import type { CSSProperties } from 'react';
 import type { Layer } from '../types';
 import { fontVar } from '@/lib/fonts/registry';
+import { backdropStyle } from '../backdrop';
 
 /**
  * The standard "one slot, several individually adjustable/styleable sub-pieces" primitive (see
@@ -24,10 +25,13 @@ export function subLayersOf(stageLayers: Layer[] | undefined, parentId: string |
   return map;
 }
 
-export function subLayerStyle(layer?: Layer): CSSProperties {
+export function subLayerStyle(layer?: Layer, assetRoot?: string): CSSProperties {
   if (!layer) return {};
   const hasShadow = Boolean(layer.shadowBlur || layer.shadowX || layer.shadowY);
   return {
+    // A plate/ribbon behind this piece's own text — see backdrop.ts. `assetRoot` comes from the
+    // slot's engine context; without it only uploaded (absolute) paths resolve.
+    ...backdropStyle(layer, (src) => (src.startsWith('/') || !assetRoot ? src : `${assetRoot}/${src}`)),
     color: layer.color,
     fontSize: layer.fontSize !== undefined ? `${layer.fontSize}cqi` : undefined,
     fontWeight: layer.fontWeight,
