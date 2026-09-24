@@ -527,7 +527,12 @@ from a failed attempt would suddenly lose that layer on the next render.
   `.heroInner` in `slots.module.css`, `.composite` in a template's own slot CSS). Gap is in `em`,
   so spacing tracks Text Size instead of drifting apart as the type grows. **A new template's
   composite container must read those vars** (each with the shipped value as its fallback) or the
-  Gap/Position/Align controls do nothing there.
+  Gap/Position/Align controls do nothing there. ⚠️ **`--slot-align` maps the couple's "Centre" to
+  `stretch`, not `center`, and a container that shipped as a plain block must default to
+  `stretch`** — a flex column with `align-items: center` shrink-wraps every child, silently
+  collapsing anything sized `width: 100%`. That rendered T13's curved eyebrow 0×0 the first time
+  round. Horizontal alignment of text is `--slot-text-align`'s job; `CurvedPiece` additionally
+  pins `align-self: stretch` so no alignment choice can collapse it.
 - **`--slot-text-scale` only works if the CSS multiplies by it.** T13 shipped its own
   `DinoSlots.module.css` with plain `font:`/`font-size:` declarations, so the panel's Text Size
   slider was a no-op for every T13 block — the control was real, the template just never read it.
