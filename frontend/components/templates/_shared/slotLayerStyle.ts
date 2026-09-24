@@ -42,7 +42,11 @@ export function slotLayerStyle(layer: Layer): CSSProperties & Record<string, str
       : null),
     ...(layer.contentAlign
       ? {
-          '--slot-align': layer.contentAlign === 'left' ? 'flex-start' : layer.contentAlign === 'right' ? 'flex-end' : 'center',
+          // 'center' maps to `stretch`, not `center`: a flex column with `align-items: center`
+          // shrink-wraps every child to its content, which silently collapses any child sized
+          // `width: 100%` — that's how a curved text piece ended up 0x0. Text is centred by
+          // `--slot-text-align` anyway, so stretch is both safer and visually identical.
+          '--slot-align': layer.contentAlign === 'left' ? 'flex-start' : layer.contentAlign === 'right' ? 'flex-end' : 'stretch',
           '--slot-text-align': layer.contentAlign,
         }
       : null),

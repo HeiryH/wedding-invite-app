@@ -40,6 +40,8 @@ export function CurvedPiece({ layer, text, anim }: { layer: Layer; text: string;
       style={{
         position: 'relative',
         width: '100%',
+        // Never let a flex parent shrink-wrap this: the SVG inside is sized as a % of this box.
+        alignSelf: 'stretch',
         height: `${line}cqi`,
         '--sl-opacity': layer.opacity ?? 1,
         '--sl-delay': staggerDelay(layer.order ?? 0),

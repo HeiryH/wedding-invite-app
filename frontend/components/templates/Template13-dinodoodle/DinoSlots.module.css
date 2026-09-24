@@ -3,7 +3,9 @@
 .composite {
   display: flex;
   flex-direction: column;
-  align-items: var(--slot-align, center);
+  /* `stretch`, because this container shipped as a plain block: a centred flex column
+     shrink-wraps its children and collapses anything sized `width: 100%`. */
+  align-items: var(--slot-align, stretch);
   justify-content: var(--slot-justify, center);
   gap: var(--slot-gap, 0);
   min-height: 100%;
