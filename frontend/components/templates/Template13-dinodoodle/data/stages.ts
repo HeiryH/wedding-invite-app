@@ -59,7 +59,7 @@ export const T13_STAGES: Record<string, StageDef> = {
       'right-border-upper-foliage': { x: 95, y: 24, w: 18 },
       'left-side-fern-leaf-cluster-lower': { x: 4, y: 70, w: 15 },
       'right-side-fern-leaf-cluster-lower': { x: 96, y: 70, w: 15 },
-      'bottom-foreground-foliage-stones': { x: 50, y: 87, w: 50 },
+      'bottom-foreground-foliage-stones': { x: 50, y: 78, w: 56 },
     },
   },
   details: {
@@ -80,6 +80,18 @@ export const T13_STAGES: Record<string, StageDef> = {
       A('details-venue', 'details', 'Venue', 4, '{{venue}}'),
       A('details-note', 'details', 'Note', 5, 'Adventure gear encouraged'),
     ],
+    // Desktop is a genuinely different picture: the square desktop canvas cover-fits a 1440x900
+    // window, so the visible band is only y 18.8-81.3 (a layer centred outside it is off-screen)
+    // and a width is a % of 1440px — the mobile w:40 props render ~580px wide. Measured, not
+    // guessed; see the welcome stage's own block.
+    desktop: {
+      'observation-balcony': { x: 50, y: 74, w: 70 },
+      'field-binoculars': { x: 92, y: 26, w: 7 },
+      brachiosaurus: { x: 28, y: 62, w: 15 },
+      'map-table': { x: 68, y: 64, w: 17 },
+      'foreground-leaf-left': { x: 6, y: 72, w: 16 },
+      details: { x: 50, y: 40, w: 46, h: 46 },
+    },
   },
   itinerary: {
     id: 'itinerary', label: 'Adventure Route', bg: 'backgrounds/itinerary.webp', bgFit: 'cover', canvas: CANVAS,
@@ -96,6 +108,19 @@ export const T13_STAGES: Record<string, StageDef> = {
       A('itin-time', 'itinerary', 'Time', 2),
       A('itin-title', 'itinerary', 'Label', 3),
     ],
+    // Desktop is a genuinely different picture: the square desktop canvas cover-fits a 1440x900
+    // window, so the visible band is only y 18.8-81.3 (a layer centred outside it is off-screen)
+    // and a width is a % of 1440px — the mobile w:40 props render ~580px wide. Measured, not
+    // guessed; see the welcome stage's own block.
+    desktop: {
+      'blank-trail-sign': { x: 22, y: 26, w: 26 },
+      'footprint-trail': { x: 52, y: 72, w: 7 },
+      'supply-pack': { x: 10, y: 68, w: 15 },
+      'raptor-scout': { x: 90, y: 64, w: 15 },
+      'bottom-left-leaves-rocks': { x: 10, y: 78, w: 22 },
+      'bottom-right-leaves-rocks': { x: 92, y: 76, w: 15 },
+      itinerary: { x: 50, y: 48, w: 46, h: 44 },
+    },
   },
   rsvp: {
     id: 'rsvp', label: 'Join the Expedition', bg: 'backgrounds/rsvp.webp', bgFit: 'cover', canvas: CANVAS,
@@ -115,6 +140,19 @@ export const T13_STAGES: Record<string, StageDef> = {
       L({ id: 'rsvp-form', kind: 'slot', slot: 'rsvpForm', presentation: 'sheet', sheetId: 'rsvp', parent: 'rsvp', label: 'RSVP Form', x: 50, y: 54, w: 78, h: 44, z: 5, order: 1, chain: false }),
       L({ id: 'rsvp-seating-form', kind: 'slot', slot: 'rsvpSeating', presentation: 'sheet', sheetId: 'rsvp', parent: 'rsvp', label: 'Seating', x: 50, y: 54, w: 78, h: 44, z: 4, order: 2, chain: false }),
     ],
+    // Desktop is a genuinely different picture: the square desktop canvas cover-fits a 1440x900
+    // window, so the visible band is only y 18.8-81.3 (a layer centred outside it is off-screen)
+    // and a width is a % of 1440px — the mobile w:40 props render ~580px wide. Measured, not
+    // guessed; see the welcome stage's own block.
+    desktop: {
+      'warning-post': { x: 12, y: 44, w: 9 },
+      'radio-crate': { x: 28, y: 74, w: 16 },
+      'amber-specimen': { x: 14, y: 76, w: 16 },
+      'triceratops-ranger': { x: 86, y: 70, w: 16 },
+      'left-mid-leaf-bush': { x: 5, y: 58, w: 14 },
+      'bottom-right-leaf-bush': { x: 93, y: 78, w: 17 },
+      rsvp: { x: 50, y: 46, w: 46, h: 40 },
+    },
   },
   wishes: {
     id: 'wishes', label: 'Field Notes', bg: 'backgrounds/wishes.webp', bgFit: 'cover', canvas: CANVAS,
@@ -135,6 +173,21 @@ export const T13_STAGES: Record<string, StageDef> = {
       L({ id: 'wishes-form', kind: 'slot', slot: 'wishForm', presentation: 'sheet', sheetId: 'wish', parent: 'wishes', label: 'Wish Form', x: 50, y: 52, w: 78, h: 30, z: 5, order: 1, chain: false }),
       L({ id: 'wishes-photo', kind: 'slot', slot: 'wishPhoto', presentation: 'sheet', sheetId: 'wish', parent: 'wishes', label: 'Wish Photo', x: 50, y: 52, w: 78, h: 30, z: 4, order: 2, chain: false }),
     ],
+    // Desktop is a genuinely different picture: the square desktop canvas cover-fits a 1440x900
+    // window, so the visible band is only y 18.8-81.3 (a layer centred outside it is off-screen)
+    // and a width is a % of 1440px — the mobile w:40 props render ~580px wide. Measured, not
+    // guessed; see the welcome stage's own block.
+    desktop: {
+      'incubator-crate': { x: 12, y: 30, w: 16 },
+      'hatching-hatchling': { x: 90, y: 32, w: 14 },
+      'field-journal': { x: 60, y: 74, w: 20 },
+      'wishes-lantern': { x: 82, y: 50, w: 8 },
+      'wishes-top-left-leaves': { x: 8, y: 22, w: 20 },
+      'wishes-left-border-foliage': { x: 3, y: 52, w: 10 },
+      'wishes-right-boulders-leaves': { x: 94, y: 70, w: 15 },
+      'wishes-full-bottom-boulder-leaves': { x: 50, y: 78, w: 60 },
+      wishes: { x: 50, y: 46, w: 46, h: 38 },
+    },
   },
   photobooth: {
     id: 'photobooth', label: 'Expedition Photos', bg: 'backgrounds/photobooth.webp', bgFit: 'cover', canvas: CANVAS,
