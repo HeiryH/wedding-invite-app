@@ -470,10 +470,18 @@ In the layer list: **drag rows to reorder z** (anchors don't drag — they don't
 sub-layer tree** (a layer with children shows a disclosure caret). The list **fills the dock's
 remaining height**. **Selecting a layer from the preview scrolls its row into view**
 (`data-layer-row` + `scrollIntoView`). **Exactly one card is open at a time** — opening a
-pop-over clears the layer selection, selecting a layer closes the pop-over. **Delete lives in the
-detail card**, not as a row ✕: for an anchor the old ✕ was just a second hide button, and for art
-it was a one-click destroy next to the eye (anchors have no Delete at all — hiding is the only
-sensible removal).
+pop-over clears the layer selection, selecting a layer closes the pop-over.
+
+**Delete is only ever offered for a layer the couple added**, and it lives in the detail card,
+not as a row ✕ (the ✕ was a second hide button for anchors and a one-click destroy next to the
+eye for art). A **shipped layer can't be deleted at all** — the panel gates on `shippedIds`
+(`baseStage(def, breakpoint)`), and Hide is the affordance instead. That's not just taste:
+`serializeStage` does write a `{id, deleted: true}` tombstone for a removed shipped layer, but
+`resolveStage`'s `applyPatch` copies **only `OVERRIDABLE` keys** and `'deleted'` **is not in that
+list**, so the tombstone is discarded on read and the layer springs straight back. A Delete
+button there would silently do nothing. ⚠️ If you ever add `'deleted'` to `OVERRIDABLE` to make
+tombstones work, check existing saved layouts first — any that already accumulated a tombstone
+from a failed attempt would suddenly lose that layer on the next render.
 
 - **Config flows one way, no cross-iframe echo.** Because the panel lives in the parent tree that
   owns `draftConfig`, `onLayoutChange(key, value)` just calls `setDraftConfig` directly (`''`

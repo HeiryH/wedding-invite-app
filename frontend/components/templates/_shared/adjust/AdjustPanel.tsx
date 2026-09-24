@@ -462,6 +462,17 @@ export default function AdjustPanel({
   }, [selectedLayer, layers]);
   const selectedParent = layers.find((l) => l.id === selectedLayer)?.parent;
 
+  // Ids of the layers this stage SHIPS with, as opposed to ones the couple added with "+".
+  // Only the latter can be deleted: removing a shipped layer would have to persist as a
+  // `deleted: true` tombstone, and `resolveStage`'s `applyPatch` copies only OVERRIDABLE keys —
+  // `deleted` isn't one, so the tombstone is dropped on read and the layer springs straight back.
+  // Rather than offer a button that silently does nothing, shipped layers get Hide (the eye in
+  // the layer list) and nothing else.
+  const shippedIds = useMemo(
+    () => new Set(baseStage(def, breakpoint).layers.map((l) => l.id)),
+    [def, breakpoint],
+  );
+
   const dirty = Boolean(config[layoutKey(keyPrefix, breakpoint, def.id)]);
   const isImage = current?.kind === 'img';
   // Anchors are existing DOM elements, not overlay art: they can't be resized (only nudged), so
@@ -1395,9 +1406,10 @@ export default function AdjustPanel({
                 <button className={`${styles.btn} ${styles.btnGhost}`} onClick={resetLayer}>
                   {isAnchor ? 'Reset position' : 'Reset layer'}
                 </button>
-                {/* Anchors have nothing to delete — they're a nudge on an element the template
-                    renders anyway; hiding one is what the eye in the list already does. */}
-                {!isAnchor && (
+                {/* Only a layer the couple added. An anchor is a nudge on an element the template
+                    renders anyway, and a shipped layer can't be removed at all (see `shippedIds`)
+                    — for both, Hide in the layer list is the real affordance. */}
+                {!isAnchor && !shippedIds.has(current.id) && (
                   <button
                     className={`${styles.btn} ${styles.btnDanger}`}
                     onClick={() => removeLayer(current.id)}
