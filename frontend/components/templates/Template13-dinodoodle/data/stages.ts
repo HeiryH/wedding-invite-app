@@ -67,7 +67,10 @@ export const T13_STAGES: Record<string, StageDef> = {
     layers: [
       L({ id: 'observation-balcony', kind: 'img', src: 'props/observation-balcony.webp', x: 50, y: 81, w: 104, z: 2, order: 0, anim: 'fade', animOut: 'none', depth: 0.1 }),
       L({ id: 'field-binoculars', kind: 'img', src: 'props/field-binoculars.webp', x: 89, y: 12.5, w: 18, z: 3, order: 1, anim: 'slide-down', animOut: 'slide-fade-out-right', depth: 0.25 }),
-      L({ id: 'brachiosaurus-map-table-provisional', kind: 'img', src: 'props/brachiosaurus-map-table-provisional.webp', label: 'Brachiosaurus + map table (provisional)', x: 59, y: 67, w: 82, z: 5, order: 2, anim: 'rise', animOut: 'fade-out', depth: 0.3 }),
+      // Was one combined "brachiosaurus + map table (provisional)" plate; now two pieces, so each
+      // can be moved on its own and the dino can stand behind the table.
+      L({ id: 'brachiosaurus', kind: 'img', src: 'props/brachiosaurus.webp', label: 'Brachiosaurus', x: 33, y: 64, w: 40, z: 4, order: 2, anim: 'slide-right', animOut: 'fade-out', depth: 0.28 }),
+      L({ id: 'map-table', kind: 'img', src: 'props/map-table.webp', label: 'Map table', x: 72, y: 70, w: 46, z: 5, order: 3, anim: 'rise', animOut: 'fade-out', depth: 0.32 }),
       L({ id: 'foreground-leaf-left', kind: 'img', src: 'props/foreground-leaf-left.webp', x: 18, y: 88, w: 45, z: 6, order: 3, anim: 'slide-right', animOut: 'slide-out-left', depth: 0.55 }),
       L({ id: 'details', kind: 'slot', slot: 'ceremonyDetails', label: 'Briefing', x: 50, y: 36, w: 80, h: 52, z: 7, order: 1, chain: false, anim: 'none', depth: 0.2 }),
       A('details-title', 'details', 'Title', 0, 'Expedition Briefing'),
@@ -81,10 +84,12 @@ export const T13_STAGES: Record<string, StageDef> = {
   itinerary: {
     id: 'itinerary', label: 'Adventure Route', bg: 'backgrounds/itinerary.webp', bgFit: 'cover', canvas: CANVAS,
     layers: [
-      L({ id: 'blank-trail-sign', kind: 'img', src: 'props/blank-trail-sign.webp', x: 27, y: 27, w: 56, z: 4, order: 0, anim: 'slide-right', animOut: 'slide-fade-out-left', depth: 0.2 }),
+      L({ id: 'blank-trail-sign', kind: 'img', src: 'props/blank-trail-sign.webp', x: 34, y: 26, w: 52, z: 4, order: 0, anim: 'slide-right', animOut: 'slide-fade-out-left', depth: 0.2 }),
       L({ id: 'footprint-trail', kind: 'img', src: 'props/footprint-trail.webp', x: 55, y: 90, w: 18, z: 4, order: 1, anim: 'fade', animOut: 'none', depth: 0.1 }),
-      L({ id: 'supply-pack', kind: 'img', src: 'props/supply-pack.webp', x: 19, y: 80, w: 38, z: 5, order: 3, anim: 'slide-right', animOut: 'slide-fade-out-left', depth: 0.4 }),
+      L({ id: 'supply-pack', kind: 'img', src: 'props/supply-pack.webp', x: 22, y: 76, w: 34, z: 5, order: 3, anim: 'slide-right', animOut: 'slide-fade-out-left', depth: 0.4 }),
       L({ id: 'raptor-scout', kind: 'img', src: 'props/raptor-scout.webp', x: 84, y: 71, w: 34, z: 5, order: 4, anim: 'slide-left', animOut: 'slide-fade-out-right', depth: 0.4 }),
+      L({ id: 'bottom-left-leaves-rocks', kind: 'img', src: 'props/bottom-left-leaves-rocks.webp', x: 24, y: 90, w: 48, z: 6, order: 5, anim: 'slide-up', animOut: 'slide-out-down', depth: 0.55 }),
+      L({ id: 'bottom-right-leaves-rocks', kind: 'img', src: 'props/bottom-right-leaves-rocks.webp', x: 80, y: 86, w: 34, z: 6, order: 5, anim: 'slide-up', animOut: 'slide-out-down', depth: 0.55 }),
       L({ id: 'itinerary', kind: 'slot', slot: 'itineraryList', label: 'Adventure Route', x: 50, y: 50, w: 80, h: 46, z: 7, order: 2, chain: false, anim: 'none', depth: 0.2 }),
       A('itinerary-title', 'itinerary', 'Title', 0, 'Adventure Route'),
       A('itinerary-list', 'itinerary', 'Schedule', 1),
@@ -95,10 +100,12 @@ export const T13_STAGES: Record<string, StageDef> = {
   rsvp: {
     id: 'rsvp', label: 'Join the Expedition', bg: 'backgrounds/rsvp.webp', bgFit: 'cover', canvas: CANVAS,
     layers: [
-      L({ id: 'warning-post', kind: 'img', src: 'props/warning-post.webp', x: 13, y: 44, w: 27, z: 4, order: 0, anim: 'slide-right', animOut: 'slide-fade-out-left', depth: 0.2 }),
-      L({ id: 'radio-crate', kind: 'img', src: 'props/radio-crate.webp', x: 36, y: 81, w: 42, z: 5, order: 3, anim: 'rise', animOut: 'fade-out', depth: 0.35 }),
-      L({ id: 'amber-specimen', kind: 'img', src: 'props/amber-specimen.webp', x: 15, y: 83, w: 27, z: 5, order: 4, anim: 'zoom-in', animOut: 'fade-out', depth: 0.4 }),
+      L({ id: 'warning-post', kind: 'img', src: 'props/warning-post.webp', x: 24, y: 46, w: 22, z: 4, order: 0, anim: 'slide-right', animOut: 'slide-fade-out-left', depth: 0.2 }),
+      L({ id: 'radio-crate', kind: 'img', src: 'props/radio-crate.webp', x: 55, y: 84, w: 36, z: 5, order: 3, anim: 'rise', animOut: 'fade-out', depth: 0.35 }),
+      L({ id: 'amber-specimen', kind: 'img', src: 'props/amber-specimen.webp', x: 32, y: 88, w: 36, z: 5, order: 4, anim: 'zoom-in', animOut: 'fade-out', depth: 0.4 }),
       L({ id: 'triceratops-ranger', kind: 'img', src: 'props/triceratops-ranger.webp', x: 83, y: 77, w: 36, z: 5, order: 5, anim: 'slide-left', animOut: 'slide-fade-out-right', depth: 0.4 }),
+      L({ id: 'left-mid-leaf-bush', kind: 'img', src: 'props/left-mid-leaf-bush.webp', x: 18, y: 64, w: 32, z: 6, order: 6, anim: 'slide-right', animOut: 'slide-out-left', depth: 0.5 }),
+      L({ id: 'bottom-right-leaf-bush', kind: 'img', src: 'props/bottom-right-leaf-bush.webp', x: 82, y: 90, w: 38, z: 6, order: 6, anim: 'slide-up', animOut: 'slide-out-down', depth: 0.55 }),
       L({ id: 'rsvp', kind: 'slot', slot: 'rsvpTitle', label: 'RSVP', x: 50, y: 50, w: 80, h: 42, z: 7, order: 1, chain: false, anim: 'none', depth: 0.2 }),
       A('rsvp-title', 'rsvp', 'Title', 0, 'Join the Expedition'),
       A('rsvp-prompt', 'rsvp', 'Prompt', 1, 'Will your explorer be joining the crew?'),
@@ -112,11 +119,14 @@ export const T13_STAGES: Record<string, StageDef> = {
   wishes: {
     id: 'wishes', label: 'Field Notes', bg: 'backgrounds/wishes.webp', bgFit: 'cover', canvas: CANVAS,
     layers: [
-      L({ id: 'incubator-crate', kind: 'img', src: 'props/incubator-crate.webp', x: 25, y: 15, w: 39, z: 4, order: 0, anim: 'slide-down', animOut: 'slide-fade-out-left', depth: 0.2 }),
+      L({ id: 'incubator-crate', kind: 'img', src: 'props/incubator-crate.webp', x: 30, y: 15, w: 39, z: 4, order: 0, anim: 'slide-down', animOut: 'slide-fade-out-left', depth: 0.2 }),
       L({ id: 'hatching-hatchling', kind: 'img', src: 'props/hatching-hatchling.webp', x: 85, y: 23, w: 33, z: 5, order: 1, anim: 'zoom-in', animOut: 'slide-fade-out-right', depth: 0.3 }),
       L({ id: 'field-journal', kind: 'img', src: 'props/field-journal.webp', x: 57, y: 82, w: 50, z: 5, order: 3, anim: 'rise', animOut: 'fade-out', depth: 0.35 }),
-      L({ id: 'left-fern-corner', kind: 'img', src: 'props/left-fern-corner.webp', x: 17, y: 85, w: 38, z: 5, order: 4, anim: 'slide-right', animOut: 'slide-out-left', depth: 0.5 }),
-      L({ id: 'right-fern-corner', kind: 'img', src: 'props/right-fern-corner.webp', x: 88, y: 87, w: 28, z: 5, order: 4, anim: 'slide-left', animOut: 'slide-out-right', depth: 0.5 }),
+      L({ id: 'wishes-lantern', kind: 'img', src: 'props/wishes-lantern.webp', x: 82, y: 48, w: 22, z: 5, order: 4, anim: 'fade', animOut: 'fade-out', depth: 0.35 }),
+      L({ id: 'wishes-top-left-leaves', kind: 'img', src: 'props/wishes-top-left-leaves.webp', x: 22, y: 8, w: 44, z: 5, order: 4, anim: 'slide-down', animOut: 'slide-out-up', depth: 0.4 }),
+      L({ id: 'wishes-left-border-foliage', kind: 'img', src: 'props/wishes-left-border-foliage.webp', x: 14, y: 58, w: 26, z: 6, order: 5, anim: 'slide-right', animOut: 'slide-out-left', depth: 0.5 }),
+      L({ id: 'wishes-right-boulders-leaves', kind: 'img', src: 'props/wishes-right-boulders-leaves.webp', x: 86, y: 76, w: 38, z: 6, order: 5, anim: 'slide-left', animOut: 'slide-out-right', depth: 0.5 }),
+      L({ id: 'wishes-full-bottom-boulder-leaves', kind: 'img', src: 'props/wishes-full-bottom-boulder-leaves.webp', x: 50, y: 86, w: 106, z: 7, order: 6, anim: 'slide-up', animOut: 'slide-out-down', depth: 0.6 }),
       L({ id: 'wishes', kind: 'slot', slot: 'wishTitle', label: 'Wishes', x: 50, y: 52, w: 80, h: 40, z: 7, order: 2, chain: false, anim: 'none', depth: 0.2 }),
       A('wishes-title', 'wishes', 'Title', 0, 'Field Notes'),
       A('wishes-prompt', 'wishes', 'Prompt', 1, 'Leave a birthday message for the expedition journal.'),
