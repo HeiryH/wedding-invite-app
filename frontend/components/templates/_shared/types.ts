@@ -179,6 +179,17 @@ export interface Layer {
   containerMinHeight?: number;
   /** kind 'slot' only. Inner padding of the rendered form/content container in px. */
   containerPadding?: number;
+  /** kind 'slot' only. Space between the block's own stacked pieces (title/prompt/button/…), in
+   *  `em` of the block's base size so it tracks Text Size. A composite slot reads it as
+   *  `--slot-gap`; a single-element slot has nothing to space and ignores it. */
+  contentGap?: number;
+  /** kind 'slot' only. Where the block's content sits inside its box vertically — the box itself
+   *  doesn't move, so this is how you park a hero's text at the top of its area without
+   *  re-dragging it. Reads as `--slot-justify` (a flex `justify-content`). */
+  contentAlignY?: 'top' | 'center' | 'bottom';
+  /** kind 'slot' only. Horizontal alignment of the block's own lines — `--slot-align` (flex
+   *  `align-items`) plus `--slot-text-align`. */
+  contentAlign?: 'left' | 'center' | 'right';
   /** Parallax factor. 0 = welded to the background. Defaults to z/10 when absent. */
   depth?: number;
 

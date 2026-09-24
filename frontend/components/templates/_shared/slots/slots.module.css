@@ -15,13 +15,16 @@
  * this to 0) — it's a purely additive neutral-theme choice.
  */
 
+/* `--slot-*` here come from the layer's own Layout tab (slotLayerStyle.ts): Gap, Vertical
+   position and Align. Each falls back to the shipped look, so an untouched block is unchanged. */
 .heroInner {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  justify-content: center;
+  align-items: var(--slot-align, center);
+  justify-content: var(--slot-justify, center);
+  gap: var(--slot-gap, 0);
   height: 100%;
-  text-align: center;
+  text-align: var(--slot-text-align, center);
   background: radial-gradient(
     ellipse at center,
     var(--slot-hero-scrim-1, rgba(246, 245, 243, 0.88)) 0%,
@@ -111,11 +114,11 @@
 .eventHero {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  justify-content: center;
+  align-items: var(--slot-align, center);
+  justify-content: var(--slot-justify, center);
   height: 100%;
-  text-align: center;
-  gap: 0.3em;
+  text-align: var(--slot-text-align, center);
+  gap: var(--slot-gap, 0.3em);
 }
 .heroEyebrow {
   margin: 0;

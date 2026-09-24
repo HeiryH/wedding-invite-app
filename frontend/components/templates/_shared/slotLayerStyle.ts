@@ -34,5 +34,17 @@ export function slotLayerStyle(layer: Layer): CSSProperties & Record<string, str
     ...(layer.containerPadding !== undefined
       ? { '--slot-container-padding': `${layer.containerPadding}px` }
       : null),
+    // Composite blocks (a hero, a titled section) read these on their own flex column — see
+    // `.eventHero`/`.heroInner` in slots.module.css and `.composite` in a template's own slot CSS.
+    ...(layer.contentGap !== undefined ? { '--slot-gap': `${layer.contentGap}em` } : null),
+    ...(layer.contentAlignY
+      ? { '--slot-justify': layer.contentAlignY === 'top' ? 'flex-start' : layer.contentAlignY === 'bottom' ? 'flex-end' : 'center' }
+      : null),
+    ...(layer.contentAlign
+      ? {
+          '--slot-align': layer.contentAlign === 'left' ? 'flex-start' : layer.contentAlign === 'right' ? 'flex-end' : 'center',
+          '--slot-text-align': layer.contentAlign,
+        }
+      : null),
   };
 }

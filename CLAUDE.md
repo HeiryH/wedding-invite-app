@@ -521,6 +521,18 @@ from a failed attempt would suddenly lose that layer on the next render.
   oversized absolute box is simply **clipped away**, which is exactly how the first attempt
   rendered nothing at all. A full `circle` ring is capped at 10 lines tall for the same reason and
   fits itself inside (`preserveAspectRatio`).
+- **A composite slot's inner layout is tunable** — `contentGap` / `contentAlignY` / `contentAlign`
+  on a `kind:'slot'` layer become `--slot-gap` / `--slot-justify` / `--slot-align` +
+  `--slot-text-align` (`slotLayerStyle.ts`), read by the block's own flex column (`.eventHero` and
+  `.heroInner` in `slots.module.css`, `.composite` in a template's own slot CSS). Gap is in `em`,
+  so spacing tracks Text Size instead of drifting apart as the type grows. **A new template's
+  composite container must read those vars** (each with the shipped value as its fallback) or the
+  Gap/Position/Align controls do nothing there.
+- **`--slot-text-scale` only works if the CSS multiplies by it.** T13 shipped its own
+  `DinoSlots.module.css` with plain `font:`/`font-size:` declarations, so the panel's Text Size
+  slider was a no-op for every T13 block — the control was real, the template just never read it.
+  Every font size in a template's slot CSS wants `calc(<size> * var(--slot-text-scale, 1))`, except
+  a child already sized in `em` of a scaled parent (that would compound).
 - **A sub-layer's Style tab only reaches text the *wrapper* owns.** `subLayerStyle` writes inline
   styles onto the piece's own element, so any child with its own `font`/`color`/`font-size` rule
   silently out-specifies the couple's choice — that's why the countdown's digits ignored the Style

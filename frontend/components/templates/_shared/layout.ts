@@ -13,7 +13,7 @@ export const layoutKey = (prefix: string, bp: Breakpoint, stage: StageId) =>
  *  resolved layers against each other. */
 export const OVERRIDABLE: (keyof Layer)[] = [
   'x', 'y', 'w', 'h', 's', 'z', 'order', 'chain', 'hidden', 'opacity', 'depth', 'textScale',
-  'accentColor', 'containerMinHeight', 'containerPadding',
+  'accentColor', 'containerMinHeight', 'containerPadding', 'contentGap', 'contentAlignY', 'contentAlign',
   'rotation', 'flipX', 'flipY', 'locked', 'overflowMode',
   'color', 'fill', 'fontSize', 'fontWeight', 'lineHeight', 'radius', 'text', 'src', 'shape', 'label',
   'anim', 'animDur', 'animOut', 'animOutDur',

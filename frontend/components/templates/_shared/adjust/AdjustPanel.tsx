@@ -165,13 +165,15 @@ const FIT_OPTIONS: ObjectFit[] = ['cover', 'contain', 'fill'];
 /** Sentinel selection for the synthetic background row. */
 const BG_ID = '__bg';
 
-function Slider({ label, value, min, max, step, onChange }: {
+function Slider({ label, value, min, max, step, onChange, title }: {
   label: string; value: number; min: number; max: number; step: number;
   onChange: (v: number) => void;
+  /** Hover text on the label, for a control whose name isn't self-explanatory (Depth). */
+  title?: string;
 }) {
   return (
     <div className={styles.control}>
-      <span>{label}</span>
+      <span title={title}>{label}</span>
       <input
         type="range" min={min} max={max} step={step} value={value}
         onChange={(e) => onChange(Number(e.target.value))}
@@ -1028,19 +1030,54 @@ export default function AdjustPanel({
                     </div>
                   )}
                   {hasSlotText && (
-                    <Slider
-                      label="Text Size"
-                      value={current.textScale ?? 1}
-                      min={0.7} max={1.8} step={0.05}
-                      onChange={set('textScale')}
-                    />
+                    <>
+                      <Slider
+                        label="Text Size"
+                        value={current.textScale ?? 1}
+                        min={0.7} max={1.8} step={0.05}
+                        onChange={set('textScale')}
+                      />
+                      {/* Inner layout of a block that stacks several pieces (a hero's eyebrow/
+                          title/name/date, a titled section). In `em`, so the spacing tracks Text
+                          Size instead of drifting apart as the type grows. */}
+                      <Slider
+                        label="Gap"
+                        value={current.contentGap ?? 0.3}
+                        min={0} max={2} step={0.05}
+                        onChange={set('contentGap')}
+                      />
+                      <div className={styles.control} style={{ gridTemplateColumns: '54px 1fr' }}>
+                        <span title="Where the block's content sits inside its box — the box itself doesn't move">Position</span>
+                        <select
+                          className={styles.select}
+                          value={current.contentAlignY ?? 'center'}
+                          onChange={(e) => patchLayer(current.id, { contentAlignY: e.target.value as Layer['contentAlignY'] })}
+                        >
+                          <option value="top">Top</option>
+                          <option value="center">Centre</option>
+                          <option value="bottom">Bottom</option>
+                        </select>
+                      </div>
+                      <div className={styles.control} style={{ gridTemplateColumns: '54px 1fr' }}>
+                        <span>Align</span>
+                        <select
+                          className={styles.select}
+                          value={current.contentAlign ?? 'center'}
+                          onChange={(e) => patchLayer(current.id, { contentAlign: e.target.value as Layer['contentAlign'] })}
+                        >
+                          <option value="left">Left</option>
+                          <option value="center">Centre</option>
+                          <option value="right">Right</option>
+                        </select>
+                      </div>
+                    </>
                   )}
                   {!isSheet && (
                     <Slider label="Opacity" value={current.opacity} min={0} max={1} step={0.05} onChange={set('opacity')} />
                   )}
 
                   {!isAnchor && !isSheet && (
-                    <Slider label="Depth" value={current.depth ?? current.z / 10} min={0} max={3} step={0.1} onChange={set('depth')} />
+                    <Slider label="Depth" value={current.depth ?? current.z / 10} min={0} max={3} step={0.1} onChange={set('depth')} title="Parallax: how far this layer drifts against the background as the guest scrolls. 0 = welded to the scene." />
                   )}
 
                   {/* Effect tuning, additional to (not instead of) the geometry above — see the
