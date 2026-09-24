@@ -51,7 +51,7 @@ function Piece({ layer, editor, id, children }: {
   const curveText = curvedTextOf(layer, children);
   const childStyle = (children.props as { style?: CSSProperties }).style ?? {};
   const child = curveText !== undefined
-    ? <CurvedPiece layer={layer!} text={curveText} anim={anim} />
+    ? <CurvedPiece layer={layer!} text={curveText} anim={anim} assetRoot={assetRoot} />
     : cloneElement(children as ReactElement<Record<string, unknown>>, {
     'data-sl-anim': anim,
     'data-scroll-fade': anim === 'scroll-fade' ? true : undefined,

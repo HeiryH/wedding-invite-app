@@ -4,6 +4,7 @@ import type { CSSProperties, ReactElement, ReactNode } from 'react';
 import type { Layer } from '../types';
 import CurvedText, { curvedAspect } from '../CurvedText';
 import { staggerDelay } from '../reveal';
+import { backdropStyle } from '../backdrop';
 
 /**
  * The Style tab's Shape control (arc/circle) for a *sub-layer* piece — the hero's title, a section
@@ -26,7 +27,13 @@ export function curvedTextOf(layer: Layer | undefined, children: ReactElement): 
 
 /** The curved replacement for a piece's flat child, carrying the same entrance-animation hooks
  *  the `cloneElement` path applies (see each slot file's `Piece`/`HeroPiece`). */
-export function CurvedPiece({ layer, text, anim }: { layer: Layer; text: string; anim: string }) {
+export function CurvedPiece({ layer, text, anim, assetRoot }: {
+  layer: Layer;
+  text: string;
+  anim: string;
+  /** Resolves a template-relative `backdropSrc`; see backdrop.ts. */
+  assetRoot?: string;
+}) {
   // The piece keeps roughly the FLAT line's height in flow, and the curve is absolutely positioned
   // and centred on it — so switching a piece to arc/circle overlaps its neighbours instead of
   // pushing them down the hero. The curve's own box is only as tall as the geometry needs
@@ -48,8 +55,11 @@ export function CurvedPiece({ layer, text, anim }: { layer: Layer; text: string;
         ...(layer.animDur ? { '--sl-dur': `${layer.animDur}s` } : {}),
       } as CSSProperties}
     >
+      {/* The backdrop rides the same box as the curve — a curved piece replaces the flat child
+          entirely, so without this the plate silently vanished whenever Shape wasn't 'flat'. */}
       <div
         style={{
+          ...backdropStyle(layer, (src) => (src.startsWith('/') || !assetRoot ? src : `${assetRoot}/${src}`)),
           position: 'absolute',
           left: 0,
           right: 0,

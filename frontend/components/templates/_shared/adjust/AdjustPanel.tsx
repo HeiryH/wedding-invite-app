@@ -1341,7 +1341,12 @@ export default function AdjustPanel({
                     piece whose child is a composite block (the timer grid), which can't curve. */}
                 {/* A plate/ribbon/banner painted behind this text, as part of the same element —
                     so it moves, scales and animates with the words instead of being a separate
-                    art layer that has to be kept in register (see backdrop.ts). */}
+                    art layer that has to be kept in register (see backdrop.ts). Only offered
+                    where there IS text to sit on it: a group whose child is a composite block
+                    (the countdown, which already paints its own stone per unit) would just get a
+                    picture behind the whole grid. Its units each have text, so they keep it. */}
+                {(current.kind === 'text' || current.hasText) && (
+                  <>
                 <div className={styles.label}>Backdrop</div>
                 {current.backdropSrc ? (
                   <>
@@ -1377,6 +1382,9 @@ export default function AdjustPanel({
                     <button className={styles.btn} onClick={() => pickImage('backdrop')}>Set backdrop image…</button>
                   </div>
                 ) : null}
+
+                  </>
+                )}
 
                 {(current.kind === 'text' || current.hasText) && (
                   <>

@@ -543,8 +543,16 @@ from a failed attempt would suddenly lose that layer on the next render.
   (a full-width box makes `contain` fit the art to the box's *height* and leaves a thumbnail
   floating in empty space), and `backdropHeight` exists because the art is usually several times
   taller than the line it frames — without it a banner shrinks to nothing in a one-line box.
-  Works for `kind:'text'` (Layer.tsx) and for `styleable` sub-layers (`subLayerStyle`, which now
-  takes `assetRoot` so template-relative paths resolve).
+  Works for `kind:'text'` (Layer.tsx), for `styleable` sub-layers (`subLayerStyle`, which now
+  takes `assetRoot` so template-relative paths resolve), and for a **curved** piece
+  (`CurvedPiece` paints it on the curve's own box — it replaces the flat child outright, so a
+  backdrop applied only via `subLayerStyle` vanishes the moment Shape isn't `flat`). The control
+  is offered only where there IS text to sit on the art (`kind === 'text' || hasText`): a group
+  whose child is a composite block — the countdown, whose units already paint their own stone —
+  would otherwise get a picture behind the whole grid. **Every new `Layer` field needs its entry
+  in `OVERRIDABLE`**; these five were missed at first, and the symptom is subtle — the control
+  works, the preview even updates, and then `serializeStage` drops the key on the very next
+  commit, so the value never sticks and the button label never changes.
 - **A slot's sub-layers can nest further.** The countdown is a group: `hero-timer` holds
   `hero-timer-{days,hours,min,sec}` (T13: `-minutes`), each its own adjustable/styleable piece,
   resolved with a second `subLayersOf(stageLayers, 'hero-timer')` call. The panel's layer tree

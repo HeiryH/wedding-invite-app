@@ -22,6 +22,8 @@ export const OVERRIDABLE: (keyof Layer)[] = [
   'shadowColor', 'shadowBlur', 'shadowX', 'shadowY',
   // text shaping (kind 'text' only) — see CurvedText.tsx.
   'textShape', 'curvature',
+  // per-text backdrop art (kind 'text' and styleable sub-layers) — see backdrop.ts.
+  'backdropSrc', 'backdropFit', 'backdropPad', 'backdropBleed', 'backdropHeight',
   // idle/looping animation (kinds 'img'/'text'/'shape'/'slot') — see reveal.css.
   'animIdle', 'animIdleSpeed', 'animIdleIntensity', 'animIdleOrigin',
   // kind 'scrollVideo' effect params (types.ts) — same delta mechanism, no geometry involved.
