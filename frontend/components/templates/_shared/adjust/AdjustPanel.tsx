@@ -483,6 +483,22 @@ export default function AdjustPanel({
   // Anchors are existing DOM elements, not overlay art: they can't be resized (only nudged), so
   // the panel shows a reduced, transform-only control set for them.
   const isAnchor = current?.kind === 'anchor';
+  // …but a *slot piece* is a different animal. An anchor nested (at any depth) under a
+  // `kind:'slot'` layer is rendered by that slot's own `Piece`/`HeroPiece` wrapper, which builds
+  // the same `data-sl-anim` / `data-scroll-exit` chain Layer.tsx does — so it genuinely supports
+  // the full enter/idle/exit set, and the panel used to tell those layers "animation isn't
+  // available" while they were visibly animating off their shipped defaults. A T1–T6 anchor has
+  // no slot ancestor (those templates declare no slot layers at all) and still gets idle-only.
+  const isSlotPiece = (() => {
+    if (current?.kind !== 'anchor') return false;
+    const byId = new Map(layers.map((l) => [l.id, l]));
+    let node = current.parent ? byId.get(current.parent) : undefined;
+    for (let hops = 0; node && hops < 8; hops++) {
+      if (node.kind !== 'anchor') return node.kind === 'slot';
+      node = node.parent ? byId.get(node.parent) : undefined;
+    }
+    return false;
+  })();
   // scrollVideo layers still get ordinary X/Y/Width/Height/Opacity/Depth (see the geometry block
   // below) plus their own effect-tuning sliders in addition — but no Style/Animation tab, since
   // the enter/exit/style vocabulary doesn't apply to a scroll-scrubbed effect. (Template 5's own
@@ -1399,7 +1415,7 @@ export default function AdjustPanel({
                   </>
                 )}
               </>
-            ) : !isAnchor ? (
+            ) : !isAnchor || isSlotPiece ? (
               <>
                 {/* Enter — one-shot when the section scrolls into view, staggered by Phase. */}
                 <div className={styles.label}>On enter</div>

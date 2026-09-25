@@ -7,6 +7,8 @@ import type { EditorHandle, Layer, SlotProps } from './types';
 import { staggerDelay } from '@/components/templates/_shared/reveal';
 import { subLayerStyle, subLayersOf } from '@/components/templates/_shared/slots/subLayerStyle';
 import { CurvedPiece, curvedTextOf } from '@/components/templates/_shared/slots/CurvedPiece';
+import { backdropSrcOf } from '@/components/templates/_shared/backdrop';
+import { idleInlineStyle } from '@/components/templates/_shared/idle';
 import { Backdrop } from '@/components/templates/_shared/backdrop';
 import { useSheets } from '@/components/templates/_shared/slots/sheets';
 import { useEngine } from '@/components/templates/_shared/engine';
@@ -47,33 +49,51 @@ function Piece({ layer, editor, id, children }: {
   const transform = dx || dy || scale !== 1 ? `translate(${dx}%, ${dy}%) scale(${scale})` : undefined;
   const anim = layer?.anim || 'rise';
   const animOut = layer?.animOut && layer.animOut !== 'none' ? layer.animOut : undefined;
+  // "While on screen" — its own element, between the entrance and the exit, so the three
+  // transforms can't fight (the same split Layer.tsx uses for ordinary layers).
+  const animIdle = layer?.animIdle && layer.animIdle !== 'none' ? layer.animIdle : undefined;
+  const idleStyle = animIdle
+    ? idleInlineStyle(animIdle, { speed: layer?.animIdleSpeed, intensity: layer?.animIdleIntensity, origin: layer?.animIdleOrigin })
+    : undefined;
+  const withIdle = (node: ReactElement) => (animIdle
+    ? <div data-sl-idle={animIdle} style={idleStyle}>{node}</div>
+    : node);
   const selected = Boolean(editor?.enabled && editor.selectedLayer === id);
   // Shape (arc/circle) from the Style tab — see CurvedPiece.tsx.
   const curveText = curvedTextOf(layer, children);
   const childStyle = (children.props as { style?: CSSProperties }).style ?? {};
+  // A backdrop means the ENTRANCE belongs on the wrapper that holds both the art and the words —
+  // otherwise the plate pops in at full opacity while only the text rises.
+  const hasBackdrop = Boolean(layer && backdropSrcOf(layer, assetRoot));
+  const animAttrs = {
+    'data-sl-anim': anim,
+    'data-scroll-fade': anim === 'scroll-fade' ? true : undefined,
+  } as const;
+  const animVars = {
+    '--sl-opacity': layer?.opacity ?? 1,
+    '--sl-delay': staggerDelay(layer?.order ?? 0),
+    ...(layer?.animDur ? { '--sl-dur': `${layer.animDur}s` } : {}),
+  } as CSSProperties;
   const child = curveText !== undefined
     ? <CurvedPiece layer={layer!} text={curveText} anim={anim} assetRoot={assetRoot} />
     : cloneElement(children as ReactElement<Record<string, unknown>>, {
-    'data-sl-anim': anim,
-    'data-scroll-fade': anim === 'scroll-fade' ? true : undefined,
-    style: {
-      ...childStyle,
-      ...subLayerStyle(layer, assetRoot),
-      '--sl-opacity': layer?.opacity ?? 1,
-      '--sl-delay': staggerDelay(layer?.order ?? 0),
-      ...(layer?.animDur ? { '--sl-dur': `${layer.animDur}s` } : {}),
-    } as CSSProperties,
-  });
+      ...(hasBackdrop ? {} : animAttrs),
+      style: {
+        ...childStyle,
+        ...subLayerStyle(layer, assetRoot),
+        ...(hasBackdrop ? {} : animVars),
+      } as CSSProperties,
+    });
 
   // Backdrop art (a ribbon/plate) rides the text itself — see backdrop.tsx. A curved piece paints
   // its own inside CurvedPiece, so it's skipped here.
   const backed = curveText !== undefined
     ? child
-    : <Backdrop layer={layer} assetRoot={assetRoot}>{child}</Backdrop>;
+    : <Backdrop layer={layer} assetRoot={assetRoot} {...(hasBackdrop ? animAttrs : {})} style={hasBackdrop ? animVars : undefined}>{child}</Backdrop>;
 
   return (
     <div style={{ transform, ...(selected ? { outline: '2px dashed #f3bd45', outlineOffset: 3 } : {}) }}>
-      {animOut ? <div data-scroll-exit data-sl-out={animOut}>{backed}</div> : backed}
+      {animOut ? <div data-scroll-exit data-sl-out={animOut}>{withIdle(backed)}</div> : withIdle(backed)}
     </div>
   );
 }

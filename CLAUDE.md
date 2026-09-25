@@ -559,6 +559,20 @@ from a failed attempt would suddenly lose that layer on the next render.
     drops the key on the next commit so nothing ever sticks.
   - T13's countdown units no longer hardcode their stone in `.countUnit`; each unit is a
     sub-layer, so its plate is set through this control like any other text's.
+- **A slot piece gets the FULL animation set, unlike other anchors.** The panel's three-way
+  branch is `!isAnchor || isSlotPiece` → enter/idle/exit, `animatable` → idle only, else
+  "Animation isn't available". `isSlotPiece` is structural, not a flag: an anchor whose nearest
+  non-anchor ancestor is a `kind:'slot'` layer is rendered by that slot's own `Piece`/`HeroPiece`
+  wrapper, which builds the same `data-sl-anim` / `data-sl-idle` / `data-sl-out` chain `Layer.tsx`
+  does. T1–T6 declare no slot layers at all, so their DOM-nudge anchors still get idle-only via
+  `animatable`. Before this, T13's hero pieces were told animation wasn't available **while they
+  were visibly animating** off the `anim: 'rise'` / `animOut: 'fade-out'` their stage data ships.
+  **A new template's piece wrapper must render all three hooks** — enter on the element, idle on
+  its own nested element (`idleInlineStyle`), exit on the outer `data-scroll-exit` — or the panel
+  will offer controls that do nothing.
+- **With a backdrop, the entrance rides the wrapper, not the text.** `Backdrop` takes the
+  `data-sl-*` attributes so the plate and its words reveal as one; put them on the text element
+  and the art pops in at full opacity while only the words rise.
 - **A slot's sub-layers can nest further.** The countdown is a group: `hero-timer` holds
   `hero-timer-{days,hours,min,sec}` (T13: `-minutes`), each its own adjustable/styleable piece,
   resolved with a second `subLayersOf(stageLayers, 'hero-timer')` call. The panel's layer tree

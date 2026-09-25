@@ -33,17 +33,23 @@ export function backdropSrcOf(layer: Layer, assetRoot?: string): string | undefi
 
 /** Wraps `children` with the layer's backdrop art behind it. Returns the children untouched when
  *  the layer has none, so a caller can use it unconditionally. */
-export function Backdrop({ layer, assetRoot, children, style }: {
+export function Backdrop({ layer, assetRoot, children, style, ...rest }: {
   layer?: Layer;
   assetRoot?: string;
   children: ReactNode;
   /** Merged onto the wrapper — the caller's own layout for the text. */
   style?: CSSProperties;
+  /** The entrance hooks (`data-sl-anim`, `data-scroll-fade`) when the caller wants the WRAPPER
+   *  to animate — which is what you want with a backdrop, so the plate and its words reveal as
+   *  one. Applied to the text element instead when there's no backdrop (see each slot's
+   *  `Piece`/`HeroPiece`). */
+  [key: `data-${string}`]: unknown;
 }) {
   const src = layer && backdropSrcOf(layer, assetRoot);
   if (!src) return <>{children}</>;
   return (
     <span
+      {...rest}
       style={{
         position: 'relative',
         display: 'flex',

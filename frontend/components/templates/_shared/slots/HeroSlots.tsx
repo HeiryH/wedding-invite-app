@@ -8,7 +8,8 @@ import type { EditorHandle, Layer, SlotProps } from '../types';
 import { staggerDelay } from '../reveal';
 import { subLayerStyle, subLayersOf } from './subLayerStyle';
 import { CurvedPiece, curvedTextOf } from './CurvedPiece';
-import { Backdrop } from '../backdrop';
+import { Backdrop, backdropSrcOf } from '../backdrop';
+import { idleInlineStyle } from '../idle';
 import { useEngine } from '../engine';
 import styles from './slots.module.css';
 
@@ -53,26 +54,44 @@ function HeroPiece({ layer, editor, id, children }: {
   const nudge = dx || dy || s !== 1 ? `translate(${dx}%, ${dy}%) scale(${s})` : undefined;
   const anim = layer?.anim || 'rise';
   const animOut = layer?.animOut && layer.animOut !== 'none' ? layer.animOut : undefined;
+  // "While on screen" — its own element, between the entrance and the exit, so the three
+  // transforms can't fight (the same split Layer.tsx uses for ordinary layers).
+  const animIdle = layer?.animIdle && layer.animIdle !== 'none' ? layer.animIdle : undefined;
+  const idleStyle = animIdle
+    ? idleInlineStyle(animIdle, { speed: layer?.animIdleSpeed, intensity: layer?.animIdleIntensity, origin: layer?.animIdleOrigin })
+    : undefined;
+  const withIdle = (node: ReactElement) => (animIdle
+    ? <div data-sl-idle={animIdle} style={idleStyle}>{node}</div>
+    : node);
   const selected =
     Boolean(editor?.enabled) && editor?.selectedStage === 'welcome' && editor?.selectedLayer === id;
 
   // Shape (arc/circle) from the Style tab, when this piece's child is one plain string.
   const curveText = curvedTextOf(layer, children);
   const childStyle = (children.props as { style?: CSSProperties }).style ?? {};
+  // A backdrop means the ENTRANCE belongs on the wrapper that holds both the art and the words —
+  // otherwise the plate pops in at full opacity while only the text rises.
+  const hasBackdrop = Boolean(layer && backdropSrcOf(layer, assetRoot));
+  const animAttrs = {
+    'data-sl-anim': anim,
+    'data-scroll-fade': anim === 'scroll-fade' ? true : undefined,
+  } as const;
+  const animVars = {
+    '--sl-opacity': layer?.opacity ?? 1,
+    '--sl-delay': staggerDelay(layer?.order ?? 0),
+    ...(layer?.animDur ? { '--sl-dur': `${layer.animDur}s` } : {}),
+  } as CSSProperties;
   const inner = curveText !== undefined
     ? <CurvedPiece layer={layer!} text={curveText} anim={anim} assetRoot={assetRoot} />
     : cloneElement(children as ReactElement<Record<string, unknown>>, {
-      'data-sl-anim': anim,
-      'data-scroll-fade': anim === 'scroll-fade' ? true : undefined,
+      ...(hasBackdrop ? {} : animAttrs),
       style: {
         ...childStyle,
         // Style-tab fields (color/font/size/spacing/border/shadow) — present only when the
         // sub-layer is flagged `styleable` (all of these are), so this is a no-op until the
         // couple actually touches the Style tab.
         ...subLayerStyle(layer, assetRoot),
-        '--sl-opacity': layer?.opacity ?? 1,
-        '--sl-delay': staggerDelay(layer?.order ?? 0),
-        ...(layer?.animDur ? { '--sl-dur': `${layer.animDur}s` } : {}),
+        ...(hasBackdrop ? {} : animVars),
       } as CSSProperties,
     });
 
@@ -80,7 +99,7 @@ function HeroPiece({ layer, editor, id, children }: {
   // piece, which paints its own inside CurvedPiece.
   const backed = curveText !== undefined
     ? inner
-    : <Backdrop layer={layer} assetRoot={assetRoot}>{inner}</Backdrop>;
+    : <Backdrop layer={layer} assetRoot={assetRoot} {...(hasBackdrop ? animAttrs : {})} style={hasBackdrop ? animVars : undefined}>{inner}</Backdrop>;
 
   // nudge wrapper · optional exit wrapper (scroll-scrubbed via --sl-out) · entrance inner — three
   // elements so nudge/exit/entrance transforms never collide.
@@ -92,9 +111,9 @@ function HeroPiece({ layer, editor, id, children }: {
       }}
     >
       {animOut ? (
-        <div data-scroll-exit data-sl-out={animOut}>{backed}</div>
+        <div data-scroll-exit data-sl-out={animOut}>{withIdle(backed)}</div>
       ) : (
-        backed
+        withIdle(backed)
       )}
     </div>
   );
