@@ -221,6 +221,13 @@ export interface Layer {
    */
   boxW?: number;
   boxH?: number;
+  /**
+   * Let a word break mid-word when it doesn't fit the box, rather than overflowing it. Off by
+   * default because breaking a name ("BARTHOL / OMEW") reads as broken, not as wrapping — but a
+   * long single word in a deliberately narrow piece has no other way to fit. Multi-word text
+   * wraps at spaces regardless; this only changes what happens to a word that is itself too wide.
+   */
+  boxBreakWord?: boolean;
 
   /** Nudge the backdrop off the text's centre, as a % of the ART's own width/height — so the
    *  offset keeps its proportions when Size changes, instead of sliding as the art grows.

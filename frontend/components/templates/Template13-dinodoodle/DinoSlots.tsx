@@ -103,6 +103,9 @@ function Piece({ layer, editor, id, children }: {
         // so narrowing a line to make it wrap doesn't shove it to one side.
         ...(layer?.boxW !== undefined ? { width: `${layer.boxW}%`, marginInline: 'auto' } : null),
         ...(layer?.boxH !== undefined ? { height: `${layer.boxH}em`, flexShrink: 0 } : null),
+        // `anywhere` rather than `break-word`: it also lets the box shrink to the broken width,
+        // which is what a narrowed piece is asking for.
+        ...(layer?.boxBreakWord ? { overflowWrap: 'anywhere' as const } : null),
         ...(selected ? { outline: '2px dashed #f3bd45', outlineOffset: 3 } : {}),
         ...(drag.handlers.style ?? {}),
       }}

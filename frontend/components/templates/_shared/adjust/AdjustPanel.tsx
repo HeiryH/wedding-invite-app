@@ -986,6 +986,17 @@ export default function AdjustPanel({
                         onChange={(v) => patchLayer(current.id, { boxH: v <= 0 ? undefined : v })}
                         title="Height in em (tracks the piece's own type size) — 0 is auto, as tall as the content"
                       />
+                      {/* Multi-word text wraps at spaces on its own; this is only for a single
+                          word too wide for the box, which otherwise overflows it. */}
+                      <div className={styles.btnRow}>
+                        <button
+                          className={`${styles.btn} ${current.boxBreakWord ? '' : styles.btnGhost}`}
+                          onClick={() => patchLayer(current.id, { boxBreakWord: current.boxBreakWord ? undefined : true })}
+                          title="Break a long word across lines instead of letting it overflow the box"
+                        >
+                          {current.boxBreakWord ? '✓ Break long words' : 'Break long words'}
+                        </button>
+                      </div>
                     </>
                   )}
 
