@@ -559,6 +559,22 @@ from a failed attempt would suddenly lose that layer on the next render.
     drops the key on the next commit so nothing ever sticks.
   - T13's countdown units no longer hardcode their stone in `.countUnit`; each unit is a
     sub-layer, so its plate is set through this control like any other text's.
+- **Canvas gestures.** A single click selects the layer under the pointer; **double-click enters a
+  group** and selects the sub-layer piece (`slots/usePieceDrag.ts`), which is the only way to reach
+  a nested element with the mouse. A piece becomes draggable **once it's selected**, so an ordinary
+  click-drag on a hero still moves the whole hero. **Shift constrains a drag to one axis** (chosen
+  by pixel distance, not percent — a percentage of a tall stage and of its width aren't the same
+  distance). A piece's drag is expressed in the nudge's own units: a % of the *element's own* box,
+  matching what `translate((x-50)%, (y-50)%)` means in the slot wrappers, which makes vertical
+  drags of a short line feel sensitive — that's the panel's semantics, not a bug.
+  ⚠️ **Pointer capture is taken on first movement, never on pointerdown.** While an element holds
+  the pointer the browser retargets the following click/dblclick to it, which swallowed the
+  double-click that reaches nested pieces.
+- **Keyboard shortcuts work inside the preview too.** Cmd/Ctrl+Z, +Shift+Z, +Y and +S are handled
+  on the customize page, but a keydown inside the preview **iframe** is delivered to that document
+  and never reaches the parent — press undo right after clicking a layer on canvas (the natural
+  thing to do) and nothing happened. The standalone preview forwards those four as
+  `PREVIEW_HOTKEY`, which the parent runs through the same handlers via refs.
 - **A slot piece gets the FULL animation set, unlike other anchors.** The panel's three-way
   branch is `!isAnchor || isSlotPiece` → enter/idle/exit, `animatable` → idle only, else
   "Animation isn't available". `isSlotPiece` is structural, not a flag: an anchor whose nearest

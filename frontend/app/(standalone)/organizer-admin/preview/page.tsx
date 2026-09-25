@@ -90,8 +90,26 @@ export default function PreviewPage() {
       }
     };
 
+    // A keydown inside this iframe is delivered to THIS document, so the customize page's own
+    // Cmd+Z / Cmd+Shift+Z / Cmd+S handler never sees it — press undo right after clicking a layer
+    // on canvas (the natural thing to do) and nothing happened. Forward the editor shortcuts up.
+    const keys = (e: KeyboardEvent) => {
+      if (!(e.metaKey || e.ctrlKey)) return;
+      const key = e.key.toLowerCase();
+      if (key !== 'z' && key !== 'y' && key !== 's') return;
+      e.preventDefault();
+      window.parent.postMessage(
+        { type: 'PREVIEW_HOTKEY', key, shiftKey: e.shiftKey },
+        window.location.origin,
+      );
+    };
+
     window.addEventListener('message', handler);
-    return () => window.removeEventListener('message', handler);
+    window.addEventListener('keydown', keys);
+    return () => {
+      window.removeEventListener('message', handler);
+      window.removeEventListener('keydown', keys);
+    };
   }, []);
 
   if (!payload) {

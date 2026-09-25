@@ -10,6 +10,7 @@ import { subLayerStyle, subLayersOf } from './subLayerStyle';
 import { CurvedPiece, curvedTextOf } from './CurvedPiece';
 import { Backdrop, backdropSrcOf } from '../backdrop';
 import { idleInlineStyle } from '../idle';
+import { usePieceDrag } from './usePieceDrag';
 import { useEngine } from '../engine';
 import styles from './slots.module.css';
 
@@ -46,6 +47,8 @@ function HeroPiece({ layer, editor, id, children }: {
   children: ReactElement;
 }) {
   const { assetRoot } = useEngine();
+  // Double-click to reach this piece inside its group; drag it once it's selected (usePieceDrag).
+  const drag = usePieceDrag(layer, id, editor);
   if (layer?.hidden) return null;
 
   const dx = (layer?.x ?? 50) - 50;
@@ -105,9 +108,11 @@ function HeroPiece({ layer, editor, id, children }: {
   // elements so nudge/exit/entrance transforms never collide.
   return (
     <div
+      {...drag.handlers}
       style={{
         transform: nudge,
         ...(selected ? { outline: '2px dashed #C98A54', outlineOffset: '3px' } : {}),
+        ...(drag.handlers.style ?? {}),
       }}
     >
       {animOut ? (

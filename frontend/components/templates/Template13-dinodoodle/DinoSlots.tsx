@@ -9,6 +9,7 @@ import { subLayerStyle, subLayersOf } from '@/components/templates/_shared/slots
 import { CurvedPiece, curvedTextOf } from '@/components/templates/_shared/slots/CurvedPiece';
 import { backdropSrcOf } from '@/components/templates/_shared/backdrop';
 import { idleInlineStyle } from '@/components/templates/_shared/idle';
+import { usePieceDrag } from '@/components/templates/_shared/slots/usePieceDrag';
 import { Backdrop } from '@/components/templates/_shared/backdrop';
 import { useSheets } from '@/components/templates/_shared/slots/sheets';
 import { useEngine } from '@/components/templates/_shared/engine';
@@ -42,6 +43,8 @@ function Piece({ layer, editor, id, children }: {
   children: ReactElement;
 }) {
   const { assetRoot } = useEngine();
+  // Double-click to reach this piece inside its group; drag it once it's selected (usePieceDrag).
+  const drag = usePieceDrag(layer, id, editor);
   if (layer?.hidden) return null;
   const dx = (layer?.x ?? 50) - 50;
   const dy = (layer?.y ?? 50) - 50;
@@ -92,7 +95,14 @@ function Piece({ layer, editor, id, children }: {
     : <Backdrop layer={layer} assetRoot={assetRoot} {...(hasBackdrop ? animAttrs : {})} style={hasBackdrop ? animVars : undefined}>{child}</Backdrop>;
 
   return (
-    <div style={{ transform, ...(selected ? { outline: '2px dashed #f3bd45', outlineOffset: 3 } : {}) }}>
+    <div
+      {...drag.handlers}
+      style={{
+        transform,
+        ...(selected ? { outline: '2px dashed #f3bd45', outlineOffset: 3 } : {}),
+        ...(drag.handlers.style ?? {}),
+      }}
+    >
       {animOut ? <div data-scroll-exit data-sl-out={animOut}>{withIdle(backed)}</div> : withIdle(backed)}
     </div>
   );

@@ -124,7 +124,10 @@ export default function Layer({ layer, slotProps, eager, selected, editing, stag
       layerX: layer.x, layerY: layer.y, layerW: layer.w, layerH: layer.h, chain: layer.chain,
       moved: false,
     };
-    e.currentTarget.setPointerCapture(e.pointerId);
+    // Capture is deliberately NOT taken here. While an element holds the pointer, the browser
+    // retargets the following click/dblclick to it — which swallowed the double-click a sub-layer
+    // piece needs to be reachable inside its group (see slots/usePieceDrag.ts). It's taken on the
+    // first real movement instead, which is just as good for keeping a drag alive off-element.
   };
 
   // Frozen drag-start values (not the live `layer` prop) so latency in the parent round-trip can
@@ -133,10 +136,18 @@ export default function Layer({ layer, slotProps, eager, selected, editing, stag
   const onDragMove = (e: ReactPointerEvent<HTMLDivElement>) => {
     const d = dragRef.current;
     if (!d || e.pointerId !== d.pointerId) return;
-    const dxPct = ((e.clientX - d.startX) / d.rectW) * 100;
-    const dyPct = ((e.clientY - d.startY) / d.rectH) * 100;
+    let dxPct = ((e.clientX - d.startX) / d.rectW) * 100;
+    let dyPct = ((e.clientY - d.startY) / d.rectH) * 100;
     if (!d.moved && Math.abs(dxPct) < 0.3 && Math.abs(dyPct) < 0.3) return;
+    if (!d.moved) e.currentTarget.setPointerCapture(d.pointerId);
     d.moved = true;
+    // Shift = straight line: lock to whichever axis the pointer has travelled furthest along, in
+    // PIXELS rather than percent — a percentage of a tall stage and of its width aren't the same
+    // distance, so comparing them would pick the wrong axis on a phone-shaped frame.
+    if (e.shiftKey) {
+      if (Math.abs(e.clientX - d.startX) >= Math.abs(e.clientY - d.startY)) dyPct = 0;
+      else dxPct = 0;
+    }
     // Clamped to the same ranges the panel's own sliders use (AdjustPanel.tsx) — a drag has no
     // other bound, so without this a fast swipe could push a layer to an unrecoverable position.
     const clampPos = (v: number) => Math.min(120, Math.max(-20, v));

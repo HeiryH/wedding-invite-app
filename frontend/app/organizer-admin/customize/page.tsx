@@ -816,6 +816,13 @@ export default function CustomizePage() {
   // immediately, so there is no client-side "unsaved" version of it to step through.
   type EditSnapshot = { draftConfig: Record<string, string>; weddingDraft: typeof emptyWed; sectionOrder: string[] };
   const [history, setHistory] = useState<{ stack: EditSnapshot[]; index: number }>({ stack: [], index: -1 });
+  // Latest undo/redo/save, readable from the postMessage handler without making that effect
+  // re-subscribe on every render (the preview iframe forwards its own Cmd+Z/Cmd+S — see
+  // PREVIEW_HOTKEY). Assigned in an effect, never during render.
+  const undoRef = useRef<(() => void) | undefined>(undefined);
+  const redoRef = useRef<(() => void) | undefined>(undefined);
+  const saveRef = useRef<(() => void) | undefined>(undefined);
+  const isDirtyRef = useRef(false);
   const applyingHistoryRef = useRef(false);
   const canUndo = history.index > 0;
   const canRedo = history.index >= 0 && history.index < history.stack.length - 1;
@@ -1035,6 +1042,14 @@ export default function CustomizePage() {
         if (stageId) setSelectedStage(stageId);
         setSelectedLayer(event.data.layerId as string);
       }
+      if (event.data?.type === 'PREVIEW_HOTKEY') {
+        // Same actions as the window-level handler below; the preview iframe forwards its own
+        // keydowns because they never bubble out of it.
+        const key = event.data.key as string;
+        if (key === 's') { if (isDirtyRef.current) saveRef.current?.(); }
+        else if (key === 'y' || (key === 'z' && event.data.shiftKey)) redoRef.current?.();
+        else if (key === 'z') undoRef.current?.();
+      }
       if (event.data?.type === 'PREVIEW_LAYER_EDIT') {
         const stageId = (event.data.stageId as string | undefined) ?? activeStage;
         patchLayerFromCanvas(stageId, event.data.layerId as string, event.data.patch as Partial<LayerModel>);
@@ -1093,6 +1108,13 @@ export default function CustomizePage() {
     setSectionOrder(snap.sectionOrder);
     setHistory((prev) => ({ ...prev, index: newIndex }));
   }, [history]);
+
+  useEffect(() => {
+    undoRef.current = handleUndo;
+    redoRef.current = handleRedo;
+    saveRef.current = handleSave;
+    isDirtyRef.current = isDirty;
+  });
 
   // Keyboard shortcuts: Cmd+S to save, Cmd+Z to undo, Cmd+Shift+Z (and the Windows-standard
   // Cmd+Y) to redo.
