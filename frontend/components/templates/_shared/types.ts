@@ -203,6 +203,11 @@ export interface Layer {
   backdropScale?: number;
   /** Degrees, for art that should sit at a slight angle behind the text. */
   backdropRotate?: number;
+  /** Nudge the backdrop off the text's centre, as a % of the ART's own width/height — so the
+   *  offset keeps its proportions when Size changes, instead of sliding as the art grows.
+   *  0 = centred on the words. */
+  backdropX?: number;
+  backdropY?: number;
   /** Parallax factor. 0 = welded to the background. Defaults to z/10 when absent. */
   depth?: number;
 

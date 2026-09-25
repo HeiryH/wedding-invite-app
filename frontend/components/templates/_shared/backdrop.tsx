@@ -16,6 +16,15 @@ import type { Layer } from './types';
  * around it**, while `left/top: 50%` + `translate(-50%, -50%)` keeps it centred on the words no
  * matter how big it gets. `height: auto` keeps its own aspect, so Size is the only control.
  */
+/** The centring transform plus the couple's nudge. The offset is a % of the image's own box
+ *  (that's what a percentage in `translate` means), so it scales with Size rather than sliding
+ *  out of place as the art grows. */
+export function backdropTransform(layer: Layer): string {
+  const x = -50 + (layer.backdropX ?? 0);
+  const y = -50 + (layer.backdropY ?? 0);
+  return `translate(${x}%, ${y}%) rotate(${layer.backdropRotate ?? 0}deg)`;
+}
+
 export function backdropSrcOf(layer: Layer, assetRoot?: string): string | undefined {
   const src = layer.backdropSrc;
   if (!src) return undefined;
@@ -58,7 +67,7 @@ export function Backdrop({ layer, assetRoot, children, style }: {
           position: 'absolute',
           left: '50%',
           top: '50%',
-          transform: `translate(-50%, -50%) rotate(${layer?.backdropRotate ?? 0}deg)`,
+          transform: backdropTransform(layer!),
           // % of the text's own width; >100 overflows symmetrically and stays centred.
           width: `${layer?.backdropScale ?? 140}%`,
           height: 'auto',

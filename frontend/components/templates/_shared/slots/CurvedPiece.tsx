@@ -4,7 +4,7 @@ import type { CSSProperties, ReactElement, ReactNode } from 'react';
 import type { Layer } from '../types';
 import CurvedText, { curvedAspect } from '../CurvedText';
 import { staggerDelay } from '../reveal';
-import { backdropSrcOf } from '../backdrop';
+import { backdropSrcOf, backdropTransform } from '../backdrop';
 
 /**
  * The Style tab's Shape control (arc/circle) for a *sub-layer* piece — the hero's title, a section
@@ -67,7 +67,7 @@ export function CurvedPiece({ layer, text, anim, assetRoot }: {
             position: 'absolute',
             left: '50%',
             top: '50%',
-            transform: `translate(-50%, -50%) rotate(${layer.backdropRotate ?? 0}deg)`,
+            transform: backdropTransform(layer),
             // Size means "% of the text" in the flat case, where the box hugs the words. A
             // curve's box spans the whole row instead, so the same number would make the art
             // roughly twice as wide the moment you switch Shape — halved here so one slider

@@ -543,7 +543,11 @@ from a failed attempt would suddenly lose that layer on the next render.
     art bigger — which pushed neighbours around and drifted off centre in a flex row. An
     absolutely-positioned image is free to be larger than the words and overlap its surroundings,
     while `left/top: 50%` + `translate(-50%, -50%)` keeps it centred at any size. `height: auto`
-    keeps the art's aspect, so **Size is the only control** (`backdropScale`, a % of the text).
+    keeps the art's aspect, so the controls are just **Size** (`backdropScale`, a % of the text),
+    **Nudge X/Y** and **Angle**. The nudge is a % of the *art's own* box — that's what a
+    percentage in `translate` means — so an offset holds its proportions as Size changes instead
+    of sliding out of place. `backdropTransform()` builds that transform in one place so the flat
+    and curved paths can't drift apart.
   - The wrapper is `width: max-content; margin-inline: auto` so Size measures against the *text*
     rather than the full row. `CurvedPiece` paints its own copy (a curve replaces the flat child
     outright) and **halves the percentage**, because a curve's box spans the whole row while the
