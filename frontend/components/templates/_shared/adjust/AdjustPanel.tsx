@@ -966,6 +966,29 @@ export default function AdjustPanel({
                     </>
                   )}
 
+                  {/* A slot piece has no box of its own by default — it's as wide as the block
+                      and as tall as its content. These give it one, which is how you narrow a
+                      single line so it wraps without touching its neighbours. Unlike Scale, the
+                      type doesn't shrink with it. */}
+                  {isSlotPiece && (
+                    <>
+                      <Slider
+                        label="Width"
+                        value={current.boxW ?? 100}
+                        min={10} max={100} step={1}
+                        onChange={(v) => patchLayer(current.id, { boxW: v >= 100 ? undefined : v })}
+                        title="% of the block this piece sits in — 100 is auto (full width)"
+                      />
+                      <Slider
+                        label="Height"
+                        value={current.boxH ?? 0}
+                        min={0} max={16} step={0.25}
+                        onChange={(v) => patchLayer(current.id, { boxH: v <= 0 ? undefined : v })}
+                        title="Height in em (tracks the piece's own type size) — 0 is auto, as tall as the content"
+                      />
+                    </>
+                  )}
+
                   {!isAnchor && !isSheet && (
                     <>
                       <Slider label="Width" value={current.w} min={3} max={200} step={0.5} onChange={set('w')} />

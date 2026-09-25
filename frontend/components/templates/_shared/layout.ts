@@ -24,6 +24,8 @@ export const OVERRIDABLE: (keyof Layer)[] = [
   'textShape', 'curvature',
   // per-text backdrop art (kind 'text' and styleable sub-layers) — see backdrop.ts.
   'backdropSrc', 'backdropScale', 'backdropRotate', 'backdropX', 'backdropY',
+  // per-piece box (slot pieces only) — see Layer.boxW.
+  'boxW', 'boxH',
   // idle/looping animation (kinds 'img'/'text'/'shape'/'slot') — see reveal.css.
   'animIdle', 'animIdleSpeed', 'animIdleIntensity', 'animIdleOrigin',
   // kind 'scrollVideo' effect params (types.ts) — same delta mechanism, no geometry involved.

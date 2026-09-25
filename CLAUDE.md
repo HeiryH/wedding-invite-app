@@ -559,6 +559,13 @@ from a failed attempt would suddenly lose that layer on the next render.
     drops the key on the next commit so nothing ever sticks.
   - T13's countdown units no longer hardcode their stone in `.countUnit`; each unit is a
     sub-layer, so its plate is set through this control like any other text's.
+- **A slot piece can have its own box** — `boxW` (% of the block it sits in) and `boxH`, in the
+  Layout tab next to Nudge/Scale. Both default to auto, which is how every template ships: a piece
+  is as wide as its block and as tall as its content. Narrowing `boxW` is how you make one line
+  wrap without touching its neighbours; unlike `s` (Scale) it's a real box change, so the type
+  doesn't shrink with it, and the piece stays centred. ⚠️ **`boxH` is in `em`, not %** — the block
+  gets its height from `min-height`, which isn't a *definite* height, so a percentage height on a
+  child resolves to auto and silently does nothing.
 - **Canvas gestures.** A single click selects the layer under the pointer; **double-click enters a
   group** and selects the sub-layer piece (`slots/usePieceDrag.ts`), which is the only way to reach
   a nested element with the mouse. A piece becomes draggable **once it's selected**, so an ordinary

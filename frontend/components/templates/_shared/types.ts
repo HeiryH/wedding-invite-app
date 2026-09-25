@@ -203,6 +203,25 @@ export interface Layer {
   backdropScale?: number;
   /** Degrees, for art that should sit at a slight angle behind the text. */
   backdropRotate?: number;
+  /**
+   * Slot-piece only (an anchor a slot renders through its own `Piece`/`HeroPiece` wrapper): an
+   * explicit box for this one piece, as a % of the block it sits in. `undefined` (the default)
+   * leaves it auto — the piece is as wide as the block and as tall as its content, which is how
+   * every template ships.
+   *
+   * Narrowing `boxW` is how you make one line wrap without touching its neighbours (a long venue
+   * under a short name), and it's a real box change, not `s` (Scale), which is a paint-only
+   * transform that shrinks the type along with it. The piece stays centred in the block, so
+   * reducing the width doesn't shove it to one side.
+   *
+   * `boxH` is in **`em`**, not a percentage: the block it sits in gets its height from
+   * `min-height`, which is not a *definite* height, so a percentage height on a child resolves
+   * to auto and silently does nothing. `em` also reads the way you'd think about a text box —
+   * "two lines tall" — and tracks the piece's own type size.
+   */
+  boxW?: number;
+  boxH?: number;
+
   /** Nudge the backdrop off the text's centre, as a % of the ART's own width/height — so the
    *  offset keeps its proportions when Size changes, instead of sliding as the art grows.
    *  0 = centred on the words. */

@@ -99,6 +99,10 @@ function Piece({ layer, editor, id, children }: {
       {...drag.handlers}
       style={{
         transform,
+        // An explicit per-piece box (Layer.boxW/boxH) — auto unless the couple sets one. Centred,
+        // so narrowing a line to make it wrap doesn't shove it to one side.
+        ...(layer?.boxW !== undefined ? { width: `${layer.boxW}%`, marginInline: 'auto' } : null),
+        ...(layer?.boxH !== undefined ? { height: `${layer.boxH}em`, flexShrink: 0 } : null),
         ...(selected ? { outline: '2px dashed #f3bd45', outlineOffset: 3 } : {}),
         ...(drag.handlers.style ?? {}),
       }}
