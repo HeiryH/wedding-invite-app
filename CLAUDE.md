@@ -548,10 +548,13 @@ from a failed attempt would suddenly lose that layer on the next render.
     percentage in `translate` means — so an offset holds its proportions as Size changes instead
     of sliding out of place. `backdropTransform()` builds that transform in one place so the flat
     and curved paths can't drift apart.
-  - The wrapper is `width: max-content; margin-inline: auto` so Size measures against the *text*
-    rather than the full row. `CurvedPiece` paints its own copy (a curve replaces the flat child
-    outright) and **halves the percentage**, because a curve's box spans the whole row while the
-    flat box hugs the words — without that, switching Shape doubled the art.
+  - **Size is `cqw` — a % of the section box, not of the text.** Sizing it against the text read
+    naturally but coupled two unrelated controls: narrowing a piece with `boxW` to make its words
+    wrap also shrank its plate, with no way to have one without the other. Against the section the
+    art holds its size while the text re-wraps inside it, and the flat and curved paths can use
+    the same number (the earlier text-relative version had to halve it for curves, since a curve's
+    box spans the row while the flat box hugs the words). The wrapper stays
+    `width: max-content; margin-inline: auto` so the art keeps centring on the words.
   - Offered only where there IS text to sit on (`kind === 'text' || hasText`), so a group whose
     child is a composite block — the countdown grid — doesn't get one picture behind everything.
   - **Every new `Layer` field needs its entry in `OVERRIDABLE`.** These were missed at first and

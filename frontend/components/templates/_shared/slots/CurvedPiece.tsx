@@ -68,11 +68,9 @@ export function CurvedPiece({ layer, text, anim, assetRoot }: {
             left: '50%',
             top: '50%',
             transform: backdropTransform(layer),
-            // Size means "% of the text" in the flat case, where the box hugs the words. A
-            // curve's box spans the whole row instead, so the same number would make the art
-            // roughly twice as wide the moment you switch Shape — halved here so one slider
-            // reads the same in both modes.
-            width: `${(layer.backdropScale ?? 140) * 0.5}%`,
+            // Same unit as the flat case (a % of the section), so switching Shape no longer
+            // resizes the art — the curve's box spans the row while the flat box hugs the words.
+            width: `${layer.backdropScale ?? 55}cqw`,
             height: 'auto',
             maxWidth: 'none',
             pointerEvents: 'none',

@@ -1403,7 +1403,7 @@ export default function AdjustPanel({
                     {/* Width as a % of the text. Over 100 the art is bigger than the words and
                         overlaps its surroundings, staying centred — which is what a ribbon wants.
                         Height follows the art's own aspect, so there's nothing else to set. */}
-                    <Slider label="Size" value={current.backdropScale ?? 140} min={40} max={400} step={5} onChange={set('backdropScale')} title="Backdrop width as a % of the text — over 100 it overlaps, always centred" />
+                    <Slider label="Size" value={current.backdropScale ?? 55} min={5} max={160} step={1} onChange={set('backdropScale')} title="Backdrop width as a % of the section — independent of the text, so narrowing the text re-wraps it without resizing the art" />
                     <Slider label="Nudge X" value={current.backdropX ?? 0} min={-100} max={100} step={1} onChange={set('backdropX')} title="Shift the art off the text's centre, as a % of the art's own width — so it holds its place when you change Size" />
                     <Slider label="Nudge Y" value={current.backdropY ?? 0} min={-100} max={100} step={1} onChange={set('backdropY')} />
                     <Slider label="Angle" value={current.backdropRotate ?? 0} min={-45} max={45} step={1} onChange={set('backdropRotate')} />

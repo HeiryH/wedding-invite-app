@@ -197,9 +197,17 @@ export interface Layer {
    *  `kind: 'text'` and for a `styleable` sub-layer (the hero pieces). A `/templates/…` path is
    *  resolved against the template's `assetRoot`; an uploaded `/uploads/…` path is used as-is. */
   backdropSrc?: string;
-  /** Backdrop width as a % of the text it sits behind. Over 100 the art is bigger than the
-   *  words and overlaps whatever is around it, staying centred — which is the point: a ribbon is
-   *  meant to be wider and taller than its line. Height follows the art's own aspect. */
+  /**
+   * Backdrop width in `cqw` — a % of the **section box** it sits in (the slot for a hero piece,
+   * the stage/canvas for a standalone text layer), not of the text.
+   *
+   * Sizing it against the text seemed natural but coupled two unrelated controls: narrowing a
+   * piece (`boxW`) to make its words wrap also shrank its plate, and there was no way to have one
+   * without the other. Against the section the art holds its size while the text re-wraps inside
+   * it. The art stays centred on the words at any size and is free to overlap its surroundings —
+   * which is the point: a ribbon is meant to be wider and taller than its line. Height follows
+   * the art's own aspect.
+   */
   backdropScale?: number;
   /** Degrees, for art that should sit at a slight angle behind the text. */
   backdropRotate?: number;

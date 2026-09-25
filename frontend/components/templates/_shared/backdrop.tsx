@@ -74,8 +74,9 @@ export function Backdrop({ layer, assetRoot, children, style, ...rest }: {
           left: '50%',
           top: '50%',
           transform: backdropTransform(layer!),
-          // % of the text's own width; >100 overflows symmetrically and stays centred.
-          width: `${layer?.backdropScale ?? 140}%`,
+          // `cqw` = a % of the section box, so the plate holds its size while the text
+          // wraps inside it (see Layer.backdropScale).
+          width: `${layer?.backdropScale ?? 55}cqw`,
           height: 'auto',
           maxWidth: 'none',
           pointerEvents: 'none',
