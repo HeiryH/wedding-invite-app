@@ -569,7 +569,13 @@ from a failed attempt would suddenly lose that layer on the next render.
   doesn't shrink with it, and the piece stays centred. For a **backed** piece this only works
   because `<Backdrop>`'s content wrapper is `display: block; max-width: 100%` — an inline span
   (what it was) doesn't constrain its contents, so the words overflowed the narrowed box at full
-  width instead of wrapping. A single long word doesn't break mid-word unless
+  width instead of wrapping. **Curved text can't wrap at all** — SVG text on a path is one
+  unbreakable run — so neither Width nor the break toggle applies to it (the toggle is hidden for
+  a curved piece). `CurvedText` **scales the font down to the arc's own length** instead, measured
+  in a layout effect and written straight to the DOM (state would re-render on every measurement).
+  Note `textLength` + `lengthAdjust` is the spec's answer and does **not** work: Chrome ignores
+  `lengthAdjust` on a `<textPath>` — the attribute is set and the glyphs still overflow.
+  For flat text, a single long word doesn't break mid-word unless
   `boxBreakWord` is on (the Layout tab's "Break long words" toggle, `overflow-wrap: anywhere`) —
   off by default because breaking a name reads as broken rather than as wrapping, but a one-word
   honoree in a deliberately narrow piece has no other way to fit. ⚠️ **`boxH` is in `em`, not %** — the block

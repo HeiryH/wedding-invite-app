@@ -987,7 +987,10 @@ export default function AdjustPanel({
                         title="Height in em (tracks the piece's own type size) — 0 is auto, as tall as the content"
                       />
                       {/* Multi-word text wraps at spaces on its own; this is only for a single
-                          word too wide for the box, which otherwise overflows it. */}
+                          word too wide for the box, which otherwise overflows it. Hidden for a
+                          curved piece: SVG text on a path is one unbreakable run, so neither this
+                          nor Width can wrap it — CurvedText shrinks it onto the arc instead. */}
+                      {(!current.textShape || current.textShape === 'flat') && (
                       <div className={styles.btnRow}>
                         <button
                           className={`${styles.btn} ${current.boxBreakWord ? '' : styles.btnGhost}`}
@@ -997,6 +1000,7 @@ export default function AdjustPanel({
                           {current.boxBreakWord ? '✓ Break long words' : 'Break long words'}
                         </button>
                       </div>
+                      )}
                     </>
                   )}
 

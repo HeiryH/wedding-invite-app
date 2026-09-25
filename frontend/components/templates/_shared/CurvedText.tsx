@@ -1,4 +1,4 @@
-import { useId } from 'react';
+import { useId, useLayoutEffect, useRef } from 'react';
 import type { Layer } from './types';
 import { fontVar } from '@/lib/fonts/registry';
 
@@ -39,6 +39,7 @@ export function curvedGeometry(layer: Layer) {
       viewH,
       d: `M ${cx - r},${cy} A ${r},${r} 0 1,${sweep} ${cx + r},${cy} A ${r},${r} 0 1,${sweep} ${cx - r},${cy}`,
       textLength: 2 * Math.PI * r,
+      pathLen: 2 * Math.PI * r,
     };
   }
 
@@ -64,6 +65,10 @@ export function curvedGeometry(layer: Layer) {
     viewH,
     d: `M ${marginX},${y} A ${r},${r} 0 0,${up ? 1 : 0} ${VIEW_W - marginX},${y}`,
     textLength: undefined as number | undefined,
+    // How much room the glyphs actually have. SVG text on a path is ONE run — there is no line
+    // breaking in SVG, so Width and "Break long words" can't help a curve: text simply runs off
+    // the end of the arc. Knowing the arc's length lets the component shrink it to fit instead.
+    pathLen: r * angleRad,
   };
 }
 
@@ -84,7 +89,30 @@ export default function CurvedText({ layer, text }: Props) {
   const shadowId = `curved-text-shadow-${idBase}`;
 
   const hasShadow = Boolean(layer.shadowBlur || layer.shadowX || layer.shadowY);
-  const { viewH, d, textLength } = curvedGeometry(layer);
+  const { viewH, d, textLength, pathLen } = curvedGeometry(layer);
+
+  // Shrink-to-fit. A curve can't wrap — SVG text on a path is one unbreakable run — so text
+  // longer than its arc used to run straight off both ends. `textLength` + `lengthAdjust` is what
+  // the spec offers and it does not work here: Chrome ignores `lengthAdjust` on a `<textPath>`
+  // (verified — the attribute was set and the glyphs still overflowed), so the font is scaled
+  // down to fit instead.
+  //
+  // Written straight to the DOM rather than held in state: this is a measure-then-adjust pass
+  // over an external system (SVG text metrics), and going through state would re-render on every
+  // measurement. React re-applies the authored size on each render and this effect runs after,
+  // so it re-measures from a clean baseline every time and can only ever shrink.
+  const textRef = useRef<SVGTextElement>(null);
+  const baseFont = (layer.fontSize ?? 4) * 2;
+  useLayoutEffect(() => {
+    const el = textRef.current;
+    if (!el || textLength !== undefined || pathLen <= 0) return;
+    const natural = el.getComputedTextLength?.() ?? 0;
+    if (!natural) return;
+    const scale = Math.min(1, Math.max(0.3, pathLen / natural));
+    if (scale < 1) el.style.fontSize = `${baseFont * scale}px`;
+  });
+
+  const runLength = textLength;
 
   return (
     <svg viewBox={`0 0 ${VIEW_W} ${viewH}`} width="100%" height="100%" style={{ overflow: 'visible' }}>
@@ -102,13 +130,14 @@ export default function CurvedText({ layer, text }: Props) {
         )}
       </defs>
       <text
+        ref={textRef}
         style={{
           // USER UNITS, not a CSS length. A CSS `cqi` here computes against the container and is
           // *then* multiplied by the viewBox→box scale (box/200), so the glyphs grew quadratically
           // with the box — a curved title rendered roughly twice the size of the same text flat.
           // 200 user units span the box's full width, so `fontSize * 2` units == `fontSize`% of the
           // box == the `Ncqi` the flat `.text` path uses.
-          fontSize: (layer.fontSize ?? 4) * 2,
+          fontSize: baseFont,
           fontFamily: fontVar(layer.fontFamily),
           fontWeight: layer.fontWeight ?? 600,
           letterSpacing: layer.letterSpacing !== undefined ? `${layer.letterSpacing}em` : undefined,
@@ -124,8 +153,8 @@ export default function CurvedText({ layer, text }: Props) {
           href={`#${pathId}`}
           startOffset="50%"
           textAnchor="middle"
-          textLength={textLength}
-          lengthAdjust={textLength ? 'spacing' : undefined}
+          textLength={runLength}
+          lengthAdjust={runLength ? (textLength ? 'spacing' : 'spacingAndGlyphs') : undefined}
         >
           {text ?? layer.text}
         </textPath>
