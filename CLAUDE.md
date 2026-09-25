@@ -563,7 +563,10 @@ from a failed attempt would suddenly lose that layer on the next render.
   Layout tab next to Nudge/Scale. Both default to auto, which is how every template ships: a piece
   is as wide as its block and as tall as its content. Narrowing `boxW` is how you make one line
   wrap without touching its neighbours; unlike `s` (Scale) it's a real box change, so the type
-  doesn't shrink with it, and the piece stays centred. ⚠️ **`boxH` is in `em`, not %** — the block
+  doesn't shrink with it, and the piece stays centred. For a **backed** piece this only works
+  because `<Backdrop>`'s content wrapper is `display: block; max-width: 100%` — an inline span
+  (what it was) doesn't constrain its contents, so the words overflowed the narrowed box at full
+  width instead of wrapping. A single long word still won't break mid-word, by design. ⚠️ **`boxH` is in `em`, not %** — the block
   gets its height from `min-height`, which isn't a *definite* height, so a percentage height on a
   child resolves to auto and silently does nothing.
 - **Canvas gestures.** A single click selects the layer under the pointer; **double-click enters a

@@ -82,7 +82,12 @@ export function Backdrop({ layer, assetRoot, children, style, ...rest }: {
           zIndex: 0,
         }}
       />
-      <span style={{ position: 'relative', zIndex: 1 }}>{children}</span>
+      {/* `display: block` + `max-width: 100%`, not a bare inline span: an inline box doesn't
+          constrain what's inside it, so a narrowed piece (Layer.boxW) couldn't make its text
+          wrap — the words just overflowed the box at full width. */}
+      <span style={{ position: 'relative', zIndex: 1, display: 'block', maxWidth: '100%', minWidth: 0 }}>
+        {children}
+      </span>
     </span>
   );
 }
