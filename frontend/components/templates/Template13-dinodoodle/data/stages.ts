@@ -48,11 +48,11 @@ export const T13_STAGES: Record<string, StageDef> = {
       // The ribbon rides the eyebrow as its backdrop (see Layer.backdropSrc) instead of being a
       // separate `blank-hero-ribbon` img layer that had to be kept in register by hand.
       A('hero-eyebrow', 'hero', 'Eyebrow', 0, 'Welcome to the Expedition', {
-        backdropSrc: 'props/blank-hero-ribbon.webp', backdropPad: 0.3, backdropBleed: 1.4, backdropHeight: 7.5,
+        backdropSrc: 'props/blank-hero-ribbon.webp', backdropScale: 150,
       }),
       A('hero-title', 'hero', 'Event Title', 1, 'The Roarsome Birthday'),
       A('hero-honoree', 'hero', 'Honoree', 2, '{{name1}}', {
-        backdropSrc: 'props/blank-name-plaque.webp', backdropPad: 0.12, backdropBleed: 0.45, backdropHeight: 2.3,
+        backdropSrc: 'props/blank-name-plaque.webp', backdropScale: 135,
       }),
       A('hero-age', 'hero', 'Age Line', 3, 'Turns 7'),
       A('hero-date', 'hero', 'Date & Time', 4, '{{date:long}} · {{time}}'),

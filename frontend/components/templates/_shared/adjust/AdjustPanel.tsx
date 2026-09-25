@@ -1350,21 +1350,11 @@ export default function AdjustPanel({
                 <div className={styles.label}>Backdrop</div>
                 {current.backdropSrc ? (
                   <>
-                    <div className={styles.control} style={{ gridTemplateColumns: '54px 1fr' }}>
-                      <span>Fit</span>
-                      <select
-                        className={styles.select}
-                        value={current.backdropFit ?? 'contain'}
-                        onChange={(e) => patchLayer(current.id, { backdropFit: e.target.value as Layer['backdropFit'] })}
-                      >
-                        <option value="contain">Whole (contain)</option>
-                        <option value="cover">Fill (crop)</option>
-                        <option value="stretch">Stretch</option>
-                      </select>
-                    </div>
-                    <Slider label="Padding" value={current.backdropPad ?? 0.4} min={0} max={3} step={0.05} onChange={set('backdropPad')} title="Space between the words and the art's edges, in em" />
-                    <Slider label="Bleed" value={current.backdropBleed ?? 0} min={0} max={6} step={0.1} onChange={set('backdropBleed')} title="How far the art extends past the text's own box — a ribbon's tails" />
-                    <Slider label="Height" value={current.backdropHeight ?? 2.6} min={1} max={14} step={0.1} onChange={set('backdropHeight')} title="How tall the backed box is, in em — a ribbon needs more height than its line of text" />
+                    {/* Width as a % of the text. Over 100 the art is bigger than the words and
+                        overlaps its surroundings, staying centred — which is what a ribbon wants.
+                        Height follows the art's own aspect, so there's nothing else to set. */}
+                    <Slider label="Size" value={current.backdropScale ?? 140} min={40} max={400} step={5} onChange={set('backdropScale')} title="Backdrop width as a % of the text — over 100 it overlaps, always centred" />
+                    <Slider label="Angle" value={current.backdropRotate ?? 0} min={-45} max={45} step={1} onChange={set('backdropRotate')} />
                     <div className={styles.btnRow}>
                       {onUploadImage && (
                         <button className={styles.btn} onClick={() => pickImage('backdrop')}>Replace</button>

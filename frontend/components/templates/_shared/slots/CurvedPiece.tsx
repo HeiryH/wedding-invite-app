@@ -4,7 +4,7 @@ import type { CSSProperties, ReactElement, ReactNode } from 'react';
 import type { Layer } from '../types';
 import CurvedText, { curvedAspect } from '../CurvedText';
 import { staggerDelay } from '../reveal';
-import { backdropStyle } from '../backdrop';
+import { backdropSrcOf } from '../backdrop';
 
 /**
  * The Style tab's Shape control (arc/circle) for a *sub-layer* piece — the hero's title, a section
@@ -56,10 +56,32 @@ export function CurvedPiece({ layer, text, anim, assetRoot }: {
       } as CSSProperties}
     >
       {/* The backdrop rides the same box as the curve — a curved piece replaces the flat child
-          entirely, so without this the plate silently vanished whenever Shape wasn't 'flat'. */}
+          entirely, so without this the plate vanished whenever Shape wasn't 'flat'. Centred on
+          the curve and free to be bigger than it, exactly as in the flat case. */}
+      {backdropSrcOf(layer, assetRoot) && (
+        <img
+          src={backdropSrcOf(layer, assetRoot)}
+          alt=""
+          aria-hidden
+          style={{
+            position: 'absolute',
+            left: '50%',
+            top: '50%',
+            transform: `translate(-50%, -50%) rotate(${layer.backdropRotate ?? 0}deg)`,
+            // Size means "% of the text" in the flat case, where the box hugs the words. A
+            // curve's box spans the whole row instead, so the same number would make the art
+            // roughly twice as wide the moment you switch Shape — halved here so one slider
+            // reads the same in both modes.
+            width: `${(layer.backdropScale ?? 140) * 0.5}%`,
+            height: 'auto',
+            maxWidth: 'none',
+            pointerEvents: 'none',
+            zIndex: 0,
+          }}
+        />
+      )}
       <div
         style={{
-          ...backdropStyle(layer, (src) => (src.startsWith('/') || !assetRoot ? src : `${assetRoot}/${src}`)),
           position: 'absolute',
           left: 0,
           right: 0,
@@ -71,6 +93,7 @@ export function CurvedPiece({ layer, text, anim, assetRoot }: {
           // (smaller, fully visible) rather than cropping it.
           maxHeight: `${line * 10}cqi`,
           pointerEvents: 'none',
+          zIndex: 1,
         }}
       >
         <CurvedText layer={layer} text={text} />

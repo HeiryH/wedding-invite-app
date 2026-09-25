@@ -7,6 +7,7 @@ import type { EditorHandle, Layer, SlotProps } from './types';
 import { staggerDelay } from '@/components/templates/_shared/reveal';
 import { subLayerStyle, subLayersOf } from '@/components/templates/_shared/slots/subLayerStyle';
 import { CurvedPiece, curvedTextOf } from '@/components/templates/_shared/slots/CurvedPiece';
+import { Backdrop } from '@/components/templates/_shared/backdrop';
 import { useSheets } from '@/components/templates/_shared/slots/sheets';
 import { useEngine } from '@/components/templates/_shared/engine';
 import { WishListSlot } from '@/components/templates/_shared/slots/WishSlots';
@@ -64,9 +65,15 @@ function Piece({ layer, editor, id, children }: {
     } as CSSProperties,
   });
 
+  // Backdrop art (a ribbon/plate) rides the text itself — see backdrop.tsx. A curved piece paints
+  // its own inside CurvedPiece, so it's skipped here.
+  const backed = curveText !== undefined
+    ? child
+    : <Backdrop layer={layer} assetRoot={assetRoot}>{child}</Backdrop>;
+
   return (
     <div style={{ transform, ...(selected ? { outline: '2px dashed #f3bd45', outlineOffset: 3 } : {}) }}>
-      {animOut ? <div data-scroll-exit data-sl-out={animOut}>{child}</div> : child}
+      {animOut ? <div data-scroll-exit data-sl-out={animOut}>{backed}</div> : backed}
     </div>
   );
 }

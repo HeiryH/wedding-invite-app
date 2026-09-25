@@ -8,6 +8,7 @@ import type { EditorHandle, Layer, SlotProps } from '../types';
 import { staggerDelay } from '../reveal';
 import { subLayerStyle, subLayersOf } from './subLayerStyle';
 import { CurvedPiece, curvedTextOf } from './CurvedPiece';
+import { Backdrop } from '../backdrop';
 import { useEngine } from '../engine';
 import styles from './slots.module.css';
 
@@ -75,6 +76,12 @@ function HeroPiece({ layer, editor, id, children }: {
       } as CSSProperties,
     });
 
+  // Backdrop art (a ribbon/plate) rides the text itself — see backdrop.tsx. Skipped for a curved
+  // piece, which paints its own inside CurvedPiece.
+  const backed = curveText !== undefined
+    ? inner
+    : <Backdrop layer={layer} assetRoot={assetRoot}>{inner}</Backdrop>;
+
   // nudge wrapper · optional exit wrapper (scroll-scrubbed via --sl-out) · entrance inner — three
   // elements so nudge/exit/entrance transforms never collide.
   return (
@@ -85,9 +92,9 @@ function HeroPiece({ layer, editor, id, children }: {
       }}
     >
       {animOut ? (
-        <div data-scroll-exit data-sl-out={animOut}>{inner}</div>
+        <div data-scroll-exit data-sl-out={animOut}>{backed}</div>
       ) : (
-        inner
+        backed
       )}
     </div>
   );

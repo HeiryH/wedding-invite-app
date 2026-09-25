@@ -533,26 +533,28 @@ from a failed attempt would suddenly lose that layer on the next render.
   collapsing anything sized `width: 100%`. That rendered T13's curved eyebrow 0×0 the first time
   round. Horizontal alignment of text is `--slot-text-align`'s job; `CurvedPiece` additionally
   pins `align-self: stretch` so no alignment choice can collapse it.
-- **Text can carry its own art: `backdropSrc`** (+ `backdropFit`/`backdropPad`/`backdropBleed`/
-  `backdropHeight`, `_shared/backdrop.ts`, Style tab → Backdrop). A ribbon/plate/banner is painted
-  as the text element's own `background-image`, so the two move, scale, animate and curve as one
-  thing. **Prefer this over a separate `img` layer for anything that frames text** — T13 shipped
-  its hero ribbon and name plaque as free-floating `img` layers that had to be kept in register by
-  hand and drifted the moment either was moved; both are now backdrops on `hero-eyebrow` and
-  `hero-honoree`. Two non-obvious bits: the box is `width: max-content` + `margin-inline: auto`
-  (a full-width box makes `contain` fit the art to the box's *height* and leaves a thumbnail
-  floating in empty space), and `backdropHeight` exists because the art is usually several times
-  taller than the line it frames — without it a banner shrinks to nothing in a one-line box.
-  Works for `kind:'text'` (Layer.tsx), for `styleable` sub-layers (`subLayerStyle`, which now
-  takes `assetRoot` so template-relative paths resolve), and for a **curved** piece
-  (`CurvedPiece` paints it on the curve's own box — it replaces the flat child outright, so a
-  backdrop applied only via `subLayerStyle` vanishes the moment Shape isn't `flat`). The control
-  is offered only where there IS text to sit on the art (`kind === 'text' || hasText`): a group
-  whose child is a composite block — the countdown, whose units already paint their own stone —
-  would otherwise get a picture behind the whole grid. **Every new `Layer` field needs its entry
-  in `OVERRIDABLE`**; these five were missed at first, and the symptom is subtle — the control
-  works, the preview even updates, and then `serializeStage` drops the key on the very next
-  commit, so the value never sticks and the button label never changes.
+- **Text can carry its own art: `backdropSrc`** (+ `backdropScale`/`backdropRotate`,
+  `_shared/backdrop.tsx`, Style tab → Backdrop). A ribbon/plate/banner rides the text so the two
+  move, scale, animate and curve as one thing. **Prefer this over a separate `img` layer for
+  anything that frames text** — T13 shipped its hero ribbon and name plaque as free-floating
+  `img` layers that had to be kept in register by hand; both are backdrops now.
+  - **It's a real `<img>`, not a CSS `background-image`.** A background is clipped to its own
+    element, so the first version had to inflate the text box with padding/min-height to make the
+    art bigger — which pushed neighbours around and drifted off centre in a flex row. An
+    absolutely-positioned image is free to be larger than the words and overlap its surroundings,
+    while `left/top: 50%` + `translate(-50%, -50%)` keeps it centred at any size. `height: auto`
+    keeps the art's aspect, so **Size is the only control** (`backdropScale`, a % of the text).
+  - The wrapper is `width: max-content; margin-inline: auto` so Size measures against the *text*
+    rather than the full row. `CurvedPiece` paints its own copy (a curve replaces the flat child
+    outright) and **halves the percentage**, because a curve's box spans the whole row while the
+    flat box hugs the words — without that, switching Shape doubled the art.
+  - Offered only where there IS text to sit on (`kind === 'text' || hasText`), so a group whose
+    child is a composite block — the countdown grid — doesn't get one picture behind everything.
+  - **Every new `Layer` field needs its entry in `OVERRIDABLE`.** These were missed at first and
+    the symptom is subtle: the control works, the preview even updates, then `serializeStage`
+    drops the key on the next commit so nothing ever sticks.
+  - T13's countdown units no longer hardcode their stone in `.countUnit`; each unit is a
+    sub-layer, so its plate is set through this control like any other text's.
 - **A slot's sub-layers can nest further.** The countdown is a group: `hero-timer` holds
   `hero-timer-{days,hours,min,sec}` (T13: `-minutes`), each its own adjustable/styleable piece,
   resolved with a second `subLayersOf(stageLayers, 'hero-timer')` call. The panel's layer tree

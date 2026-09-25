@@ -197,20 +197,12 @@ export interface Layer {
    *  `kind: 'text'` and for a `styleable` sub-layer (the hero pieces). A `/templates/…` path is
    *  resolved against the template's `assetRoot`; an uploaded `/uploads/…` path is used as-is. */
   backdropSrc?: string;
-  /** How the backdrop fills the text's box. 'contain' (default) keeps the art whole — the usual
-   *  choice for a ribbon; 'cover' crops it; 'stretch' distorts it to the box exactly. */
-  backdropFit?: 'contain' | 'cover' | 'stretch';
-  /** Breathing room between the text and the backdrop's edges, in `em`, so it tracks type size.
-   *  A ribbon usually needs some, since its art is wider than its writable middle. */
-  backdropPad?: number;
-  /** Extra width for the backdrop beyond the text's own box, in `em`. A ribbon's tails usually
-   *  want to extend past the words. */
-  backdropBleed?: number;
-  /** Minimum height of the backed element, in `em`. A ribbon or plate is usually several times
-   *  taller than the line of type it frames, and `background-size: contain` fits the art to the
-   *  SHORTER axis — so without this a banner shrinks to a thumbnail in the middle of a one-line
-   *  box. The text is centred in whatever height this gives. */
-  backdropHeight?: number;
+  /** Backdrop width as a % of the text it sits behind. Over 100 the art is bigger than the
+   *  words and overlaps whatever is around it, staying centred — which is the point: a ribbon is
+   *  meant to be wider and taller than its line. Height follows the art's own aspect. */
+  backdropScale?: number;
+  /** Degrees, for art that should sit at a slight angle behind the text. */
+  backdropRotate?: number;
   /** Parallax factor. 0 = welded to the background. Defaults to z/10 when absent. */
   depth?: number;
 

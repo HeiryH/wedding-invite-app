@@ -8,7 +8,7 @@ import { useEngine } from './engine';
 import { DEFAULT_SHEET, useSheets } from './slots/sheets';
 import { fontVar } from '@/lib/fonts/registry';
 import CurvedText from './CurvedText';
-import { backdropStyle } from './backdrop';
+import { Backdrop } from './backdrop';
 import ScrollVideoLayer from './effects/ScrollVideoLayer';
 import PlayOnceVideoLayer from './effects/PlayOnceVideoLayer';
 import WaterLayer from './effects/WaterLayer';
@@ -277,7 +277,6 @@ export default function Layer({ layer, slotProps, eager, selected, editing, stag
           <div
             className={styles.text}
             style={{
-              ...backdropStyle(layer, (src) => (src.startsWith('/') ? src : `${assetRoot}/${src}`)),
               color: layer.color ?? '#3F3524',
               fontSize: `${layer.fontSize ?? 4}cqi`,
               fontWeight: layer.fontWeight ?? 600,
@@ -294,7 +293,7 @@ export default function Layer({ layer, slotProps, eager, selected, editing, stag
                 : undefined,
             }}
           >
-            {resolvedText}
+            <Backdrop layer={layer} assetRoot={assetRoot}>{resolvedText}</Backdrop>
           </div>
         );
       }

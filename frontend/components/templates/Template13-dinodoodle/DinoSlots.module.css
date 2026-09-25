@@ -27,7 +27,9 @@
 .detailLine { font-size: calc(clamp(.66rem, 2.15cqi, .88rem) * var(--slot-text-scale, 1)); font-weight: 800; letter-spacing: .02em; text-transform: uppercase; }
 /* Type defaults on the wrapper, inherited by the children — see slots.module.css's .countdown. */
 .countdown { display: flex; justify-content: center; gap: clamp(.42rem, 2cqi, .85rem); margin: .55rem auto; font: 900 calc(clamp(1rem, 4cqi, 1.55rem) * var(--slot-text-scale, 1))/1 var(--slot-font-display); }
-.countUnit { display: grid; min-width: 3.4rem; aspect-ratio: 226 / 239; align-content: center; padding: .42rem .5rem .36rem; background: url('/templates/dino-doodle-party/props/countdown-stone-days.webp') center / contain no-repeat; }
+/* No hardcoded stone here — each unit is its own sub-layer, so its plate is set through the
+   Adjust panel's Backdrop control like any other text's. */
+.countUnit { display: grid; min-width: 3.4rem; align-content: center; padding: .42rem .5rem .36rem; }
 .countUnit strong { font: inherit; color: inherit; }
 .countUnit small { margin-top: .18rem; font-size: .34em; font-weight: 900; letter-spacing: .08em; text-transform: uppercase; color: inherit; }
 .cue { margin-top: .55rem; font-size: calc(.58rem * var(--slot-text-scale, 1)); font-weight: 900; letter-spacing: .12em; text-transform: uppercase; }
