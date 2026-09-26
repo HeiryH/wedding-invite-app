@@ -527,7 +527,10 @@ from a failed attempt would suddenly lose that layer on the next render.
   `.heroInner` in `slots.module.css`, `.composite` in a template's own slot CSS). Gap is in `em`,
   so spacing tracks Text Size instead of drifting apart as the type grows. **A new template's
   composite container must read those vars** (each with the shipped value as its fallback) or the
-  Gap/Position/Align controls do nothing there. ⚠️ **`--slot-align` maps the couple's "Centre" to
+  Gap/Position/Align controls do nothing there — **and neither may a modifier class on it**:
+  T13's `.actionSection` (RSVP, Wishes) re-declared `display: grid` and a literal `gap`, which
+  silently overrode all three for those blocks, and in a grid `align-items`/`justify-content`
+  mean the opposite axes anyway. ⚠️ **`--slot-align` maps the couple's "Centre" to
   `stretch`, not `center`, and a container that shipped as a plain block must default to
   `stretch`** — a flex column with `align-items: center` shrink-wraps every child, silently
   collapsing anything sized `width: 100%`. That rendered T13's curved eyebrow 0×0 the first time
