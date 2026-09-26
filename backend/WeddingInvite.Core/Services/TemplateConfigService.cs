@@ -75,7 +75,14 @@ namespace WeddingInvite.Core.Services
 
             var design = config
                 .Where(kv => !TemplateConfigPolicy.IsCoupleContent(kv.Key))
-                .ToDictionary(kv => kv.Key, kv => kv.Value, StringComparer.Ordinal);
+                .ToDictionary(
+                    kv => kv.Key,
+                    // A lock is an editor affordance, not design — see StripLayerLocks. Capturing
+                    // one made every invitation of the template open with that layer uneditable.
+                    kv => TemplateConfigPolicy.IsLayoutKey(kv.Key)
+                        ? TemplateConfigPolicy.StripLayerLocks(kv.Value)
+                        : kv.Value,
+                    StringComparer.Ordinal);
 
             await _defaultRepo.ReplaceAsync(templateId, design);
         }

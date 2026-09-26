@@ -51,6 +51,47 @@ public class TemplateDefaultConfigTests
     }
 
     [Fact]
+    public async Task Capture_DropsLayerLocks_KeepingTheRestOfTheLayout()
+    {
+        using var db = new TestDb();
+        var sourceId = SeedWedding(db, "source", TemplateId);
+        var svc = ConfigService(db);
+
+        // A lock is an editing affordance — it keeps a layer from being dragged by accident on
+        // the canvas. Captured into a template's starting design it became something else: every
+        // invitation of that template opened with the layer locked and its controls hidden.
+        await svc.SaveConfigAsync(sourceId, new()
+        {
+            ["t7.layout.mobile.welcome"] =
+                "{\"layers\":[{\"id\":\"arch\",\"y\":40,\"locked\":true},{\"id\":\"rsvp\",\"locked\":true,\"z\":9},{\"id\":\"pot\",\"x\":12}]}",
+        }, UserRoles.SuperAdmin, "PRO");
+
+        await svc.SetDefaultFromWeddingAsync(TemplateId, sourceId);
+
+        var captured = (await svc.GetDefaultAsync(TemplateId))["t7.layout.mobile.welcome"];
+        Assert.DoesNotContain("locked", captured);
+        // Everything else about the layout survives, in place.
+        Assert.Contains("\"id\":\"arch\",\"y\":40", captured);
+        Assert.Contains("\"id\":\"rsvp\",\"z\":9", captured);
+        Assert.Contains("\"id\":\"pot\",\"x\":12", captured);
+    }
+
+    [Fact]
+    public async Task CoupleOwnLock_IsUntouched_OnTheirOwnInvitation()
+    {
+        using var db = new TestDb();
+        var eventId = SeedWedding(db, "theirs", TemplateId);
+        var svc = ConfigService(db);
+
+        var layout = "{\"layers\":[{\"id\":\"arch\",\"locked\":true}]}";
+        await svc.SaveConfigAsync(eventId, new() { ["t7.layout.mobile.welcome"] = layout },
+            UserRoles.SuperAdmin, "PRO");
+
+        var config = await svc.GetConfigAsync(eventId);
+        Assert.Equal(layout, config["t7.layout.mobile.welcome"]);
+    }
+
+    [Fact]
     public async Task Capture_KeepsDesign_DropsCoupleContent()
     {
         using var db = new TestDb();

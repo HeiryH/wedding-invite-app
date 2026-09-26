@@ -63,6 +63,30 @@ namespace WeddingInvite.Core.Config
         public static bool IsCoupleContent(string key) => CoupleContentKeys.Contains(key);
 
         /// <summary>
+        /// Strips per-layer <c>"locked": true/false</c> flags out of a stage-layout value.
+        ///
+        /// A lock is an *editing* affordance — it stops a layer being dragged or clicked by
+        /// accident on the canvas — not part of a design. Captured into a template's starting
+        /// design it became something else entirely: every invitation of that template opened
+        /// with those layers locked and their whole control set hidden, with no way for a couple
+        /// to know why. (T13 shipped exactly that: its RSVP group, its itinerary group and six
+        /// welcome props were all locked for every couple.) A couple's own lock on their own
+        /// invitation is untouched; only what gets captured as a default is cleaned.
+        ///
+        /// Deliberately a string edit rather than a JSON round-trip: the value is an opaque
+        /// delta blob whose shape belongs to the frontend (see `_shared/layout.ts`), and
+        /// re-serialising it here would silently reorder or reformat every other key.
+        /// </summary>
+        public static string StripLayerLocks(string value) =>
+            LockedFlagPattern.IsMatch(value) ? LockedFlagPattern.Replace(value, string.Empty) : value;
+
+        // `,"locked":true` / `{"locked":true,` — either side's comma is absorbed so the result
+        // stays valid JSON, and a layer left with no fields at all is harmless (resolveStage
+        // needs an `id`, and a lone `{}` entry is skipped).
+        private static readonly Regex LockedFlagPattern =
+            new(@",\s*""locked""\s*:\s*(?:true|false)|""locked""\s*:\s*(?:true|false)\s*,", RegexOptions.Compiled);
+
+        /// <summary>
         /// Whether a caller of the given role + tier may write this key. Super admins bypass both
         /// gates. Admin-only keys need SUPER_ADMIN; stage-layout keys need PRO tier.
         /// </summary>

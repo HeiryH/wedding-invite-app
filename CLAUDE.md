@@ -156,7 +156,15 @@ inspector renders itself from `getConfigFields(templateId, role)` — there are 
   same shape as `WeddingTemplateConfig`). A super-admin captures a *finished* invite's design on the
   themes page (`/super-admin/themes` → "Starting design" → pick an invite → *Set as default*);
   `SetDefaultFromWeddingAsync` stores that wedding's **effective** config minus couple-content keys
-  (`TemplateConfigPolicy.IsCoupleContent`: `invite.body`, `walimah.body`, `music.url`).
+  (`TemplateConfigPolicy.IsCoupleContent`: `invite.body`, `walimah.body`, `music.url`)
+  **and minus every layer's `locked` flag** (`TemplateConfigPolicy.StripLayerLocks`). A lock is an
+  *editing* affordance — it stops a layer being dragged or clicked by accident on the canvas — and
+  captured into a default it became something else: every invitation of that template opened with
+  those layers locked and their entire control set replaced by a "🔒 Locked" note, with no way for
+  a couple to tell why. T13 shipped exactly that (its RSVP group, its itinerary group and six
+  welcome props); T10 and T14 had it too, and all of them were cleaned out of the stored defaults
+  on 2026-09-26. A couple's own lock on their own invitation still persists — only what gets
+  captured as a template default is stripped.
   **The default is applied live at read time, not seeded.** `GetConfigAsync(weddingId)` returns the
   template default **underlaid** by the wedding's own rows (a stored key always wins). So every invite
   of a template — existing or new, however it got there — renders that template's default for any key
