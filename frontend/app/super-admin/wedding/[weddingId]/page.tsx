@@ -22,6 +22,8 @@ import {
   SeatingTable,
 } from '@/lib/api';
 import { urlSegmentForEventType } from '@/lib/eventTypes';
+import EventUrlField, { SlugStatus } from '@/components/admin/EventUrlField';
+import { slugify } from '@/lib/slug';
 
 // Map a guest's wire-format `guestSide` to the UI's Bride/Groom label.
 const guestSideLabel = (guest: Guest): 'Bride' | 'Groom' | null =>
@@ -80,6 +82,7 @@ export default function WeddingDetailPage() {
   // creation and only ever moves through this dedicated, deliberate control.
   const [isEditingSlug, setIsEditingSlug] = useState(false);
   const [slugDraft, setSlugDraft] = useState('');
+  const [slugStatus, setSlugStatus] = useState<SlugStatus>('idle');
 
   useEffect(() => {
     fetchData();
@@ -145,7 +148,7 @@ export default function WeddingDetailPage() {
 
   const handleUpdateSlug = async () => {
     if (!wedding) return;
-    const next = slugDraft.trim().toLowerCase();
+    const next = slugify(slugDraft);
     if (!next || next === wedding.slug) { setIsEditingSlug(false); return; }
     if (!window.confirm(
       `Change the public URL from "${wedding.slug}" to "${next}"?\n\nAny invitation link already shared under "${wedding.slug}" will stop working immediately.`,
@@ -488,17 +491,25 @@ export default function WeddingDetailPage() {
                   only way to move it. Any link already shared under the current URL will stop
                   working the moment you save.
                 </p>
-                <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-                  <span style={{ fontSize: 13, color: 'var(--ink-2)' }}>
-                    {urlSegmentForEventType(wedding.eventType)}/
-                  </span>
-                  <input
-                    value={slugDraft}
-                    onChange={(e) => setSlugDraft(e.target.value)}
-                    placeholder="new-url-slug"
-                    style={{ ...inpEdit, flex: 1, minWidth: 180 }}
-                  />
-                  <button onClick={handleUpdateSlug} style={{ padding: '9px 18px', background: 'var(--lavender-grey-ink)', color: 'var(--floral)', border: 'none', borderRadius: 10, fontSize: 13.5, fontWeight: 500, cursor: 'pointer' }}>Save</button>
+                {/* Same field as the create form, so a rename gets the same live collision check.
+                    excludeId is what lets this event keep the slug it already has. */}
+                <EventUrlField
+                  eventType={wedding.eventType}
+                  value={slugDraft}
+                  onChange={setSlugDraft}
+                  suggestion={wedding.slug}
+                  excludeId={wedding.eventId}
+                  onStatusChange={setSlugStatus}
+                  inputStyle={{ ...inpEdit, width: '100%', boxSizing: 'border-box' }}
+                  labelSlot={() => null}
+                  hint="Letters, numbers and hyphens."
+                />
+                <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', marginTop: 10 }}>
+                  <button
+                    onClick={handleUpdateSlug}
+                    disabled={slugStatus === 'taken' || slugStatus === 'invalid'}
+                    style={{ padding: '9px 18px', background: (slugStatus === 'taken' || slugStatus === 'invalid') ? 'var(--muted)' : 'var(--lavender-grey-ink)', color: 'var(--floral)', border: 'none', borderRadius: 10, fontSize: 13.5, fontWeight: 500, cursor: (slugStatus === 'taken' || slugStatus === 'invalid') ? 'not-allowed' : 'pointer' }}
+                  >Save</button>
                   <button onClick={() => setIsEditingSlug(false)} style={{ padding: '9px 18px', background: 'rgba(255,255,255,.5)', border: '1px solid rgba(255,255,255,.6)', borderRadius: 10, fontSize: 13.5, fontWeight: 500, cursor: 'pointer', color: 'var(--ink)' }}>Cancel</button>
                 </div>
               </div>

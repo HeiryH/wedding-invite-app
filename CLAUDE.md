@@ -145,10 +145,13 @@ not be created: the collision surfaced only as a failed save with no way to reso
 - The live check is a **courtesy, not the gate**: two admins can type the same URL at once, so
   `CreateAsync`/`SetSlugAsync` re-check on save. A failed check leaves the submit button enabled;
   only a *known-bad* verdict (`taken`/`invalid`) disables it.
-- Both create pages (super-admin and host-admin) share `components/admin/EventUrlField.tsx` —
-  it takes the host page's own `inputStyle`/`labelSlot` so it matches two different token sets.
-  Renaming after creation is still the separate, SUPER_ADMIN-only `SetSlugAsync`; the field
-  accepts an `excludeId` for that case, but the detail page hasn't been moved onto it yet.
+- **All three call sites share `components/admin/EventUrlField.tsx`** — both create pages and the
+  event detail page's "Change public URL" panel. It takes the host page's own
+  `inputStyle`/`labelSlot`/`hint` so it matches three different token sets (`labelSlot: () => null`
+  where the surrounding panel already says what the field is). Renaming is still the separate,
+  SUPER_ADMIN-only `SetSlugAsync`, and it passes **`excludeId`** so the event doesn't read as
+  colliding with the slug it already has — without it the panel would open reporting its own URL
+  as taken.
 
 ### Frontend API Layer
 All API calls go through `frontend/lib/api/` and are exported from `index.ts`. Each service file wraps an `apiClient` (Axios instance). **Always add new service methods to the relevant service file and re-export from `index.ts`.**

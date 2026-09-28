@@ -28,6 +28,7 @@ export default function EventUrlField({
   onStatusChange,
   inputStyle,
   labelSlot,
+  hint = 'Letters, numbers and hyphens. This is the link guests will open.',
 }: {
   eventType: string;
   value: string;
@@ -38,8 +39,13 @@ export default function EventUrlField({
   excludeId?: number;
   onStatusChange?: (status: SlugStatus) => void;
   inputStyle: React.CSSProperties;
-  /** The host page's own field-label renderer, so this matches its surroundings. */
+  /**
+   * The host page's own field-label renderer, so this matches its surroundings. Pass
+   * `() => null` where the surrounding panel already says what the field is.
+   */
   labelSlot: (text: string) => React.ReactNode;
+  /** Hint text under the field. Defaults to the create form's wording. */
+  hint?: string;
 }) {
   const [touched, setTouched] = useState(false);
   const [status, setStatus] = useState<SlugStatus>('idle');
@@ -143,7 +149,7 @@ export default function EventUrlField({
         </span>
       </div>
       <p style={{ margin: '6px 0 0', fontSize: 12, color: message ? 'var(--danger)' : 'var(--muted, var(--text-muted))' }}>
-        {message ?? 'Letters, numbers and hyphens. This is the link guests will open.'}
+        {message ?? hint}
       </p>
     </div>
   );
