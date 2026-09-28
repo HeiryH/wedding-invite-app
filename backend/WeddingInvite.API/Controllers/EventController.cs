@@ -74,6 +74,16 @@ namespace WeddingInvite.API.Controllers
             return Ok(evt);
         }
 
+        // GET: api/event/slug-available?slug=john-and-mary&excludeId=5
+        // Answers the create/rename form's live URL check. Admin-only: it's a membership oracle
+        // over every event's URL, and only an admin can create or rename one anyway.
+        [HttpGet("slug-available")]
+        [Authorize(Roles = "SUPER_ADMIN,HOST_ADMIN")]
+        public async Task<ActionResult<SlugAvailabilityDto>> CheckSlug([FromQuery] string slug, [FromQuery] int? excludeId = null)
+        {
+            return Ok(await _eventService.CheckSlugAsync(slug, excludeId));
+        }
+
         // POST: api/event
         [HttpPost]
         [Authorize(Roles = "SUPER_ADMIN,HOST_ADMIN")]

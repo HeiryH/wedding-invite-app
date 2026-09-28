@@ -6,11 +6,21 @@ import { motion } from 'framer-motion';
 import { eventService, templateService, Template } from '@/lib/api';
 import Icon from '@/components/admin/Icon';
 import { TemplatePreview } from '@/components/templates/TemplatePreview';
-import { EVENT_TYPES, EventTypeKey, matchesEvent, urlSegmentForEventType } from '@/lib/eventTypes';
+import { EVENT_TYPES, EventTypeKey, matchesEvent } from '@/lib/eventTypes';
+import EventUrlField, { SlugStatus } from '@/components/admin/EventUrlField';
+import { slugify } from '@/lib/slug';
 
 const first = (name: string) => (name.trim().split(/\s+/)[0] || '').toLowerCase();
-const slugifyTitle = (title: string) =>
-  title.trim().split(/\s+/).slice(0, 3).join('-').toLowerCase() || 'event';
+const slugifyTitle = (title: string) => slugify(title.trim().split(/\s+/).slice(0, 3).join('-'));
+
+// What the URL field starts as, and keeps following until the admin edits it. It's only a
+// proposal now — the field is editable and checked for collisions, so two Sarahs are fine.
+const suggestedSlug = (f: { eventType: EventTypeKey; brideName: string; groomName: string; eventTitle: string }) =>
+  f.eventType === 'WEDDING'
+    ? slugify(`${first(f.brideName)}-and-${first(f.groomName)}`)
+    : f.eventType === 'PARTY'
+      ? slugify(first(f.brideName))
+      : slugifyTitle(f.eventTitle);
 
 const inputStyle: React.CSSProperties = {
   width: '100%', padding: '10px 12px',
@@ -24,8 +34,10 @@ export default function HostCreateWeddingPage() {
   const [templates, setTemplates] = useState<Template[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [slugStatus, setSlugStatus] = useState<SlugStatus>('idle');
   const [formData, setFormData] = useState({
     eventType: 'WEDDING' as EventTypeKey,
+    slug: '',
     brideName: '',
     groomName: '',
     eventTitle: '',
@@ -51,18 +63,18 @@ export default function HostCreateWeddingPage() {
 
   const visibleTemplates = templates.filter((t) => matchesEvent(t, formData.eventType));
 
+  // A known-bad URL blocks the save; an unfinished check doesn't — the server checks again.
+  const submitDisabled =
+    loading || formData.templateId === 0 || slugStatus === 'taken' || slugStatus === 'invalid';
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
     try {
       const { eventType } = formData;
-      const slug =
-        eventType === 'WEDDING' ? `${first(formData.brideName)}-and-${first(formData.groomName)}`
-        : eventType === 'PARTY' ? first(formData.brideName)
-        : slugifyTitle(formData.eventTitle);
       const wedding = await eventService.create({
-        slug,
+        slug: slugify(formData.slug),
         eventType,
         name1: eventType === 'WEDDING' || eventType === 'PARTY' ? formData.brideName.trim() : '',
         name2: eventType === 'WEDDING' ? formData.groomName.trim() : '',
@@ -177,26 +189,17 @@ export default function HostCreateWeddingPage() {
                 style={inputStyle} {...focusHandlers} placeholder="e.g., Ali's Aqiqah" required />
             </div>
           )}
-          {formData.eventType === 'WEDDING' && formData.brideName && formData.groomName && (
-            <div style={{ marginTop: 12, padding: '10px 14px', background: 'var(--brand-subtle)', border: '1px solid var(--brand-border)', borderRadius: 'var(--radius-md)' }}>
-              <p style={{ fontSize: 11, color: 'var(--text-muted)', margin: '0 0 4px', textTransform: 'uppercase', letterSpacing: 'var(--tracking-caps)', fontFamily: 'var(--font-ui)' }}>Auto-generated URL</p>
-              <p style={{ fontSize: 13, fontFamily: 'var(--font-mono)', color: 'var(--brand)', margin: 0 }}>
-                /{urlSegmentForEventType(formData.eventType)}/{first(formData.brideName)}-and-{first(formData.groomName)}
-              </p>
-            </div>
-          )}
-          {formData.eventType === 'PARTY' && formData.brideName && (
-            <div style={{ marginTop: 12, padding: '10px 14px', background: 'var(--brand-subtle)', border: '1px solid var(--brand-border)', borderRadius: 'var(--radius-md)' }}>
-              <p style={{ fontSize: 11, color: 'var(--text-muted)', margin: '0 0 4px', textTransform: 'uppercase', letterSpacing: 'var(--tracking-caps)', fontFamily: 'var(--font-ui)' }}>Auto-generated URL</p>
-              <p style={{ fontSize: 13, fontFamily: 'var(--font-mono)', color: 'var(--brand)', margin: 0 }}>/{urlSegmentForEventType(formData.eventType)}/{first(formData.brideName)}</p>
-            </div>
-          )}
-          {formData.eventType === 'CEREMONY' && formData.eventTitle && (
-            <div style={{ marginTop: 12, padding: '10px 14px', background: 'var(--brand-subtle)', border: '1px solid var(--brand-border)', borderRadius: 'var(--radius-md)' }}>
-              <p style={{ fontSize: 11, color: 'var(--text-muted)', margin: '0 0 4px', textTransform: 'uppercase', letterSpacing: 'var(--tracking-caps)', fontFamily: 'var(--font-ui)' }}>Auto-generated URL</p>
-              <p style={{ fontSize: 13, fontFamily: 'var(--font-mono)', color: 'var(--brand)', margin: 0 }}>/{urlSegmentForEventType(formData.eventType)}/{slugifyTitle(formData.eventTitle)}</p>
-            </div>
-          )}
+          <div style={{ marginTop: 14 }}>
+            <EventUrlField
+              eventType={formData.eventType}
+              value={formData.slug}
+              onChange={(slug) => setFormData((f) => ({ ...f, slug }))}
+              suggestion={suggestedSlug(formData)}
+              onStatusChange={setSlugStatus}
+              inputStyle={inputStyle}
+              labelSlot={fieldLabel}
+            />
+          </div>
         </div>
 
         {/* Event Details */}
@@ -266,8 +269,8 @@ export default function HostCreateWeddingPage() {
             Cancel
           </button>
           <button
-            type="submit" disabled={loading || formData.templateId === 0}
-            style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '10px 20px', borderRadius: 'var(--radius-md)', background: (loading || formData.templateId === 0) ? 'var(--text-subtle)' : 'var(--brand)', color: '#fff', border: 'none', fontSize: 13.5, fontWeight: 500, cursor: (loading || formData.templateId === 0) ? 'not-allowed' : 'pointer', fontFamily: 'var(--font-ui)', boxShadow: 'var(--shadow-foil)' }}
+            type="submit" disabled={submitDisabled}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '10px 20px', borderRadius: 'var(--radius-md)', background: submitDisabled ? 'var(--text-subtle)' : 'var(--brand)', color: '#fff', border: 'none', fontSize: 13.5, fontWeight: 500, cursor: submitDisabled ? 'not-allowed' : 'pointer', fontFamily: 'var(--font-ui)', boxShadow: 'var(--shadow-foil)' }}
           >
             {loading ? (
               <>

@@ -77,19 +77,22 @@ namespace WeddingInvite.Core.Services
                 ? Models.EventTypes.Wedding
                 : createDto.EventType.ToUpperInvariant();
 
-            // 1. Check if slug is valid (alphanumeric + hyphens only)
-            if (!IsValidSlug(createDto.Slug))
+            // 1. Normalise the slug FIRST, then validate and check uniqueness against that form.
+            //    The admin types this URL themselves, so it arrives as free text; checking the raw
+            //    value let "John-And-Mary" clear the collision check and then save on top of an
+            //    existing "john-and-mary", since the stored form is lower-cased.
+            var slug = EventSlug.Normalize(createDto.Slug);
+            var slugError = EventSlug.Validate(slug);
+            if (slugError != null)
             {
-                throw new ArgumentException(
-                    "Slug can only contain letters, numbers, and hyphens"
-                );
+                throw new ArgumentException(slugError);
             }
 
             // 2. Check if slug already exists
-            if (await _eventRepo.SlugExistsAsync(createDto.Slug))
+            if (await _eventRepo.SlugExistsAsync(slug))
             {
                 throw new ArgumentException(
-                    $"Slug '{createDto.Slug}' is already taken"
+                    $"The URL '{slug}' is already taken"
                 );
             }
 
@@ -127,7 +130,7 @@ namespace WeddingInvite.Core.Services
             // All validation passed! Create the event
             var evt = new Event
             {
-                Slug = createDto.Slug.ToLower().Trim(),
+                Slug = slug,
                 EventType = eventType,
                 Name1 = createDto.Name1?.Trim(),
                 Name2 = createDto.Name2?.Trim(),
@@ -187,15 +190,16 @@ namespace WeddingInvite.Core.Services
             if (evt == null)
                 throw new KeyNotFoundException($"Event with ID {id} not found");
 
-            slug = (slug ?? string.Empty).ToLower().Trim();
+            slug = EventSlug.Normalize(slug);
 
-            if (!IsValidSlug(slug))
-                throw new InvalidOperationException("Slug can only contain letters, numbers, and hyphens");
+            var slugError = EventSlug.Validate(slug);
+            if (slugError != null)
+                throw new InvalidOperationException(slugError);
 
             // A no-op rename (setting it to what it already is) must not trip the collision check
             // against itself.
             if (!string.Equals(slug, evt.Slug, StringComparison.Ordinal) && await _eventRepo.SlugExistsAsync(slug))
-                throw new InvalidOperationException($"Slug '{slug}' is already taken");
+                throw new InvalidOperationException($"The URL '{slug}' is already taken");
 
             evt.Slug = slug;
             await _eventRepo.UpdateAsync(evt);
@@ -414,12 +418,24 @@ namespace WeddingInvite.Core.Services
             return count;
         }
 
-        private bool IsValidSlug(string slug)
+        /// <summary>
+        /// Answers the create/rename form's live "is this URL free?" check. Normalises first so the
+        /// answer is about the slug that would actually be stored, and reports *why* a slug is
+        /// unusable so the form can say so without duplicating the rules in TypeScript.
+        /// <paramref name="excludeEventId"/> lets an event keep its own slug when renaming.
+        /// </summary>
+        public async Task<SlugAvailabilityDto> CheckSlugAsync(string slug, int? excludeEventId = null)
         {
-            return System.Text.RegularExpressions.Regex.IsMatch(
-                slug,
-                @"^[a-zA-Z0-9-]+$"
-            );
+            var normalized = EventSlug.Normalize(slug);
+            var error = EventSlug.Validate(normalized);
+            if (error != null)
+                return new SlugAvailabilityDto { Slug = normalized, Available = false, Reason = error };
+
+            var existing = await _eventRepo.GetBySlugAsync(normalized);
+            if (existing != null && existing.EventId != excludeEventId)
+                return new SlugAvailabilityDto { Slug = normalized, Available = false, Reason = "That URL is already taken." };
+
+            return new SlugAvailabilityDto { Slug = normalized, Available = true };
         }
     }
 }

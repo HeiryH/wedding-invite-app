@@ -122,6 +122,34 @@ up before you delete it," but stands alone as a general data-portability export.
 super-admin/host-admin wedding-list card (`WeddingCard`'s download icon) and the wedding detail page
 header ("Export data").
 
+### The public URL (slug) is chosen, not derived
+An event's slug is typed by whoever creates it. The create form still *proposes* one from the
+names, and follows them until the admin edits the field — but it's an ordinary editable input with
+a live availability check (`GET /api/event/slug-available?slug=&excludeId=`, admin-only). Before
+this it was derived and shown read-only, so a second couple with the same first names simply could
+not be created: the collision surfaced only as a failed save with no way to resolve it.
+
+- **`EventSlug` (`Core/Utilities/`) is the only place the rules live.** `Normalize` folds **case and
+  whitespace only**; `Validate` then *rejects* anything else — `^[a-z0-9]+(-[a-z0-9]+)*$`, 3–60
+  chars. Turning a posted `ali/siti` into `alisiti` would hand the caller a URL they never asked
+  for, so the friendly folding of spaces and punctuation belongs in the form
+  (`frontend/lib/slug.ts`, applied as the admin types) where the result is visible before saving.
+  Keep the two shapes in step.
+- **Normalise BEFORE the uniqueness check.** Slugs are stored lower-cased, so `CreateAsync`
+  checking `SlugExistsAsync(createDto.Slug)` on the *raw* input let `John-And-Mary` clear the
+  collision check and then save on top of `john-and-mary`. Both `CreateAsync` and `SetSlugAsync`
+  now normalise first; `EventServiceSlugTests` pins it on both paths.
+- **`slugProblem()` runs on `slugify()` output, not raw input** — mid-typing, `sarah-` carries a
+  trailing hyphen the server would reject, and flagging that on every keystroke is noise.
+  `slugifyWhileTyping` deliberately keeps that hyphen so `sarah-` can become `sarah-and-mike`.
+- The live check is a **courtesy, not the gate**: two admins can type the same URL at once, so
+  `CreateAsync`/`SetSlugAsync` re-check on save. A failed check leaves the submit button enabled;
+  only a *known-bad* verdict (`taken`/`invalid`) disables it.
+- Both create pages (super-admin and host-admin) share `components/admin/EventUrlField.tsx` —
+  it takes the host page's own `inputStyle`/`labelSlot` so it matches two different token sets.
+  Renaming after creation is still the separate, SUPER_ADMIN-only `SetSlugAsync`; the field
+  accepts an `excludeId` for that case, but the detail page hasn't been moved onto it yet.
+
 ### Frontend API Layer
 All API calls go through `frontend/lib/api/` and are exported from `index.ts`. Each service file wraps an `apiClient` (Axios instance). **Always add new service methods to the relevant service file and re-export from `index.ts`.**
 

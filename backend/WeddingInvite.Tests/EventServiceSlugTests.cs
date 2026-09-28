@@ -237,6 +237,98 @@ public class EventServiceSlugTests
         await Assert.ThrowsAsync<InvalidOperationException>(() => svc.SetSlugAsync(second.EventId, "nur-firdaus"));
     }
 
+    // ── The admin types the URL, so it arrives as free text ──────────────────
+    // It used to be derived from the names and shown read-only, which meant a second couple with
+    // the same first names simply couldn't be created. Now the field is editable, which puts the
+    // whole weight of correctness on these checks.
+
+    [Fact]
+    public async Task CreateAsync_Throws_WhenSlugDiffersOnlyByCase_FromAnExistingOne()
+    {
+        // The stored form is lower-cased, so checking the RAW input let this pass validation and
+        // then save on top of the existing event's URL.
+        using var db = new TestDb();
+        var svc = BuildService(db);
+        await svc.CreateAsync(ValidCreateDto(slug: "ali-and-siti"));
+
+        var clash = ValidCreateDto(slug: "Ali-And-Siti", bride: "Someone", groom: "Else");
+        await Assert.ThrowsAsync<ArgumentException>(() => svc.CreateAsync(clash));
+    }
+
+    [Fact]
+    public async Task SetSlugAsync_Throws_WhenSlugDiffersOnlyByCase_FromAnotherEvent()
+    {
+        using var db = new TestDb();
+        var svc = BuildService(db);
+        await svc.CreateAsync(ValidCreateDto(slug: "nur-firdaus", bride: "Nur", groom: "Firdaus"));
+        var second = await svc.CreateAsync(ValidCreateDto(slug: "someone-else", bride: "Someone", groom: "Else"));
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => svc.SetSlugAsync(second.EventId, "Nur-Firdaus"));
+    }
+
+    [Theory]
+    [InlineData("-ali")]       // leading hyphen
+    [InlineData("ali-")]       // trailing hyphen
+    [InlineData("ali--siti")]  // doubled hyphen
+    [InlineData("ab")]         // too short
+    public async Task CreateAsync_Throws_WhenSlugIsMalformed(string slug)
+    {
+        using var db = new TestDb();
+
+        await Assert.ThrowsAsync<ArgumentException>(() => BuildService(db).CreateAsync(ValidCreateDto(slug: slug)));
+    }
+
+    // ── CheckSlugAsync — the create/rename form's live check ─────────────────
+
+    [Fact]
+    public async Task CheckSlugAsync_ReportsAvailable_WithTheNormalisedForm()
+    {
+        using var db = new TestDb();
+
+        var result = await BuildService(db).CheckSlugAsync("  Ali-And-Siti  ");
+
+        Assert.True(result.Available);
+        Assert.Equal("ali-and-siti", result.Slug);
+        Assert.Null(result.Reason);
+    }
+
+    [Fact]
+    public async Task CheckSlugAsync_ReportsTaken_IgnoringCase()
+    {
+        using var db = new TestDb();
+        var svc = BuildService(db);
+        await svc.CreateAsync(ValidCreateDto(slug: "ali-and-siti"));
+
+        var result = await svc.CheckSlugAsync("Ali-And-Siti");
+
+        Assert.False(result.Available);
+        Assert.NotNull(result.Reason);
+    }
+
+    [Fact]
+    public async Task CheckSlugAsync_LetsAnEventKeepItsOwnSlug_WhenExcluded()
+    {
+        // Renaming: the form asks about the slug the event already has, which must not read as
+        // a collision with itself.
+        using var db = new TestDb();
+        var svc = BuildService(db);
+        var created = await svc.CreateAsync(ValidCreateDto());
+
+        Assert.False((await svc.CheckSlugAsync(created.Slug)).Available);
+        Assert.True((await svc.CheckSlugAsync(created.Slug, created.EventId)).Available);
+    }
+
+    [Fact]
+    public async Task CheckSlugAsync_ReportsInvalid_WithoutTouchingTheDatabase()
+    {
+        using var db = new TestDb();
+
+        var result = await BuildService(db).CheckSlugAsync("ali siti");
+
+        Assert.False(result.Available);
+        Assert.NotNull(result.Reason);
+    }
+
     [Fact]
     public async Task SetSlugAsync_Succeeds_WhenSlugUnchanged()
     {

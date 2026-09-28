@@ -37,6 +37,14 @@ export interface Event {
   ownerTier: 'BASIC' | 'PREMIUM' | 'PRO';
 }
 
+// Mirrors SlugAvailabilityDto. `slug` is the normalised form the server would actually store,
+// so a form can echo it back to the admin rather than showing what they typed.
+export interface SlugAvailability {
+  slug: string;
+  available: boolean;
+  reason?: string | null;
+}
+
 export interface CreateEvent {
   slug: string;
   eventType: string;

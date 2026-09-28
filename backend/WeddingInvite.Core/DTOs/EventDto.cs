@@ -96,4 +96,14 @@ namespace WeddingInvite.Core.DTOs
         public string Slug { get; set; } = string.Empty;
     }
 
+    // The answer to the create/rename form's live URL check. `Slug` is the NORMALISED form — the
+    // one that would actually be stored — so the form can show the admin what they'll really get.
+    public class SlugAvailabilityDto
+    {
+        public string Slug { get; set; } = string.Empty;
+        public bool Available { get; set; }
+        /// <summary>Why it isn't available; null when it is.</summary>
+        public string? Reason { get; set; }
+    }
+
 }

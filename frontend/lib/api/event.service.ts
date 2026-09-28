@@ -1,5 +1,5 @@
 import { apiClient } from './client';
-import { Event, CreateEvent, UpdateEventDto } from './types';
+import { Event, CreateEvent, UpdateEventDto, SlugAvailability } from './types';
 
 export const eventService = {
   // Get all events (super admin only)
@@ -66,6 +66,16 @@ export const eventService = {
   // the old slug stops resolving the moment this succeeds.
   setSlug: async (id: number, slug: string): Promise<Event> => {
     const response = await apiClient.put<Event>(`/event/${id}/slug`, { slug });
+    return response.data;
+  },
+
+  // Live "is this URL free?" check for the create/rename forms. Returns the NORMALISED slug
+  // (what would actually be stored) alongside the verdict, so the form can show what the admin
+  // will really get. Uniqueness is re-checked on save — this is a courtesy, not the gate.
+  checkSlug: async (slug: string, excludeId?: number): Promise<SlugAvailability> => {
+    const response = await apiClient.get<SlugAvailability>('/event/slug-available', {
+      params: { slug, ...(excludeId ? { excludeId } : {}) },
+    });
     return response.data;
   },
 

@@ -16,6 +16,11 @@ namespace WeddingInvite.Core.Services
         /// already shared under the old slug stops resolving the moment this runs.
         /// </summary>
         Task<EventDto> SetSlugAsync(int id, string slug);
+        /// <summary>
+        /// Live "is this URL free?" check for the create/rename forms. Normalises the input first,
+        /// so it answers about the slug that would actually be stored.
+        /// </summary>
+        Task<SlugAvailabilityDto> CheckSlugAsync(string slug, int? excludeEventId = null);
         Task<bool> DeleteAsync(int id);
         Task<EventDto> UpdateTemplateAsync(int id, int templateId);
         Task<EventDto> ToggleActiveAsync(int id, bool isActive);
