@@ -61,6 +61,8 @@ public class TemplateConfigTests
     [InlineData("t5.layout.mobile.welcome", true)]
     [InlineData("t7.layout.desktop.ceremony-details", true)]
     [InlineData("t12.layout.mobile.x", true)]
+    [InlineData("t15.layout.mobile.cinematic-camera", true)]
+    [InlineData("t15.layout.desktop.cinematic-world", true)]
     [InlineData("t7.layout", false)]        // needs the trailing segment
     [InlineData("nav.layout.thing", false)] // only the t<N>.layout. namespace counts
     [InlineData("invite.body", false)]
@@ -84,6 +86,23 @@ public class TemplateConfigTests
         Assert.False(TemplateConfigPolicy.CanWrite("t7.layout.mobile.welcome", UserRoles.OrganizerAdmin, "PREMIUM"));
         Assert.False(TemplateConfigPolicy.CanWrite("t7.layout.mobile.welcome", UserRoles.OrganizerAdmin, "BASIC"));
         Assert.False(TemplateConfigPolicy.CanWrite("t7.layout.mobile.welcome", UserRoles.OrganizerAdmin, null));
+        Assert.True(TemplateConfigPolicy.CanWrite("t15.layout.mobile.cinematic-camera", UserRoles.OrganizerAdmin, "PRO"));
+        Assert.False(TemplateConfigPolicy.CanWrite("t15.layout.mobile.cinematic-camera", UserRoles.OrganizerAdmin, "PREMIUM"));
+    }
+
+    [Theory]
+    [InlineData("invite.body", true)]
+    [InlineData("walimah.body", true)]
+    [InlineData("people.primary.title", true)]
+    [InlineData("people.primary.details", true)]
+    [InlineData("people.secondary.title", true)]
+    [InlineData("people.secondary.details", true)]
+    [InlineData("people.honoree.title", true)]
+    [InlineData("people.honoree.details", true)]
+    [InlineData("t15.layout.mobile.cinematic-world", false)]
+    public void IsCoupleContent_ExcludesPaintedPromiseWordingFromTemplateDefaults(string key, bool expected)
+    {
+        Assert.Equal(expected, TemplateConfigPolicy.IsCoupleContent(key));
     }
 
     [Fact]

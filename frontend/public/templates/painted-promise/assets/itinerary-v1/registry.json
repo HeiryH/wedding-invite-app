@@ -1,0 +1,107 @@
+{
+  "mode": "source-alpha",
+  "assets": [
+    {
+      "id": "programme-board",
+      "file": "elements/programme-board.png",
+      "role": "cinematic-prop",
+      "label": "Blank antique-gold programme board",
+      "w": 407,
+      "h": 725,
+      "sourceComponents": [
+        1
+      ]
+    },
+    {
+      "id": "left-board-floral",
+      "file": "elements/left-board-floral.png",
+      "role": "cinematic-prop",
+      "label": "Left programme-board floral cluster",
+      "w": 464,
+      "h": 687,
+      "sourceComponents": [
+        2
+      ]
+    },
+    {
+      "id": "right-board-floral",
+      "file": "elements/right-board-floral.png",
+      "role": "cinematic-prop",
+      "label": "Right programme-board floral cluster",
+      "w": 386,
+      "h": 697,
+      "sourceComponents": [
+        3
+      ]
+    },
+    {
+      "id": "tall-glass-lantern",
+      "file": "elements/tall-glass-lantern.png",
+      "role": "cinematic-prop",
+      "label": "Tall glass lantern with candle",
+      "w": 190,
+      "h": 363,
+      "sourceComponents": [
+        11
+      ]
+    },
+    {
+      "id": "short-glass-lantern",
+      "file": "elements/short-glass-lantern.png",
+      "role": "cinematic-prop",
+      "label": "Short glass lantern with candle",
+      "w": 183,
+      "h": 272,
+      "sourceComponents": [
+        12
+      ]
+    },
+    {
+      "id": "candle-vessel-trio",
+      "file": "elements/candle-vessel-trio.png",
+      "role": "cinematic-prop",
+      "label": "Antique-gold and glass candle-vessel trio",
+      "w": 310,
+      "h": 243,
+      "sourceComponents": [
+        13
+      ]
+    },
+    {
+      "id": "loose-petal-trail",
+      "file": "elements/loose-petal-trail.png",
+      "role": "cinematic-prop",
+      "label": "Loose blush-and-ivory petal trail",
+      "w": 476,
+      "h": 299,
+      "sourceComponents": [
+        16,
+        17,
+        19,
+        20
+      ]
+    },
+    {
+      "id": "near-camera-floral",
+      "file": "elements/near-camera-floral.png",
+      "role": "cinematic-prop",
+      "label": "Near-camera floral stem and cluster",
+      "w": 490,
+      "h": 375,
+      "sourceComponents": [
+        14
+      ]
+    },
+    {
+      "id": "ivory-drapery-ribbon",
+      "file": "elements/ivory-drapery-ribbon.png",
+      "role": "cinematic-prop",
+      "label": "Short flowing ivory drapery and ribbon accent",
+      "w": 389,
+      "h": 339,
+      "sourceComponents": [
+        15
+      ]
+    }
+  ]
+}

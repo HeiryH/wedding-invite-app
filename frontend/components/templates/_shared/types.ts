@@ -559,6 +559,17 @@ export interface EditorHandle {
   breakpoint: Breakpoint;
   selectedStage?: string;
   selectedLayer?: string;
+  /** Editor-only controls for the continuous Cinematic family. Unlike selectedStage/selectedLayer,
+   * this is a playhead through one world rather than selection inside one discrete stage. */
+  cinematic?: {
+    progress: number;
+    beatId?: string;
+    mode: 'scene' | 'camera-compose' | 'camera-beat';
+    /** Compose mode previews an exploratory frame without mutating a saved beat. */
+    cameraOverride?: { x: number; y: number; scale: number; rotate: number };
+    referenceSrc?: string;
+    referenceOpacity?: number;
+  };
   /** @deprecated superseded by `frame.w`/`frame.svh`. Kept for one release so a stale cached
    *  payload degrades gracefully instead of silently falling back to the template's own 390×844
    *  constants — see `app/(standalone)/organizer-admin/preview/page.tsx`'s derivation. */

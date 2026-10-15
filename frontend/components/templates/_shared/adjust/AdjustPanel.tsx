@@ -215,7 +215,7 @@ export default function AdjustPanel({
     });
   const selectLayer = (id: string | undefined) => {
     setPopover(null);
-    onSelectLayer(id);
+    onSelectLayer(id && id === selectedLayer ? undefined : id);
   };
   const layersRef = useRef<HTMLDivElement>(null);
   // Layer-detail tab: geometry vs style vs animation. Sticky across layer selection.

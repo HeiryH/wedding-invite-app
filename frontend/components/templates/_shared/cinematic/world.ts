@@ -1,0 +1,155 @@
+import type { Breakpoint, ObjectFit } from '../types';
+
+export type CinematicLayerGroup =
+  | 'background'
+  | 'welcome'
+  | 'custom'
+  | 'venue'
+  | 'dais'
+  | 'programme'
+  | 'table'
+  | 'table-wishes'
+  | 'rsvp'
+  | 'wishes'
+  | 'memory';
+export type CinematicLayerSpace = 'viewport' | 'world';
+export type CinematicLayerKind = 'img' | 'text' | 'shape';
+
+export interface CinematicWorldLayer {
+  id: string;
+  label: string;
+  group: CinematicLayerGroup;
+  space: CinematicLayerSpace;
+  /** Omitted on text and shape layers. Existing art defaults to `img`. */
+  kind?: CinematicLayerKind;
+  src?: string;
+  text?: string;
+  color?: string;
+  fontSize?: number;
+  fontFamily?: string;
+  fontWeight?: number;
+  textAlign?: 'left' | 'center' | 'right';
+  lineHeight?: number;
+  letterSpacing?: number;
+  shape?: 'rect' | 'ellipse';
+  fill?: string;
+  radius?: number;
+  borderColor?: string;
+  borderWidth?: number;
+  x: number;
+  y: number;
+  w: number;
+  /** Omitted means preserve the source aspect ratio. */
+  h?: number;
+  z: number;
+  rotation: number;
+  flipX: boolean;
+  hidden: boolean;
+  locked: boolean;
+  opacity: number;
+  fit?: ObjectFit;
+  /** Optional intrinsic box ratio for composite DOM objects such as a programme board. */
+  aspectRatio?: number;
+  desktop?: Partial<CinematicWorldGeometry>;
+}
+
+export type CinematicWorldGeometry = Pick<
+  CinematicWorldLayer,
+  'label' | 'group' | 'space' | 'kind' | 'src' | 'text' | 'color' | 'fontSize' | 'fontFamily' |
+  'fontWeight' | 'textAlign' | 'lineHeight' | 'letterSpacing' | 'shape' | 'fill' | 'radius' |
+  'borderColor' | 'borderWidth' | 'x' | 'y' | 'w' | 'h' | 'z' | 'rotation' | 'flipX' |
+  'hidden' | 'locked' | 'opacity' | 'fit'
+>;
+
+type LayerDelta = Partial<CinematicWorldGeometry> & { id: string };
+type StoredLayer = LayerDelta | CinematicWorldLayer;
+interface WorldLayout { layers?: StoredLayer[] }
+
+const OVERRIDABLE: (keyof CinematicWorldGeometry)[] = [
+  'label', 'group', 'space', 'kind', 'src', 'text', 'color', 'fontSize', 'fontFamily',
+  'fontWeight', 'textAlign', 'lineHeight', 'letterSpacing', 'shape', 'fill', 'radius',
+  'borderColor', 'borderWidth', 'x', 'y', 'w', 'h', 'z', 'rotation', 'flipX', 'hidden',
+  'locked', 'opacity', 'fit',
+];
+
+export const cinematicWorldKey = (prefix: string, breakpoint: Breakpoint) =>
+  `${prefix}.layout.${breakpoint}.cinematic-world`;
+
+function applyPatch(layer: CinematicWorldLayer, patch: Partial<CinematicWorldGeometry>) {
+  const next = { ...layer };
+  for (const key of OVERRIDABLE) {
+    if (patch[key] !== undefined) (next as unknown as Record<string, unknown>)[key] = patch[key];
+  }
+  return next;
+}
+
+function defaultsFor(defs: CinematicWorldLayer[], breakpoint: Breakpoint) {
+  return defs.map((layer) => breakpoint === 'desktop' && layer.desktop
+    ? applyPatch(layer, layer.desktop)
+    : { ...layer });
+}
+
+function isCompleteUserLayer(value: StoredLayer): value is CinematicWorldLayer {
+  return typeof value.id === 'string' && typeof value.label === 'string' &&
+    typeof value.group === 'string' && (value.space === 'world' || value.space === 'viewport') &&
+    typeof value.x === 'number' && typeof value.y === 'number' && typeof value.w === 'number' &&
+    typeof value.z === 'number' && typeof value.rotation === 'number' &&
+    typeof value.flipX === 'boolean' && typeof value.hidden === 'boolean' &&
+    typeof value.locked === 'boolean' && typeof value.opacity === 'number' &&
+    (value.kind === undefined || value.kind === 'img' || value.kind === 'text' || value.kind === 'shape');
+}
+
+export function resolveCinematicWorld(
+  prefix: string,
+  defs: CinematicWorldLayer[],
+  breakpoint: Breakpoint,
+  config: Record<string, string> | undefined,
+): CinematicWorldLayer[] {
+  let layers = defaultsFor(defs, breakpoint);
+  const raw = config?.[cinematicWorldKey(prefix, breakpoint)];
+  if (raw) {
+    try {
+      const saved = JSON.parse(raw) as WorldLayout;
+      const byId = new Map(layers.map((layer) => [layer.id, layer]));
+      for (const patch of saved.layers ?? []) {
+        const layer = byId.get(patch.id);
+        if (layer) byId.set(patch.id, applyPatch(layer, patch));
+        else if (isCompleteUserLayer(patch)) {
+          // User-added layers are stored whole. Unknown partial records are ignored so malformed
+          // config cannot create an unrenderable object in the invitation.
+          byId.set(patch.id, patch as CinematicWorldLayer);
+        }
+      }
+      layers = [...byId.values()];
+    } catch {
+      // A malformed layout must never take the invitation down; shipped defaults remain active.
+    }
+  }
+  return layers.sort((a, b) => a.z - b.z);
+}
+
+export function serializeCinematicWorld(
+  defs: CinematicWorldLayer[],
+  breakpoint: Breakpoint,
+  layers: CinematicWorldLayer[],
+): string {
+  const baseById = new Map(defaultsFor(defs, breakpoint).map((layer) => [layer.id, layer]));
+  const deltas: StoredLayer[] = [];
+  for (const layer of layers) {
+    const base = baseById.get(layer.id);
+    if (!base) {
+      deltas.push(layer);
+      continue;
+    }
+    const delta: LayerDelta = { id: layer.id };
+    let changed = false;
+    for (const key of OVERRIDABLE) {
+      if (layer[key] !== base[key]) {
+        (delta as Record<string, unknown>)[key] = layer[key];
+        changed = true;
+      }
+    }
+    if (changed) deltas.push(delta);
+  }
+  return deltas.length ? JSON.stringify({ layers: deltas }) : '';
+}

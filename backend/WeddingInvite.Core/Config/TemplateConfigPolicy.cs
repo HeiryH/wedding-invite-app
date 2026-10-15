@@ -39,6 +39,9 @@ namespace WeddingInvite.Core.Config
         private static readonly HashSet<string> CoupleContentKeys = new(StringComparer.Ordinal)
         {
             "invite.body", "walimah.body", "music.url",
+            "people.primary.title", "people.primary.details",
+            "people.secondary.title", "people.secondary.details",
+            "people.honoree.title", "people.honoree.details",
         };
 
         private static readonly Regex KeyPattern = new(@"^[a-zA-Z0-9._-]+$", RegexOptions.Compiled);

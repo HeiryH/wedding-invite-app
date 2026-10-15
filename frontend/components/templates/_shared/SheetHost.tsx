@@ -1,7 +1,7 @@
 'use client';
 
 import { AnimatePresence, motion } from 'framer-motion';
-import type { CSSProperties } from 'react';
+import { useEffect, type CSSProperties } from 'react';
 import type { EditorHandle, Layer, SlotProps } from './types';
 import { useEngine } from './engine';
 import { useSheets } from './slots/sheets';
@@ -52,6 +52,17 @@ export default function SheetHost({ groups, slotProps, themeStyle, editor }: Pro
   // entirely and say why instead.
   const dismissable = !forcedId;
 
+  useEffect(() => {
+    if (!activeId || !dismissable) return;
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return;
+      event.preventDefault();
+      close();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [activeId, close, dismissable]);
+
   return (
     <AnimatePresence>
       {layers?.length ? (
@@ -71,6 +82,9 @@ export default function SheetHost({ groups, slotProps, themeStyle, editor }: Pro
             className={styles.sheetCard}
             style={themeStyle}
             data-seen="true"
+            role="dialog"
+            aria-modal={dismissable ? 'true' : undefined}
+            aria-label="Invitation form"
           >
             {dismissable ? (
               <>

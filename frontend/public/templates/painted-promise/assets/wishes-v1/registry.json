@@ -1,0 +1,119 @@
+{
+  "mode": "source-alpha",
+  "assets": [
+    {
+      "id": "open-blank-guest-book",
+      "file": "elements/open-blank-guest-book.png",
+      "role": "cinematic-prop",
+      "label": "Open blank wedding guest book",
+      "w": 937,
+      "h": 541,
+      "sourceComponents": [
+        2
+      ]
+    },
+    {
+      "id": "espresso-fountain-pen",
+      "file": "elements/espresso-fountain-pen.png",
+      "role": "cinematic-prop",
+      "label": "Espresso fountain pen with gold trim",
+      "w": 333,
+      "h": 381,
+      "sourceComponents": [
+        3
+      ]
+    },
+    {
+      "id": "long-silk-ribbon",
+      "file": "elements/long-silk-ribbon.png",
+      "role": "cinematic-prop",
+      "label": "Long flowing blush silk ribbon bookmark",
+      "w": 441,
+      "h": 902,
+      "sourceComponents": [
+        1
+      ]
+    },
+    {
+      "id": "empty-ring-dish",
+      "file": "elements/empty-ring-dish.png",
+      "role": "cinematic-prop",
+      "label": "Small empty ivory ring dish",
+      "w": 341,
+      "h": 230,
+      "sourceComponents": [
+        10
+      ]
+    },
+    {
+      "id": "single-pressed-flower",
+      "file": "elements/single-pressed-flower.png",
+      "role": "cinematic-prop",
+      "label": "Single pressed blush flower",
+      "w": 271,
+      "h": 258,
+      "sourceComponents": [
+        11
+      ]
+    },
+    {
+      "id": "loose-petal-group",
+      "file": "elements/loose-petal-group.png",
+      "role": "cinematic-prop",
+      "label": "Loose blush-and-ivory petal group",
+      "w": 263,
+      "h": 259,
+      "sourceComponents": [
+        15,
+        18,
+        21,
+        22
+      ]
+    },
+    {
+      "id": "three-wish-envelopes",
+      "file": "elements/three-wish-envelopes.png",
+      "role": "cinematic-prop",
+      "label": "Three sealed wish envelopes",
+      "w": 736,
+      "h": 348,
+      "sourceComponents": [
+        23
+      ]
+    },
+    {
+      "id": "petite-glass-lantern",
+      "file": "elements/petite-glass-lantern.png",
+      "role": "cinematic-prop",
+      "label": "Petite antique-gold glass lantern",
+      "w": 271,
+      "h": 444,
+      "sourceComponents": [
+        17
+      ]
+    },
+    {
+      "id": "narrow-vase-stems",
+      "file": "elements/narrow-vase-stems.png",
+      "role": "cinematic-prop",
+      "label": "Narrow glass vase with sparse stems",
+      "w": 431,
+      "h": 742,
+      "sourceComponents": [
+        4
+      ]
+    },
+    {
+      "id": "painted-pen-flourish",
+      "file": "elements/painted-pen-flourish.png",
+      "role": "cinematic-prop",
+      "label": "Small painted espresso-and-gold pen flourish",
+      "w": 270,
+      "h": 130,
+      "sourceComponents": [
+        24,
+        25
+      ]
+    }
+  ]
+}

@@ -1,0 +1,148 @@
+{
+  "mode": "source-alpha",
+  "assets": [
+    {
+      "id": "long-ribbon-system",
+      "file": "elements/long-ribbon-system.png",
+      "role": "cinematic-prop",
+      "label": "Long suspended blush-and-ivory ribbon system",
+      "w": 569,
+      "h": 392,
+      "sourceComponents": [
+        3
+      ]
+    },
+    {
+      "id": "three-portrait-frames",
+      "file": "elements/three-portrait-frames.png",
+      "role": "cinematic-prop",
+      "label": "Three blank portrait frames with clips",
+      "w": 595,
+      "h": 308,
+      "sourceComponents": [
+        9,
+        10,
+        11
+      ]
+    },
+    {
+      "id": "three-landscape-frames",
+      "file": "elements/three-landscape-frames.png",
+      "role": "cinematic-prop",
+      "label": "Three blank landscape frames with clips",
+      "w": 730,
+      "h": 242,
+      "sourceComponents": [
+        22,
+        23,
+        24
+      ]
+    },
+    {
+      "id": "left-floral-arch",
+      "file": "elements/left-floral-arch.png",
+      "role": "cinematic-prop",
+      "label": "Left floral-arch section",
+      "w": 353,
+      "h": 877,
+      "sourceComponents": [
+        2
+      ]
+    },
+    {
+      "id": "right-floral-arch",
+      "file": "elements/right-floral-arch.png",
+      "role": "cinematic-prop",
+      "label": "Right floral-arch section",
+      "w": 348,
+      "h": 770,
+      "sourceComponents": [
+        1
+      ]
+    },
+    {
+      "id": "sheer-drapery-accent",
+      "file": "elements/sheer-drapery-accent.png",
+      "role": "cinematic-prop",
+      "label": "Sheer flowing ivory drapery accent",
+      "w": 312,
+      "h": 630,
+      "sourceComponents": [
+        12
+      ]
+    },
+    {
+      "id": "illustrated-camera",
+      "file": "elements/illustrated-camera.png",
+      "role": "cinematic-prop",
+      "label": "Small illustrated vintage camera",
+      "w": 205,
+      "h": 148,
+      "sourceComponents": [
+        30
+      ]
+    },
+    {
+      "id": "empty-photo-basket",
+      "file": "elements/empty-photo-basket.png",
+      "role": "cinematic-prop",
+      "label": "Empty woven photo basket",
+      "w": 379,
+      "h": 284,
+      "sourceComponents": [
+        29
+      ]
+    },
+    {
+      "id": "left-lantern-cluster",
+      "file": "elements/left-lantern-cluster.png",
+      "role": "cinematic-prop",
+      "label": "Left warm two-lantern cluster",
+      "w": 331,
+      "h": 398,
+      "sourceComponents": [
+        28
+      ]
+    },
+    {
+      "id": "right-lantern-cluster",
+      "file": "elements/right-lantern-cluster.png",
+      "role": "cinematic-prop",
+      "label": "Right warm two-lantern cluster",
+      "w": 321,
+      "h": 409,
+      "sourceComponents": [
+        31
+      ]
+    },
+    {
+      "id": "near-camera-floral",
+      "file": "elements/near-camera-floral.png",
+      "role": "cinematic-prop",
+      "label": "Near-camera floral branch",
+      "w": 462,
+      "h": 263,
+      "sourceComponents": [
+        32
+      ]
+    },
+    {
+      "id": "drifting-petals",
+      "file": "elements/drifting-petals.png",
+      "role": "cinematic-prop",
+      "label": "Drifting blush-and-ivory petal group",
+      "w": 392,
+      "h": 196,
+      "sourceComponents": [
+        33,
+        34,
+        35,
+        36,
+        37,
+        38,
+        39,
+        43
+      ]
+    }
+  ]
+}

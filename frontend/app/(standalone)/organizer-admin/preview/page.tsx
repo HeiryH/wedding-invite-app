@@ -26,6 +26,14 @@ interface PreviewPayload {
     breakpoint: 'mobile' | 'desktop';
     selectedStage?: string;
     selectedLayer?: string;
+    cinematic?: {
+      progress: number;
+      beatId?: string;
+      mode: 'scene' | 'camera-compose' | 'camera-beat';
+      cameraOverride?: { x: number; y: number; scale: number; rotate: number };
+      referenceSrc?: string;
+      referenceOpacity?: number;
+    };
     /** @deprecated superseded by `frame`. Kept so a `preview_draft_v2` written by an older build
      *  still pins the reveal frame instead of silently falling back to the template's own 390×844
      *  constants — see the derivation below. */
@@ -156,6 +164,7 @@ export default function PreviewPage() {
                 breakpoint: payload.editor.breakpoint,
                 selectedStage: payload.editor.selectedStage,
                 selectedLayer: payload.editor.selectedLayer,
+                cinematic: payload.editor.cinematic,
                 frameW: payload.editor.frameW,
                 frameH: payload.editor.frameH,
                 frame,

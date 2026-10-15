@@ -4,6 +4,8 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Icon } from '@/components/ui/Icon';
 import type { Wedding } from '@/lib/api';
 import { urlSegmentForEventType } from '@/lib/eventTypes';
+import CinematicTimeline, { type CinematicTimelineAsset } from '@/components/templates/_shared/cinematic/CinematicTimeline';
+import type { CinematicResolvedBeat, CinematicSequenceClip, CinematicSequenceTrack } from '@/components/templates/_shared/cinematic/sequence';
 import {
   DEVICE_PRESETS, defaultPresetFor, type Device, type DevicePreset, type SafeAreaInsets,
 } from '@/lib/devicePresets';
@@ -66,6 +68,17 @@ interface PreviewPanelProps {
    *  frame-scoped `--f*` units the standalone preview derives from it). */
   frame: PreviewFrame;
   setFrame: (f: PreviewFrame) => void;
+  cinematicTimeline?: {
+    progress: number;
+    beats: CinematicResolvedBeat[];
+    tracks: CinematicSequenceTrack[];
+    selectedAsset?: CinematicTimelineAsset;
+    selectedBeat?: string;
+    editableBeats?: boolean;
+    onChange: (progress: number) => void;
+    onBeatMove?: (id: string, progress: number) => void;
+    onTrackClipChange?: (id: string, clip: CinematicSequenceClip) => void;
+  };
 }
 
 const numInputStyle: React.CSSProperties = {
@@ -82,11 +95,14 @@ const numInputStyle: React.CSSProperties = {
 export function PreviewPanel({
   iframeRef, device, setDevice, manualZoom, setManualZoom,
   activeBlock, onSelectBlock, sectionOrder, editorMode, onShowEditor, wedding,
-  frame, setFrame,
+  frame, setFrame, cinematicTimeline,
 }: PreviewPanelProps) {
   const stageRef = useRef<HTMLDivElement>(null);
   const [autoZoom, setAutoZoom] = useState(80);
   const [showSizePanel, setShowSizePanel] = useState(false);
+  const [timelineExpanded, setTimelineExpanded] = useState(false);
+  const hasCinematicTimeline = Boolean(cinematicTimeline);
+  const timelineHeight = timelineExpanded ? 300 : 148;
 
   const zoom = manualZoom ?? autoZoom;
   const defaultPreset = defaultPresetFor(device);
@@ -128,9 +144,10 @@ export function PreviewPanel({
     if (!el) return;
     const compute = () => {
       const rect = el.getBoundingClientRect();
-      const pad = 80;
-      const fitW = (rect.width  - pad) / iframeW;
-      const fitH = (rect.height - pad) / iframeH;
+      const fitW = (rect.width - 80) / iframeW;
+      // Reserve the visible Story Timeline beneath the preview. All Tracks deliberately makes the
+      // device smaller rather than letting editor chrome cover the invitation being directed.
+      const fitH = (rect.height - (hasCinematicTimeline ? timelineHeight + 96 : 80)) / iframeH;
       const auto = Math.min(fitW, fitH, 1);
       if (auto > 0.05) setAutoZoom(Math.round(auto * 100));
     };
@@ -138,7 +155,7 @@ export function PreviewPanel({
     const ro = new ResizeObserver(compute);
     ro.observe(el);
     return () => ro.disconnect();
-  }, [iframeW, iframeH, device, editorMode]);
+  }, [iframeW, iframeH, device, editorMode, hasCinematicTimeline, timelineHeight]);
 
   const changeZoom = (delta: number) => {
     const base = manualZoom ?? autoZoom;
@@ -322,7 +339,8 @@ export function PreviewPanel({
       {/* Device stage */}
       <div ref={stageRef} style={{
         flex: 1, display: 'grid', placeItems: 'center',
-        padding: '72px 56px 80px', overflow: 'hidden', minHeight: 0, minWidth: 0,
+        padding: cinematicTimeline ? `72px 56px ${timelineHeight + 84}px` : '72px 56px 80px',
+        overflow: 'hidden', minHeight: 0, minWidth: 0,
       }}>
         {/* Clip box sized exactly to the scaled iframe — no bezel, no padding. */}
         <div style={{
@@ -358,7 +376,7 @@ export function PreviewPanel({
       {/* Dimension size panel (popover above status strip) */}
       {showSizePanel && (
         <div style={{
-          position: 'absolute', bottom: 66, left: '50%', transform: 'translateX(-50%)',
+          position: 'absolute', bottom: cinematicTimeline ? timelineHeight + 72 : 66, left: '50%', transform: 'translateX(-50%)',
           background: 'var(--surface-card)', borderRadius: 14,
           border: '1px solid var(--border-subtle)', boxShadow: 'var(--shadow-lg)',
           padding: '14px 18px', zIndex: 10, minWidth: 300,
@@ -432,6 +450,30 @@ export function PreviewPanel({
               </button>
             ))}
           </div>
+        </div>
+      )}
+
+      {/* Cinematic timeline belongs to the canvas, not the property dock: it controls the view
+          being directed and stays reachable while a floating layer card is open. */}
+      {cinematicTimeline && (
+        <div style={{
+          position: 'absolute', bottom: 62, left: '50%', transform: 'translateX(-50%)',
+          width: 'min(880px, calc(100% - 64px))', height: timelineHeight,
+          zIndex: 6,
+        }}>
+          <CinematicTimeline
+            progress={cinematicTimeline.progress}
+            beats={cinematicTimeline.beats}
+            tracks={cinematicTimeline.tracks}
+            selectedAsset={cinematicTimeline.selectedAsset}
+            selectedBeat={cinematicTimeline.selectedBeat}
+            editableBeats={cinematicTimeline.editableBeats}
+            expanded={timelineExpanded}
+            onExpandedChange={setTimelineExpanded}
+            onChange={cinematicTimeline.onChange}
+            onBeatMove={cinematicTimeline.onBeatMove}
+            onTrackClipChange={cinematicTimeline.onTrackClipChange}
+          />
         </div>
       )}
 

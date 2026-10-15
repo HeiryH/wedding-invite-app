@@ -1,0 +1,52 @@
+{
+  "mode": "source-alpha",
+  "source": ".einvite-run/source/painted-promise/welcome/exec-d122555f-626a-4fe3-8e90-2081b8b4c3de.png",
+  "assets": [
+    {
+      "id": "groom-hand",
+      "file": "elements/groom-hand.png",
+      "role": "cinematic-prop",
+      "label": "Groom hand and dark formal cuff",
+      "w": 1047,
+      "h": 467,
+      "sourceComponents": [
+        1
+      ]
+    },
+    {
+      "id": "bride-hand",
+      "file": "elements/bride-hand.png",
+      "role": "cinematic-prop",
+      "label": "Bride hand and white bridal lace sleeve",
+      "w": 1141,
+      "h": 430,
+      "sourceComponents": [
+        8
+      ]
+    },
+    {
+      "id": "ring",
+      "file": "elements/ring.png",
+      "role": "cinematic-prop",
+      "label": "Antique-gold ring",
+      "w": 109,
+      "h": 114,
+      "sourceComponents": [
+        4
+      ]
+    },
+    {
+      "id": "shimmer",
+      "file": "elements/shimmer.png",
+      "role": "cinematic-prop",
+      "label": "Antique-gold shimmer accent",
+      "w": 111,
+      "h": 91,
+      "sourceComponents": [
+        3,
+        5,
+        7
+      ]
+    }
+  ]
+}

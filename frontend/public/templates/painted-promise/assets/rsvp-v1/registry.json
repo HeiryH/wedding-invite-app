@@ -1,0 +1,116 @@
+{
+  "mode": "source-alpha",
+  "assets": [
+    {
+      "id": "empty-upholstered-chair",
+      "file": "elements/empty-upholstered-chair.png",
+      "role": "cinematic-prop",
+      "label": "Empty ivory upholstered chair",
+      "w": 475,
+      "h": 740,
+      "sourceComponents": [
+        1
+      ]
+    },
+    {
+      "id": "plate-folded-napkin",
+      "file": "elements/plate-folded-napkin.png",
+      "role": "cinematic-prop",
+      "label": "Plate and folded ivory napkin",
+      "w": 485,
+      "h": 316,
+      "sourceComponents": [
+        2
+      ]
+    },
+    {
+      "id": "clear-glassware",
+      "file": "elements/clear-glassware.png",
+      "role": "cinematic-prop",
+      "label": "Clear non-alcoholic glassware group",
+      "w": 309,
+      "h": 305,
+      "sourceComponents": [
+        3,
+        4
+      ]
+    },
+    {
+      "id": "blank-place-card",
+      "file": "elements/blank-place-card.png",
+      "role": "cinematic-prop",
+      "label": "Blank warm-ivory tent place card",
+      "w": 282,
+      "h": 187,
+      "sourceComponents": [
+        9
+      ]
+    },
+    {
+      "id": "blank-menu-card",
+      "file": "elements/blank-menu-card.png",
+      "role": "cinematic-prop",
+      "label": "Blank warm-ivory menu card",
+      "w": 323,
+      "h": 412,
+      "sourceComponents": [
+        8
+      ]
+    },
+    {
+      "id": "sealed-blush-envelope",
+      "file": "elements/sealed-blush-envelope.png",
+      "role": "cinematic-prop",
+      "label": "Sealed blush envelope with gold wax seal",
+      "w": 347,
+      "h": 233,
+      "sourceComponents": [
+        10
+      ]
+    },
+    {
+      "id": "low-floral-arrangement",
+      "file": "elements/low-floral-arrangement.png",
+      "role": "cinematic-prop",
+      "label": "Low ivory, blush and sage floral arrangement",
+      "w": 854,
+      "h": 422,
+      "sourceComponents": [
+        11
+      ]
+    },
+    {
+      "id": "glass-lantern-candle",
+      "file": "elements/glass-lantern-candle.png",
+      "role": "cinematic-prop",
+      "label": "Antique-gold glass lantern with candle",
+      "w": 236,
+      "h": 381,
+      "sourceComponents": [
+        13
+      ]
+    },
+    {
+      "id": "ribbon-transition",
+      "file": "elements/ribbon-transition.png",
+      "role": "cinematic-prop",
+      "label": "Flowing ivory and blush ribbon transition",
+      "w": 871,
+      "h": 218,
+      "sourceComponents": [
+        37
+      ]
+    },
+    {
+      "id": "floral-confirmation-mark",
+      "file": "elements/floral-confirmation-mark.png",
+      "role": "cinematic-prop",
+      "label": "Small painted floral confirmation mark",
+      "w": 314,
+      "h": 252,
+      "sourceComponents": [
+        36
+      ]
+    }
+  ]
+}
