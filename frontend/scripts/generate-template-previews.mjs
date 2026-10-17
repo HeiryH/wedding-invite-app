@@ -27,6 +27,7 @@ const CODES = [
   'dreamy-woodland',
   'dino-doodle-party',
   'sandy-beach',
+  'painted-promise',
 ];
 
 const BASE = 'http://localhost:3000';
@@ -47,7 +48,8 @@ for (const code of CODES) {
   const page = await context.newPage();
 
   await page.goto(`${BASE}/template-preview/${code}`, { waitUntil: 'domcontentloaded' });
-  // The component signals readiness 1s after mount; the extra wait covers font + art decode.
+  // The page signals readiness after config, the selected chunk, fonts/art and a settling delay.
+  // Keep the extra wait for authored entrance animations before taking the thumbnail.
   await page.waitForSelector('[data-preview-ready]', { timeout: 20000 });
   await page.waitForTimeout(2500);
 

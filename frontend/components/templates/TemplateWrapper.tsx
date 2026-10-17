@@ -1,44 +1,12 @@
 'use client';
 
-import { useMemo } from 'react';
-import { Wedding, Guest, Wish, Photo, ItineraryItem, SeatingTable } from '@/lib/api';
-import Template1 from './Template1';
-import Template2 from './Template2';
-import Template3 from './Template3';
-import Template4 from './Template4';
-import Template5 from './Template5';
-import Template6 from './Template6';
-import Template7 from './Template7';
-import Template8 from './Template8';
-import Template9 from './Template9';
-import Template10 from './Template10';
-import Template11 from './Template11';
-import Template12 from './Template12';
-import Template13 from './Template13';
-import Template14 from './Template14';
-import Template15 from './Template15';
+import { Suspense, useMemo } from 'react';
+import { TEMPLATE_COMPONENTS } from './templateComponents';
+import TemplateLoadBoundary, { TemplateLoading, TemplateReady } from './TemplateLoadBoundary';
+import type { TemplateRenderProps } from './templateTypes';
 import DataTemplate from './_shared/DataTemplate';
 import { useBreakpoint } from './_shared/hooks/useBreakpoint';
-import type { StageDef, SlotProps, EditorHandle } from './_shared/types';
-
-interface TemplateWrapperProps {
-  wedding: Wedding;
-  onRSVP: (data: any) => Promise<void>;
-  onSubmitWish: (data: any) => Promise<void>;
-  onUploadPhoto?: (data: any) => Promise<void>;
-  guests?: Guest[];
-  wishes: Wish[];
-  photos: Photo[];
-  photoBoothEnabled: boolean;
-  coupleMedia?: Photo[];
-  customConfig?: Record<string, string>;
-  itinerary?: ItineraryItem[];
-  // Template 7 needs these to render its seating step and its Adjust panel. They were never
-  // forwarded, which is why the preview iframe showed a seating-less RSVP.
-  seatingEnabled?: boolean;
-  tables?: SeatingTable[];
-  editor?: EditorHandle;
-}
+import type { StageDef, SlotProps } from './_shared/types';
 
 export default function TemplateWrapper({
   wedding,
@@ -55,7 +23,8 @@ export default function TemplateWrapper({
   seatingEnabled,
   tables,
   editor,
-}: TemplateWrapperProps) {
+  onTemplateReady,
+}: TemplateRenderProps & { onTemplateReady?: () => void }) {
   // Pinned by the Adjust panel while editing (matches every hand-coded template's own convention).
   const breakpoint = useBreakpoint(editor?.enabled ? editor.breakpoint : undefined);
 
@@ -92,77 +61,45 @@ export default function TemplateWrapper({
       editor,
     };
     return (
-      <DataTemplate
-        stages={authoredStages}
-        stageIds={Object.keys(authoredStages)}
-        keyPrefix={`ta${wedding.templateId}`}
-        assetRoot=""
-        breakpoint={breakpoint}
-        customConfig={customConfig}
-        slotProps={slotProps}
-        editor={editor}
-      />
+      <>
+        <DataTemplate
+          stages={authoredStages}
+          stageIds={Object.keys(authoredStages)}
+          keyPrefix={`ta${wedding.templateId}`}
+          assetRoot=""
+          breakpoint={breakpoint}
+          customConfig={customConfig}
+          slotProps={slotProps}
+          editor={editor}
+        />
+        <TemplateReady key={wedding.templateId} onReady={onTemplateReady} />
+      </>
     );
   }
 
-  // Map templateId to component
-  const getTemplate = () => {
-    switch (wedding.templateId) {
-      case 1:
-        return Template1;
-      case 2:
-        return Template2;
-      case 3:
-        return Template3;
-      case 4:
-        return Template4;
-      case 5:
-        return Template5;
-      case 6:
-        return Template6;
-      case 7:
-        return Template7;
-      case 8:
-        return Template8;
-      case 9:
-        return Template9;
-      case 10:
-        return Template10;
-      case 11:
-        return Template11;
-      case 12:
-        return Template12;
-      case 13:
-        return Template13;
-      case 14:
-        return Template14;
-      case 15:
-        return Template15;
-      default:
-        return Template1; // Fallback to Template1
-    }
-  };
-
-  // The seven templates take overlapping but not identical prop sets, so the union isn't
-  // directly callable. Each ignores the props it doesn't declare.
-  const TemplateComponent = getTemplate() as unknown as React.ComponentType<TemplateWrapperProps>;
+  const TemplateComponent = TEMPLATE_COMPONENTS[wedding.templateId as keyof typeof TEMPLATE_COMPONENTS] ?? TEMPLATE_COMPONENTS[1];
 
   return (
-    <TemplateComponent
-      wedding={wedding}
-      onRSVP={onRSVP}
-      onSubmitWish={onSubmitWish}
-      onUploadPhoto={onUploadPhoto}
-      guests={guests}
-      wishes={wishes}
-      photos={photos}
-      photoBoothEnabled={photoBoothEnabled}
-      coupleMedia={coupleMedia}
-      customConfig={customConfig}
-      itinerary={itinerary}
-      seatingEnabled={seatingEnabled}
-      tables={tables}
-      editor={editor}
-    />
+    <TemplateLoadBoundary key={wedding.templateId}>
+      <Suspense fallback={<TemplateLoading />}>
+        <TemplateComponent
+          wedding={wedding}
+          onRSVP={onRSVP}
+          onSubmitWish={onSubmitWish}
+          onUploadPhoto={onUploadPhoto}
+          guests={guests}
+          wishes={wishes}
+          photos={photos}
+          photoBoothEnabled={photoBoothEnabled}
+          coupleMedia={coupleMedia}
+          customConfig={customConfig}
+          itinerary={itinerary}
+          seatingEnabled={seatingEnabled}
+          tables={tables}
+          editor={editor}
+        />
+        <TemplateReady onReady={onTemplateReady} />
+      </Suspense>
+    </TemplateLoadBoundary>
   );
 }

@@ -1,24 +1,14 @@
 'use client';
 
 import { useParams } from 'next/navigation';
-import { useEffect, useRef, useState } from 'react';
-import { Wedding } from '@/lib/api/types';
+import { Suspense, useCallback, useEffect, useRef, useState } from 'react';
+import type { Wedding } from '@/lib/api/types';
 import { templateService, templateConfigService } from '@/lib/api';
-import Template1 from '@/components/templates/Template1';
-import Template2 from '@/components/templates/Template2';
-import Template3 from '@/components/templates/Template3';
-import Template4 from '@/components/templates/Template4';
-import Template5 from '@/components/templates/Template5';
-import Template6 from '@/components/templates/Template6';
-import Template7 from '@/components/templates/Template7';
-import Template8 from '@/components/templates/Template8';
-import Template9 from '@/components/templates/Template9';
-import Template10 from '@/components/templates/Template10';
-import Template11 from '@/components/templates/Template11';
-import Template12 from '@/components/templates/Template12';
-import Template13 from '@/components/templates/Template13';
-import Template14 from '@/components/templates/Template14';
-import Template15 from '@/components/templates/Template15';
+import { TEMPLATE_COMPONENTS } from '@/components/templates/templateComponents';
+import { templateIdForCode } from '@/components/templates/templateCatalog';
+import type { TemplateRenderProps } from '@/components/templates/templateTypes';
+import TemplateLoadBoundary, { TemplateLoading, TemplateReady, TemplateUnavailable } from '@/components/templates/TemplateLoadBoundary';
+import { waitForPreviewAssets } from '@/components/templates/previewReadiness';
 
 const DUMMY: Wedding = {
   weddingId: 0,
@@ -98,12 +88,12 @@ const DUMMY_DINO_DOODLE: Wedding = {
 const noOp = () => Promise.resolve();
 
 // Minimal props required by all templates
-const BASE_PROPS = {
+const BASE_PROPS: TemplateRenderProps = {
   wedding: DUMMY,
   onRSVP: noOp,
   onSubmitWish: noOp,
-  wishes: [] as any[],
-  photos: [] as any[],
+  wishes: [],
+  photos: [],
   photoBoothEnabled: false,
 };
 
@@ -146,16 +136,41 @@ const PAINTED_PROMISE_PROPS = {
 
 export default function TemplatePreviewPage() {
   const { code } = useParams<{ code: string }>();
+  // A new route owns new config/readiness state. An old request may not mark a new code ready.
+  return <PreviewForCode key={code} code={code} />;
+}
+
+function previewPropsForCode(code: string, customConfig: Record<string, string>): TemplateRenderProps {
+  const props = { ...BASE_PROPS, customConfig };
+  switch (code) {
+    case 'gilded-arch': return { ...props, wedding: DUMMY_PARTY };
+    case 'engraved-certificate': return { ...props, wedding: DUMMY_CEREMONY };
+    case 'sunny-safari': return { ...props, wedding: DUMMY_SUNNY_SAFARI };
+    case 'dreamy-woodland': return { ...DREAMY_WOODLAND_PROPS, customConfig };
+    case 'dino-doodle-party': return { ...DINO_DOODLE_PROPS, customConfig: {
+      'walimah.body': 'Meet the expedition crew, collect your field kit, and prepare for a wild afternoon of discovery.', ...customConfig,
+    } };
+    case 'painted-promise': return { ...PAINTED_PROMISE_PROPS, customConfig: {
+      'walimah.body': 'We request the pleasure of your company as Aisha and Adam begin their life together.', ...customConfig,
+    } };
+    default: return props;
+  }
+}
+
+function PreviewForCode({ code }: { code: string }) {
   const [ready, setReady] = useState(false);
-  const [configLoaded, setConfigLoaded] = useState(false);
+  const [mounted, setMounted] = useState(false);
   // The template's captured "starting design" (empty if none set) — without this, every preview/
   // thumbnail renders the raw shipped code defaults, never a saved design (e.g. T7's stage layout).
-  const [customConfig, setCustomConfig] = useState<Record<string, string>>({});
+  const [customConfig, setCustomConfig] = useState<Record<string, string>>();
   const rootRef = useRef<HTMLDivElement>(null);
+  const markMounted = useCallback(() => setMounted(true), []);
+  const id = templateIdForCode(code);
+  const TemplateComponent = id === undefined ? undefined : TEMPLATE_COMPONENTS[id];
 
-  // Resolve the template's default config before anything else — readiness below waits on
-  // configLoaded so the page can't signal ready before the real design is applied.
+  // Resolve defaults first so the selected template mounts with its effective starting design.
   useEffect(() => {
+    if (id === undefined) return;
     let cancelled = false;
     (async () => {
       try {
@@ -164,24 +179,21 @@ export default function TemplatePreviewPage() {
         if (!cancelled) setCustomConfig(config);
       } catch {
         if (!cancelled) setCustomConfig({}); // no default set (or lookup failed) — fall back to code defaults
-      } finally {
-        if (!cancelled) setConfigLoaded(true);
       }
     })();
     return () => { cancelled = true; };
-  }, [code]);
+  }, [code, id]);
 
   // Signal readiness (used by the offline generate-previews Playwright script)
   useEffect(() => {
-    if (!configLoaded) return;
-    const t = setTimeout(() => setReady(true), 1000);
-    return () => clearTimeout(t);
-  }, [configLoaded]);
-
-  const props = { ...BASE_PROPS, customConfig };
-  const partyProps = { ...props, wedding: DUMMY_PARTY };
-  const ceremonyProps = { ...props, wedding: DUMMY_CEREMONY };
-  const sunnySafariProps = { ...props, wedding: DUMMY_SUNNY_SAFARI };
+    if (!mounted || !rootRef.current) return;
+    const controller = new AbortController();
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    waitForPreviewAssets(rootRef.current, controller.signal).then(() => {
+      if (!controller.signal.aborted) timer = setTimeout(() => setReady(true), 1000);
+    });
+    return () => { controller.abort(); clearTimeout(timer); };
+  }, [mounted]);
 
   return (
     <div
@@ -195,21 +207,14 @@ export default function TemplatePreviewPage() {
       }}
       {...(ready ? { 'data-preview-ready': 'true' } : {})}
     >
-      {code === 'classic-rose'          && <Template1 {...props} />}
-      {code === 'golden-elegance'       && <Template2 {...props} />}
-      {code === 'garden-romance'        && <Template3 {...props} />}
-      {code === 'minimal-noir'          && <Template4 {...props} />}
-      {code === 'dreaming-floral-sky'   && <Template5 {...props} />}
-      {code === 'fairy-garden'          && <Template6 {...props} />}
-      {code === 'roman-garden'          && <Template7 {...props} />}
-      {code === 'gilded-arch'           && <Template8 {...partyProps} />}
-      {code === 'engraved-certificate'  && <Template9 {...ceremonyProps} />}
-      {code === 'sunny-safari'          && <Template10 {...sunnySafariProps} />}
-      {code === 'rose-horizon'          && <Template11 {...props} />}
-      {code === 'dreamy-woodland'       && <Template12 {...DREAMY_WOODLAND_PROPS} customConfig={customConfig} />}
-      {code === 'dino-doodle-party'     && <Template13 {...DINO_DOODLE_PROPS} customConfig={{ 'walimah.body': 'Meet the expedition crew, collect your field kit, and prepare for a wild afternoon of discovery.', ...customConfig }} />}
-      {code === 'sandy-beach'           && <Template14 {...props} />}
-      {code === 'painted-promise'       && <Template15 {...PAINTED_PROMISE_PROPS} customConfig={{ 'walimah.body': 'We request the pleasure of your company as Aisha and Adam begin their life together.', ...customConfig }} />}
+      {!TemplateComponent ? <TemplateUnavailable /> : customConfig === undefined ? <TemplateLoading /> : (
+        <TemplateLoadBoundary>
+          <Suspense fallback={<TemplateLoading />}>
+            <TemplateComponent {...previewPropsForCode(code, customConfig)} />
+            <TemplateReady onReady={markMounted} />
+          </Suspense>
+        </TemplateLoadBoundary>
+      )}
     </div>
   );
 }
