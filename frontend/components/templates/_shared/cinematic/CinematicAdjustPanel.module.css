@@ -80,6 +80,14 @@
   padding: 14px 15px 18px;
 }
 
+.body[hidden] { display: none; }
+.sidebarTabs { display: flex; flex-shrink: 0; gap: 6px; padding: 10px 14px; border-top: 1px solid var(--border-subtle); background: var(--surface-card); }
+.sidebarTabs button { flex: 1; padding: 9px 12px; border: 1px solid transparent; border-radius: 6px; background: transparent; color: var(--text-muted); font: 600 12px var(--font-ui); cursor: pointer; }
+.sidebarTabs button[aria-selected="true"] { color: var(--brand); background: color-mix(in srgb, var(--brand) 8%, var(--surface-card)); border-color: color-mix(in srgb, var(--brand) 25%, var(--border-subtle)); }
+.sidebarTabs button:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+.directorSettings.directorStandalone { margin: 0; padding: 0; border: 0; }
+.directorStandalone h3 { margin: 0 0 8px; font-size: 15px; font-weight: 650; }
+
 .label {
   margin: 15px 0 7px;
   color: var(--text-muted);
@@ -142,16 +150,25 @@
 }
 
 .layerGroupHeader {
+  width: 100%;
   display: grid;
   grid-template-columns: 8px 1fr auto;
   align-items: center;
   gap: 6px;
   padding: 3px 5px 5px;
+  border: 0;
+  background: transparent;
   color: var(--text-muted);
+  cursor: pointer;
+  font-family: inherit;
   font-size: 9px;
   letter-spacing: .1em;
+  text-align: left;
   text-transform: uppercase;
 }
+
+.layerGroupHeader:disabled { cursor: default; }
+.layerGroupHeader:not(:disabled):hover { color: var(--gold-700); }
 
 .layerGroupHeader small {
   color: var(--text-subtle);
@@ -186,6 +203,18 @@
   background: var(--gold-50);
 }
 
+.layerRowChecked {
+  border-color: color-mix(in srgb, var(--brand) 45%, var(--border-default));
+  background: color-mix(in srgb, var(--brand) 6%, var(--surface-card));
+}
+
+.layerCheck {
+  width: 14px;
+  height: 14px;
+  flex: 0 0 auto;
+  accent-color: var(--brand);
+}
+
 .layerName {
   min-width: 0;
   flex: 1;
@@ -199,6 +228,16 @@
   font-family: inherit;
   font-size: 12.5px;
   text-align: left;
+}
+
+.layerName small {
+  max-width: 100%;
+  overflow: hidden;
+  color: var(--text-subtle);
+  font-size: 9.5px;
+  font-weight: 450;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .iconButton {
@@ -308,6 +347,26 @@
   background: var(--surface-sunken);
 }
 
+.advancedTiming {
+  margin-top: 9px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border-subtle);
+}
+
+.advancedTiming summary {
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 10px;
+  font-weight: 650;
+}
+
+.advancedTiming > p {
+  margin: 6px 0 0;
+  color: var(--text-subtle);
+  font-size: 9.5px;
+  line-height: 1.35;
+}
+
 .timingGrid {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -351,15 +410,72 @@
   border-top: 1px solid var(--border-subtle);
 }
 
-.transitionGrid > div {
-  display: grid;
-  grid-template-columns: 54px 1fr 1fr;
-  align-items: center;
-  gap: 5px;
+.transitionCard {
+  overflow: hidden;
+  border: 1px solid var(--border-subtle);
+  border-radius: 7px;
+  background: var(--surface-card);
 }
 
-.transitionGrid span { color: var(--text-muted); font-size: 10px; }
-.transitionGrid select {
+.transitionHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 7px 8px;
+  border-bottom: 1px solid var(--border-subtle);
+  background: color-mix(in srgb, var(--surface-sunken) 72%, var(--surface-card));
+}
+
+.transitionHeader > div {
+  display: grid;
+  gap: 1px;
+}
+
+.transitionHeader strong {
+  color: var(--text-strong);
+  font-size: 10.5px;
+}
+
+.transitionHeader span {
+  color: var(--text-subtle);
+  font-size: 8.5px;
+}
+
+.transitionHeader button {
+  padding: 4px 7px;
+  border: 1px solid var(--border-default);
+  border-radius: 5px;
+  background: var(--surface-card);
+  color: var(--text-muted);
+  cursor: pointer;
+  font: 600 9px var(--font-ui);
+}
+
+.transitionHeader button:disabled {
+  cursor: default;
+  opacity: .4;
+}
+
+.transitionFields {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 7px;
+  padding: 8px;
+}
+
+.transitionFields label {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.transitionFields label > span {
+  color: var(--text-muted);
+  font-size: 9px;
+}
+
+.transitionFields select {
   min-width: 0;
   height: 28px;
   padding: 3px 5px;
@@ -368,6 +484,28 @@
   background: var(--surface-card);
   color: var(--text-strong);
   font: 10px var(--font-ui);
+}
+
+.transitionFields .transitionStrength {
+  grid-column: 1 / -1;
+  grid-template-columns: 58px minmax(0, 1fr) 34px;
+  align-items: center;
+  gap: 6px;
+}
+
+.transitionStrength input { min-width: 0; accent-color: var(--gold-500, #a87621); }
+.transitionStrength output {
+  color: var(--text-muted);
+  font: 9.5px var(--font-mono);
+  text-align: right;
+}
+
+.transitionHint {
+  grid-column: 1 / -1;
+  margin: 0;
+  color: var(--text-subtle);
+  font-size: 9px;
+  line-height: 1.35;
 }
 
 .timingLinkButton {
@@ -381,6 +519,170 @@
   cursor: pointer;
   font: 600 10.5px var(--font-ui);
 }
+
+.timingSourceField {
+  display: grid;
+  gap: 4px;
+  margin-top: 9px;
+  color: var(--text-muted);
+  font-size: 10px;
+}
+
+.timingSourceField select {
+  width: 100%;
+  height: 30px;
+  padding: 4px 7px;
+  border: 1px solid var(--border-default);
+  border-radius: 6px;
+  background: var(--surface-card);
+  color: var(--text-strong);
+  font: 11px var(--font-ui);
+}
+
+.organizeTimingButton {
+  width: 100%;
+  margin-top: 7px;
+  padding: 7px;
+  border: 1px solid var(--border-default);
+  border-radius: 7px;
+  background: var(--surface-card);
+  color: var(--text-muted);
+  cursor: pointer;
+  font: 600 10.5px var(--font-ui);
+}
+
+.timingSelectionBar {
+  display: grid;
+  gap: 7px;
+  margin-top: 8px;
+  padding: 9px;
+  border: 1px solid color-mix(in srgb, var(--brand) 36%, var(--border-default));
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--brand) 5%, var(--surface-card));
+}
+
+.timingSelectionBar > div:first-child { display: grid; gap: 2px; }
+.timingSelectionBar strong { font-size: 11px; }
+.timingSelectionBar span { color: var(--text-muted); font-size: 9.5px; line-height: 1.35; }
+.timingSelectionBar input,
+.setEditorHeader input {
+  min-width: 0;
+  height: 29px;
+  padding: 4px 7px;
+  border: 1px solid var(--border-default);
+  border-radius: 6px;
+  background: var(--surface-card);
+  color: var(--text-strong);
+  font: 11px var(--font-ui);
+}
+
+.timingSelectionBar > div:last-child,
+.setActions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+
+.timingSelectionBar button,
+.setActions > button {
+  padding: 7px;
+  border: 1px solid var(--border-default);
+  border-radius: 6px;
+  background: var(--surface-card);
+  color: var(--text-muted);
+  cursor: pointer;
+  font: 600 10px var(--font-ui);
+}
+
+.timingSelectionBar button:disabled { cursor: default; opacity: .45; }
+
+.customSets {
+  display: grid;
+  gap: 4px;
+  margin-top: 10px;
+}
+
+.customSets > span {
+  color: var(--text-muted);
+  font-size: 9.5px;
+}
+
+.customSets button {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 7px 8px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 6px;
+  background: var(--surface-card);
+  color: var(--text-strong);
+  cursor: pointer;
+  font-family: var(--font-ui);
+}
+
+.customSets button strong { font-size: 10.5px; font-weight: 600; }
+.customSets button small { color: var(--text-subtle); font-size: 9px; }
+.customSets .customSetActive { border-color: var(--gold-400); background: var(--gold-50); }
+
+.setEditor {
+  margin-top: 8px;
+  padding: 9px;
+  border: 1px solid var(--gold-300, var(--border-subtle));
+  border-radius: 8px;
+  background: var(--surface-sunken);
+}
+
+.setEditorHeader {
+  display: grid;
+  grid-template-columns: 1fr 26px;
+  align-items: center;
+  gap: 6px;
+}
+
+.setEditorHeader > strong { font-size: 11px; }
+.setEditorHeader > button {
+  height: 26px;
+  border: 0;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 18px;
+}
+
+.setActions { margin-top: 9px; }
+.setActions .dangerButton { margin: 0; background: var(--surface-card); }
+
+.deleteSetConfirm {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  padding: 8px;
+  border: 1px solid color-mix(in srgb, var(--danger, #b42318) 34%, var(--border-default));
+  border-radius: 7px;
+  background: color-mix(in srgb, var(--danger, #b42318) 5%, var(--surface-card));
+}
+
+.deleteSetConfirm p {
+  grid-column: 1 / -1;
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 10px;
+  line-height: 1.4;
+}
+
+.deleteSetConfirm button {
+  padding: 6px;
+  border: 1px solid var(--border-default);
+  border-radius: 5px;
+  background: var(--surface-card);
+  color: var(--text-muted);
+  cursor: pointer;
+  font: 600 9.5px var(--font-ui);
+}
+
+.deleteSetConfirm button:last-child { color: var(--danger, #b42318); }
 
 .cameraActions {
   display: grid;
@@ -457,6 +759,11 @@
   background: color-mix(in srgb, var(--danger, #b42318) 5%, var(--surface-card));
 }
 
+.deleteMomentConfirm strong {
+  color: var(--text-strong);
+  font-size: 11px;
+}
+
 .deleteMomentConfirm p {
   margin: 0;
   color: var(--text-muted);
@@ -464,7 +771,31 @@
   line-height: 1.45;
 }
 
-.deleteMomentConfirm > div {
+.deleteMomentConfirm ul {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding-left: 17px;
+  color: var(--text-muted);
+  font-size: 10.5px;
+  line-height: 1.35;
+}
+
+.deleteMomentConfirm li small {
+  display: block;
+  color: var(--text-subtle);
+  font-size: 9.5px;
+}
+
+.deleteMomentConfirm .functionalWarning {
+  padding: 7px;
+  border-radius: 5px;
+  background: color-mix(in srgb, var(--danger, #b42318) 10%, transparent);
+  color: var(--danger, #b42318);
+  font-weight: 650;
+}
+
+.deleteMomentActions {
   display: grid;
   grid-template-columns: 1fr 1.4fr;
   gap: 6px;
@@ -473,6 +804,44 @@
 .deleteMomentConfirm .deleteBeat { grid-column: auto; }
 
 .cameraActions button:disabled { cursor: default; opacity: .4; }
+
+.deletedMoments {
+  display: grid;
+  gap: 6px;
+  margin-top: 10px;
+  padding: 10px;
+  border: 1px dashed var(--border-default);
+  border-radius: 9px;
+  background: var(--surface-sunken);
+}
+
+.deletedMoments > strong {
+  color: var(--text-strong);
+  font-size: 11px;
+}
+
+.deletedMoments > p {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 10.5px;
+  line-height: 1.4;
+}
+
+.deletedMoments > div {
+  display: grid;
+  gap: 5px;
+}
+
+.deletedMoments button {
+  padding: 7px 8px;
+  border: 1px solid var(--border-default);
+  border-radius: 6px;
+  background: var(--surface-card);
+  color: var(--gold-700);
+  cursor: pointer;
+  font: 600 10.5px/1.2 var(--font-ui);
+  text-align: left;
+}
 
 .control {
   display: grid;
@@ -730,3 +1099,53 @@
   margin-top: 9px;
   background: var(--surface-card);
 }
+.sceneSetsManager { margin-bottom: 20px; }
+.sceneSetsHeading { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 8px; }
+.sceneSetsHeading strong { font-size: 13px; }
+.sceneSetsManager button { font: inherit; cursor: pointer; }
+.sceneSetsManager button:disabled { opacity: .45; cursor: default; }
+.sceneSetsHeading button, .sceneSetActions button, .sceneSetRowActions button { border: 1px solid var(--border-default); border-radius: 6px; color: var(--text-body); background: var(--surface-card); padding: 6px 8px; font-size: 11px; }
+.sceneSetList { display: grid; gap: 4px; margin-top: 12px; max-height: 240px; overflow-y: auto; overscroll-behavior: contain; padding: 2px; scrollbar-gutter: stable; }
+.sceneSetList:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+.sceneSetRow { border: 1px solid var(--border-subtle); border-radius: 8px; padding: 8px; background: var(--surface-card); }
+.sceneSetSelected { border-color: var(--brand); background: var(--surface-sunken); }
+.sceneSetName { display: grid; gap: 4px; text-align: left; width: 100%; border: 0; background: none; padding: 0 0 8px; color: var(--text-body); }
+.sceneSetName strong { font-size: 12px; font-weight: 600; }
+.sceneSetName small { color: var(--text-muted); font-size: 10px; }
+.sceneSetRowActions { display: flex; gap: 5px; }
+.sceneSetRowActions button:nth-child(2) { margin-right: auto; }
+.sceneSetForm { display: grid; gap: 12px; padding: 12px; margin: 10px 0; border: 1px solid var(--border-default); border-radius: 8px; background: var(--surface-sunken); }
+.sceneSetForm label { display: grid; gap: 5px; font-size: 11px; color: var(--text-muted); }
+.sceneSetActions { display: flex; flex-wrap: wrap; gap: 8px; }
+.sceneSetsManager button:focus-visible, .sceneSetsManager input:focus-visible, .sceneSetsManager select:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+.directorSettings { margin: 14px 0; border-top: 1px solid var(--border, #dedbd5); border-bottom: 1px solid var(--border, #dedbd5); padding: 14px 0; }
+.directorSettings summary { font-weight: 600; cursor: pointer; padding: 4px 0; }
+.directorTabs { display: flex; flex-wrap: wrap; gap: 6px; margin: 12px 0; }
+.directorTabs button { border: 1px solid #dedbd5; border-radius: 5px; padding: 7px 10px; background: transparent; color: inherit; font-size: 12px; cursor: pointer; }
+.directorTabs button[aria-selected="true"] { background: var(--brand, #426a8b); color: white; border-color: var(--brand, #426a8b); }
+.directorFields { display: flex; flex-direction: column; gap: 12px; font-size: 12px; }
+.directorFields > label, .directorFields fieldset > label { display: grid; grid-template-columns: minmax(80px, 1fr) minmax(0, 1.4fr); align-items: center; gap: 10px; }
+.directorFields input:not([type="checkbox"]), .directorFields select, .directorFields textarea { box-sizing: border-box; min-width: 0; width: 100%; padding: 7px; border: 1px solid #d5d3ce; border-radius: 4px; background: white; color: #30362e; }
+.directorFields fieldset { display: grid; gap: 10px; min-width: 0; margin: 0; padding: 12px; border: 1px solid #dedbd5; border-radius: 5px; }
+.directorFields > button, .directorFields fieldset button { padding: 8px 10px; background: #fff; border: 1px solid #d5d3ce; border-radius: 4px; color: inherit; cursor: pointer; }
+.directorFields p { margin: 0; color: #687063; font-size: 11px; line-height: 1.5; }
+.directorChecks { display: flex; flex-wrap: wrap; gap: 8px 14px; margin-top: 8px; }
+.directorChecks label, .directorFields .directorCheck { display: flex; align-items: center; gap: 6px; }
+.motionGrid { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr) minmax(0, 1fr); gap: 8px; align-items: center; }
+.motionRow { display: contents; }
+.narrativeEditor { border: 1px solid #d5d3ce; border-radius: 6px; overflow: hidden; }
+.narrativeEditor > div:first-child { display: flex; gap: 6px; padding: 6px; border-bottom: 1px solid #dedbd5; }
+.narrativeEditor button { padding: 4px 8px; background: white; border: 1px solid #dedbd5; border-radius: 4px; font-size: 11px; }
+.narrativeEditor :global(.tiptap) { min-height: 90px; max-height: 220px; overflow: auto; padding: 10px; outline: none; font-size: 13px; }
+.narrativeEditor :global(.tiptap:focus-visible) { box-shadow: inset 0 0 0 2px #718362; }
+.assetAnimations { margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--border-subtle); }
+.assetAnimations h4 { margin: 0 0 8px; font-size: 12px; font-weight: 650; }
+.animationFields { min-width: 0; margin: 10px 0 0; padding: 0; border: 0; }
+.animationCard { margin: 8px 0; border: 1px solid var(--border-subtle); border-radius: 6px; }
+.animationCard summary { cursor: pointer; padding: 10px; font-size: 12px; font-weight: 600; overflow-wrap: anywhere; }
+.animationProperties { display: grid; gap: 10px; padding: 0 10px 12px; }
+.animationProperties label { display: flex; flex-direction: column; gap: 5px; min-width: 0; color: var(--text-muted); font-size: 10px; }
+.animationProperties input:not([type="checkbox"]), .animationProperties select, .animationAdd select { box-sizing: border-box; width: 100%; min-width: 0; border: 1px solid var(--border-default); border-radius: 4px; padding: 7px; background: var(--surface-card); color: var(--text-strong); font-size: 12px; }
+.animationProperties .animationEnabled { flex-direction: row; align-items: center; gap: 6px; }
+.animationAdd { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; margin-top: 10px; }
+.animationAdd button { padding: 7px 10px; border: 1px solid var(--border-default); border-radius: 4px; background: var(--surface-card); color: var(--text-strong); font-size: 11px; cursor: pointer; }

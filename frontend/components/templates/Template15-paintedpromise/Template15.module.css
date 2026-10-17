@@ -1,9 +1,9 @@
 .track {
   position: relative;
-  height: 1250svh;
-  background: #8bcafb;
-  color: #4a3a32;
-  font-family: var(--font-ae-eb-garamond), Georgia, serif;
+  height: var(--cinematic-track-desktop, 1250svh);
+  background: var(--cinematic-page, #8bcafb);
+  color: var(--cinematic-ink, #4a3a32);
+  font-family: var(--cinematic-body-font, var(--font-ae-eb-garamond)), Georgia, serif;
 }
 
 .viewport {
@@ -14,7 +14,7 @@
   height: var(--fsvh, 100svh);
   overflow: hidden;
   isolation: isolate;
-  background: #8bcafb;
+  background: var(--cinematic-page, #8bcafb);
 }
 
 :global(html.painted-promise-no-scrollbar) { scrollbar-width: none; }
@@ -29,7 +29,7 @@
   position: absolute;
   left: 50%;
   top: 50%;
-  width: 100vw;
+  width: var(--fvw, 100vw);
   height: var(--fsvh, 100svh);
   transform: translate(-50%, -50%) translate3d(var(--camera-x), var(--camera-y), 0) scale(var(--camera-scale)) rotate(var(--camera-rotate));
   transform-origin: 50% 56%;
@@ -61,54 +61,35 @@
 
 .boardObject {
   position: relative; display: block; width: 100%; height: 100%;
-  border: 0; background: transparent; padding: 0; cursor: pointer; color: #5b4335;
+  border: 0; background: transparent; padding: 0; cursor: pointer; color: var(--cinematic-ink);
 }
 .boardObject:disabled { cursor: move; }
 .boardObject > img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
 .boardCopy { position: absolute; inset: 17% 19% 15%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: .28em; text-align: center; font-size: clamp(6px, .62vw, 13px); line-height: 1.05; }
-.boardCopy strong { font: 600 1.8em/1 var(--font-ae-cormorant), Georgia, serif; margin-bottom: .3em; color: #8e684c; }
+.boardCopy strong { font: 600 1.8em/1 var(--cinematic-display-font); margin-bottom: .3em; color: var(--cinematic-secondary); }
 .boardCopy span { display: grid; grid-template-columns: 3em 1fr; gap: .4em; width: 100%; text-align: left; }
-.boardCopy b { color: #a47154; font-weight: 600; }
+.boardCopy b { color: var(--cinematic-secondary); font-weight: 600; }
 .boardAction {
   position: absolute; left: 50%; bottom: 9%; transform: translateX(-50%);
   padding: .32em .72em; border: 1px solid rgba(164,113,84,.35); border-radius: 999px;
-  background: rgba(255,251,242,.82); color: #8e684c;
+  background: var(--cinematic-panel); color: var(--cinematic-secondary);
   font-size: clamp(5px, .48vw, 10px); letter-spacing: .08em; text-transform: uppercase;
   opacity: 0; transition: opacity .18s ease;
 }
 .boardObject:hover .boardAction,
 .boardObject:focus-visible .boardAction { opacity: 1; }
 
-.welcomeHand, .welcomeRing { will-change: transform, opacity; }
-
-.walimahCopy, .personDetail {
-  position: absolute; z-index: 9; max-width: min(84vw, 520px); padding: clamp(22px, 5vw, 54px);
-  pointer-events: none; color: #4a3a32; text-shadow: 0 1px rgba(255,255,255,.75); transition: opacity .12s linear;
-}
-.walimahCopy { left: 50%; top: 50%; transform: translate(-50%, -50%); text-align: center; width: min(86vw, 610px); }
-.walimahCopy::before, .personDetail::before { content: ''; position: absolute; inset: 0; z-index: -1; background: radial-gradient(ellipse, rgba(255,251,240,.9), rgba(255,251,240,.58) 58%, transparent 76%); filter: blur(3px); }
-.walimahCopy p, .personDetail p { margin: 0 0 .35rem; font-size: clamp(.72rem, 1.3vw, .92rem); letter-spacing: .12em; }
-.walimahCopy h1 { margin: 0; font: 600 clamp(3.2rem, 9vw, 7rem)/.88 var(--font-ae-cormorant), Georgia, serif; color: #9d6c52; }
-.walimahCopy div { max-width: 42ch; margin: 1.1rem auto; font-size: clamp(1rem, 2vw, 1.25rem); line-height: 1.5; }
-.walimahCopy time, .walimahCopy address { display: block; font-size: clamp(.84rem, 1.45vw, 1rem); font-style: normal; line-height: 1.45; }
-
-.personDetail { top: 50%; transform: translateY(-50%); width: min(44vw, 440px); }
-.detailLeft { left: 4vw; text-align: left; }
-.detailRight { right: 4vw; text-align: right; }
-.personDetail h2 { margin: 0 0 .75rem; font: 600 clamp(2.3rem, 6vw, 5rem)/.9 var(--font-ae-cormorant), Georgia, serif; color: #9d6c52; }
-.personDetail div { font-size: clamp(.95rem, 1.8vw, 1.18rem); line-height: 1.45; }
-
-.letterButton, .bookButton { position: relative; border: 0; background: transparent; cursor: pointer; padding: 0; font-family: inherit; color: #5c4235; }
+.letterButton, .bookButton { position: relative; border: 0; background: transparent; cursor: pointer; padding: 0; font-family: inherit; color: var(--cinematic-ink); }
 .letterButton { width: 100%; height: 100%; }
 .letterButton:disabled, .bookButton:disabled { cursor: move; }
 .envelope { position: absolute; left: 50%; bottom: 4%; z-index: 2; width: 62%; max-width: 350px; transform: translateX(-50%); filter: drop-shadow(0 20px 22px rgba(70,42,27,.18)); }
-.letter { position: absolute; left: 50%; bottom: 8%; z-index: 1; width: 82%; max-width: 430px; aspect-ratio: .72; background: linear-gradient(#fffdf7, #f8eddd); border: 1px solid rgba(178,133,90,.32); box-shadow: 0 22px 50px rgba(80,49,30,.2); display: flex; flex-direction: column; align-items: center; justify-content: center; transition: transform .55s cubic-bezier(.22,.7,.2,1); }
-.letter::before, .bookButton span::before { content: ''; position: absolute; inset: 6%; border: 1px solid rgba(184,137,89,.34); pointer-events: none; }
+.letter { position: absolute; left: 50%; bottom: 8%; z-index: 1; width: 82%; max-width: 430px; aspect-ratio: .72; background: var(--cinematic-panel, #fffdf7); border: 1px solid var(--cinematic-border, #b2855a); box-shadow: 0 22px 50px rgba(80,49,30,var(--cinematic-shadow, .2)); display: flex; flex-direction: column; align-items: center; justify-content: center; transition: transform var(--cinematic-open-duration, 550ms) cubic-bezier(.22,.7,.2,1); }
+.letter::before, .bookButton span::before { content: ''; position: absolute; inset: 6%; pointer-events: none; }
 .letter small, .bookButton small { font-size: .82rem; letter-spacing: .1em; }
-.letter strong, .bookButton strong { font: 600 clamp(3.2rem, 10vw, 6rem)/1 var(--font-ae-cormorant), Georgia, serif; color: #ae735f; }
+.letter strong, .bookButton strong { font: 600 clamp(3.2rem, 10cqi, 6rem)/1 var(--cinematic-display-font); color: var(--cinematic-accent); }
 .letter em, .bookButton em { margin-top: 1.2rem; font-size: .82rem; font-style: normal; text-decoration: underline; text-underline-offset: 4px; }
 
-.bookButton { display: block; width: 100%; height: 100%; transition: transform .58s cubic-bezier(.22,.7,.2,1), opacity .58s ease; }
+.bookButton { display: block; width: 100%; height: 100%; transition: transform var(--cinematic-close-duration, 580ms) cubic-bezier(.22,.7,.2,1), opacity var(--cinematic-close-duration, 580ms) ease; }
 .bookClosing { transform: scale(.86) rotate(-1deg); opacity: .15; }
 .bookButton > img { display: block; width: 100%; filter: drop-shadow(0 24px 30px rgba(70,42,27,.22)); }
 .bookButton span { position: absolute; inset: 18% 15% 20%; display: flex; flex-direction: column; align-items: center; justify-content: center; }
@@ -120,19 +101,29 @@
 .memoryFrame:nth-child(2n) { --tilt: 1.5deg; }
 .memoryFrame:nth-child(3n) { --tilt: -1.2deg; }
 .memoryFrame img { width: 100%; height: 100%; object-fit: cover; }
-.memoryFrame span { text-align: center; font: 600 clamp(.55rem, 1.2vw, .9rem)/1.15 var(--font-ae-cormorant), Georgia, serif; color: #ad7961; }
-.photoCaption { position: absolute; left: 50%; bottom: 5%; transform: translateX(-50%); width: 70%; text-align: center; color: #594238; }
-.photoCaption h2 { margin: 0; font: 600 clamp(2.1rem, 6vw, 4rem)/1 var(--font-ae-cormorant), Georgia, serif; color: #a86e58; }
+.memoryFrame span { text-align: center; font: 600 clamp(.55rem, 1.2cqi, .9rem)/1.15 var(--cinematic-display-font); color: var(--cinematic-secondary); }
+.photoCaption { position: absolute; left: 50%; bottom: 5%; transform: translateX(-50%); width: 70%; text-align: center; color: var(--cinematic-ink); }
+.photoCaption h2 { margin: 0; font: 600 clamp(2.1rem, 6cqi, 4rem)/1 var(--cinematic-display-font); color: var(--cinematic-accent); }
 .photoCaption p { margin: .5rem auto 0; max-width: 36ch; font-size: clamp(.78rem, 1.5vw, 1rem); }
 
 .interactionObject { transition: opacity .15s linear; }
-.interactionClosing { animation: cinematic-object-close .62s cubic-bezier(.4,0,.2,1) both; }
+.interactionClosing { animation: cinematic-object-close var(--cinematic-close-duration, 620ms) cubic-bezier(.4,0,.2,1) both; }
 @keyframes cinematic-object-close {
   0%, 35% { opacity: 1; }
   100% { opacity: 0; }
 }
 
-.scrollCue { position: absolute; z-index: 20; left: 50%; bottom: max(18px, env(safe-area-inset-bottom)); transform: translateX(-50%); margin: 0; color: #664c40; font-size: .8rem; letter-spacing: .08em; }
+.narrative { position: relative; width: 100%; padding: clamp(16px, 4cqi, 54px); box-sizing: border-box; color: var(--cinematic-ink); }
+.narrative::before { content: ''; position: absolute; inset: 0; z-index: -1; background: radial-gradient(ellipse, var(--cinematic-panel) 0%, transparent 76%); opacity: .85; border-radius: inherit; }
+.narrative > p { font-size: .8em; margin: 0 0 .6em; letter-spacing: .1em; }
+.narrative h2 { margin: 0; font-weight: 600; line-height: .95; }
+.narrative > div { margin: 1em 0; }
+.narrative time, .narrative address { display: block; font-size: .85em; font-style: normal; line-height: 1.45; }
+.infoBackdrop { position: absolute; inset: 0; z-index: 1000; display: grid; place-items: center; padding: 24px; background: #0007; }
+.infoDialog { max-width: 520px; max-height: 85%; overflow: auto; width: 100%; padding: 24px; border-radius: var(--cinematic-radius); background: var(--cinematic-panel); color: var(--cinematic-ink); box-shadow: 0 26px 70px rgba(0,0,0,var(--cinematic-shadow)); animation: cinematic-dialog-open var(--cinematic-open-duration, 550ms) ease-out; }
+@keyframes cinematic-dialog-open { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+.infoDialog button { float: right; color: inherit; border: 1px solid var(--cinematic-border); background: transparent; border-radius: 6px; padding: 8px 12px; }
+
 .referenceOverlay {
   position: absolute;
   inset: 0;
@@ -165,11 +156,7 @@
 .anchor { position: absolute; left: 0; width: 1px; height: 1px; pointer-events: none; }
 
 @media (max-width: 700px) {
-  .track { height: 1350svh; }
-  .personDetail { width: 47vw; padding: 20px 10px; }
-  .detailLeft { left: 2vw; }
-  .detailRight { right: 2vw; }
-  .personDetail h2 { font-size: clamp(2rem, 9vw, 3.6rem); }
+  .track { height: var(--cinematic-track-mobile, 1350svh); }
   .memoryFrames { width: 52%; top: 44%; gap: 3%; }
   .photoCaption { bottom: 9%; }
 }

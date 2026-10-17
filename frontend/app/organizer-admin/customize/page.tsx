@@ -29,13 +29,27 @@ import { PRESETS, isShadowField, chipOf, useSchemaIndex } from './_components/Sc
 import AdjustPanel from '@/components/templates/_shared/adjust/AdjustPanel';
 import { TEMPLATE_ENGINES, sectionAnchorId } from '@/components/templates/_shared/registry';
 import CinematicAdjustPanel from '@/components/templates/_shared/cinematic/CinematicAdjustPanel';
+import { compileAssetAnimationTracks, retimeAssetAnimation, NEUTRAL_ASSET_MOTION } from '@/components/templates/_shared/cinematic/assetAnimations';
+import { resolveCinematicDirection, saveCinematicDirection } from '@/components/templates/_shared/cinematic/direction';
 import { CINEMATIC_ENGINES, type CinematicEditorMode } from '@/components/templates/_shared/cinematic/registry';
 import { cinematicWorldKey, resolveCinematicWorld, serializeCinematicWorld, type CinematicWorldGeometry, type CinematicWorldLayer } from '@/components/templates/_shared/cinematic/world';
+import { cinematicAncestors } from '@/components/templates/_shared/cinematic/parts';
 import { baseBeatCameras, cinematicCameraKey, resolveCinematicCamera, serializeCinematicCamera, type CinematicBeatCamera } from '@/components/templates/_shared/cinematic/cameraLayout';
-import { cinematicVisibilityKey, resolveCinematicVisibility, serializeCinematicVisibility, type CinematicVisibilitySet } from '@/components/templates/_shared/cinematic/visibility';
+import { resolveCinematicSceneSets } from '@/components/templates/_shared/cinematic/sceneSets';
+import { editCinematicSceneSets, type SceneSetAction } from '@/components/templates/_shared/cinematic/sceneSetEditing';
 import {
-  beatsFromSequence, cinematicSequenceKey, resolveCinematicSequence,
-  removeCinematicNarrativeMoment, resolveCinematicTrackClip,
+  migrateCinematicConfigToProject, resetCinematicProjectConfig,
+  resolveCinematicProjectConfig, updateCinematicProjectValue,
+} from '@/components/templates/_shared/cinematic/project';
+import {
+  cinematicVisibilityKey, promoteLegacyCinematicVisibilityTracks,
+  resolveCinematicVisibility, serializeCinematicVisibility, type CinematicVisibilitySet,
+} from '@/components/templates/_shared/cinematic/visibility';
+import {
+  beatsFromSequence, cinematicSequenceKey, createCinematicTimingSet,
+  deleteCinematicTimingSet, duplicateCinematicTimingSet, linkCinematicLayerTiming,
+  relinkCinematicLayerToGroup, resolveCinematicLayerTiming, resolveCinematicSequence,
+  removeCinematicNarrativeMoment, restoreCinematicNarrativeMoment, unlinkCinematicLayerTiming,
   serializeCinematicSequence, visibilityFromSequence,
   type CinematicCameraTransition, type CinematicSequence, type CinematicSequenceClip,
   type CinematicSequenceTrack,
@@ -819,6 +833,8 @@ export default function CustomizePage() {
   const [adjusting, setAdjusting] = useState(false);
   const [selectedStage, setSelectedStage] = useState<string>('');
   const [selectedLayer, setSelectedLayer] = useState<string | undefined>();
+  const [selectedCinematicTimingTrack, setSelectedCinematicTimingTrack] = useState<string | undefined>();
+  const [cinematicTimingSelectionRequest, setCinematicTimingSelectionRequest] = useState(0);
   const [selectedCinematicBeat, setSelectedCinematicBeat] = useState<string>('');
   const [cinematicProgress, setCinematicProgress] = useState(0.08);
   const [cinematicMode, setCinematicMode] = useState<CinematicEditorMode>('scene');
@@ -878,14 +894,22 @@ export default function CustomizePage() {
     const id = wedding?.templateId;
     const cinematicEngine = id ? CINEMATIC_ENGINES[id] : undefined;
     if (cinematicEngine) {
+      const project = resolveCinematicProjectConfig(cinematicEngine.keyPrefix, draftConfig);
       const sequence = resolveCinematicSequence(
-        cinematicEngine.keyPrefix, cinematicEngine.sequence, draftConfig,
+        cinematicEngine.keyPrefix, cinematicEngine.sequence, project.config,
       ).sequence;
       return {
         family: 'cinematic' as const,
         keyPrefix: cinematicEngine.keyPrefix,
         sequence,
         sequenceDefinition: cinematicEngine.sequence,
+        config: project.config,
+        projectSource: project.source,
+        direction: resolveCinematicDirection(cinematicEngine.keyPrefix, cinematicEngine.direction, draftConfig),
+        sceneSets: resolveCinematicSceneSets(
+          cinematicEngine.keyPrefix, cinematicEngine.sceneSets, project.config,
+        ).sceneSets,
+        sceneSetDefinitions: cinematicEngine.sceneSets,
         beats: beatsFromSequence(sequence),
         world: cinematicEngine.world,
         camera: cinematicEngine.camera,
@@ -936,32 +960,24 @@ export default function CustomizePage() {
     () => layout?.family === 'cinematic' ? layout.beats : [],
     [layout],
   );
+  const deletedCinematicBeats = useMemo(() => {
+    if (layout?.family !== 'cinematic') return [];
+    const activeIds = new Set(layout.sequence.beats.map((beat) => beat.id));
+    return beatsFromSequence({
+      ...layout.sequenceDefinition,
+      beats: layout.sequenceDefinition.beats.filter((beat) => !activeIds.has(beat.id)),
+    });
+  }, [layout]);
   const activeCinematicBeat = cinematicBeats.find((beat) => beat.id === selectedCinematicBeat)
     ?? cinematicBeats[0];
   const cinematicWorldLayers = useMemo(() => layout?.family === 'cinematic'
-    ? resolveCinematicWorld(layout.keyPrefix, layout.world, previewBreakpoint, draftConfig)
-    : [], [layout, previewBreakpoint, draftConfig]);
-  const selectedCinematicAsset = useMemo(() => {
-    if (layout?.family !== 'cinematic' || !selectedLayer) return undefined;
-    const layer = cinematicWorldLayers.find((candidate) => candidate.id === selectedLayer);
-    if (!layer) return undefined;
-    const exact = layout.sequence.tracks.find((candidate) =>
-      candidate.target.type === 'layer' && candidate.target.id === layer.id);
-    const inherited = layout.sequence.tracks.find((candidate) =>
-      candidate.target.type === 'group' && candidate.target.id === layer.group);
-    const track = exact ?? inherited;
-    return {
-      id: layer.id,
-      label: layer.label,
-      trackId: track?.id,
-      timingStatus: exact ? 'independent' as const : inherited ? 'linked' as const : 'always' as const,
-      editableTrackId: exact?.timing.mode === 'independent' ? exact.id : undefined,
-    };
-  }, [layout, selectedLayer, cinematicWorldLayers]);
+    ? resolveCinematicWorld(layout.keyPrefix, layout.world, previewBreakpoint, layout.config,
+      { frames: layout.direction.theme.memory.frames, programmeItems: itinerary.length })
+    : [], [layout, previewBreakpoint, itinerary.length]);
   const cinematicCameraLayout = useMemo(() => layout?.family === 'cinematic'
-    ? resolveCinematicCamera(layout.keyPrefix, layout.camera, layout.beats, previewBreakpoint, draftConfig)
+    ? resolveCinematicCamera(layout.keyPrefix, layout.camera, layout.beats, previewBreakpoint, layout.config)
     : { beatCameras: [] as CinematicBeatCamera[], timeline: [] },
-  [layout, previewBreakpoint, draftConfig]);
+  [layout, previewBreakpoint]);
   const activeCinematicCamera = cinematicCameraLayout.beatCameras.find(
     (camera) => camera.id === activeCinematicBeat?.id,
   );
@@ -969,24 +985,48 @@ export default function CustomizePage() {
     ? composedCamera ?? sampleCamera(cinematicProgress, cinematicCameraLayout.timeline)
     : activeCinematicCamera;
   const cinematicVisibilitySets = useMemo(() => layout?.family === 'cinematic'
-    ? resolveCinematicVisibility(layout.keyPrefix, layout.visibility, previewBreakpoint, draftConfig)
-    : [], [layout, previewBreakpoint, draftConfig]);
+    ? resolveCinematicVisibility(layout.keyPrefix, layout.visibility, previewBreakpoint, layout.config)
+    : [], [layout, previewBreakpoint]);
   const cinematicTimelineTracks = useMemo(() => layout?.family === 'cinematic'
-    ? layout.sequence.tracks.map((track) => {
-        if (track.target.type !== 'group') return track;
-        const visibility = cinematicVisibilitySets.find((set) =>
-          set.id === track.id || set.group === track.target.id);
-        return visibility ? {
-          ...track,
-          clip: {
-            start: visibility.enterStart,
-            enterEnd: visibility.enterEnd,
-            exitStart: visibility.exitStart,
-            end: visibility.exitEnd,
-          },
-        } : track;
-      })
+    ? promoteLegacyCinematicVisibilityTracks(layout.sequence.tracks, cinematicVisibilitySets)
     : [], [layout, cinematicVisibilitySets]);
+  const cinematicAnimationTracks = useMemo(() => compileAssetAnimationTracks(cinematicWorldLayers, cinematicTimelineTracks), [cinematicWorldLayers, cinematicTimelineTracks]);
+  const cinematicDisplayTracks = useMemo(() => [...cinematicTimelineTracks, ...cinematicAnimationTracks], [cinematicTimelineTracks, cinematicAnimationTracks]);
+  const selectedCinematicAsset = useMemo(() => {
+    if (layout?.family !== 'cinematic' || !selectedLayer) return undefined;
+    const layer = cinematicWorldLayers.find((candidate) => candidate.id === selectedLayer);
+    if (!layer) return undefined;
+    const timing = resolveCinematicLayerTiming(layer.id, layer.group, cinematicTimelineTracks, layer.timingTrackId, cinematicWorldLayers);
+    const track = timing.exact ?? timing.inherited;
+    return {
+      id: layer.id,
+      label: layer.label,
+      trackId: track?.id,
+      sourceTrackId: timing.source?.id,
+      timingStatus: timing.status,
+      editableTrackId: timing.status === 'independent' ? timing.exact?.id : undefined,
+    };
+  }, [layout, selectedLayer, cinematicWorldLayers, cinematicTimelineTracks]);
+  const selectedCinematicTimelineItem = useMemo(() => {
+    const track = selectedCinematicTimingTrack
+      ? cinematicDisplayTracks.find((candidate) => candidate.id === selectedCinematicTimingTrack)
+      : undefined;
+    if (!track) return selectedCinematicAsset;
+    return {
+      id: track.id,
+      label: track.label,
+      trackId: track.id,
+      sourceTrackId: track.id,
+      editableTrackId: track.id,
+      timingStatus: 'independent' as const,
+    };
+  }, [selectedCinematicAsset, selectedCinematicTimingTrack, cinematicDisplayTracks]);
+  useEffect(() => {
+    if (selectedCinematicTimingTrack &&
+      !cinematicDisplayTracks.some((track) => track.id === selectedCinematicTimingTrack)) {
+      setSelectedCinematicTimingTrack(undefined);
+    }
+  }, [selectedCinematicTimingTrack, cinematicDisplayTracks]);
   // The dock owns config directly (it lives in this tree, not the iframe): '' deletes the key,
   // restoring a stage to its shipped defaults. This is the whole cross-iframe patch protocol,
   // collapsed to a setState now that the panel and draftConfig share a component tree.
@@ -999,27 +1039,60 @@ export default function CustomizePage() {
     });
   }, []);
 
+  const handleCinematicLayoutChange = useCallback((key: string, value: string) => {
+    if (!layout || layout.family !== 'cinematic') return;
+    setDraftConfig((previous) => updateCinematicProjectValue(
+      layout.keyPrefix, previous, key, value,
+    ));
+  }, [layout]);
+
+  const handleSceneSetAction = useCallback((action: SceneSetAction) => {
+    const engine = wedding?.templateId ? CINEMATIC_ENGINES[wedding.templateId] : undefined;
+    if (!engine) return;
+    const nextConfig = editCinematicSceneSets(engine, draftConfig, action);
+    if (nextConfig === draftConfig) return;
+    // Set management uses discrete actions. Record their boundaries immediately rather than letting
+    // the slider-oriented debounce merge a quick delete/duplicate/reorder into another operation.
+    const before: EditSnapshot = { draftConfig, weddingDraft, sectionOrder };
+    const after: EditSnapshot = { draftConfig: nextConfig, weddingDraft, sectionOrder };
+    setHistory((previous) => {
+      const stack = previous.stack.slice(0, previous.index + 1);
+      if (JSON.stringify(stack.at(-1)) !== JSON.stringify(before)) stack.push(before);
+      stack.push(after);
+      const capped = stack.slice(-100);
+      return { stack: capped, index: capped.length - 1 };
+    });
+    setDraftConfig(nextConfig);
+    if (action.type === 'delete') {
+      setSelectedLayer(undefined);
+      setSelectedCinematicTimingTrack(undefined);
+    }
+  }, [wedding?.templateId, draftConfig, weddingDraft, sectionOrder]);
+
   const handleCinematicWorldChange = useCallback((layers: CinematicWorldLayer[]) => {
     if (!layout || layout.family !== 'cinematic') return;
-    handleLayoutChange(
+    handleCinematicLayoutChange(
       cinematicWorldKey(layout.keyPrefix, previewBreakpoint),
       serializeCinematicWorld(layout.world, previewBreakpoint, layers),
     );
-  }, [layout, previewBreakpoint, handleLayoutChange]);
+  }, [layout, previewBreakpoint, handleCinematicLayoutChange]);
 
   const patchCinematicLayerFromCanvas = useCallback((layerId: string, patch: Partial<CinematicWorldGeometry>) => {
     if (!layout || layout.family !== 'cinematic') return;
+    const target = cinematicWorldLayers.find((layer) => layer.id === layerId);
+    if (!target || target.locked || cinematicAncestors(target, cinematicWorldLayers).some((parent) => parent.locked) ||
+      layout.sceneSets.find((set) => set.id === target.group)?.locked) return;
     handleCinematicWorldChange(cinematicWorldLayers.map((layer) =>
       layer.id === layerId ? { ...layer, ...patch } : layer));
   }, [layout, cinematicWorldLayers, handleCinematicWorldChange]);
 
   const handleCinematicCameraChange = useCallback((cameras: CinematicBeatCamera[]) => {
     if (!layout || layout.family !== 'cinematic') return;
-    handleLayoutChange(
+    handleCinematicLayoutChange(
       cinematicCameraKey(layout.keyPrefix, previewBreakpoint),
       serializeCinematicCamera(layout.camera, layout.beats, cameras, previewBreakpoint),
     );
-  }, [layout, previewBreakpoint, handleLayoutChange]);
+  }, [layout, previewBreakpoint, handleCinematicLayoutChange]);
 
   const patchCinematicCamera = useCallback((patch: Partial<CameraState>, beatId?: string) => {
     if (cinematicMode === 'camera-compose') {
@@ -1038,21 +1111,27 @@ export default function CustomizePage() {
 
   const handleCinematicSequenceChange = useCallback((sequence: CinematicSequence) => {
     if (!layout || layout.family !== 'cinematic') return;
-    handleLayoutChange(
+    handleCinematicLayoutChange(
       cinematicSequenceKey(layout.keyPrefix),
       serializeCinematicSequence(layout.sequenceDefinition, sequence),
     );
-  }, [layout, handleLayoutChange]);
+  }, [layout, handleCinematicLayoutChange]);
 
   const handleCinematicTracksChange = useCallback((tracks: CinematicSequenceTrack[]) => {
     if (!layout || layout.family !== 'cinematic') return;
     handleCinematicSequenceChange({ ...layout.sequence, tracks });
     // Preserve any old breakpoint visibility edits by starting from `cinematicTimelineTracks`,
     // then retire the legacy key once those values live in the versioned sequence.
-    handleLayoutChange(cinematicVisibilityKey(layout.keyPrefix, previewBreakpoint), '');
-  }, [layout, previewBreakpoint, handleCinematicSequenceChange, handleLayoutChange]);
+    handleCinematicLayoutChange(cinematicVisibilityKey(layout.keyPrefix, previewBreakpoint), '');
+  }, [layout, previewBreakpoint, handleCinematicSequenceChange, handleCinematicLayoutChange]);
 
   const patchCinematicTrack = useCallback((id: string, patch: Partial<CinematicSequenceTrack>) => {
+    const animation = cinematicAnimationTracks.find((track) => track.id === id)?.assetAnimation;
+    if (animation) {
+      if (patch.clip) handleCinematicWorldChange(cinematicWorldLayers.map((layer) => layer.id === animation.layerId
+        ? retimeAssetAnimation(layer, animation.animationId, patch.clip!, cinematicTimelineTracks, cinematicWorldLayers) : layer));
+      return;
+    }
     handleCinematicTracksChange(cinematicTimelineTracks.map((track) => track.id === id ? {
       ...track,
       ...patch,
@@ -1062,38 +1141,80 @@ export default function CustomizePage() {
       exit: patch.exit ? { ...track.exit, ...patch.exit } : track.exit,
       timing: patch.timing ? { ...track.timing, ...patch.timing } as CinematicSequenceTrack['timing'] : track.timing,
     } : track));
-  }, [cinematicTimelineTracks, handleCinematicTracksChange]);
+  }, [cinematicAnimationTracks, cinematicWorldLayers, handleCinematicWorldChange, cinematicTimelineTracks, handleCinematicTracksChange]);
+
+  const resetCinematicTrack = useCallback((id: string) => {
+    if (!layout || layout.family !== 'cinematic') return;
+    const animation = cinematicAnimationTracks.find((track) => track.id === id)?.assetAnimation;
+    if (animation) {
+      handleCinematicWorldChange(cinematicWorldLayers.map((layer) => layer.id === animation.layerId ? { ...layer,
+        animations: layer.animations?.map((item) => item.id === animation.animationId ? { ...item, ...NEUTRAL_ASSET_MOTION } : item),
+      } : layer));
+      return;
+    }
+    const shipped = layout.sequenceDefinition.tracks.find((track) => track.id === id);
+    handleCinematicTracksChange(cinematicTimelineTracks.map((track) => {
+      if (track.id !== id) return track;
+      if (shipped) return shipped;
+      return {
+        ...track,
+        timing: { mode: 'independent' as const },
+        clip: { start: 0, enterEnd: 0, exitStart: 1, end: 1 },
+        enter: { kind: 'fade' as const, easing: 'ease-out' as const },
+        exit: { kind: 'fade' as const, easing: 'ease-in' as const },
+      };
+    }));
+  }, [layout, cinematicAnimationTracks, cinematicWorldLayers, handleCinematicWorldChange, cinematicTimelineTracks, handleCinematicTracksChange]);
+
+  const resetCinematicSequence = useCallback(() => {
+    if (!layout || layout.family !== 'cinematic') return;
+    setDraftConfig((previous) => resetCinematicProjectConfig(layout.keyPrefix, previous));
+    const first = layout.sequenceDefinition.beats[0];
+    if (first) {
+      setSelectedCinematicBeat(first.id);
+      setCinematicProgress(first.at);
+    }
+    setSelectedLayer(undefined);
+    setSelectedCinematicTimingTrack(undefined);
+    setCinematicMode('scene');
+    setComposedCamera(undefined);
+  }, [layout]);
 
   const makeCinematicLayerTimingIndependent = useCallback((layerId: string) => {
     if (!layout || layout.family !== 'cinematic') return;
     const layer = cinematicWorldLayers.find((candidate) => candidate.id === layerId);
     if (!layer) return;
-    const exact = cinematicTimelineTracks.find((track) =>
-      track.target.type === 'layer' && track.target.id === layer.id);
-    if (exact) return;
-    const inherited = cinematicTimelineTracks.find((track) =>
-      track.target.type === 'group' && track.target.id === layer.group);
-    const used = new Set(cinematicTimelineTracks.map((track) => track.id));
-    const baseId = `layer-${layer.id}`;
-    let id = baseId;
-    let suffix = 2;
-    while (used.has(id)) id = `${baseId}-${suffix++}`;
-    const clip = inherited
-      ? resolveCinematicTrackClip(inherited, cinematicTimelineTracks)
-      : { start: 0, enterEnd: 0, exitStart: 1, end: 1 };
-    const track: CinematicSequenceTrack = {
-      id, label: layer.label, kind: layer.kind === 'text' ? 'text' : 'asset',
-      target: { type: 'layer', id: layer.id }, timing: { mode: 'independent' }, clip,
-      enter: inherited?.enter ?? { kind: 'fade', easing: 'ease-out' },
-      exit: inherited?.exit ?? { kind: 'fade', easing: 'ease-in' },
-      ownership: inherited?.ownership ?? { kind: 'shared' },
-    };
-    handleCinematicTracksChange([...cinematicTimelineTracks, track]);
+    handleCinematicTracksChange(unlinkCinematicLayerTiming(cinematicTimelineTracks, layer, cinematicWorldLayers));
   }, [layout, cinematicWorldLayers, cinematicTimelineTracks, handleCinematicTracksChange]);
 
-  const relinkCinematicLayerTiming = useCallback((layerId: string) => {
-    handleCinematicTracksChange(cinematicTimelineTracks.filter((track) =>
-      !(track.target.type === 'layer' && track.target.id === layerId)));
+  const relinkCinematicLayerTiming = useCallback((layerId: string, sourceTrackId?: string) => {
+    const layer = cinematicWorldLayers.find((candidate) => candidate.id === layerId);
+    if (!layer) return;
+    handleCinematicTracksChange(sourceTrackId
+      ? linkCinematicLayerTiming(cinematicTimelineTracks, layer, sourceTrackId)
+      : relinkCinematicLayerToGroup(cinematicTimelineTracks, layerId));
+  }, [cinematicWorldLayers, cinematicTimelineTracks, handleCinematicTracksChange]);
+
+  const createCinematicAssetTimingSet = useCallback((label: string, layerIds: string[]) => {
+    const members = layerIds.flatMap((id) => {
+      const layer = cinematicWorldLayers.find((candidate) => candidate.id === id);
+      return layer ? [layer] : [];
+    });
+    if (!members.length) return undefined;
+    const created = createCinematicTimingSet(cinematicTimelineTracks, label, members);
+    handleCinematicTracksChange(created.tracks);
+    return created.setId;
+  }, [cinematicWorldLayers, cinematicTimelineTracks, handleCinematicTracksChange]);
+
+  const duplicateCinematicAssetTimingSet = useCallback((id: string) => {
+    const duplicated = duplicateCinematicTimingSet(cinematicTimelineTracks, id);
+    if (!duplicated.setId) return undefined;
+    handleCinematicTracksChange(duplicated.tracks);
+    return duplicated.setId;
+  }, [cinematicTimelineTracks, handleCinematicTracksChange]);
+
+  const deleteCinematicAssetTimingSet = useCallback((id: string) => {
+    handleCinematicTracksChange(deleteCinematicTimingSet(cinematicTimelineTracks, id));
   }, [cinematicTimelineTracks, handleCinematicTracksChange]);
 
   const normalizeCinematicBeats = useCallback((beats: CinematicSequence['beats']) =>
@@ -1117,7 +1238,7 @@ export default function CustomizePage() {
     handleCinematicSequenceChange({ ...layout.sequence, beats: nextBeats });
 
     const camera = composedCamera ?? sampleCamera(cinematicProgress, cinematicCameraLayout.timeline);
-    handleLayoutChange(
+    handleCinematicLayoutChange(
       cinematicCameraKey(layout.keyPrefix, previewBreakpoint),
       serializeCinematicCamera(
         layout.camera, beatsFromSequence({ ...layout.sequence, beats: nextBeats }),
@@ -1129,7 +1250,7 @@ export default function CustomizePage() {
     setComposedCamera(undefined);
   }, [layout, cinematicProgress, composedCamera, cinematicCameraLayout.timeline,
     cinematicCameraLayout.beatCameras, normalizeCinematicBeats, handleCinematicSequenceChange,
-    handleLayoutChange, previewBreakpoint]);
+    handleCinematicLayoutChange, previewBreakpoint]);
 
   const patchCinematicBeat = useCallback((id: string, patch: Partial<CinematicSequence['beats'][number]>) => {
     if (!layout || layout.family !== 'cinematic') return;
@@ -1154,7 +1275,7 @@ export default function CustomizePage() {
     const duplicate = { ...source, id: duplicateId, label: `${source.label} copy`, at };
     const nextBeats = normalizeCinematicBeats([...layout.sequence.beats, duplicate]);
     handleCinematicSequenceChange({ ...layout.sequence, beats: nextBeats });
-    handleLayoutChange(
+    handleCinematicLayoutChange(
       cinematicCameraKey(layout.keyPrefix, previewBreakpoint),
       serializeCinematicCamera(
         layout.camera, beatsFromSequence({ ...layout.sequence, beats: nextBeats }),
@@ -1165,27 +1286,55 @@ export default function CustomizePage() {
     setCinematicProgress(at);
     setCinematicMode('camera-beat');
   }, [layout, cinematicCameraLayout.beatCameras, normalizeCinematicBeats,
-    handleCinematicSequenceChange, handleLayoutChange, previewBreakpoint]);
+    handleCinematicSequenceChange, handleCinematicLayoutChange, previewBreakpoint]);
 
   const deleteCinematicBeat = useCallback((id: string) => {
     if (!layout || layout.family !== 'cinematic' || layout.sequence.beats.length <= 1) return;
     const removal = removeCinematicNarrativeMoment(layout.sequence, id);
     const nextBeats = normalizeCinematicBeats(removal.sequence.beats);
     handleCinematicSequenceChange({ ...removal.sequence, beats: nextBeats });
-    handleLayoutChange(
+    handleCinematicLayoutChange(
       cinematicCameraKey(layout.keyPrefix, previewBreakpoint),
       serializeCinematicCamera(
         layout.camera, beatsFromSequence({ ...layout.sequence, beats: nextBeats }),
         cinematicCameraLayout.beatCameras.filter((camera) => camera.id !== id), previewBreakpoint,
       ),
     );
-    const nearest = nextBeats.reduce((best, beat) =>
+    const next = nextBeats.find((beat) => beat.id === removal.nextBeatId) ?? nextBeats.reduce((best, beat) =>
       Math.abs(beat.at - cinematicProgress) < Math.abs(best.at - cinematicProgress) ? beat : best,
     nextBeats[0]);
-    setSelectedCinematicBeat(nearest.id);
-    setCinematicProgress(nearest.at);
+    setSelectedCinematicBeat(next.id);
+    setCinematicProgress(next.at);
   }, [layout, cinematicProgress, cinematicCameraLayout.beatCameras, normalizeCinematicBeats,
-    handleCinematicSequenceChange, handleLayoutChange, previewBreakpoint]);
+    handleCinematicSequenceChange, handleCinematicLayoutChange, previewBreakpoint]);
+
+  const restoreDeletedCinematicBeat = useCallback((id: string) => {
+    if (!layout || layout.family !== 'cinematic') return;
+    const restored = restoreCinematicNarrativeMoment(
+      layout.sequenceDefinition, layout.sequence, id,
+    );
+    const beats = normalizeCinematicBeats(restored.beats);
+    const sequence = { ...restored, beats };
+    const projectedBeats = beatsFromSequence(sequence);
+    const restoredBeat = beats.find((beat) => beat.id === id);
+    if (!restoredBeat) return;
+    handleCinematicSequenceChange(sequence);
+
+    const initialCamera = baseBeatCameras(
+      layout.camera, projectedBeats, previewBreakpoint,
+    ).find((camera) => camera.id === id);
+    const cameras = cinematicCameraLayout.beatCameras.filter((camera) => camera.id !== id);
+    if (initialCamera) cameras.push(initialCamera);
+    handleCinematicLayoutChange(
+      cinematicCameraKey(layout.keyPrefix, previewBreakpoint),
+      serializeCinematicCamera(layout.camera, projectedBeats, cameras, previewBreakpoint),
+    );
+    setSelectedCinematicBeat(id);
+    setCinematicProgress(restoredBeat.at);
+    setCinematicMode('camera-beat');
+    setComposedCamera(undefined);
+  }, [layout, previewBreakpoint, cinematicCameraLayout.beatCameras, normalizeCinematicBeats,
+    handleCinematicSequenceChange, handleCinematicLayoutChange]);
 
   const resetCinematicBeat = useCallback((id: string) => {
     if (!layout || layout.family !== 'cinematic') return;
@@ -1198,7 +1347,7 @@ export default function CustomizePage() {
       layout.camera, beatsFromSequence({ ...layout.sequence, beats }), previewBreakpoint,
     ).find((camera) => camera.id === id);
     if (initial) {
-      handleLayoutChange(
+      handleCinematicLayoutChange(
         cinematicCameraKey(layout.keyPrefix, previewBreakpoint),
         serializeCinematicCamera(
           layout.camera, beatsFromSequence({ ...layout.sequence, beats }),
@@ -1209,15 +1358,15 @@ export default function CustomizePage() {
     }
     setCinematicProgress(shipped.at);
   }, [layout, previewBreakpoint, cinematicCameraLayout.beatCameras,
-    normalizeCinematicBeats, handleCinematicSequenceChange, handleLayoutChange]);
+    normalizeCinematicBeats, handleCinematicSequenceChange, handleCinematicLayoutChange]);
 
   const handleCinematicVisibilityChange = useCallback((sets: CinematicVisibilitySet[]) => {
     if (!layout || layout.family !== 'cinematic') return;
-    handleLayoutChange(
+    handleCinematicLayoutChange(
       cinematicVisibilityKey(layout.keyPrefix, previewBreakpoint),
       serializeCinematicVisibility(layout.visibility, sets),
     );
-  }, [layout, previewBreakpoint, handleLayoutChange]);
+  }, [layout, previewBreakpoint, handleCinematicLayoutChange]);
 
   const handleCinematicProgressChange = useCallback((progress: number) => {
     if (!cinematicBeats.length) return;
@@ -1317,7 +1466,8 @@ export default function CustomizePage() {
               mode: cinematicMode,
               cameraOverride: cinematicMode === 'camera-compose' ? composedCamera : undefined,
               referenceSrc: cinematicReferenceVisible ? activeCinematicBeat.referenceSrc : undefined,
-              referenceOpacity: cinematicReferenceOpacity,
+              referenceOpacity: activeCinematicBeat.referenceOpacity ?? cinematicReferenceOpacity,
+              referenceFit: activeCinematicBeat.referenceFit,
             }
           : undefined,
         // The device box the stage pins itself to while revealing — the *emulated* layout size
@@ -1389,6 +1539,7 @@ export default function CustomizePage() {
       if (event.data?.type === 'PREVIEW_CINEMATIC_LAYER_SELECT') {
         const layerId = event.data.layerId as string | undefined;
         setSelectedLayer(layerId);
+        setSelectedCinematicTimingTrack(undefined);
         if (layerId) setCinematicMode('scene');
       }
       if (event.data?.type === 'PREVIEW_CINEMATIC_LAYER_EDIT') {
@@ -1575,7 +1726,10 @@ export default function CustomizePage() {
     if (!weddingId || !wedding) return;
     setSaving(true);
     try {
-      const configToSave = { ...draftConfig, 'section.order': sectionOrder.join(',') };
+      const rawConfig = { ...draftConfig, 'section.order': sectionOrder.join(',') };
+      const configToSave = layout?.family === 'cinematic'
+        ? migrateCinematicConfigToProject(layout.keyPrefix, rawConfig)
+        : rawConfig;
       const tasks: Promise<unknown>[] = [templateConfigService.save(weddingId, configToSave)];
       if (weddingDirty) {
         tasks.push(eventService.update(weddingId, { name1: weddingDraft.brideName, name2: weddingDraft.groomName, eventTitle: weddingDraft.eventTitle, eventDate: weddingDraft.weddingDate, venue: weddingDraft.venue, venueAddress: weddingDraft.venueAddress, maxPax: weddingDraft.maxPax }));
@@ -2198,10 +2352,11 @@ export default function CustomizePage() {
           cinematicTimeline={canAdjust && adjusting && layout?.family === 'cinematic' ? {
             progress: cinematicProgress,
             beats: cinematicBeats,
-            tracks: cinematicTimelineTracks,
-            selectedAsset: selectedCinematicAsset,
+            tracks: cinematicDisplayTracks,
+            selectedAsset: selectedCinematicTimelineItem,
             selectedBeat: activeCinematicBeat?.id,
             editableBeats: cinematicMode === 'camera-beat',
+            dirty: isDirty,
             onChange: handleCinematicProgressChange,
             onBeatMove: (id, progress) => {
               patchCinematicBeat(id, { at: progress });
@@ -2210,6 +2365,17 @@ export default function CustomizePage() {
             },
             onTrackClipChange: (id, clip: CinematicSequenceClip) =>
               patchCinematicTrack(id, { clip }),
+            onTrackSelect: (id) => {
+              setCinematicTimingSelectionRequest((request) => request + 1);
+              setSelectedCinematicTimingTrack(id);
+              setSelectedLayer(cinematicAnimationTracks.find((track) => track.id === id)?.assetAnimation?.layerId);
+              setCinematicMode('scene');
+            },
+            onClearSelection: () => {
+              setSelectedLayer(undefined);
+              setSelectedCinematicTimingTrack(undefined);
+            },
+            onResetTrack: resetCinematicTrack,
           } : undefined}
         />
 
@@ -2242,7 +2408,10 @@ export default function CustomizePage() {
                     { type: 'PREVIEW_SCROLL', sectionId: id }, window.location.origin,
                   );
                 }}
-                onSelectLayer={setSelectedLayer}
+                onSelectLayer={(id) => {
+                  setSelectedLayer(id);
+                  if (id) setSelectedCinematicTimingTrack(undefined);
+                }}
                 onClose={toggleAdjust}
                 onUploadImage={handleAdjustUpload}
                 slotTheme={Boolean(layout.slotTheme)}
@@ -2253,17 +2422,31 @@ export default function CustomizePage() {
             ) : layout?.family === 'cinematic' && activeCinematicBeat ? (
               <CinematicAdjustPanel
                 beats={cinematicBeats}
+                deletedBeats={deletedCinematicBeats}
                 breakpoint={previewBreakpoint}
                 selectedBeat={activeCinematicBeat.id}
                 progress={cinematicProgress}
                 mode={cinematicMode}
                 referenceVisible={cinematicReferenceVisible}
                 referenceOpacity={cinematicReferenceOpacity}
+                direction={layout.direction}
+                onDirectionChange={(direction) => setDraftConfig((previous) => saveCinematicDirection(layout.keyPrefix, previous, direction))}
+                onAddEffectTrack={(id, label) => handleCinematicTracksChange([...cinematicTimelineTracks, {
+                  id, label, kind: 'effect', target: { type: 'effect', id },
+                  ownership: { kind: 'shared' },
+                  timing: { mode: 'independent' }, clip: { start: 0, enterEnd: .1, exitStart: 1, end: 1 },
+                  enter: { kind: 'fade', easing: 'linear' }, exit: { kind: 'cut', easing: 'linear' },
+                }])}
+                onReferenceChange={(patch) => patchCinematicBeat(activeCinematicBeat.id, patch)}
                 layers={cinematicWorldLayers}
+                sceneSets={layout.sceneSets}
+                onSceneSetAction={handleSceneSetAction}
                 selectedLayer={selectedLayer}
                 camera={cinematicEditorCamera}
                 visibilitySets={cinematicVisibilitySets}
                 tracks={cinematicTimelineTracks}
+                selectedTimingTrack={selectedCinematicTimingTrack}
+                timingSelectionRequest={cinematicTimingSelectionRequest}
                 onSelectBeat={(id) => {
                   const beat = cinematicBeats.find((candidate) => candidate.id === id);
                   if (!beat) return;
@@ -2277,7 +2460,10 @@ export default function CustomizePage() {
                 onProgressChange={handleCinematicProgressChange}
                 onModeChange={(mode) => {
                   setCinematicMode(mode);
-                  if (mode !== 'scene') setSelectedLayer(undefined);
+                  if (mode !== 'scene') {
+                    setSelectedLayer(undefined);
+                    setSelectedCinematicTimingTrack(undefined);
+                  }
                   if (mode === 'camera-compose') {
                     setComposedCamera(sampleCamera(cinematicProgress, cinematicCameraLayout.timeline));
                   } else {
@@ -2294,23 +2480,34 @@ export default function CustomizePage() {
                 onResetLayer={(id) => {
                   const initial = resolveCinematicWorld(
                     layout.keyPrefix, layout.world, previewBreakpoint, undefined,
+                    { frames: layout.direction.theme.memory.frames, programmeItems: itinerary.length },
                   ).find((layer) => layer.id === id);
                   if (!initial) return;
                   handleCinematicWorldChange(cinematicWorldLayers.map((layer) =>
                     layer.id === id ? initial : layer));
                 }}
                 onResetWorld={() => {
-                  handleLayoutChange(cinematicWorldKey(layout.keyPrefix, previewBreakpoint), '');
+                  handleCinematicLayoutChange(cinematicWorldKey(layout.keyPrefix, previewBreakpoint), '');
                   setSelectedLayer(undefined);
                 }}
                 onCameraChange={patchCinematicCamera}
                 onTimingTrackChange={patchCinematicTrack}
+                onResetTrack={resetCinematicTrack}
                 onMakeTimingIndependent={makeCinematicLayerTimingIndependent}
                 onRelinkTiming={relinkCinematicLayerTiming}
+                onCreateTimingSet={createCinematicAssetTimingSet}
+                onRenameTimingSet={(id, label) => patchCinematicTrack(id, { label })}
+                onDuplicateTimingSet={duplicateCinematicAssetTimingSet}
+                onDeleteTimingSet={deleteCinematicAssetTimingSet}
+                onSelectTimingTrack={(id) => {
+                  setSelectedCinematicTimingTrack(id);
+                  if (id) setSelectedLayer(cinematicAnimationTracks.find((track) => track.id === id)?.assetAnimation?.layerId);
+                }}
                 onCreateBeat={createCinematicBeat}
                 onRenameBeat={(id, label) => patchCinematicBeat(id, { label })}
                 onDuplicateBeat={duplicateCinematicBeat}
                 onDeleteBeat={deleteCinematicBeat}
+                onRestoreBeat={restoreDeletedCinematicBeat}
                 onTransitionChange={(id, transitionIn: CinematicCameraTransition) =>
                   patchCinematicBeat(id, { transitionIn })}
                 onResetBeat={resetCinematicBeat}
@@ -2326,16 +2523,17 @@ export default function CustomizePage() {
                 }}
                 onCopyCameraToOther={() => {
                   const other: Breakpoint = previewBreakpoint === 'mobile' ? 'desktop' : 'mobile';
-                  handleLayoutChange(
+                  handleCinematicLayoutChange(
                     cinematicCameraKey(layout.keyPrefix, other),
                     serializeCinematicCamera(layout.camera, layout.beats, cinematicCameraLayout.beatCameras, other),
                   );
                 }}
                 onVisibilityChange={handleCinematicVisibilityChange}
                 onResetVisibility={() => {
-                  handleLayoutChange(cinematicVisibilityKey(layout.keyPrefix, previewBreakpoint), '');
+                  handleCinematicLayoutChange(cinematicVisibilityKey(layout.keyPrefix, previewBreakpoint), '');
                   handleCinematicTracksChange(layout.sequenceDefinition.tracks);
                 }}
+                onResetSequence={resetCinematicSequence}
                 onUploadImage={handleAdjustUpload}
                 shippedLayerIds={layout.world.map((layer) => layer.id)}
                 onClose={toggleAdjust}

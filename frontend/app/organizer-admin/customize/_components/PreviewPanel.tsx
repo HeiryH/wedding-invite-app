@@ -75,9 +75,13 @@ interface PreviewPanelProps {
     selectedAsset?: CinematicTimelineAsset;
     selectedBeat?: string;
     editableBeats?: boolean;
+    dirty?: boolean;
     onChange: (progress: number) => void;
     onBeatMove?: (id: string, progress: number) => void;
     onTrackClipChange?: (id: string, clip: CinematicSequenceClip) => void;
+    onTrackSelect?: (id: string) => void;
+    onClearSelection?: () => void;
+    onResetTrack?: (id: string) => void;
   };
 }
 
@@ -102,7 +106,10 @@ export function PreviewPanel({
   const [showSizePanel, setShowSizePanel] = useState(false);
   const [timelineExpanded, setTimelineExpanded] = useState(false);
   const hasCinematicTimeline = Boolean(cinematicTimeline);
-  const timelineHeight = timelineExpanded ? 300 : 148;
+  const timelineHeight = timelineExpanded
+    // All Tracks must keep its screen position while a scrolled track is activated.
+    ? 440
+    : (cinematicTimeline?.selectedAsset?.editableTrackId ? 204 : 148);
 
   const zoom = manualZoom ?? autoZoom;
   const defaultPreset = defaultPresetFor(device);
@@ -457,8 +464,9 @@ export function PreviewPanel({
           being directed and stays reachable while a floating layer card is open. */}
       {cinematicTimeline && (
         <div style={{
-          position: 'absolute', bottom: 62, left: '50%', transform: 'translateX(-50%)',
-          width: 'min(880px, calc(100% - 64px))', height: timelineHeight,
+          position: 'absolute', bottom: 62,
+          left: 'clamp(16px, 2vw, 28px)', right: 'clamp(16px, 2vw, 28px)',
+          height: timelineHeight,
           zIndex: 6,
         }}>
           <CinematicTimeline
@@ -468,11 +476,15 @@ export function PreviewPanel({
             selectedAsset={cinematicTimeline.selectedAsset}
             selectedBeat={cinematicTimeline.selectedBeat}
             editableBeats={cinematicTimeline.editableBeats}
+            dirty={cinematicTimeline.dirty}
             expanded={timelineExpanded}
             onExpandedChange={setTimelineExpanded}
             onChange={cinematicTimeline.onChange}
             onBeatMove={cinematicTimeline.onBeatMove}
             onTrackClipChange={cinematicTimeline.onTrackClipChange}
+            onTrackSelect={cinematicTimeline.onTrackSelect}
+            onClearSelection={cinematicTimeline.onClearSelection}
+            onResetTrack={cinematicTimeline.onResetTrack}
           />
         </div>
       )}

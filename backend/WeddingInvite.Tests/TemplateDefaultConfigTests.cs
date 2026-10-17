@@ -92,6 +92,31 @@ public class TemplateDefaultConfigTests
     }
 
     [Fact]
+    public async Task Capture_CinematicProjectRechunksAfterRemovingLayerLocks()
+    {
+        using var db = new TestDb();
+        var sourceId = SeedWedding(db, "cinematic-source", TemplateId);
+        var svc = ConfigService(db);
+        const string projectKey = "t15.layout.cinematic-project";
+        var document = "{\"version\":1,\"sceneSets\":{},\"layers\":{\"mobile\":{\"layers\":[{\"id\":\"arch\",\"locked\":true,\"x\":40}]},\"desktop\":{}},\"sequence\":{},\"cameras\":{},\"visibility\":{}}";
+        await svc.SaveConfigAsync(sourceId, new()
+        {
+            [projectKey] = $"{{\"version\":1,\"chunks\":1,\"length\":{document.Length}}}",
+            [$"{projectKey}.0"] = document,
+        }, UserRoles.SuperAdmin, "PRO");
+
+        await svc.SetDefaultFromWeddingAsync(TemplateId, sourceId);
+        var captured = await svc.GetDefaultAsync(TemplateId);
+        using var manifest = System.Text.Json.JsonDocument.Parse(captured[projectKey]);
+        var count = manifest.RootElement.GetProperty("chunks").GetInt32();
+        var length = manifest.RootElement.GetProperty("length").GetInt32();
+        var rebuilt = string.Concat(Enumerable.Range(0, count).Select(i => captured[$"{projectKey}.{i}"]));
+        Assert.Equal(length, rebuilt.Length);
+        Assert.DoesNotContain("locked", rebuilt);
+        Assert.Contains("\"id\":\"arch\",\"x\":40", rebuilt);
+    }
+
+    [Fact]
     public async Task Capture_KeepsDesign_DropsCoupleContent()
     {
         using var db = new TestDb();

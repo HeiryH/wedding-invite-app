@@ -1,4 +1,5 @@
 import type { Breakpoint } from '../types';
+import type { CinematicSequenceTrack } from './sequence';
 import type { CinematicLayerGroup } from './world';
 
 export interface CinematicVisibilitySet {
@@ -77,6 +78,37 @@ export function serializeCinematicVisibility(
     if (changed) deltas.push(delta);
   }
   return deltas.length ? JSON.stringify({ sets: deltas }) : '';
+}
+
+/**
+ * Promotes the pre-sequence, breakpoint visibility format into the versioned track model at read
+ * time. Keeping this conversion in one pure function prevents the editor and guest renderer from
+ * drifting during the migration window. The caller retires the legacy key on the next timing edit.
+ */
+export function promoteLegacyCinematicVisibilityTracks(
+  tracks: CinematicSequenceTrack[],
+  sets: CinematicVisibilitySet[],
+): CinematicSequenceTrack[] {
+  if (!sets.length) return tracks;
+  const byId = new Map(sets.map((set) => [set.id, set]));
+  const byGroup = new Map(sets.map((set) => [set.group, set]));
+  let changed = false;
+  const promoted = tracks.map((track) => {
+    if (track.target.type !== 'group') return track;
+    const set = byId.get(track.id) ?? byGroup.get(track.target.id);
+    if (!set) return track;
+    const clip = {
+      start: set.enterStart,
+      enterEnd: set.enterEnd,
+      exitStart: set.exitStart,
+      end: set.exitEnd,
+    };
+    if (track.clip.start === clip.start && track.clip.enterEnd === clip.enterEnd &&
+      track.clip.exitStart === clip.exitStart && track.clip.end === clip.end) return track;
+    changed = true;
+    return { ...track, clip };
+  });
+  return changed ? promoted : tracks;
 }
 
 /** Scroll-scrubbed, reversible visibility with independently directable entrance and exit. */

@@ -1,5 +1,6 @@
 using WeddingInvite.Core.Config;
 using WeddingInvite.Data.Repositories;
+using System.Text.Json;
 
 namespace WeddingInvite.Core.Services
 {
@@ -52,9 +53,33 @@ namespace WeddingInvite.Core.Services
             // the default — whether omitted or resubmitted-as-default — is pruned back to the default.
             var defaults = await GetTemplateDefaultForEventAsync(eventId);
 
+            // A cinematic project is one logical document split into <=3,500-character config rows.
+            // Per-row default pruning could otherwise retain only the changed chunks and later mix
+            // them with chunks from a newer live template default. If any row differs, persist every
+            // submitted row in that project so the manifest/chunks remain an atomic snapshot.
+            var changedCinematicProjectKeys = new HashSet<string>(StringComparer.Ordinal);
+            var projectGroups = config.Keys
+                .Where(CanWrite)
+                .Select(TemplateConfigPolicy.CinematicProjectBaseKey)
+                .Where(p => p != null)
+                .Distinct(StringComparer.Ordinal);
+            foreach (var projectBase in projectGroups)
+            {
+                var submitted = config
+                    .Where(kv => kv.Key == projectBase || kv.Key.StartsWith(projectBase + ".", StringComparison.Ordinal))
+                    .ToDictionary(kv => kv.Key, kv => kv.Value, StringComparer.Ordinal);
+                var inherited = defaults
+                    .Where(kv => kv.Key == projectBase || kv.Key.StartsWith(projectBase + ".", StringComparison.Ordinal))
+                    .ToDictionary(kv => kv.Key, kv => kv.Value, StringComparer.Ordinal);
+                var differs = submitted.Count != inherited.Count || submitted.Any(kv =>
+                    !inherited.TryGetValue(kv.Key, out var value) || value != kv.Value);
+                if (differs) changedCinematicProjectKeys.UnionWith(submitted.Keys);
+            }
+
             var overrides = config
                 .Where(kv => CanWrite(kv.Key))
-                .Where(kv => !(defaults.TryGetValue(kv.Key, out var d) && d == kv.Value))
+                .Where(kv => changedCinematicProjectKeys.Contains(kv.Key) ||
+                    !(defaults.TryGetValue(kv.Key, out var d) && d == kv.Value))
                 .ToDictionary(kv => kv.Key, kv => kv.Value, StringComparer.Ordinal);
 
             await _repo.UpsertAsync(eventId, overrides, CanWrite);
@@ -79,10 +104,13 @@ namespace WeddingInvite.Core.Services
                     kv => kv.Key,
                     // A lock is an editor affordance, not design — see StripLayerLocks. Capturing
                     // one made every invitation of the template open with that layer uneditable.
-                    kv => TemplateConfigPolicy.IsLayoutKey(kv.Key)
+                    kv => TemplateConfigPolicy.IsLayoutKey(kv.Key) &&
+                        TemplateConfigPolicy.CinematicProjectBaseKey(kv.Key) == null
                         ? TemplateConfigPolicy.StripLayerLocks(kv.Value)
                         : kv.Value,
                     StringComparer.Ordinal);
+
+            ReassembleCapturedCinematicProjects(design);
 
             await _defaultRepo.ReplaceAsync(templateId, design);
         }
@@ -96,6 +124,54 @@ namespace WeddingInvite.Core.Services
             var evt = await _eventRepo.GetByIdAsync(eventId);
             if (evt == null) return new Dictionary<string, string>(StringComparer.Ordinal);
             return await _defaultRepo.GetByTemplateIdAsync(evt.TemplateId);
+        }
+
+        /// <summary>
+        /// Lock removal can change chunk lengths. Reassemble each logical project, strip locks from
+        /// the complete JSON document, then rechunk it and update its manifest so capturing a starting
+        /// design can never leave an unreadable project.
+        /// </summary>
+        private static void ReassembleCapturedCinematicProjects(Dictionary<string, string> design)
+        {
+            const int chunkSize = 3500;
+            var projects = design.Keys
+                .Select(TemplateConfigPolicy.CinematicProjectBaseKey)
+                .Where(p => p != null)
+                .Distinct(StringComparer.Ordinal)
+                .ToList();
+            foreach (var projectBase in projects)
+            {
+                if (!design.TryGetValue(projectBase!, out var manifestRaw)) continue;
+                try
+                {
+                    using var manifest = JsonDocument.Parse(manifestRaw);
+                    var root = manifest.RootElement;
+                    var version = root.GetProperty("version").GetInt32();
+                    var count = root.GetProperty("chunks").GetInt32();
+                    if (count < 1) continue;
+                    var parts = Enumerable.Range(0, count)
+                        .Select(i => design.TryGetValue($"{projectBase}.{i}", out var part) ? part : null)
+                        .ToList();
+                    if (parts.Any(p => p == null)) continue;
+                    var stripped = TemplateConfigPolicy.StripLayerLocks(string.Concat(parts.Select(p => p!)));
+                    var chunks = Enumerable.Range(0, (int)Math.Ceiling(stripped.Length / (double)chunkSize))
+                        .Select(i => stripped.Substring(i * chunkSize, Math.Min(chunkSize, stripped.Length - i * chunkSize)))
+                        .ToList();
+                    foreach (var key in design.Keys.Where(k =>
+                        k.StartsWith(projectBase + ".", StringComparison.Ordinal)).ToList()) design.Remove(key);
+                    design[projectBase!] = JsonSerializer.Serialize(new
+                    {
+                        version,
+                        chunks = chunks.Count,
+                        length = stripped.Length,
+                    });
+                    for (var i = 0; i < chunks.Count; i++) design[$"{projectBase}.{i}"] = chunks[i];
+                }
+                catch (JsonException)
+                {
+                    // Preserve malformed source data as-is; project resolution will fall back safely.
+                }
+            }
         }
     }
 }

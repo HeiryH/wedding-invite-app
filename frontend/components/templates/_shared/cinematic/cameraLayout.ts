@@ -97,35 +97,32 @@ export function resolveCinematicCamera(
     return delta ? { ...camera, ...delta, id: camera.id } : camera;
   });
 
-  // Keep the original camera curve intact everywhere except beats the director explicitly edits.
-  // An edited beat is inserted as a keyframe at that beat's scroll position.
-  const timeline = shippedTimeline.map((frame) => ({ ...frame }));
-  for (const beat of beats) {
-    if (!savedById.has(beat.id)) continue;
-    const camera = beatCameras.find((candidate) => candidate.id === beat.id);
-    if (!camera) continue;
-    const replacement: CameraKeyframe = {
-      at: beat.progress, x: camera.x, y: camera.y, scale: camera.scale, rotate: camera.rotate,
+  // Once directing begins, named beats are the authoritative camera path. The shipped curve still
+  // supplies each beat's default framing, but its anonymous interior keyframes must not survive
+  // between visible beats: doing so creates motion the editor cannot display or remove (for
+  // example a 58.5% edited beat followed by an unseen shipped point at 59%). Preserve only the two
+  // story boundaries so the opening and final framing remain compatible.
+  const cameraById = new Map(beatCameras.map((camera) => [camera.id, camera]));
+  const timeline: CameraKeyframe[] = beats.flatMap((beat) => {
+    const camera = cameraById.get(beat.id);
+    return camera ? [{
+      at: beat.progress,
+      x: camera.x,
+      y: camera.y,
+      scale: camera.scale,
+      rotate: camera.rotate,
       transitionIn: beat.transitionIn,
+    }] : [];
+  });
+  const boundary = (at: 0 | 1): CameraKeyframe => {
+    const camera = sampleCamera(at, shippedTimeline);
+    return {
+      at, x: camera.x, y: camera.y, scale: camera.scale, rotate: camera.rotate,
+      transitionIn: at === 1 ? shippedTimeline[shippedTimeline.length - 1]?.transitionIn : undefined,
     };
-    const existing = timeline.findIndex((frame) => Math.abs(frame.at - beat.progress) < 0.00001);
-    if (existing >= 0) timeline[existing] = replacement;
-    else timeline.push(replacement);
-  }
-  timeline.sort((a, b) => a.at - b.at);
-
-  // A non-default transition is itself an explicit directing decision. Give it a real sampled
-  // keyframe even when its camera geometry has not otherwise been edited.
-  for (const beat of beats) {
-    if (!beat.transitionIn || beat.transitionIn === 'ease-out' || savedById.has(beat.id)) continue;
-    const existing = timeline.findIndex((frame) => Math.abs(frame.at - beat.progress) < .00001);
-    if (existing >= 0) {
-      timeline[existing] = { ...timeline[existing], transitionIn: beat.transitionIn };
-      continue;
-    }
-    const sampled = sampleCamera(beat.progress, shippedTimeline);
-    timeline.push({ at: beat.progress, ...sampled, transitionIn: beat.transitionIn });
-  }
+  };
+  if (!timeline.some((frame) => frame.at === 0)) timeline.push(boundary(0));
+  if (!timeline.some((frame) => frame.at === 1)) timeline.push(boundary(1));
   timeline.sort((a, b) => a.at - b.at);
   return { beatCameras, timeline };
 }

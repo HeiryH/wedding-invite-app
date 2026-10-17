@@ -58,6 +58,16 @@ public class TemplateConfigTests
     }
 
     [Theory]
+    [InlineData("t15.layout.cinematic-project", "t15.layout.cinematic-project")]
+    [InlineData("t15.layout.cinematic-project.0", "t15.layout.cinematic-project")]
+    [InlineData("ta16.layout.cinematic-project.12", "ta16.layout.cinematic-project")]
+    [InlineData("t15.layout.mobile.cinematic-world", null)]
+    public void CinematicProjectBaseKey_GroupsManifestAndChunks(string key, string? expected)
+    {
+        Assert.Equal(expected, TemplateConfigPolicy.CinematicProjectBaseKey(key));
+    }
+
+    [Theory]
     [InlineData("t5.layout.mobile.welcome", true)]
     [InlineData("t7.layout.desktop.ceremony-details", true)]
     [InlineData("t12.layout.mobile.x", true)]
@@ -281,5 +291,29 @@ public class TemplateConfigTests
 
         var rows = db.Fresh().TemplateConfigs.Where(c => c.EventId == WeddingId).ToList();
         Assert.Equal(2, rows.Count); // no duplicate rows from the unique (WeddingId, ConfigKey) index
+    }
+
+    [Fact]
+    public async Task Save_CinematicProjectPersistsAllChunksWhenOneDiffersFromTheLiveDefault()
+    {
+        using var db = SeedWedding();
+        var svc = ServiceFor(db);
+        var defaults = new TemplateConfigDefaultRepository(db.Context);
+        const string project = "t15.layout.cinematic-project";
+        await defaults.ReplaceAsync(7, Bag(
+            (project, "{\"version\":1,\"chunks\":2,\"length\":6}"),
+            ($"{project}.0", "AAA"),
+            ($"{project}.1", "BBB")));
+
+        await svc.SaveConfigAsync(WeddingId, Bag(
+            (project, "{\"version\":1,\"chunks\":2,\"length\":6}"),
+            ($"{project}.0", "AAA"),
+            ($"{project}.1", "CCC")), UserRoles.OrganizerAdmin, "PRO");
+
+        // The unchanged first chunk must still be an event override. Otherwise a later live-default
+        // update would combine a new first chunk with this invitation's old second chunk.
+        var rows = db.Fresh().TemplateConfigs.Where(c => c.EventId == WeddingId).ToList();
+        Assert.Equal(3, rows.Count);
+        Assert.Contains(rows, row => row.ConfigKey == $"{project}.0" && row.ConfigValue == "AAA");
     }
 }

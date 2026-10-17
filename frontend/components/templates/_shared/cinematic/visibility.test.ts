@@ -3,6 +3,7 @@ import { PAINTED_PROMISE_VISIBILITY } from '../../Template15-paintedpromise/data
 import {
   cinematicSetOpacity,
   cinematicVisibilityKey,
+  promoteLegacyCinematicVisibilityTracks,
   resolveCinematicVisibility,
   serializeCinematicVisibility,
 } from './visibility';
@@ -29,5 +30,23 @@ describe('cinematic set visibility', () => {
     expect(resolveCinematicVisibility('t15', PAINTED_PROMISE_VISIBILITY, 'mobile', {
       [cinematicVisibilityKey('t15', 'mobile')]: saved,
     }).find((set) => set.id === 'rsvp')?.enterStart).toBe(.8);
+  });
+
+  it('promotes legacy breakpoint timing into sequence tracks without mutating the source', () => {
+    const tracks = [{
+      id: 'dais', label: 'Dais', kind: 'set' as const,
+      target: { type: 'group' as const, id: 'dais' as const },
+      timing: { mode: 'independent' as const },
+      clip: { start: .2, enterEnd: .3, exitStart: .5, end: .6 },
+      enter: { kind: 'fade' as const, easing: 'ease-out' as const },
+      exit: { kind: 'fade' as const, easing: 'ease-in' as const },
+      ownership: { kind: 'shared' as const },
+    }];
+    const promoted = promoteLegacyCinematicVisibilityTracks(tracks, [{
+      id: 'legacy-dais', label: 'Dais', group: 'dais',
+      enterStart: .1, enterEnd: .2, exitStart: .7, exitEnd: .8,
+    }]);
+    expect(promoted[0].clip).toEqual({ start: .1, enterEnd: .2, exitStart: .7, end: .8 });
+    expect(tracks[0].clip).toEqual({ start: .2, enterEnd: .3, exitStart: .5, end: .6 });
   });
 });

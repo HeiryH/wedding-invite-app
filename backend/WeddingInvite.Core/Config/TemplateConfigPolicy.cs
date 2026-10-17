@@ -53,12 +53,25 @@ namespace WeddingInvite.Core.Config
         // of these requires PRO. Matches every template's layout namespace at once, so onboarding
         // T5/T6/… or a new authored template needs no change here.
         private static readonly Regex LayoutKeyPattern = new(@"^ta?\d+\.layout\.", RegexOptions.Compiled);
+        private static readonly Regex CinematicProjectKeyPattern = new(
+            @"^(ta?\d+\.layout\.cinematic-project)(?:\.\d+)?$", RegexOptions.Compiled);
 
         public static bool IsAdminOnly(string key) =>
             AdminOnlyKeys.Contains(key) ||
             AdminOnlyPrefixes.Any(p => key.StartsWith(p, StringComparison.Ordinal));
 
         public static bool IsLayoutKey(string key) => LayoutKeyPattern.IsMatch(key);
+
+        /// <summary>
+        /// Returns the logical project key shared by a cinematic manifest and all of its transport
+        /// chunks. The config store merges template defaults per row, so changed cinematic projects
+        /// must be persisted atomically rather than as independently-pruned chunks.
+        /// </summary>
+        public static string? CinematicProjectBaseKey(string key)
+        {
+            var match = CinematicProjectKeyPattern.Match(key);
+            return match.Success ? match.Groups[1].Value : null;
+        }
 
         /// <summary>
         /// Whether a key holds couple-specific content (excluded from a captured template default).

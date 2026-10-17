@@ -22,7 +22,7 @@ describe('cinematic camera layout', () => {
     expect(desktop.timeline.find((frame) => frame.at === .71)?.x).toBe(-44);
   });
 
-  it('inserts an edited beat into the camera timeline', () => {
+  it('compiles an edited camera path from named beats without hidden shipped points', () => {
     const key = cinematicCameraKey('t15', 'mobile');
     const resolved = resolveCinematicCamera(
       't15', PAINTED_PROMISE_CAMERA, PAINTED_PROMISE_BEATS, 'mobile', {
@@ -31,6 +31,29 @@ describe('cinematic camera layout', () => {
     );
     expect(resolved.beatCameras.find((camera) => camera.id === 'groom')).toMatchObject({ x: 42, scale: 2.8 });
     expect(resolved.timeline.find((frame) => frame.at === 0.4)).toMatchObject({ x: 42, scale: 2.8 });
+    expect(resolved.timeline.some((frame) => frame.at === .59)).toBe(false);
+    expect(resolved.timeline.filter((frame) => frame.at > 0 && frame.at < 1).map((frame) => frame.at))
+      .toEqual(PAINTED_PROMISE_BEATS.map((beat) => beat.progress));
+  });
+
+  it('prevents a hidden shipped keyframe from reversing the dais-to-programme zoom', () => {
+    const key = cinematicCameraKey('t15', 'mobile');
+    const resolved = resolveCinematicCamera(
+      't15', PAINTED_PROMISE_CAMERA, PAINTED_PROMISE_BEATS, 'mobile', {
+        [key]: JSON.stringify({ frames: [
+          { id: 'dais-return', scale: .3 },
+          { id: 'programme-wide', x: -15, y: -23.5, scale: .37 },
+        ] }),
+      },
+    );
+    const segment = resolved.timeline.filter((frame) => frame.at >= .585 && frame.at <= .62);
+    expect(segment.map((frame) => ({ at: frame.at, scale: frame.scale }))).toEqual([
+      { at: .585, scale: .3 },
+      { at: .62, scale: .37 },
+    ]);
+    const middle = sampleCamera(.59, resolved.timeline).scale;
+    expect(middle).toBeGreaterThan(.3);
+    expect(middle).toBeLessThan(.37);
   });
 
   it('serializes only changed camera properties and resets cleanly', () => {

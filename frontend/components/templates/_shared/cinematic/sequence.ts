@@ -1,5 +1,6 @@
 import type { CinematicVisibilitySet } from './visibility';
-import type { CinematicLayerGroup } from './world';
+import type { CinematicLayerGroup, CinematicWorldLayer } from './world';
+import { cinematicAncestors } from './parts';
 
 export const CINEMATIC_SEQUENCE_VERSION = 1 as const;
 
@@ -20,6 +21,8 @@ export type CinematicAssetTransition =
 
 export type CinematicEasing = 'linear' | 'ease-in' | 'ease-out' | 'ease-in-out';
 
+export type CinematicSlideDirection = 'left' | 'right' | 'up' | 'down';
+
 export interface CinematicSequenceBeat {
   id: string;
   label: string;
@@ -29,6 +32,8 @@ export interface CinematicSequenceBeat {
   transitionIn: CinematicCameraTransition;
   referenceSrc?: string;
   referenceLabel?: string;
+  referenceFit?: 'contain' | 'cover' | 'fill';
+  referenceOpacity?: number;
 }
 
 export interface CinematicSequenceClip {
@@ -41,6 +46,12 @@ export interface CinematicSequenceClip {
 export interface CinematicTrackTransition {
   kind: CinematicAssetTransition;
   easing: CinematicEasing;
+  /** Direction of the off-stage endpoint for slide-based transitions. */
+  direction?: CinematicSlideDirection;
+  /** Distance from the composed position, as a percentage of the preview frame. */
+  distance?: number;
+  /** Scale at the off-stage endpoint. 1 keeps the authored size. */
+  scale?: number;
 }
 
 export type CinematicTrackOwnership =
@@ -53,11 +64,13 @@ export type CinematicTrackTiming =
 
 export type CinematicTrackTarget =
   | { type: 'group'; id: CinematicLayerGroup }
-  | { type: 'layer' | 'narrative' | 'effect' | 'interaction'; id: string };
+  | { type: 'set' | 'layer' | 'narrative' | 'effect' | 'interaction'; id: string };
 
 export type CinematicTrackKind = 'set' | 'asset' | 'text' | 'effect' | 'interaction';
 
 export interface CinematicSequenceTrack {
+  /** Editor-only projection of a layer's in-between animation; never stored in the sequence. */
+  assetAnimation?: { layerId: string; animationId: string; label?: string; sourceTrackId?: string; startLimit?: number; endLimit?: number };
   id: string;
   label: string;
   kind: CinematicTrackKind;
@@ -82,7 +95,12 @@ export interface CinematicSequenceIssue {
 
 export interface CinematicMomentRemoval {
   sequence: CinematicSequence;
+  removedBeat?: CinematicSequenceBeat;
   removedTracks: CinematicSequenceTrack[];
+  /** Normalized story span removed before the remaining timeline is compacted back to 0..1. */
+  freedSpan: number;
+  /** The surviving beat whose incoming camera transition now follows the previous moment. */
+  nextBeatId?: string;
 }
 
 type BeatPatch = Partial<Omit<CinematicSequenceBeat, 'id'>> & { id: string; deleted?: boolean };
@@ -100,15 +118,11 @@ const ASSET_TRANSITIONS = new Set<CinematicAssetTransition>([
   'cut', 'fade', 'slide', 'scale', 'fade-slide',
 ]);
 const EASINGS = new Set<CinematicEasing>(['linear', 'ease-in', 'ease-out', 'ease-in-out']);
+const SLIDE_DIRECTIONS = new Set<CinematicSlideDirection>(['left', 'right', 'up', 'down']);
 const TRACK_KINDS = new Set<CinematicTrackKind>(['set', 'asset', 'text', 'effect', 'interaction']);
 const TARGET_TYPES = new Set<CinematicTrackTarget['type']>([
-  'group', 'layer', 'narrative', 'effect', 'interaction',
+  'group', 'set', 'layer', 'narrative', 'effect', 'interaction',
 ]);
-const LAYER_GROUPS = new Set<CinematicLayerGroup>([
-  'background', 'welcome', 'custom', 'venue', 'dais', 'programme', 'table',
-  'table-wishes', 'rsvp', 'wishes', 'memory',
-]);
-
 export const cinematicSequenceKey = (prefix: string) => `${prefix}.layout.cinematic-sequence`;
 
 const clamp = (value: number) => Math.min(1, Math.max(0, value));
@@ -166,6 +180,8 @@ function normalizeBeat(
     at,
     order: finite(value.order, index),
     transitionIn,
+    referenceFit: ['contain', 'cover', 'fill'].includes(value.referenceFit ?? '') ? value.referenceFit : undefined,
+    referenceOpacity: value.referenceOpacity === undefined ? undefined : clamp(finite(value.referenceOpacity, .45)),
   };
 }
 
@@ -192,10 +208,28 @@ function normalizeTransition(
 ): CinematicTrackTransition {
   const kind = ASSET_TRANSITIONS.has(value?.kind) ? value.kind : 'fade';
   const easing = EASINGS.has(value?.easing) ? value.easing : 'ease-in-out';
-  if (kind !== value?.kind || easing !== value?.easing) {
+  const direction = value?.direction === undefined
+    ? undefined
+    : SLIDE_DIRECTIONS.has(value.direction) ? value.direction : undefined;
+  const rawDistance = value?.distance;
+  const distance = rawDistance === undefined
+    ? undefined
+    : Math.min(50, Math.max(0, finite(rawDistance, 6)));
+  const rawScale = value?.scale;
+  const scale = rawScale === undefined
+    ? undefined
+    : Math.min(2, Math.max(.1, finite(rawScale, .86)));
+  if (kind !== value?.kind || easing !== value?.easing ||
+    direction !== value?.direction || distance !== rawDistance || scale !== rawScale) {
     issues.push({ path, message: 'Unknown asset transition was replaced.' });
   }
-  return { kind, easing };
+  return {
+    kind,
+    easing,
+    ...(direction ? { direction } : {}),
+    ...(distance !== undefined ? { distance } : {}),
+    ...(scale !== undefined ? { scale } : {}),
+  };
 }
 
 function normalizeTrack(
@@ -210,7 +244,7 @@ function normalizeTrack(
     return null;
   }
   if (!TRACK_KINDS.has(value.kind) || !value.target || !TARGET_TYPES.has(value.target.type) ||
-    !validId(value.target.id) || (value.target.type === 'group' && !LAYER_GROUPS.has(value.target.id))) {
+    !validId(value.target.id)) {
     issues.push({ path, message: 'Track has an invalid kind or target.' });
     return null;
   }
@@ -414,11 +448,104 @@ export interface CinematicResolvedBeat {
   transitionIn: CinematicCameraTransition;
   referenceSrc?: string;
   referenceLabel?: string;
+  referenceFit?: 'contain' | 'cover' | 'fill';
+  referenceOpacity?: number;
+}
+
+export interface CinematicSnapResult {
+  value: number;
+  beat?: CinematicResolvedBeat;
+}
+
+/** Keeps a clip inside the story while preserving the invariant used by the runtime. */
+export function constrainCinematicClip(clip: CinematicSequenceClip): CinematicSequenceClip {
+  const start = clamp(finite(clip.start, 0));
+  const enterEnd = Math.max(start, clamp(finite(clip.enterEnd, start)));
+  const exitStart = Math.max(enterEnd, clamp(finite(clip.exitStart, enterEnd)));
+  const end = Math.max(exitStart, clamp(finite(clip.end, exitStart)));
+  return { start, enterEnd, exitStart, end };
+}
+
+/** Moves the whole clip without changing either transition span. */
+export function moveCinematicClip(
+  clip: CinematicSequenceClip,
+  requestedDelta: number,
+): CinematicSequenceClip {
+  const delta = Math.max(-clip.start, Math.min(1 - clip.end, requestedDelta));
+  const shifted = (value: number) => Number((value + delta).toFixed(6));
+  return {
+    start: shifted(clip.start),
+    enterEnd: shifted(clip.enterEnd),
+    exitStart: shifted(clip.exitStart),
+    end: shifted(clip.end),
+  };
+}
+
+/** Snaps a story position to the nearest camera beat when it is within the visual threshold. */
+export function snapCinematicStoryValue(
+  value: number,
+  beats: CinematicResolvedBeat[],
+  threshold = .012,
+): CinematicSnapResult {
+  const clamped = clamp(value);
+  const beat = beats.reduce<CinematicResolvedBeat | undefined>((closest, candidate) => {
+    if (Math.abs(candidate.progress - clamped) > threshold) return closest;
+    if (!closest) return candidate;
+    return Math.abs(candidate.progress - clamped) < Math.abs(closest.progress - clamped)
+      ? candidate
+      : closest;
+  }, undefined);
+  return beat ? { value: beat.progress, beat } : { value: clamped };
+}
+
+/** Human-readable story positions for the director UI (for example, “Full dais + 12%”). */
+export function describeCinematicStoryPosition(
+  value: number,
+  beats: CinematicResolvedBeat[],
+): string {
+  if (!beats.length) return `${Math.round(clamp(value) * 100)}%`;
+  const ordered = [...beats].sort((left, right) => left.progress - right.progress);
+  const exact = ordered.find((beat) => Math.abs(beat.progress - value) < .0005);
+  if (exact) return exact.label;
+  const previous = [...ordered].reverse().find((beat) => beat.progress < value);
+  const next = ordered.find((beat) => beat.progress > value);
+  if (!previous) {
+    const amount = Math.round((clamp(value) / Math.max(next?.progress ?? 1, .0001)) * 100);
+    return `Opening + ${amount}%`;
+  }
+  if (!next) {
+    const amount = Math.round(((clamp(value) - previous.progress) /
+      Math.max(1 - previous.progress, .0001)) * 100);
+    return amount ? `${previous.label} + ${amount}%` : previous.label;
+  }
+  const amount = Math.round(((value - previous.progress) /
+    Math.max(next.progress - previous.progress, .0001)) * 100);
+  return amount ? `${previous.label} + ${amount}%` : previous.label;
+}
+
+function cinematicBeatCoordinate(value: number, beats: CinematicResolvedBeat[]): number {
+  const ordered = [...beats].sort((left, right) => left.progress - right.progress);
+  const points = [{ progress: 0 }, ...ordered, { progress: 1 }];
+  const clamped = clamp(value);
+  const rightIndex = points.findIndex((point) => point.progress >= clamped);
+  if (rightIndex <= 0) return 0;
+  const left = points[rightIndex - 1];
+  const right = points[rightIndex];
+  return rightIndex - 1 + ((clamped - left.progress) /
+    Math.max(right.progress - left.progress, .0001));
+}
+
+export function cinematicClipBeatSpan(
+  clip: CinematicSequenceClip,
+  beats: CinematicResolvedBeat[],
+): number {
+  return Math.max(0,
+    cinematicBeatCoordinate(clip.end, beats) - cinematicBeatCoordinate(clip.start, beats));
 }
 
 export function beatsFromSequence(sequence: CinematicSequence): CinematicResolvedBeat[] {
-  return sequence.beats.map(({ id, label, at, transitionIn, referenceSrc, referenceLabel }) => ({
-    id, label, progress: at, transitionIn, referenceSrc, referenceLabel,
+  return sequence.beats.map(({ id, label, at, transitionIn, referenceSrc, referenceLabel, referenceFit, referenceOpacity }) => ({
+    id, label, progress: at, transitionIn, referenceSrc, referenceLabel, referenceFit, referenceOpacity,
   }));
 }
 
@@ -430,17 +557,126 @@ export function removeCinematicNarrativeMoment(
   sequence: CinematicSequence,
   beatId: string,
 ): CinematicMomentRemoval {
+  const ordered = [...sequence.beats].sort((left, right) => left.at - right.at || left.order - right.order);
+  const index = ordered.findIndex((beat) => beat.id === beatId);
+  const removedBeat = ordered[index];
+  if (!removedBeat || ordered.length <= 1) {
+    return { sequence, removedTracks: [], freedSpan: 0 };
+  }
+  const previous = ordered[index - 1];
+  const next = ordered[index + 1];
+  // A beat owns the story span from the midpoint behind it to the midpoint ahead of it. Excising
+  // that whole cell makes the remap continuous and monotonic: values inside the deleted moment
+  // meet at one seam, while everything before/after retains its relative timing.
+  const cutStart = previous ? (previous.at + removedBeat.at) / 2 : 0;
+  const cutEnd = next ? (removedBeat.at + next.at) / 2 : 1;
+  const freedSpan = Math.min(.45, Math.max(.005, cutEnd - cutStart));
+  const remainingRange = Math.max(.001, 1 - freedSpan);
+  const collapse = (value: number) => {
+    if (value <= cutStart) return clamp(value / remainingRange);
+    if (value >= cutEnd) return clamp((value - freedSpan) / remainingRange);
+    return clamp(cutStart / remainingRange);
+  };
   const removedTracks = sequence.tracks.filter((track) =>
     track.ownership.kind === 'beat' && track.ownership.beatId === beatId);
   const removedTrackIds = new Set(removedTracks.map((track) => track.id));
+  const beats = ordered
+    .filter((beat) => beat.id !== beatId)
+    .map((beat, order) => ({ ...beat, at: collapse(beat.at), order }));
+  const tracks = sequence.tracks.flatMap((track) => {
+    if (removedTrackIds.has(track.id)) return [];
+    const sourceWasRemoved = track.timing.mode === 'linked' && removedTrackIds.has(track.timing.trackId);
+    const sourceClip = sourceWasRemoved ? resolveCinematicTrackClip(track, sequence.tracks) : track.clip;
+    return [{
+      ...track,
+      timing: sourceWasRemoved ? { mode: 'independent' as const } : track.timing,
+      clip: constrainCinematicClip({
+        start: collapse(sourceClip.start),
+        enterEnd: collapse(sourceClip.enterEnd),
+        exitStart: collapse(sourceClip.exitStart),
+        end: collapse(sourceClip.end),
+      }),
+    }];
+  });
   return {
     sequence: {
       ...sequence,
-      beats: sequence.beats.filter((beat) => beat.id !== beatId),
-      tracks: sequence.tracks.filter((track) => !removedTrackIds.has(track.id)),
+      beats,
+      tracks,
     },
+    removedBeat,
     removedTracks,
+    freedSpan,
+    nextBeatId: next?.id ?? previous?.id,
   };
+}
+
+/** Restores a shipped narrative moment and its exclusively-owned tracks between surviving beats. */
+export function restoreCinematicNarrativeMoment(
+  definition: CinematicSequence,
+  sequence: CinematicSequence,
+  beatId: string,
+): CinematicSequence {
+  if (sequence.beats.some((beat) => beat.id === beatId)) return sequence;
+  const shipped = definition.beats.find((beat) => beat.id === beatId);
+  if (!shipped) return sequence;
+
+  const shippedOrder = [...definition.beats].sort((left, right) => left.at - right.at || left.order - right.order);
+  const shippedIndex = shippedOrder.findIndex((beat) => beat.id === beatId);
+  const currentById = new Map(sequence.beats.map((beat) => [beat.id, beat]));
+  const previous = [...shippedOrder.slice(0, shippedIndex)].reverse()
+    .map((beat) => currentById.get(beat.id)).find(Boolean);
+  const next = shippedOrder.slice(shippedIndex + 1)
+    .map((beat) => currentById.get(beat.id)).find(Boolean);
+  const shippedPrevious = previous ? definition.beats.find((beat) => beat.id === previous.id) : undefined;
+  const shippedNext = next ? definition.beats.find((beat) => beat.id === next.id) : undefined;
+  let at = shipped.at;
+  if (previous && next && shippedPrevious && shippedNext) {
+    const ratio = (shipped.at - shippedPrevious.at) /
+      Math.max(shippedNext.at - shippedPrevious.at, .0001);
+    at = previous.at + (next.at - previous.at) * ratio;
+  } else if (previous && shippedPrevious) {
+    const ratio = (shipped.at - shippedPrevious.at) / Math.max(1 - shippedPrevious.at, .0001);
+    at = previous.at + (1 - previous.at) * ratio;
+  } else if (next && shippedNext) {
+    at = next.at * (shipped.at / Math.max(shippedNext.at, .0001));
+  }
+
+  const beats = [...sequence.beats, { ...shipped, at: clamp(at) }]
+    .sort((left, right) => left.at - right.at || left.order - right.order)
+    .map((beat, order) => ({ ...beat, order }));
+  const restoredBeatById = new Map(beats.map((beat) => [beat.id, beat]));
+  const anchors = [
+    { from: 0, to: 0 },
+    ...shippedOrder.flatMap((beat) => {
+      const current = restoredBeatById.get(beat.id);
+      return current ? [{ from: beat.at, to: current.at }] : [];
+    }),
+    { from: 1, to: 1 },
+  ].sort((left, right) => left.from - right.from);
+  const mapFromDefinition = (value: number) => {
+    const rightIndex = anchors.findIndex((anchor) => anchor.from >= value);
+    if (rightIndex <= 0) return anchors[0]?.to ?? value;
+    const left = anchors[rightIndex - 1];
+    const right = anchors[rightIndex];
+    const amount = (value - left.from) / Math.max(right.from - left.from, .0001);
+    return clamp(left.to + (right.to - left.to) * amount);
+  };
+  const currentTrackIds = new Set(sequence.tracks.map((track) => track.id));
+  const restoredTracks = definition.tracks.flatMap((track) => {
+    if (currentTrackIds.has(track.id) || track.ownership.kind !== 'beat' ||
+      track.ownership.beatId !== beatId) return [];
+    return [{
+      ...clone(track),
+      clip: constrainCinematicClip({
+        start: mapFromDefinition(track.clip.start),
+        enterEnd: mapFromDefinition(track.clip.enterEnd),
+        exitStart: mapFromDefinition(track.clip.exitStart),
+        end: mapFromDefinition(track.clip.end),
+      }),
+    }];
+  });
+  return { ...sequence, beats, tracks: [...sequence.tracks, ...restoredTracks] };
 }
 
 export function resolveCinematicTrackClip(
@@ -456,13 +692,238 @@ export function resolveCinematicTrackClip(
   return resolveCinematicTrackClip(parent, byId, visited);
 }
 
+/** Resolves the track that ultimately owns a linked clip. */
+export function resolveCinematicTrackSource(
+  track: CinematicSequenceTrack,
+  tracks: CinematicSequenceTrack[] | Map<string, CinematicSequenceTrack>,
+  visited = new Set<string>(),
+): CinematicSequenceTrack {
+  const byId = tracks instanceof Map ? tracks : new Map(tracks.map((candidate) => [candidate.id, candidate]));
+  if (track.timing.mode !== 'linked' || visited.has(track.id)) return track;
+  const parent = byId.get(track.timing.trackId);
+  if (!parent) return track;
+  visited.add(track.id);
+  return resolveCinematicTrackSource(parent, byId, visited);
+}
+
+export interface CinematicLayerTimingMember {
+  id: string;
+  label: string;
+  group: CinematicLayerGroup;
+  kind?: 'img' | 'text' | 'shape' | 'functional';
+  timingTrackId?: string;
+  parentId?: string;
+}
+
+export interface CinematicLayerTimingResolution {
+  exact?: CinematicSequenceTrack;
+  inherited?: CinematicSequenceTrack;
+  source?: CinematicSequenceTrack;
+  status: 'independent' | 'linked' | 'always';
+}
+
+/** Returns both the asset wrapper track and the set that effectively controls its clip. */
+export function resolveCinematicLayerTiming(
+  layerId: string,
+  group: CinematicLayerGroup,
+  tracks: CinematicSequenceTrack[],
+  timingTrackId?: string,
+  layers: CinematicWorldLayer[] = [],
+): CinematicLayerTimingResolution {
+  const exact = tracks.find((track) => track.target.type === 'layer' && track.target.id === layerId)
+    ?? (timingTrackId ? tracks.find((track) => track.id === timingTrackId) : undefined);
+  const member = layers.find((layer) => layer.id === layerId);
+  const parentTrack = member ? cinematicAncestors(member, layers).flatMap((parent) => {
+    const track = tracks.find((item) => item.target.type === 'layer' && item.target.id === parent.id)
+      ?? tracks.find((item) => item.id === parent.timingTrackId);
+    return track ? [track] : [];
+  })[0] : undefined;
+  const inherited = parentTrack ?? tracks.find((track) =>
+    track.target.type === 'group' && track.target.id === group);
+  const effective = exact ?? inherited;
+  if (!effective) return { exact, inherited, status: 'always' };
+  const source = resolveCinematicTrackSource(effective, tracks);
+  return {
+    exact,
+    inherited,
+    source,
+    status: exact?.timing.mode === 'independent' ? 'independent' : 'linked',
+  };
+}
+
+const uniqueTrackId = (tracks: CinematicSequenceTrack[], requested: string) => {
+  const normalized = requested.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
+    .slice(0, 64) || 'timing-set';
+  const used = new Set(tracks.map((track) => track.id));
+  let id = normalized;
+  let suffix = 2;
+  while (used.has(id)) id = `${normalized}-${suffix++}`;
+  return id;
+};
+
+const alwaysClip: CinematicSequenceClip = { start: 0, enterEnd: 0, exitStart: 1, end: 1 };
+const defaultEnter: CinematicTrackTransition = { kind: 'fade', easing: 'ease-out' };
+const defaultExit: CinematicTrackTransition = { kind: 'fade', easing: 'ease-in' };
+
+export function linkCinematicLayerTiming(
+  tracks: CinematicSequenceTrack[],
+  member: CinematicLayerTimingMember,
+  sourceTrackId: string,
+): CinematicSequenceTrack[] {
+  const source = tracks.find((track) => track.id === sourceTrackId);
+  if (!source) return tracks;
+  const timing = resolveCinematicLayerTiming(member.id, member.group, tracks, member.timingTrackId);
+  if (timing.exact) {
+    return tracks.map((track) => track.id === timing.exact!.id
+      ? { ...track, timing: { mode: 'linked', trackId: sourceTrackId } }
+      : track);
+  }
+  const id = uniqueTrackId(tracks, `layer-${member.id}`);
+  return [...tracks, {
+    id,
+    label: member.label,
+    kind: member.kind === 'text' ? 'text' : 'asset',
+    target: { type: 'layer', id: member.id },
+    timing: { mode: 'linked', trackId: sourceTrackId },
+    clip: resolveCinematicTrackClip(source, tracks),
+    enter: source.enter,
+    exit: source.exit,
+    ownership: { kind: 'shared' },
+  }];
+}
+
+export function unlinkCinematicLayerTiming(
+  tracks: CinematicSequenceTrack[],
+  member: CinematicLayerTimingMember,
+  layers?: CinematicWorldLayer[],
+): CinematicSequenceTrack[] {
+  const timing = resolveCinematicLayerTiming(member.id, member.group, tracks, member.timingTrackId, layers);
+  if (timing.exact?.timing.mode === 'independent') return tracks;
+  if (timing.exact) {
+    const clip = resolveCinematicTrackClip(timing.exact, tracks);
+    return tracks.map((track) => track.id === timing.exact!.id
+      ? { ...track, timing: { mode: 'independent' }, clip }
+      : track);
+  }
+  const source = timing.source;
+  const id = uniqueTrackId(tracks, `layer-${member.id}`);
+  return [...tracks, {
+    id,
+    label: member.label,
+    kind: member.kind === 'text' ? 'text' : 'asset',
+    target: { type: 'layer', id: member.id },
+    timing: { mode: 'independent' },
+    clip: source ? resolveCinematicTrackClip(source, tracks) : alwaysClip,
+    enter: source?.enter ?? defaultEnter,
+    exit: source?.exit ?? defaultExit,
+    ownership: source?.ownership ?? { kind: 'shared' },
+  }];
+}
+
+/** Removes an asset wrapper so it follows its built-in scene group again. */
+export function relinkCinematicLayerToGroup(
+  tracks: CinematicSequenceTrack[],
+  layerId: string,
+): CinematicSequenceTrack[] {
+  return tracks.filter((track) =>
+    !(track.target.type === 'layer' && track.target.id === layerId));
+}
+
+export function createCinematicTimingSet(
+  tracks: CinematicSequenceTrack[],
+  label: string,
+  members: CinematicLayerTimingMember[],
+): { tracks: CinematicSequenceTrack[]; setId: string } {
+  const cleanLabel = label.trim() || 'New timing set';
+  const setId = uniqueTrackId(tracks, `set-${cleanLabel}`);
+  const firstTiming = members[0]
+    ? resolveCinematicLayerTiming(members[0].id, members[0].group, tracks)
+    : undefined;
+  const source = firstTiming?.source;
+  let next: CinematicSequenceTrack[] = [...tracks, {
+    id: setId,
+    label: cleanLabel,
+    kind: 'set',
+    target: { type: 'set', id: setId },
+    timing: { mode: 'independent' },
+    clip: source ? resolveCinematicTrackClip(source, tracks) : alwaysClip,
+    enter: source?.enter ?? defaultEnter,
+    exit: source?.exit ?? defaultExit,
+    ownership: { kind: 'shared' },
+  }];
+  for (const member of members) next = linkCinematicLayerTiming(next, member, setId);
+  return { tracks: next, setId };
+}
+
+export function duplicateCinematicTimingSet(
+  tracks: CinematicSequenceTrack[],
+  setId: string,
+): { tracks: CinematicSequenceTrack[]; setId?: string } {
+  const source = tracks.find((track) =>
+    track.id === setId && track.kind === 'set' && track.target.type === 'set');
+  if (!source) return { tracks };
+  const duplicateId = uniqueTrackId(tracks, `${source.id}-copy`);
+  return {
+    tracks: [...tracks, {
+      ...clone(source), id: duplicateId, label: `${source.label} copy`,
+      target: { type: 'set', id: duplicateId }, timing: { mode: 'independent' },
+    }],
+    setId: duplicateId,
+  };
+}
+
+/** Deletes a custom set without changing its assets' current appearance. Linked clips become independent. */
+export function deleteCinematicTimingSet(
+  tracks: CinematicSequenceTrack[],
+  setId: string,
+): CinematicSequenceTrack[] {
+  if (!tracks.some((track) =>
+    track.id === setId && track.kind === 'set' && track.target.type === 'set')) return tracks;
+  return tracks.flatMap((track) => {
+    if (track.id === setId) return [];
+    if (track.timing.mode !== 'linked' || track.timing.trackId !== setId) return [track];
+    return [{ ...track, timing: { mode: 'independent' }, clip: resolveCinematicTrackClip(track, tracks) }];
+  });
+}
+
+export type CinematicTrackLookup = CinematicSequenceTrack[] | Map<string, CinematicSequenceTrack>;
+
+/** True while the playhead is inside a track's effective (possibly linked) clip. */
+export function cinematicTrackIsActive(
+  progress: number,
+  track: CinematicSequenceTrack | undefined,
+  tracks: CinematicTrackLookup,
+): boolean {
+  if (!track) return false;
+  const clip = resolveCinematicTrackClip(track, tracks);
+  return progress >= clip.start && progress <= clip.end;
+}
+
+/**
+ * Normalized 0..1 progress through a track's entrance region. Effects use this instead of keeping
+ * private scroll thresholds in their components; after the entrance finishes the phase holds at 1
+ * until the effective clip ends.
+ */
+export function cinematicTrackPhase(
+  progress: number,
+  track: CinematicSequenceTrack | undefined,
+  tracks: CinematicTrackLookup,
+): number {
+  if (!track) return 0;
+  const clip = resolveCinematicTrackClip(track, tracks);
+  if (progress < clip.start || progress > clip.end) return 0;
+  if (clip.enterEnd <= clip.start || progress >= clip.enterEnd) return 1;
+  return clamp((progress - clip.start) / (clip.enterEnd - clip.start));
+}
+
 export interface CinematicTrackPresentation {
   opacity: number;
   xVw: number;
+  yVh: number;
   scale: number;
 }
 
-const easeAmount = (value: number, easing: CinematicEasing) => {
+export const easeAmount = (value: number, easing: CinematicEasing) => {
   const amount = clamp(value);
   if (easing === 'linear') return amount;
   if (easing === 'ease-in') return amount * amount * amount;
@@ -476,11 +937,13 @@ const easeAmount = (value: number, easing: CinematicEasing) => {
 export function cinematicTrackPresentation(
   progress: number,
   track: CinematicSequenceTrack | undefined,
-  tracks: CinematicSequenceTrack[],
+  tracks: CinematicTrackLookup,
 ): CinematicTrackPresentation {
-  if (!track) return { opacity: 1, xVw: 0, scale: 1 };
+  if (!track) return { opacity: 1, xVw: 0, yVh: 0, scale: 1 };
   const clip = resolveCinematicTrackClip(track, tracks);
-  if (progress < clip.start || progress > clip.end) return { opacity: 0, xVw: 0, scale: 1 };
+  if (progress < clip.start || progress > clip.end) {
+    return { opacity: 0, xVw: 0, yVh: 0, scale: 1 };
+  }
 
   const enterRaw = clip.enterEnd <= clip.start ? 1
     : clamp((progress - clip.start) / (clip.enterEnd - clip.start));
@@ -494,11 +957,18 @@ export function cinematicTrackPresentation(
   const fade = transition.kind === 'fade' || transition.kind === 'fade-slide';
   const slide = transition.kind === 'slide' || transition.kind === 'fade-slide';
   const scale = transition.kind === 'scale';
+  const distance = transition.distance ?? 6;
+  const direction = transition.direction ?? (enteringNow ? 'right' : 'left');
+  const offset = (1 - phase) * distance;
+  const xVw = !slide ? 0 : direction === 'left' ? -offset : direction === 'right' ? offset : 0;
+  const yVh = !slide ? 0 : direction === 'up' ? -offset : direction === 'down' ? offset : 0;
+  const endpointScale = transition.scale ?? .86;
 
   return {
     opacity: fade ? phase : 1,
-    xVw: slide ? (1 - phase) * (enteringNow ? 6 : -6) : 0,
-    scale: scale ? .86 + phase * .14 : 1,
+    xVw,
+    yVh,
+    scale: scale ? endpointScale + phase * (1 - endpointScale) : 1,
   };
 }
 

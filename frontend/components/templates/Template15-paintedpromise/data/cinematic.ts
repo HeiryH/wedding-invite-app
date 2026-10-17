@@ -1,5 +1,6 @@
 import type { CameraKeyframe } from '@/components/templates/_shared/cinematic/useCinematicScroll';
 import type { CinematicWorldLayer } from '@/components/templates/_shared/cinematic/world';
+import type { CinematicSceneSet } from '@/components/templates/_shared/cinematic/sceneSets';
 import {
   beatsFromSequence,
   CINEMATIC_SEQUENCE_VERSION,
@@ -23,6 +24,21 @@ export type PaintedPromiseBeatId =
   | 'memory-wall';
 
 const REFS = '/templates/painted-promise/editor-references';
+
+export const PAINTED_PROMISE_SCENE_SETS: CinematicSceneSet[] = [
+  { id: 'background', label: 'Cloud backdrop', space: 'viewport', z: 0, hidden: false, opacity: 1, locked: true, system: true, behavior: 'background' },
+  { id: 'welcome', label: 'Welcome ring action', space: 'viewport', z: 10, timingTrackId: 'welcome', hidden: false, opacity: 1, locked: false, system: false },
+  { id: 'custom', label: 'Added layers', space: 'viewport', z: 20, hidden: false, opacity: 1, locked: false, system: false },
+  { id: 'venue', label: 'Venue structure', space: 'world', z: 30, hidden: false, opacity: 1, locked: false, system: false },
+  { id: 'dais', label: 'Bridal dais', space: 'world', z: 40, timingTrackId: 'dais', hidden: false, opacity: 1, locked: false, system: false },
+  { id: 'programme', label: 'Programme', space: 'world', z: 50, timingTrackId: 'programme', hidden: false, opacity: 1, locked: false, system: false, behavior: 'programme-board' },
+  { id: 'table', label: 'Reception table', space: 'world', z: 60, timingTrackId: 'table', hidden: false, opacity: 1, locked: false, system: false, behavior: 'return-surface' },
+  { id: 'table-wishes', label: 'Table guest book', space: 'world', z: 70, timingTrackId: 'table-wishes', hidden: false, opacity: 1, locked: false, system: false, behavior: 'post-response-prop' },
+  { id: 'rsvp', label: 'RSVP interaction', space: 'viewport', z: 80, timingTrackId: 'rsvp', hidden: false, opacity: 1, locked: false, system: false, behavior: 'rsvp-trigger' },
+  { id: 'wishes', label: 'Best Wishes interaction', space: 'viewport', z: 90, timingTrackId: 'wishes', hidden: false, opacity: 1, locked: false, system: false, behavior: 'wishes-trigger' },
+  { id: 'memory', label: 'Memory wall', space: 'viewport', z: 100, timingTrackId: 'memory', hidden: false, opacity: 1, locked: false, system: false, behavior: 'memory-wall' },
+  { id: 'narrative', label: 'Invitation words', space: 'viewport', z: 110, hidden: false, opacity: 1, locked: false, system: false },
+];
 
 /**
  * The global story contract. Camera geometry and layer placement remain breakpoint-specific, but
@@ -48,6 +64,13 @@ export const PAINTED_PROMISE_SEQUENCE: CinematicSequence = {
   ],
   tracks: [
     {
+      id: 'cloud-drift', label: 'Cloud drift', kind: 'effect', target: { type: 'effect', id: 'cloud-drift' },
+      timing: { mode: 'independent' },
+      clip: { start: 0, enterEnd: 1, exitStart: 1, end: 1 },
+      enter: { kind: 'cut', easing: 'linear' }, exit: { kind: 'cut', easing: 'linear' },
+      ownership: { kind: 'shared' },
+    },
+    {
       id: 'welcome', label: 'Welcome hands', kind: 'set', target: { type: 'group', id: 'welcome' },
       timing: { mode: 'independent' },
       clip: { start: 0, enterEnd: 0, exitStart: .13, end: .19 },
@@ -59,6 +82,27 @@ export const PAINTED_PROMISE_SEQUENCE: CinematicSequence = {
       timing: { mode: 'independent' },
       clip: { start: .075, enterEnd: .105, exitStart: .13, end: .19 },
       enter: { kind: 'fade', easing: 'ease-out' }, exit: { kind: 'fade', easing: 'ease-in-out' },
+      ownership: { kind: 'beat', beatId: 'ring' },
+    },
+    {
+      id: 'groom-hand-motion', label: 'Groom hand movement', kind: 'effect', target: { type: 'effect', id: 'groom-hand-motion' },
+      timing: { mode: 'independent' },
+      clip: { start: 0, enterEnd: .115, exitStart: .19, end: .19 },
+      enter: { kind: 'slide', easing: 'linear' }, exit: { kind: 'cut', easing: 'linear' },
+      ownership: { kind: 'beat', beatId: 'ring' },
+    },
+    {
+      id: 'bride-hand-motion', label: 'Bride hand movement', kind: 'effect', target: { type: 'effect', id: 'bride-hand-motion' },
+      timing: { mode: 'independent' },
+      clip: { start: 0, enterEnd: .115, exitStart: .19, end: .19 },
+      enter: { kind: 'slide', easing: 'linear' }, exit: { kind: 'cut', easing: 'linear' },
+      ownership: { kind: 'beat', beatId: 'ring' },
+    },
+    {
+      id: 'ring-motion', label: 'Ring fitting movement', kind: 'effect', target: { type: 'effect', id: 'ring-motion' },
+      timing: { mode: 'independent' },
+      clip: { start: 0, enterEnd: .115, exitStart: .19, end: .19 },
+      enter: { kind: 'slide', easing: 'linear' }, exit: { kind: 'cut', easing: 'linear' },
       ownership: { kind: 'beat', beatId: 'ring' },
     },
     {
@@ -97,6 +141,13 @@ export const PAINTED_PROMISE_SEQUENCE: CinematicSequence = {
       ownership: { kind: 'shared' },
     },
     {
+      id: 'programme-focus-availability', label: 'Programme focus availability', kind: 'interaction',
+      target: { type: 'interaction', id: 'programme-focus' }, timing: { mode: 'independent' },
+      clip: { start: .665, enterEnd: .665, exitStart: .755, end: .755 },
+      enter: { kind: 'cut', easing: 'linear' }, exit: { kind: 'cut', easing: 'linear' },
+      ownership: { kind: 'beat', beatId: 'programme-focus' },
+    },
+    {
       id: 'table', label: 'Reception table', kind: 'set', target: { type: 'group', id: 'table' },
       timing: { mode: 'independent' },
       clip: { start: .735, enterEnd: .77, exitStart: .77, end: .965 },
@@ -111,25 +162,67 @@ export const PAINTED_PROMISE_SEQUENCE: CinematicSequence = {
       ownership: { kind: 'beat', beatId: 'table-wishes' },
     },
     {
-      id: 'rsvp', label: 'RSVP envelope', kind: 'interaction', target: { type: 'group', id: 'rsvp' },
+      id: 'rsvp', label: 'RSVP envelope', kind: 'set', target: { type: 'group', id: 'rsvp' },
       timing: { mode: 'independent' },
       clip: { start: .785, enterEnd: .825, exitStart: .825, end: .865 },
       enter: { kind: 'fade', easing: 'ease-out' }, exit: { kind: 'fade', easing: 'ease-in' },
       ownership: { kind: 'beat', beatId: 'rsvp-letter' },
     },
     {
-      id: 'wishes', label: 'Best Wishes book', kind: 'interaction', target: { type: 'group', id: 'wishes' },
+      id: 'rsvp-availability', label: 'RSVP form availability', kind: 'interaction',
+      target: { type: 'interaction', id: 'rsvp' }, timing: { mode: 'independent' },
+      clip: { start: .805, enterEnd: .805, exitStart: .855, end: .855 },
+      enter: { kind: 'cut', easing: 'linear' }, exit: { kind: 'cut', easing: 'linear' },
+      ownership: { kind: 'beat', beatId: 'rsvp-letter' },
+    },
+    {
+      id: 'rsvp-reset-window', label: 'RSVP reset window', kind: 'effect',
+      target: { type: 'effect', id: 'rsvp-reset-window' }, timing: { mode: 'independent' },
+      clip: { start: 0, enterEnd: 0, exitStart: .775, end: .775 },
+      enter: { kind: 'cut', easing: 'linear' }, exit: { kind: 'cut', easing: 'linear' },
+      ownership: { kind: 'beat', beatId: 'rsvp-letter' },
+    },
+    {
+      id: 'wishes', label: 'Best Wishes book', kind: 'set', target: { type: 'group', id: 'wishes' },
       timing: { mode: 'independent' },
       clip: { start: .865, enterEnd: .9, exitStart: .9, end: .945 },
       enter: { kind: 'fade', easing: 'ease-out' }, exit: { kind: 'fade', easing: 'ease-in' },
       ownership: { kind: 'beat', beatId: 'wishes-book' },
     },
     {
-      id: 'memory', label: 'Memory wall', kind: 'interaction', target: { type: 'group', id: 'memory' },
+      id: 'wishes-availability', label: 'Best Wishes form availability', kind: 'interaction',
+      target: { type: 'interaction', id: 'wish' }, timing: { mode: 'independent' },
+      clip: { start: .885, enterEnd: .885, exitStart: .94, end: .94 },
+      enter: { kind: 'cut', easing: 'linear' }, exit: { kind: 'cut', easing: 'linear' },
+      ownership: { kind: 'beat', beatId: 'wishes-book' },
+    },
+    {
+      id: 'wishes-reset-window', label: 'Best Wishes reset window', kind: 'effect',
+      target: { type: 'effect', id: 'wishes-reset-window' }, timing: { mode: 'independent' },
+      clip: { start: 0, enterEnd: 0, exitStart: .855, end: .855 },
+      enter: { kind: 'cut', easing: 'linear' }, exit: { kind: 'cut', easing: 'linear' },
+      ownership: { kind: 'beat', beatId: 'wishes-book' },
+    },
+    {
+      id: 'memory', label: 'Memory wall', kind: 'set', target: { type: 'group', id: 'memory' },
       timing: { mode: 'independent' },
       clip: { start: .925, enterEnd: .99, exitStart: 1, end: 1 },
       enter: { kind: 'fade', easing: 'ease-out' }, exit: { kind: 'cut', easing: 'linear' },
       ownership: { kind: 'beat', beatId: 'memory-wall' },
+    },
+    {
+      id: 'memory-background-blur', label: 'Memory background blur', kind: 'effect',
+      target: { type: 'effect', id: 'memory-background-blur' }, timing: { mode: 'independent' },
+      clip: { start: .94, enterEnd: .985, exitStart: 1, end: 1 },
+      enter: { kind: 'fade', easing: 'linear' }, exit: { kind: 'cut', easing: 'linear' },
+      ownership: { kind: 'beat', beatId: 'memory-wall' },
+    },
+    {
+      id: 'scroll-cue', label: 'Opening scroll cue', kind: 'effect',
+      target: { type: 'effect', id: 'scroll-cue' }, timing: { mode: 'independent' },
+      clip: { start: 0, enterEnd: 0, exitStart: .03, end: .12 },
+      enter: { kind: 'cut', easing: 'linear' }, exit: { kind: 'fade', easing: 'linear' },
+      ownership: { kind: 'shared' },
     },
   ],
 };
@@ -158,6 +251,7 @@ const ASSETS = '/templates/painted-promise/assets';
 export const PAINTED_PROMISE_WORLD: CinematicWorldLayer[] = [
   {
     id: 'clouds', label: 'Cloud background', group: 'background', space: 'viewport',
+    kind: 'functional', behavior: 'background',
     src: `${ASSETS}/background-v1/cloud-bg.png`, x: 50, y: 50, w: 124, h: 124,
     z: 0, rotation: 0, flipX: false, hidden: false, locked: false, opacity: 1, fit: 'cover',
   },
@@ -266,6 +360,7 @@ export const PAINTED_PROMISE_WORLD: CinematicWorldLayer[] = [
   },
   {
     id: 'programme-board', label: 'Programme board', group: 'programme', space: 'world',
+    kind: 'functional', behavior: 'programme-board', interactionId: 'programme-focus',
     src: `${ASSETS}/itinerary-v1/programme-board.png`, x: 54, y: 52, w: 22,
     z: 12, rotation: 0, flipX: false, hidden: false, locked: false, opacity: 1,
     aspectRatio: .72, desktop: { x: 72, y: 54, w: 14 },
@@ -296,20 +391,39 @@ export const PAINTED_PROMISE_WORLD: CinematicWorldLayer[] = [
   },
   {
     id: 'rsvp-letter', label: 'RSVP envelope and letter', group: 'rsvp', space: 'viewport',
+    kind: 'functional', behavior: 'rsvp-envelope', interactionId: 'rsvp',
     src: `${ASSETS}/rsvp-v1/sealed-blush-envelope.png`, x: 50, y: 50, w: 76, h: 66,
     z: 20, rotation: 0, flipX: false, hidden: false, locked: false, opacity: 1,
     desktop: { w: 52, h: 66 },
   },
   {
     id: 'wishes-book', label: 'Best Wishes guest book', group: 'wishes', space: 'viewport',
+    kind: 'functional', behavior: 'guest-book', interactionId: 'wish',
     src: `${ASSETS}/wishes-v1/open-blank-guest-book.png`, x: 50, y: 50, w: 88,
     z: 21, rotation: 0, flipX: false, hidden: false, locked: false, opacity: 1,
     aspectRatio: 1.732, desktop: { w: 53 },
   },
   {
     id: 'memory-wall', label: 'Memory wall', group: 'memory', space: 'viewport',
+    kind: 'functional', behavior: 'memory-wall',
     src: `${ASSETS}/cinematic/photobooth-arch.png`, x: 50, y: 50, w: 98, h: 92,
     z: 22, rotation: 0, flipX: false, hidden: false, locked: false, opacity: 1,
     desktop: { w: 53, h: 92 },
+  },
+  {
+    id: 'walimah-copy', label: 'Walimah invitation', group: 'narrative', space: 'viewport', kind: 'functional', behavior: 'narrative', contentKey: 'walimah', timingTrackId: 'walimah-copy',
+    x: 50, y: 50, w: 86, z: 9, rotation: 0, flipX: false, hidden: false, locked: false, opacity: 1, textAlign: 'center', desktop: { w: 43 },
+  },
+  {
+    id: 'groom-details', label: 'Primary person details', group: 'narrative', space: 'viewport', kind: 'functional', behavior: 'narrative', contentKey: 'primary', timingTrackId: 'groom-details',
+    x: 27, y: 50, w: 47, z: 9, rotation: 0, flipX: false, hidden: false, locked: false, opacity: 1, textAlign: 'left', desktop: { x: 19.3, w: 30.6 },
+  },
+  {
+    id: 'bride-details', label: 'Secondary person details', group: 'narrative', space: 'viewport', kind: 'functional', behavior: 'narrative', contentKey: 'secondary', timingTrackId: 'bride-details',
+    x: 73, y: 50, w: 47, z: 9, rotation: 0, flipX: false, hidden: false, locked: false, opacity: 1, textAlign: 'right', desktop: { x: 80.7, w: 30.6 },
+  },
+  {
+    id: 'scroll-cue', label: 'Opening scroll cue', group: 'narrative', space: 'viewport', kind: 'functional', behavior: 'scroll-cue', timingTrackId: 'scroll-cue', text: 'Scroll to begin',
+    x: 50, y: 95, w: 70, h: 4, z: 20, rotation: 0, flipX: false, hidden: false, locked: false, opacity: 1, textAlign: 'center',
   },
 ];

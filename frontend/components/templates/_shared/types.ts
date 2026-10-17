@@ -569,6 +569,7 @@ export interface EditorHandle {
     cameraOverride?: { x: number; y: number; scale: number; rotate: number };
     referenceSrc?: string;
     referenceOpacity?: number;
+    referenceFit?: 'contain' | 'cover' | 'fill';
   };
   /** @deprecated superseded by `frame.w`/`frame.svh`. Kept for one release so a stale cached
    *  payload degrades gracefully instead of silently falling back to the template's own 390×844

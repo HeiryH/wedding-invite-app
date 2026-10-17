@@ -33,6 +33,7 @@ interface PreviewPayload {
       cameraOverride?: { x: number; y: number; scale: number; rotate: number };
       referenceSrc?: string;
       referenceOpacity?: number;
+      referenceFit?: 'contain' | 'cover' | 'fill';
     };
     /** @deprecated superseded by `frame`. Kept so a `preview_draft_v2` written by an older build
      *  still pins the reveal frame instead of silently falling back to the template's own 390×844

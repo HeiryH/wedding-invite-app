@@ -1,10 +1,65 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
-import { PAINTED_PROMISE_BEATS, PAINTED_PROMISE_SEQUENCE, PAINTED_PROMISE_VISIBILITY, PAINTED_PROMISE_WORLD } from '../../Template15-paintedpromise/data/cinematic';
+import { PAINTED_PROMISE_BEATS, PAINTED_PROMISE_SCENE_SETS, PAINTED_PROMISE_SEQUENCE, PAINTED_PROMISE_VISIBILITY, PAINTED_PROMISE_WORLD } from '../../Template15-paintedpromise/data/cinematic';
 import { resolveCinematicWorld } from './world';
-import CinematicAdjustPanel from './CinematicAdjustPanel';
+import AdjustPanel from './CinematicAdjustPanel';
+import type { ComponentProps } from 'react';
+import { PAINTED_PROMISE_DIRECTION } from '../../Template15-paintedpromise/data/direction';
+
+const CinematicAdjustPanel = (props: ComponentProps<typeof AdjustPanel>) =>
+  <AdjustPanel sceneSets={PAINTED_PROMISE_SCENE_SETS} {...props} />;
 
 describe('CinematicAdjustPanel', () => {
+  it('isolates story settings in the bottom Advanced tab and returns to editing for a timing selection', () => {
+    const props: ComponentProps<typeof AdjustPanel> = {
+      beats: PAINTED_PROMISE_BEATS, breakpoint: 'mobile', selectedBeat: 'dais', progress: .31, mode: 'scene',
+      referenceVisible: false, referenceOpacity: .45, layers: [], shippedLayerIds: [], visibilitySets: PAINTED_PROMISE_VISIBILITY,
+      tracks: PAINTED_PROMISE_SEQUENCE.tracks, direction: PAINTED_PROMISE_DIRECTION, onDirectionChange: vi.fn(),
+      onSelectBeat: vi.fn(), onProgressChange: vi.fn(), onModeChange: vi.fn(), onReferenceVisibleChange: vi.fn(),
+      onReferenceOpacityChange: vi.fn(), onSelectLayer: vi.fn(), onLayersChange: vi.fn(), onResetLayer: vi.fn(),
+      onResetWorld: vi.fn(), onCameraChange: vi.fn(), onResetCamera: vi.fn(), onCopyCameraToOther: vi.fn(),
+      onVisibilityChange: vi.fn(), onResetVisibility: vi.fn(), onClose: vi.fn(),
+    };
+    const { rerender } = render(<CinematicAdjustPanel {...props} />);
+    expect(screen.queryByRole('heading', { name: 'Story settings' })).toBeNull();
+    fireEvent.click(screen.getByRole('tab', { name: 'Advanced' }));
+    expect(screen.getByRole('heading', { name: 'Story settings' })).toBeVisible();
+    expect(screen.queryByText('Editing mode')).not.toBeVisible();
+    fireEvent.click(screen.getByRole('tab', { name: 'Theme' }));
+    rerender(<CinematicAdjustPanel {...props} selectedTimingTrack="dais" />);
+    expect(screen.getByRole('tab', { name: 'Editing' })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('region', { name: 'Timing track Dais set' })).toBeVisible();
+    fireEvent.click(screen.getByRole('tab', { name: 'Advanced' }));
+    expect(screen.getByRole('tab', { name: 'Theme' })).toHaveAttribute('aria-selected', 'true');
+  });
+
+  it('keeps track and full-story resets at distinct confirmed scopes', () => {
+    const onResetTrack = vi.fn();
+    const onResetSequence = vi.fn();
+    render(
+      <CinematicAdjustPanel
+        beats={PAINTED_PROMISE_BEATS} breakpoint="mobile" selectedBeat="dais" progress={.31}
+        mode="scene" referenceVisible={false} referenceOpacity={.45}
+        layers={[]} shippedLayerIds={[]} visibilitySets={PAINTED_PROMISE_VISIBILITY}
+        tracks={PAINTED_PROMISE_SEQUENCE.tracks} selectedTimingTrack="dais"
+        onSelectBeat={vi.fn()} onProgressChange={vi.fn()} onModeChange={vi.fn()}
+        onReferenceVisibleChange={vi.fn()} onReferenceOpacityChange={vi.fn()}
+        onSelectLayer={vi.fn()} onLayersChange={vi.fn()} onResetLayer={vi.fn()}
+        onResetWorld={vi.fn()} onCameraChange={vi.fn()} onResetCamera={vi.fn()}
+        onCopyCameraToOther={vi.fn()} onResetTrack={onResetTrack}
+        onVisibilityChange={vi.fn()} onResetVisibility={vi.fn()}
+        onResetSequence={onResetSequence} onClose={vi.fn()}
+      />,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Reset track' }));
+    expect(onResetTrack).toHaveBeenCalledWith('dais');
+    fireEvent.click(screen.getByRole('button', { name: 'Reset entire story' }));
+    expect(screen.getByRole('alert')).toHaveTextContent('Reset the entire story?');
+    expect(onResetSequence).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: 'Reset entire story' }));
+    expect(onResetSequence).toHaveBeenCalledOnce();
+  });
+
   it('selects director beats and exposes the editor-only reference controls', () => {
     const onSelectBeat = vi.fn();
     const onModeChange = vi.fn();
@@ -139,11 +194,63 @@ describe('CinematicAdjustPanel', () => {
     expect(onTransitionChange).toHaveBeenCalledWith('groom', 'hold');
     fireEvent.click(screen.getByRole('button', { name: 'Duplicate beat' }));
     fireEvent.click(screen.getByRole('button', { name: 'Delete moment' }));
-    expect(screen.getByRole('alert')).toHaveTextContent('1 owned timeline item');
+    expect(screen.getByRole('alert')).toHaveTextContent('Delete “Groom close-up”?');
+    expect(screen.getByRole('alert')).toHaveTextContent('Camera composition');
+    expect(screen.getByRole('alert')).toHaveTextContent('Groom details text and details');
+    expect(screen.getByRole('alert')).toHaveTextContent('Allocated scroll segment');
+    expect(screen.getByRole('alert')).toHaveTextContent('Shared scenery and timing sets stay');
     expect(onDeleteBeat).not.toHaveBeenCalled();
     fireEvent.click(screen.getByRole('button', { name: 'Confirm delete moment' }));
     expect(onDuplicateBeat).toHaveBeenCalledWith('groom');
     expect(onDeleteBeat).toHaveBeenCalledWith('groom');
+  });
+
+  it('warns when deleting a functional beat removes a guest interaction', () => {
+    render(
+      <CinematicAdjustPanel
+        beats={PAINTED_PROMISE_BEATS} breakpoint="mobile" selectedBeat="rsvp-letter" progress={.825}
+        mode="camera-beat" referenceVisible={false} referenceOpacity={.45}
+        layers={[]} shippedLayerIds={[]} visibilitySets={PAINTED_PROMISE_VISIBILITY}
+        tracks={PAINTED_PROMISE_SEQUENCE.tracks}
+        camera={{ x: 0, y: 0, scale: 1, rotate: 0 }}
+        onSelectBeat={vi.fn()} onProgressChange={vi.fn()} onModeChange={vi.fn()}
+        onReferenceVisibleChange={vi.fn()} onReferenceOpacityChange={vi.fn()}
+        onSelectLayer={vi.fn()} onLayersChange={vi.fn()} onResetLayer={vi.fn()}
+        onResetWorld={vi.fn()} onCameraChange={vi.fn()} onResetCamera={vi.fn()}
+        onCopyCameraToOther={vi.fn()} onDeleteBeat={vi.fn()}
+        onVisibilityChange={vi.fn()} onResetVisibility={vi.fn()} onClose={vi.fn()}
+      />,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Delete moment' }));
+    expect(screen.getByRole('alert')).toHaveTextContent('RSVP envelope exclusive artwork or set');
+    expect(screen.getByRole('alert')).toHaveTextContent('RSVP form availability interaction entry point');
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      'Guests will lose this form or interaction entry point.',
+    );
+  });
+
+  it('restores a deleted shipped narrative moment from the camera editor', () => {
+    const onRestoreBeat = vi.fn();
+    const deletedGroom = PAINTED_PROMISE_BEATS.find((beat) => beat.id === 'groom')!;
+    render(
+      <CinematicAdjustPanel
+        beats={PAINTED_PROMISE_BEATS.filter((beat) => beat.id !== 'groom')}
+        deletedBeats={[deletedGroom]}
+        breakpoint="mobile" selectedBeat="bride" progress={.5}
+        mode="camera-beat" referenceVisible={false} referenceOpacity={.45}
+        layers={[]} shippedLayerIds={[]} visibilitySets={PAINTED_PROMISE_VISIBILITY}
+        tracks={PAINTED_PROMISE_SEQUENCE.tracks.filter((track) => track.id !== 'groom-details')}
+        camera={{ x: -28, y: 2, scale: 2.35, rotate: 0 }}
+        onSelectBeat={vi.fn()} onProgressChange={vi.fn()} onModeChange={vi.fn()}
+        onReferenceVisibleChange={vi.fn()} onReferenceOpacityChange={vi.fn()}
+        onSelectLayer={vi.fn()} onLayersChange={vi.fn()} onResetLayer={vi.fn()}
+        onResetWorld={vi.fn()} onCameraChange={vi.fn()} onResetCamera={vi.fn()}
+        onCopyCameraToOther={vi.fn()} onRestoreBeat={onRestoreBeat}
+        onVisibilityChange={vi.fn()} onResetVisibility={vi.fn()} onClose={vi.fn()}
+      />,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Restore Groom close-up' }));
+    expect(onRestoreBeat).toHaveBeenCalledWith('groom');
   });
 
   it('makes inherited set timing independent from layer geometry', () => {
@@ -182,7 +289,7 @@ describe('CinematicAdjustPanel', () => {
     );
 
     expect(screen.getByText(/Following Programme board/)).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Edit separately' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Unlink timing' }));
     expect(onMakeTimingIndependent).toHaveBeenCalledWith('programme-board');
   });
 
@@ -212,6 +319,53 @@ describe('CinematicAdjustPanel', () => {
     expect(onTimingTrackChange).toHaveBeenCalledWith('layer-programme-board', {
       clip: expect.objectContaining({ start: .56 }),
     });
+  });
+
+  it('directs and previews entrance and exit transitions from the selected timing clip', () => {
+    const onTimingTrackChange = vi.fn();
+    const onProgressChange = vi.fn();
+    const programme = PAINTED_PROMISE_SEQUENCE.tracks.find((track) => track.id === 'programme')!;
+    const exact = {
+      ...programme,
+      id: 'layer-programme-board',
+      label: 'Programme artwork',
+      target: { type: 'layer' as const, id: 'programme-board' },
+      enter: { kind: 'fade-slide' as const, easing: 'ease-out' as const, direction: 'up' as const, distance: 18 },
+      exit: { kind: 'scale' as const, easing: 'ease-in' as const, scale: .72 },
+    };
+    render(
+      <CinematicAdjustPanel
+        beats={PAINTED_PROMISE_BEATS} breakpoint="mobile" selectedBeat="programme-wide"
+        progress={.62} mode="scene" referenceVisible={false} referenceOpacity={.45}
+        layers={resolveCinematicWorld('t15', PAINTED_PROMISE_WORLD, 'mobile', undefined)}
+        selectedLayer="programme-board" visibilitySets={PAINTED_PROMISE_VISIBILITY}
+        tracks={[...PAINTED_PROMISE_SEQUENCE.tracks, exact]}
+        shippedLayerIds={PAINTED_PROMISE_WORLD.map((layer) => layer.id)}
+        onSelectBeat={vi.fn()} onProgressChange={onProgressChange} onModeChange={vi.fn()}
+        onReferenceVisibleChange={vi.fn()} onReferenceOpacityChange={vi.fn()}
+        onSelectLayer={vi.fn()} onLayersChange={vi.fn()} onResetLayer={vi.fn()}
+        onResetWorld={vi.fn()} onCameraChange={vi.fn()} onResetCamera={vi.fn()}
+        onCopyCameraToOther={vi.fn()} onTimingTrackChange={onTimingTrackChange}
+        onVisibilityChange={vi.fn()} onResetVisibility={vi.fn()} onClose={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByRole('combobox', { name: 'enter direction for Programme artwork' }))
+      .toHaveValue('up');
+    expect(screen.getByRole('slider', { name: 'enter distance for Programme artwork' }))
+      .toHaveValue('18');
+    expect(screen.getByRole('slider', { name: 'exit scale for Programme artwork' }))
+      .toHaveValue('72');
+
+    fireEvent.change(screen.getByRole('combobox', { name: 'enter direction for Programme artwork' }), {
+      target: { value: 'down' },
+    });
+    expect(onTimingTrackChange).toHaveBeenCalledWith('layer-programme-board', {
+      enter: expect.objectContaining({ direction: 'down', distance: 18 }),
+    });
+
+    fireEvent.click(screen.getAllByRole('button', { name: 'Preview' })[0]);
+    expect(onProgressChange).toHaveBeenCalledWith(exact.clip.start);
   });
 
   it('organizes props into sets, reveals an off-beat prop, and resets only that prop', () => {
@@ -249,11 +403,11 @@ describe('CinematicAdjustPanel', () => {
     );
 
     expect(screen.getByText('Welcome ring action')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Groom hand · dark formal cuff' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Bride hand · white bridal lace' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Wedding ring' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^Groom hand · dark formal cuff/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^Bride hand · white bridal lace/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^Wedding ring/ })).toBeInTheDocument();
     expect(screen.getByText('Programme')).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Programme board' }));
+    fireEvent.click(screen.getByRole('button', { name: /^Programme board/ }));
     expect(onSelectLayer).toHaveBeenCalledWith('programme-board');
     expect(onProgressChange).toHaveBeenCalledWith((.59 + .745) / 2);
   });
@@ -284,8 +438,110 @@ describe('CinematicAdjustPanel', () => {
     );
 
     expect(screen.getByText('Appearance timing')).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Programme board' }));
+    fireEvent.click(screen.getByRole('button', { name: /^Programme board/ }));
     expect(onSelectLayer).toHaveBeenCalledWith(undefined);
+  });
+
+  it('creates a named timing set from multiple selected scene assets', () => {
+    const onCreateTimingSet = vi.fn(() => 'set-portrait-pair');
+    render(
+      <CinematicAdjustPanel
+        beats={PAINTED_PROMISE_BEATS} breakpoint="mobile" selectedBeat="dais" progress={.31}
+        mode="scene" referenceVisible={false} referenceOpacity={.45}
+        layers={resolveCinematicWorld('t15', PAINTED_PROMISE_WORLD, 'mobile', undefined)}
+        visibilitySets={PAINTED_PROMISE_VISIBILITY} tracks={PAINTED_PROMISE_SEQUENCE.tracks}
+        shippedLayerIds={PAINTED_PROMISE_WORLD.map((layer) => layer.id)}
+        onSelectBeat={vi.fn()} onProgressChange={vi.fn()} onModeChange={vi.fn()}
+        onReferenceVisibleChange={vi.fn()} onReferenceOpacityChange={vi.fn()}
+        onSelectLayer={vi.fn()} onLayersChange={vi.fn()} onResetLayer={vi.fn()}
+        onResetWorld={vi.fn()} onCameraChange={vi.fn()} onResetCamera={vi.fn()}
+        onCopyCameraToOther={vi.fn()} onVisibilityChange={vi.fn()}
+        onResetVisibility={vi.fn()} onCreateTimingSet={onCreateTimingSet} onClose={vi.fn()}
+      />,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Organize timing sets' }));
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Include Seated groom in timing set' }));
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Include Seated bride in timing set' }));
+    fireEvent.change(screen.getByRole('textbox', { name: 'New timing set name' }), {
+      target: { value: 'Portrait pair' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Create set' }));
+    expect(onCreateTimingSet).toHaveBeenCalledWith('Portrait pair', ['groom', 'bride']);
+  });
+
+  it('renames, duplicates, and confirms safe deletion of a custom timing set', () => {
+    const onRenameTimingSet = vi.fn();
+    const onDuplicateTimingSet = vi.fn(() => 'portrait-pair-copy');
+    const onDeleteTimingSet = vi.fn();
+    const set = {
+      ...PAINTED_PROMISE_SEQUENCE.tracks.find((track) => track.id === 'dais')!,
+      id: 'portrait-pair', label: 'Portrait pair', kind: 'set' as const,
+      target: { type: 'set' as const, id: 'portrait-pair' },
+    };
+    const linked = ['groom', 'bride'].map((id) => ({
+      ...set, id: `layer-${id}`, label: id, kind: 'asset' as const,
+      target: { type: 'layer' as const, id },
+      timing: { mode: 'linked' as const, trackId: set.id },
+    }));
+    render(
+      <CinematicAdjustPanel
+        beats={PAINTED_PROMISE_BEATS} breakpoint="mobile" selectedBeat="dais" progress={.31}
+        mode="scene" referenceVisible={false} referenceOpacity={.45}
+        layers={resolveCinematicWorld('t15', PAINTED_PROMISE_WORLD, 'mobile', undefined)}
+        visibilitySets={PAINTED_PROMISE_VISIBILITY}
+        tracks={[...PAINTED_PROMISE_SEQUENCE.tracks, set, ...linked]}
+        shippedLayerIds={PAINTED_PROMISE_WORLD.map((layer) => layer.id)}
+        onSelectBeat={vi.fn()} onProgressChange={vi.fn()} onModeChange={vi.fn()}
+        onReferenceVisibleChange={vi.fn()} onReferenceOpacityChange={vi.fn()}
+        onSelectLayer={vi.fn()} onLayersChange={vi.fn()} onResetLayer={vi.fn()}
+        onResetWorld={vi.fn()} onCameraChange={vi.fn()} onResetCamera={vi.fn()}
+        onCopyCameraToOther={vi.fn()} onVisibilityChange={vi.fn()}
+        onResetVisibility={vi.fn()} onRenameTimingSet={onRenameTimingSet}
+        onDuplicateTimingSet={onDuplicateTimingSet} onDeleteTimingSet={onDeleteTimingSet}
+        onClose={vi.fn()}
+      />,
+    );
+    fireEvent.click(screen.getByRole('button', { name: /Portrait pair2 linked/ }));
+    fireEvent.change(screen.getByRole('textbox', { name: 'Timing set name' }), {
+      target: { value: 'Couple portraits' },
+    });
+    expect(onRenameTimingSet).toHaveBeenCalledWith(set.id, 'Couple portraits');
+    fireEvent.click(screen.getByRole('button', { name: 'Duplicate set' }));
+    expect(onDuplicateTimingSet).toHaveBeenCalledWith(set.id);
+    fireEvent.click(screen.getByRole('button', { name: /Portrait pair2 linked/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Delete set' }));
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      '2 linked assets will keep their current timing as independent clips.',
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Delete set' }));
+    expect(onDeleteTimingSet).toHaveBeenCalledWith(set.id);
+  });
+
+  it('edits a functional interaction as availability rather than form-open duration', () => {
+    const onTimingTrackChange = vi.fn();
+    render(
+      <CinematicAdjustPanel
+        beats={PAINTED_PROMISE_BEATS} breakpoint="mobile" selectedBeat="rsvp-letter" progress={.825}
+        mode="scene" referenceVisible={false} referenceOpacity={.45}
+        layers={[]} selectedTimingTrack="rsvp-availability" shippedLayerIds={[]}
+        visibilitySets={PAINTED_PROMISE_VISIBILITY} tracks={PAINTED_PROMISE_SEQUENCE.tracks}
+        onSelectBeat={vi.fn()} onProgressChange={vi.fn()} onModeChange={vi.fn()}
+        onReferenceVisibleChange={vi.fn()} onReferenceOpacityChange={vi.fn()}
+        onSelectLayer={vi.fn()} onLayersChange={vi.fn()} onResetLayer={vi.fn()}
+        onResetWorld={vi.fn()} onCameraChange={vi.fn()} onResetCamera={vi.fn()}
+        onCopyCameraToOther={vi.fn()} onTimingTrackChange={onTimingTrackChange}
+        onVisibilityChange={vi.fn()} onResetVisibility={vi.fn()} onClose={vi.fn()}
+      />,
+    );
+    expect(screen.getByRole('region', { name: 'Timing track RSVP form availability' }))
+      .toBeInTheDocument();
+    expect(screen.getByText(/Time spent inside the open form is not added/)).toBeInTheDocument();
+    fireEvent.change(screen.getByRole('spinbutton', {
+      name: 'Available from for RSVP form availability',
+    }), { target: { value: '82' } });
+    expect(onTimingTrackChange).toHaveBeenCalledWith('rsvp-availability', {
+      clip: { start: .82, enterEnd: .82, exitStart: .855, end: .855 },
+    });
   });
 
   it('adds a token-aware text layer through the floating Add card', () => {
