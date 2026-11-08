@@ -256,7 +256,7 @@ function RSVPModal({ wedding, onRSVP, onClose, seatingEnabled, tables, t, subtit
                           />
                           <div className={`${styles.sideLabelInner} ${rsvpData.brideOrGroomSide === side ? styles.checked : ''}`}>
                             <span className={styles.sideIcon}>{side === 'Bride' ? '👰' : '🤵'}</span>
-                            <span className={styles.sideText}>{side}'s Side</span>
+                            <span className={styles.sideText}>{side}&apos;s Side</span>
                           </div>
                         </label>
                       ))}
@@ -580,7 +580,7 @@ const NAV_EMOJIS: Record<string, string> = {
     }, 350000000);
     autoShuffleRef.current = id;
     return () => { clearInterval(id); autoShuffleRef.current = null; };
-  }, [photoLayout, photos.length]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [photoLayout, photos.length]);
 
   useEffect(() => {
     const t = setTimeout(() => setGhostIndex(stackIndex), 180);
@@ -681,7 +681,7 @@ const NAV_EMOJIS: Record<string, string> = {
           transition={{ delay: 0.3, duration: 1 }}
           className={styles.inviteLabel}
         >
-          You're invited
+          You&apos;re invited
         </motion.p>
 
         {layout === 'minimal' ? (
@@ -1296,7 +1296,7 @@ const NAV_EMOJIS: Record<string, string> = {
               {wishes.slice(0, displayedWishes).map((wish) => (
                 <div key={wish.wishId} className={styles.wishCard}>
                   <p className={styles.wishAuthor}>{wish.guestName}</p>
-                  <p className={styles.wishMessage}>"{wish.message}"</p>
+                  <p className={styles.wishMessage}>&quot;{wish.message}&quot;</p>
                 </div>
               ))}
               {wishes.length > displayedWishes && (

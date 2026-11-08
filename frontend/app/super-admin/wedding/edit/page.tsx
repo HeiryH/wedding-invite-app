@@ -51,12 +51,6 @@ export default function EditWeddingPage() {
       const minutes = String(weddingDate.getMinutes()).padStart(2, '0');
       const formattedDateTime = `${year}-${month}-${day}T${hours}:${minutes}`;
 
-      const localDateTime = new Date(
-        weddingDate.getTime() - weddingDate.getTimezoneOffset() * 60000
-      )
-        .toISOString()
-        .slice(0, 16);
-
       setFormData({
         brideName: weddingData.name1 ?? '',
         groomName: weddingData.name2 ?? '',
@@ -213,7 +207,7 @@ export default function EditWeddingPage() {
             <div className="grid md:grid-cols-2 gap-6">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Bride's Name *
+                  Bride&apos;s Name *
                 </label>
                 <input
                   type="text"
@@ -228,7 +222,7 @@ export default function EditWeddingPage() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Groom's Name *
+                  Groom&apos;s Name *
                 </label>
                 <input
                   type="text"

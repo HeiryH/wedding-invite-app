@@ -4,7 +4,6 @@ import { apiErrorMessage } from '@/lib/api/errors';
 
 import { useEffect, useMemo, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { motion } from 'framer-motion';
 import {
   eventService,
   guestService,

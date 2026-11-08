@@ -27,3 +27,9 @@ No merge, deployment, migration, dependency upgrade or saved-config rewrite is i
 - Admin guest input explicitly models omitted attendance/party-size defaults from the C# DTO; public RSVP remains strict. Request serialization is unchanged, including omitted defaults.
 - Validation: TypeScript passed; full suite initially had 414 passing and one new-test mock failure (mock PUT lacked a response). Corrected mock, then all 5 API contract/error tests passed. No application failure was involved. Phase 5 reruns the full suite.
 - ESLint: 79 errors, 78 warnings; no explicit-any or React hook diagnostics remain.
+
+## Phase 3 — JSX, internal navigation and unused code
+
+- Escaped JSX punctuation without changing rendered copy, and converted 17 distinct flagged internal anchors to Next Link (21 diagnostics included duplicate reports). External links/download behavior is unchanged.
+- Removed unused imports, bindings and side-effect-free values; retained the used T4 swipe handler and always-visible T2 navigation. Removed only the obsolete T5 disable comment, retaining its effect/dependency list.
+- TypeScript and all 415 frontend tests pass. ESLint: 0 errors, 48 warnings, all image-disposition warnings.

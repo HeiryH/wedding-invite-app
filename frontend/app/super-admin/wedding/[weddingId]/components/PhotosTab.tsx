@@ -180,7 +180,7 @@ export default function PhotosTab({
                 <div className="p-3">
                   <p className="font-semibold text-sm text-gray-800 truncate">{photo.guestName}</p>
                   {photo.caption && (
-                    <p className="text-xs text-gray-600 italic truncate">"{photo.caption}"</p>
+                    <p className="text-xs text-gray-600 italic truncate">&quot;{photo.caption}&quot;</p>
                   )}
                   <p className="text-xs text-gray-400 mt-1">
                     {new Date(photo.createdDate).toLocaleDateString()}

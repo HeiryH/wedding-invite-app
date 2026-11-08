@@ -16,7 +16,6 @@ import type { TemplateRsvpSubmission, PhotoUploadSubmission, TemplateWishSubmiss
 import { useContext, useState, useEffect } from 'react';
 import { SeatingPreviewContext } from './_shared/slots/preview';
 import { motion, AnimatePresence } from 'framer-motion';
-import Link from 'next/link';
 import { Wedding, Wish, Photo, SeatingTable, ItineraryItem } from '@/lib/api';
 import SeatingStep from './SeatingStep';
 import { toHijriString, alignClass, headingStyle, headingAnimationProps, sectionBgStyle, resolveSectionOrder, type SectionCode } from '@/lib/templateUtils';
@@ -200,7 +199,7 @@ export default function Template1({
         setRsvpSuccess(false);
         scrollToSection('wishes');
       }, 2000);
-    } catch (err) {
+    } catch {
       alert('Failed to submit RSVP');
     } finally {
       setRsvpSubmitting(false);
@@ -216,7 +215,7 @@ export default function Template1({
       setWishSuccess(true);
       setWishData({ guestName: '', message: '' });
       schedule(() => setWishSuccess(false), 3000);
-    } catch (err) {
+    } catch {
       alert('Failed to submit wish');
     } finally {
       setWishSubmitting(false);
@@ -261,7 +260,7 @@ export default function Template1({
       setSelectedFile(null);
       setPreviewUrl(null);
       schedule(() => setPhotoSuccess(false), 3000);
-    } catch (err) {
+    } catch {
       alert('Failed to upload photo');
     } finally {
       setPhotoSubmitting(false);
@@ -592,7 +591,7 @@ export default function Template1({
                             }`}
                         >
                           <span className="text-lg font-semibold">
-                            ✅ Yes, I'll be there!
+                            ✅ Yes, I&apos;ll be there!
                           </span>
                         </button>
 
@@ -605,7 +604,7 @@ export default function Template1({
                             }`}
                         >
                           <span className="text-lg font-semibold">
-                            😢 Sorry, can't make it
+                            😢 Sorry, can&apos;t make it
                           </span>
                         </button>
                       </div>
@@ -666,7 +665,7 @@ export default function Template1({
                             />
                             <div className="rounded-lg border-2 border-gray-200 p-4 text-center peer-checked:border-rose-500 peer-checked:bg-rose-50">
                               <span className="text-2xl block mb-1">👰</span>
-                              <span className="font-semibold">Bride's Side</span>
+                              <span className="font-semibold">Bride&apos;s Side</span>
                             </div>
                           </label>
 
@@ -686,7 +685,7 @@ export default function Template1({
                             />
                             <div className="rounded-lg border-2 border-gray-200 p-4 text-center peer-checked:border-rose-500 peer-checked:bg-rose-50">
                               <span className="text-2xl block mb-1">🤵</span>
-                              <span className="font-semibold">Groom's Side</span>
+                              <span className="font-semibold">Groom&apos;s Side</span>
                             </div>
                           </label>
                         </div>
@@ -827,7 +826,7 @@ export default function Template1({
                               {wish.guestName}
                             </p>
                             <p className="text-gray-600 text-sm italic">
-                              "{wish.message}"
+                              &quot;{wish.message}&quot;
                             </p>
                             <p className="text-xs text-gray-400 mt-2">
                               {formatEventDate(new Date(wish.createdDate))}
@@ -954,7 +953,7 @@ export default function Template1({
                       </p>
                       {photo.caption && (
                         <p className="text-xs text-gray-600 italic">
-                          "{photo.caption}"
+                          &quot;{photo.caption}&quot;
                         </p>
                       )}
                     </div>

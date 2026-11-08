@@ -1,5 +1,7 @@
 'use client';
 
+import Link from 'next/link';
+
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
@@ -185,7 +187,7 @@ export default function HomePage() {
           <span>The Invit</span><span className="u">_</span><span className="e">e</span>
         </span>
         <p style={{ fontFamily: 'var(--mkt-sans)', fontSize: 14, color: 'rgba(251,247,239,0.5)', margin: 0 }}>{c('footer.tagline')}</p>
-        <a href="/login" style={{ fontFamily: 'var(--mkt-sans)', fontSize: 14, color: 'rgba(251,247,239,0.7)' }}>Sign in →</a>
+        <Link href="/login" style={{ fontFamily: 'var(--mkt-sans)', fontSize: 14, color: 'rgba(251,247,239,0.7)' }}>Sign in →</Link>
       </footer>
     </div>
   );

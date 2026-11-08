@@ -283,7 +283,7 @@ const onSubmit = async (data: WishFormData) => {
                           </p>
                         </div>
                         <p className="text-gray-600 text-sm italic">
-                          "{wish.message}"
+                          &quot;{wish.message}&quot;
                         </p>
                       </motion.div>
                     ))}

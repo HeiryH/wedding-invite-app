@@ -17,7 +17,7 @@ import { SeatingPreviewContext } from './_shared/slots/preview';
 import { motion, useMotionValue, useTransform, animate, AnimatePresence, type PanInfo } from 'framer-motion';
 import { Wedding, Wish, Photo, SeatingTable, TemplateSlots, ItineraryItem } from '@/lib/api';
 import SeatingStep from './SeatingStep';
-import { toHijriString, alignClass, headingStyle, headingAnimationProps, sectionBgStyle, resolveSectionOrder, type SectionCode } from '@/lib/templateUtils';
+import { toHijriString, alignClass, headingStyle, headingAnimationProps, sectionBgStyle, resolveSectionOrder } from '@/lib/templateUtils';
 import type { Breakpoint, EditorHandle } from '@/components/templates/_shared/types';
 import { useBreakpoint } from '@/components/templates/_shared/hooks/useBreakpoint';
 import SectionOverlay from './Template4-minimalnoir/SectionOverlay';
@@ -128,7 +128,6 @@ function CardStack({
   const x = useMotionValue(0);
   const rotate = useTransform(x, [-250, 250], [-18, 18]);
   const overlayOpacity = useTransform(x, [-120, 0, 120], [0.25, 0, 0.25]);
-  const overlayColor = useTransform(x, [-120, 0, 120], ['#000', '#000', '#000']);
 
   const handleDragEnd = (_: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
     const swipeThreshold = 80;
@@ -469,7 +468,7 @@ export default function Template4({
     ]);
   }, [photos, extra1, extra2, extra3]);
 
-  const handleSwipe = (_dir: 'left' | 'right') => {
+  const handleSwipe = () => {
     setCards((prev) => {
       if (prev.length <= 1) return prev;
       return [...prev.slice(1), prev[0]];

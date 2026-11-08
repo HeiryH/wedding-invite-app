@@ -4,7 +4,6 @@ import { useCallback, useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { photoService, eventService, Photo, Event } from '@/lib/api';
-import { getImageUrl } from '@/lib/utils';
 import PhotoSkeleton from '@/components/skeletons/PhotoSkeleton';
 
 export default function PhotoManagementPage() {
@@ -46,7 +45,7 @@ export default function PhotoManagementPage() {
         try {
             await photoService.approve(photoId, { isApproved: true });
             await fetchData();
-        } catch (err) {
+        } catch {
             alert('Failed to approve photo');
         } finally {
             setActionLoading(null);
@@ -62,7 +61,7 @@ export default function PhotoManagementPage() {
                 rejectionReason: reason || undefined,
             });
             await fetchData();
-        } catch (err) {
+        } catch {
             alert('Failed to reject photo');
         } finally {
             setActionLoading(null);
@@ -74,7 +73,7 @@ export default function PhotoManagementPage() {
         try {
             await photoService.setFeatured(photoId, isFeatured);
             await fetchData();
-        } catch (err) {
+        } catch {
             alert('Failed to set featured status');
         } finally {
             setActionLoading(null);
@@ -89,7 +88,7 @@ export default function PhotoManagementPage() {
         try {
             await photoService.delete(photoId);
             await fetchData();
-        } catch (err) {
+        } catch {
             alert('Failed to delete photo');
         } finally {
             setActionLoading(null);
@@ -305,7 +304,7 @@ export default function PhotoManagementPage() {
                                         </p>
                                         {photo.caption && (
                                             <p className="text-xs text-gray-600 italic truncate">
-                                                "{photo.caption}"
+                                                &quot;{photo.caption}&quot;
                                             </p>
                                         )}
                                         <p className="text-xs text-gray-400 mt-1">

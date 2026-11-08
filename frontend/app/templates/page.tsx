@@ -1,5 +1,7 @@
 'use client';
 
+import Link from 'next/link';
+
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { templateService, Template } from '@/lib/api';
@@ -40,9 +42,9 @@ export default function TemplatesPage() {
         borderBottom: '1px solid var(--border-subtle)',
       }}>
         <div style={{ maxWidth: 1200, margin: '0 auto', padding: '0 24px', height: 60, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <a href="/" style={{ textDecoration: 'none' }}>
+          <Link href="/" style={{ textDecoration: 'none' }}>
             <Wordmark size={22} />
-          </a>
+          </Link>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
             {user ? (
               <a
@@ -53,15 +55,15 @@ export default function TemplatesPage() {
               </a>
             ) : (
               <>
-                <a href="/login" style={{ fontFamily: 'var(--font-ui)', fontSize: 'var(--text-sm)', color: 'var(--text-body)', textDecoration: 'none' }}>
+                <Link href="/login" style={{ fontFamily: 'var(--font-ui)', fontSize: 'var(--text-sm)', color: 'var(--text-body)', textDecoration: 'none' }}>
                   Sign in
-                </a>
-                <a
+                </Link>
+                <Link
                   href="/try"
                   style={{ fontFamily: 'var(--font-ui)', fontSize: 'var(--text-sm)', fontWeight: 600, color: '#fff', textDecoration: 'none', padding: '8px 18px', borderRadius: 'var(--radius-full)', background: 'var(--em)' }}
                 >
                   Try free
-                </a>
+                </Link>
               </>
             )}
           </div>
@@ -113,12 +115,12 @@ export default function TemplatesPage() {
           <p style={{ margin: '0 0 28px', fontFamily: 'var(--font-ui)', fontSize: 'var(--text-base)', color: 'rgba(255,255,255,0.85)' }}>
             Start with a free template — no credit card required.
           </p>
-          <a
+          <Link
             href="/try"
             style={{ display: 'inline-block', background: '#fff', color: 'var(--em)', fontFamily: 'var(--font-ui)', fontWeight: 700, fontSize: 'var(--text-base)', padding: '14px 36px', borderRadius: 'var(--radius-full)', textDecoration: 'none', boxShadow: '0 4px 20px rgba(0,0,0,0.15)' }}
           >
             Start for free
-          </a>
+          </Link>
         </div>
       )}
     </div>

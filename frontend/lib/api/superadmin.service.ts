@@ -1,5 +1,5 @@
 import { apiClient } from './client';
-import { Event, EventFeature, ToggleFeature } from './types';
+import { ToggleFeature } from './types';
 
 export const superAdminService = {
   // Get all registered weddings across the platform

@@ -1,5 +1,7 @@
 'use client';
 
+import Link from 'next/link';
+
 import { apiErrorMessage } from '@/lib/api/errors';
 
 import { useEffect, useState } from 'react';
@@ -51,7 +53,7 @@ export default function AdminDashboard() {
 
                 setGuests(guestsData);
                 setWishes(wishesData);
-            } catch (err) {
+            } catch {
                 setError('Failed to load data');
             } finally {
                 setLoading(false);
@@ -194,9 +196,9 @@ export default function AdminDashboard() {
             <div className="min-h-screen flex items-center justify-center bg-gray-50">
                 <div className="text-center">
                     <p className="text-2xl text-red-500 mb-4">😢 {error || 'Wedding not found'}</p>
-                    <a href="/" className="text-rose-600 hover:underline">
+                    <Link href="/" className="text-rose-600 hover:underline">
                         ← Back to home
-                    </a>
+                    </Link>
                 </div>
             </div>
         );
@@ -333,7 +335,7 @@ export default function AdminDashboard() {
                                 <div className="space-y-4">
                                     <div>
                                         <div className="flex justify-between mb-2">
-                                            <span className="text-gray-600">👰 Bride's Side</span>
+                                            <span className="text-gray-600">👰 Bride&apos;s Side</span>
                                             <span className="font-semibold">{stats.brideSide} guests</span>
                                         </div>
                                         <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
@@ -347,7 +349,7 @@ export default function AdminDashboard() {
                                     </div>
                                     <div>
                                         <div className="flex justify-between mb-2">
-                                            <span className="text-gray-600">🤵 Groom's Side</span>
+                                            <span className="text-gray-600">🤵 Groom&apos;s Side</span>
                                             <span className="font-semibold">{stats.groomSide} guests</span>
                                         </div>
                                         <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
@@ -469,8 +471,8 @@ export default function AdminDashboard() {
                                     className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-rose-400"
                                 >
                                     <option value="All">All Sides</option>
-                                    <option value="Bride">Bride's Side</option>
-                                    <option value="Groom">Groom's Side</option>
+                                    <option value="Bride">Bride&apos;s Side</option>
+                                    <option value="Groom">Groom&apos;s Side</option>
                                 </select>
 
                                 {/* Attending Filter */}
@@ -631,7 +633,7 @@ export default function AdminDashboard() {
                                                         {new Date(wish.createdDate).toLocaleDateString()}
                                                     </p>
                                                 </div>
-                                                <p className="text-gray-600 text-sm italic">"{wish.message}"</p>
+                                                <p className="text-gray-600 text-sm italic">&quot;{wish.message}&quot;</p>
                                             </div>
                                         ))}
                                 </div>

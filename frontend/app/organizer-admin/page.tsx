@@ -1,5 +1,7 @@
 'use client';
 
+import Link from 'next/link';
+
 import type { AdminGuestInput } from '@/lib/api';
 import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -247,7 +249,7 @@ function PhotosPanel({ photos, weddingId, onRefresh }: { photos: Photo[]; weddin
                 </div>
                 <div style={{ padding: 10 }}>
                   <p style={{ fontSize: 12, fontWeight: 600, fontFamily: 'var(--font-ui)', color: 'var(--text-strong)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', margin: 0 }}>{photo.guestName}</p>
-                  {photo.caption && <p style={{ fontSize: 11, fontFamily: 'var(--font-ui)', color: 'var(--text-subtle)', fontStyle: 'italic', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', margin: '2px 0 0' }}>"{photo.caption}"</p>}
+                  {photo.caption && <p style={{ fontSize: 11, fontFamily: 'var(--font-ui)', color: 'var(--text-subtle)', fontStyle: 'italic', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', margin: '2px 0 0' }}>&quot;{photo.caption}&quot;</p>}
                 </div>
               </motion.div>
             ))}
@@ -539,9 +541,9 @@ export default function OrganizerAdminDashboard() {
               Only you can preview it. Upgrade to share with guests and collect real RSVPs.
             </p>
           </div>
-          <a href="/templates" style={{ flexShrink: 0, fontFamily: 'var(--font-ui)', fontSize: 'var(--text-xs)', fontWeight: 700, color: 'var(--gold-700)', textDecoration: 'none', border: '1px solid var(--gold-400)', borderRadius: 'var(--radius-full)', padding: '5px 12px', whiteSpace: 'nowrap' }}>
+          <Link href="/templates" style={{ flexShrink: 0, fontFamily: 'var(--font-ui)', fontSize: 'var(--text-xs)', fontWeight: 700, color: 'var(--gold-700)', textDecoration: 'none', border: '1px solid var(--gold-400)', borderRadius: 'var(--radius-full)', padding: '5px 12px', whiteSpace: 'nowrap' }}>
             Upgrade
-          </a>
+          </Link>
         </div>
       )}
 

@@ -4,7 +4,6 @@ import { apiErrorMessage } from '@/lib/api/errors';
 
 import { useCallback, useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { motion, AnimatePresence } from 'framer-motion';
 import {
   eventService,
   guestService,
@@ -61,7 +60,6 @@ export default function WeddingDetailPage() {
   const [templates, setTemplates] = useState<Template[]>([]);
   const [organizerAdmin, setOrganizerAdmin] = useState<OrganizerAdminUser | null>(null);
   const [tables, setTables] = useState<SeatingTable[]>([]);
-  const [selectedTemplatePreview, setSelectedTemplatePreview] = useState<number | null>(null);
 
 
   // Filters
@@ -211,7 +209,7 @@ export default function WeddingDetailPage() {
     try {
       await photoService.approve(photoId, { isApproved: true });
       await fetchData();
-    } catch (err) {
+    } catch {
       alert('Failed to approve photo');
     }
   };
@@ -224,7 +222,7 @@ export default function WeddingDetailPage() {
         rejectionReason: reason || undefined,
       });
       await fetchData();
-    } catch (err) {
+    } catch {
       alert('Failed to reject photo');
     }
   };
@@ -233,7 +231,7 @@ export default function WeddingDetailPage() {
     try {
       await photoService.setFeatured(photoId, isFeatured);
       await fetchData();
-    } catch (err) {
+    } catch {
       alert('Failed to update featured status');
     }
   };
@@ -243,7 +241,7 @@ export default function WeddingDetailPage() {
     try {
       await photoService.delete(photoId);
       await fetchData();
-    } catch (err) {
+    } catch {
       alert('Failed to delete photo');
     }
   };

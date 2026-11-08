@@ -55,8 +55,8 @@ export default function GuestsTab({
             <select value={filterSide} onChange={e => setFilterSide(e.target.value as 'All' | 'Bride' | 'Groom')}
               style={{ ...sel, width: 'auto', paddingRight: 28 }}>
               <option value="All">All sides</option>
-              <option value="Bride">Bride's side</option>
-              <option value="Groom">Groom's side</option>
+              <option value="Bride">Bride&apos;s side</option>
+              <option value="Groom">Groom&apos;s side</option>
             </select>
           )}
           <select value={filterAttending} onChange={e => setFilterAttending(e.target.value as 'All' | 'Yes' | 'No')}

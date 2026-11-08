@@ -1,5 +1,7 @@
 'use client';
 
+import Link from 'next/link';
+
 import { useState } from 'react';
 import { eventService } from '@/lib/api';
 import { Icon } from '@/components/ui/Icon';
@@ -61,12 +63,12 @@ export function CustomDomainCard({ weddingId, domain, isPro }: CustomDomainCardP
           Serve your invitation on your own web address, e.g.{' '}
           <strong>john-and-mary.com</strong>, instead of the platform link.
         </p>
-        <a
+        <Link
           href="/templates"
           style={{ alignSelf: 'flex-start', fontFamily: 'var(--font-ui)', fontSize: 'var(--text-xs)', fontWeight: 700, color: 'var(--gold-700)', textDecoration: 'none', border: '1px solid var(--gold-400)', borderRadius: 'var(--radius-full)', padding: '6px 14px' }}
         >
           Upgrade to PRO
-        </a>
+        </Link>
       </div>
     );
   }

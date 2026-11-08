@@ -1,5 +1,7 @@
 'use client';
 
+import Link from 'next/link';
+
 import { apiErrorMessage } from '@/lib/api/errors';
 
 import { useState } from 'react';
@@ -190,9 +192,9 @@ export default function LoginPage() {
                 disabled={loading}
               />
               <div style={{ textAlign: 'right', marginTop: 8 }}>
-                <a href="/forgot-password" style={{ fontFamily: 'var(--font-ui)', fontSize: 'var(--text-sm)', color: 'var(--brand)', textDecoration: 'none' }}>
+                <Link href="/forgot-password" style={{ fontFamily: 'var(--font-ui)', fontSize: 'var(--text-sm)', color: 'var(--brand)', textDecoration: 'none' }}>
                   Forgot password?
-                </a>
+                </Link>
               </div>
             </div>
 

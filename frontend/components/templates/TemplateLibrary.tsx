@@ -7,7 +7,6 @@ import { UpgradeDialog } from './UpgradeDialog';
 import { tierRank, tierLabel } from '@/lib/tierRank';
 import { Icon } from '@/components/ui/Icon';
 
-type Tier = 'BASIC' | 'PREMIUM' | 'PRO';
 
 const tierBadge: Record<string, { bg: string; color: string }> = {
   BASIC:    { bg: 'var(--surface-sunken)',                                              color: 'var(--text-muted)' },

@@ -1,5 +1,7 @@
 'use client';
 
+import Link from 'next/link';
+
 import { storeValue, useStoredValue } from '@/lib/useStoredValue';
 
 const STORAGE_KEY = 'cookie-consent';
@@ -27,7 +29,7 @@ export function CookieConsent() {
     >
       <span style={{ flex: 1, minWidth: 220 }}>
         We use essential cookies to keep you signed in and run the site. See our{' '}
-        <a href="/privacy" style={{ color: 'var(--brand, #b06)', textDecoration: 'underline' }}>Privacy Policy</a>.
+        <Link href="/privacy" style={{ color: 'var(--brand, #b06)', textDecoration: 'underline' }}>Privacy Policy</Link>.
       </span>
       <button
         onClick={accept}

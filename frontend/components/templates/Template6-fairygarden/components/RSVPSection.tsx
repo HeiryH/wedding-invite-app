@@ -176,8 +176,8 @@ export default function RSVPSection({ onRSVP, customConfig, wedding, seatingEnab
                       }))
                     }
                   >
-                    <option value="Bride">Bride's Side</option>
-                    <option value="Groom">Groom's Side</option>
+                    <option value="Bride">Bride&apos;s Side</option>
+                    <option value="Groom">Groom&apos;s Side</option>
                   </select>
                 </div>
 

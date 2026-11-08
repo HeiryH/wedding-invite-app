@@ -1,5 +1,7 @@
 'use client';
 
+import Link from 'next/link';
+
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { templateService, Template, authService } from '@/lib/api';
@@ -197,7 +199,7 @@ function SignUpModal({ open, onClose, onSubmit, loading, error }: {
         </button>
         <button onClick={onClose} style={{ width: '100%', marginTop: 10, fontFamily: 'var(--mkt-sans)', fontSize: 14, color: 'var(--mkt-muted)', background: 'none', border: 'none', cursor: 'pointer' }}>Keep editing</button>
         <p style={{ marginTop: 14, fontFamily: 'var(--mkt-sans)', fontSize: 12, color: 'var(--mkt-muted)', textAlign: 'center' }}>
-          Already have an account? <a href="/login" style={{ fontWeight: 600 }}>Sign in</a>
+          Already have an account? <Link href="/login" style={{ fontWeight: 600 }}>Sign in</Link>
         </p>
       </div>
     </div>

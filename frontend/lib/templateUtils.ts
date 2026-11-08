@@ -8,7 +8,7 @@ function _gregorianToHijri(date: Date): { d: number; m: number; y: number } {
   const gm = date.getMonth() + 1;
   const gd = date.getDate();
 
-  let jd =
+  const jd =
     Math.floor((1461 * (gy + 4800 + Math.floor((gm - 14) / 12))) / 4) +
     Math.floor((367 * (gm - 2 - 12 * Math.floor((gm - 14) / 12))) / 12) -
     Math.floor((3 * Math.floor((gy + 4900 + Math.floor((gm - 14) / 12)) / 100)) / 4) +

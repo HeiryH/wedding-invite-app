@@ -1,5 +1,7 @@
 'use client';
 
+import Link from 'next/link';
+
 import { apiErrorMessage } from '@/lib/api/errors';
 
 import { useEffect, useMemo, useState } from 'react';
@@ -268,12 +270,12 @@ export default function WeddingInvitationPage() {
             <p style={{ margin: '0 0 28px', fontSize: 15, color: '#645a4d', lineHeight: 1.6 }}>
               This invitation is not yet shared publicly. The couple is still setting things up.
             </p>
-            <a
+            <Link
               href="/"
               style={{ display: 'inline-block', background: '#059669', color: '#fff', padding: '13px 28px', borderRadius: 999, fontSize: 14, fontWeight: 700, textDecoration: 'none' }}
             >
               Create your own invitation
-            </a>
+            </Link>
           </div>
         </div>
       );
@@ -294,9 +296,9 @@ export default function WeddingInvitationPage() {
       {!event.isPublic && !previewTemplateId && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 50, background: '#059669', color: '#fff', padding: '10px 20px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, fontSize: 13, fontFamily: 'system-ui, sans-serif' }}>
           <span>🔒 Private preview — only you can see this</span>
-          <a href="/organizer-admin" style={{ color: '#fff', fontWeight: 700, textDecoration: 'underline', fontSize: 12 }}>
+          <Link href="/organizer-admin" style={{ color: '#fff', fontWeight: 700, textDecoration: 'underline', fontSize: 12 }}>
             Back to dashboard
-          </a>
+          </Link>
         </div>
       )}
 

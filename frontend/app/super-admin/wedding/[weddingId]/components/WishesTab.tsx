@@ -58,7 +58,7 @@ export default function WishesTab({ wishes, onDelete, onExport }: WishesTabProps
                     {new Date(wish.createdDate).toLocaleDateString()}
                   </p>
                 </div>
-                <p style={{ fontSize: 13, color: 'var(--ink-2)', fontStyle: 'italic', margin: 0, lineHeight: 1.5 }}>"{wish.message}"</p>
+                <p style={{ fontSize: 13, color: 'var(--ink-2)', fontStyle: 'italic', margin: 0, lineHeight: 1.5 }}>&quot;{wish.message}&quot;</p>
               </div>
             ))}
         </div>

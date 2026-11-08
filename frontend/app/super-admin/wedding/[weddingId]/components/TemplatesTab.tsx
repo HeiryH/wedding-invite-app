@@ -145,7 +145,7 @@ export default function TemplatesTab({
         {/* Info Box */}
         <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
           <p className="text-sm text-blue-800">
-            💡 <strong>Tip:</strong> Click "Preview" to see how the template looks with your wedding data before applying it. 
+            💡 <strong>Tip:</strong> Click &quot;Preview&quot; to see how the template looks with your wedding data before applying it. 
             Changes take effect immediately on the public invitation.
           </p>
         </div>

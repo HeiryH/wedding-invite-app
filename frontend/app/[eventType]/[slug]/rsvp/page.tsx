@@ -103,7 +103,7 @@ export default function RSVPPage() {
           RSVP
         </h1>
         <p className="text-center text-gray-600 mb-8">
-          We'd love to have you celebrate with us! 💕
+          We&apos;d love to have you celebrate with us! 💕
         </p>
 
         <AnimatePresence mode="wait">
@@ -157,7 +157,7 @@ export default function RSVPPage() {
                     }`}
                   >
                     <span className="text-lg font-semibold">
-                      ✅ Yes, I'll be there!
+                      ✅ Yes, I&apos;ll be there!
                     </span>
                   </motion.button>
 
@@ -173,7 +173,7 @@ export default function RSVPPage() {
                     }`}
                   >
                     <span className="text-lg font-semibold">
-                      😢 Sorry, can't make it
+                      😢 Sorry, can&apos;t make it
                     </span>
                   </motion.button>
                 </div>
@@ -234,7 +234,7 @@ export default function RSVPPage() {
                     {/* Side Selection */}
                     <div className="mb-6">
                       <label className="block text-sm font-medium text-gray-700 mb-3">
-                        I'm with the... *
+                        I&apos;m with the... *
                       </label>
                       <div className="grid grid-cols-2 gap-4">
                         <motion.label
@@ -249,7 +249,7 @@ export default function RSVPPage() {
                           />
                           <div className="rounded-lg border-2 border-gray-200 p-4 text-center peer-checked:border-rose-500 peer-checked:bg-rose-50 transition-all">
                             <span className="text-2xl block mb-1">👰</span>
-                            <span className="font-semibold">Bride's Side</span>
+                            <span className="font-semibold">Bride&apos;s Side</span>
                           </div>
                         </motion.label>
 
@@ -265,7 +265,7 @@ export default function RSVPPage() {
                           />
                           <div className="rounded-lg border-2 border-gray-200 p-4 text-center peer-checked:border-rose-500 peer-checked:bg-rose-50 transition-all">
                             <span className="text-2xl block mb-1">🤵</span>
-                            <span className="font-semibold">Groom's Side</span>
+                            <span className="font-semibold">Groom&apos;s Side</span>
                           </div>
                         </motion.label>
                       </div>

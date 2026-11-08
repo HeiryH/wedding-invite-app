@@ -1,5 +1,7 @@
 'use client';
 
+import Link from 'next/link';
+
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { authService } from '@/lib/api';
@@ -66,9 +68,9 @@ export default function ForgotPasswordPage() {
         )}
 
         <div style={{ textAlign: 'center', marginTop: 24 }}>
-          <a href="/login" style={{ fontFamily: 'var(--font-ui)', fontSize: 'var(--text-sm)', color: 'var(--brand)', textDecoration: 'none' }}>
+          <Link href="/login" style={{ fontFamily: 'var(--font-ui)', fontSize: 'var(--text-sm)', color: 'var(--brand)', textDecoration: 'none' }}>
             &larr; Back to sign in
-          </a>
+          </Link>
         </div>
       </motion.div>
     </div>

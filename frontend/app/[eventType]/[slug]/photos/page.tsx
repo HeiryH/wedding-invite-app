@@ -204,7 +204,7 @@ export default function PhotoBoothPage() {
             📸 Photo Booth
           </h1>
           <p className="text-gray-600 text-lg">
-            Share your favorite moments from {wedding?.displayName}'s special day!
+            Share your favorite moments from {wedding?.displayName}&apos;s special day!
           </p>
           <button
             onClick={() => router.push(`/${urlEventType}/${coupleName}`)}
@@ -402,7 +402,7 @@ export default function PhotoBoothPage() {
                     </p>
                     {photo.caption && (
                       <p className="text-sm text-gray-600 italic mb-2">
-                        "{photo.caption}"
+                        &quot;{photo.caption}&quot;
                       </p>
                     )}
                     <p className="text-xs text-gray-400">

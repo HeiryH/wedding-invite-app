@@ -112,7 +112,7 @@ export default function WishesSection({ wishes, onSubmitWish, customConfig, over
                 viewport={{ once: true }}
                 transition={{ delay: i * 0.08, duration: 0.5 }}
               >
-                <p className={styles.wishMessage}>"{w.message}"</p>
+                <p className={styles.wishMessage}>&quot;{w.message}&quot;</p>
                 <span className={styles.wishAuthor}>— {w.guestName}</span>
               </motion.div>
             ))}</WishBatch>

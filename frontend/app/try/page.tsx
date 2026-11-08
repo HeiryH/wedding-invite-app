@@ -1,5 +1,7 @@
 'use client';
 
+import Link from 'next/link';
+
 import { apiErrorMessage } from '@/lib/api/errors';
 
 import { useEffect, useRef, useState, useCallback, Suspense } from 'react';
@@ -111,7 +113,7 @@ function SignUpModal({ open, onClose, onSubmit, loading, error }: {
 
         <p style={{ margin: '16px 0 0', fontFamily: 'var(--font-ui)', fontSize: 'var(--text-xs)', color: 'var(--text-subtle)', textAlign: 'center', lineHeight: 1.5 }}>
           Already have an account?{' '}
-          <a href="/login" style={{ color: 'var(--em)', textDecoration: 'none', fontWeight: 600 }}>Sign in</a>
+          <Link href="/login" style={{ color: 'var(--em)', textDecoration: 'none', fontWeight: 600 }}>Sign in</Link>
         </p>
       </div>
     </div>
@@ -258,10 +260,10 @@ function TryEditor() {
         }}>
           {/* Header */}
           <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
-            <a href="/" style={{ textDecoration: 'none' }}>
+            <Link href="/" style={{ textDecoration: 'none' }}>
               <Wordmark size={18} />
-            </a>
-            <a href="/login" style={{ fontFamily: 'var(--font-ui)', fontSize: 'var(--text-xs)', color: 'var(--text-muted)', textDecoration: 'none' }}>Sign in</a>
+            </Link>
+            <Link href="/login" style={{ fontFamily: 'var(--font-ui)', fontSize: 'var(--text-xs)', color: 'var(--text-muted)', textDecoration: 'none' }}>Sign in</Link>
           </div>
 
           {/* Scrollable form area */}
@@ -273,11 +275,11 @@ function TryEditor() {
               </p>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                 <div>
-                  <Label>Bride's name</Label>
+                  <Label>Bride&apos;s name</Label>
                   <Input value={brideName} onChange={(v) => { setBrideName(v); }} placeholder="e.g. Aisyah" />
                 </div>
                 <div>
-                  <Label>Groom's name</Label>
+                  <Label>Groom&apos;s name</Label>
                   <Input value={groomName} onChange={(v) => { setGroomName(v); }} placeholder="e.g. Hariz" />
                 </div>
                 <div>
