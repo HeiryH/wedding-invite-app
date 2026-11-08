@@ -46,7 +46,7 @@ describe('lazy editor template wrapper', () => {
     expect(screen.getByText('Authored invite')).toBeInTheDocument();
     expect(state.select).not.toHaveBeenCalled();
     expect(state.authored.mock.calls[0][0]).toMatchObject({ keyPrefix: 'ta99', customConfig: props.customConfig,
-      slotProps: { editor: props.editor, onRSVP: props.onRSVP, onSubmitWish: props.onSubmitWish } });
+      slotProps: { editor: props.editor, onRSVP: props.onRSVP, onSubmitWish: props.onSubmitWish, coupleMedia: props.coupleMedia } });
   });
   it('retains the built-in path for malformed authored JSON', () => {
     render(<TemplateWrapper {...props} wedding={{ ...props.wedding, templateStagesJson: 'invalid' }} />);

@@ -1,4 +1,6 @@
 'use client';
+import type { TemplateRsvpSubmission, PhotoUploadSubmission, TemplateWishSubmission } from '@/components/templates/guestContracts';
+
 
 import { useContext, useState, useEffect } from 'react';
 import { SeatingPreviewContext } from './_shared/slots/preview';
@@ -15,9 +17,9 @@ const API_BASE = process.env.NEXT_PUBLIC_API_URL?.replace('/api', '') ?? '';
 
 interface Template2Props {
     wedding: Wedding;
-    onRSVP: (data: any) => Promise<void>;
-    onSubmitWish: (data: any) => Promise<void>;
-    onUploadPhoto?: (data: any) => Promise<void>;
+    onRSVP: (data: TemplateRsvpSubmission) => Promise<void>;
+    onSubmitWish: (data: TemplateWishSubmission) => Promise<void>;
+    onUploadPhoto?: (data: PhotoUploadSubmission) => Promise<void>;
     guests?: Guest[];
     wishes: Wish[];
     photos: Photo[];

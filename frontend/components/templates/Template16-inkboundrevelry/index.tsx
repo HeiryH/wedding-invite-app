@@ -111,7 +111,7 @@ function VenueActions({ wedding, t }: Pick<TemplateRenderProps, 'wedding'> & { t
 }
 
 function ReplyForm({ wedding, onRSVP, seatingEnabled = false, tables = [], editor, previewOnly, t }: TemplateRenderProps & { t: Copy }) {
-  const [form, setForm] = useState({ guestName: '', email: '', phoneNumber: '', brideOrGroomSide: 'Bride', numberOfAttendees: 1, isAttending: true, songRequest: '' });
+  const [form, setForm] = useState({ guestName: '', email: '', phoneNumber: '', brideOrGroomSide: 'Bride' as 'Bride' | 'Groom', numberOfAttendees: 1, isAttending: true, songRequest: '' });
   const [step, setStep] = useState<'form' | 'seating'>('form');
   const seatingPreview = useContext(SeatingPreviewContext);
   const visibleStep = seatingPreview ? 'seating' : step;

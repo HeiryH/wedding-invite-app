@@ -1,3 +1,4 @@
+import { TEMPLATE_CAPABILITIES } from '../templateCapabilities';
 import { useMemo } from 'react';
 import type { Breakpoint, Layer, ObjectFit, StageDef, StageId, StageLayout } from './types';
 
@@ -179,7 +180,8 @@ export function serializeStage(
 }
 
 export function inlineFormSheet(prefix: string, stageId: StageId, config?: Record<string, string>) {
-  if (!/^t(7|10|11|12|13|14)$/.test(prefix)) return undefined;
+  const id = /^t(\d+)$/.exec(prefix)?.[1];
+  if (!id || !TEMPLATE_CAPABILITIES[Number(id)]?.configurableForms) return undefined;
   if (stageId === 'rsvp' && config?.['rsvp.form_layout'] === 'inline') return 'rsvp';
   if (stageId === 'wishes' && config?.['wish.form_layout'] === 'inline') return 'wish';
 }

@@ -1,4 +1,6 @@
 'use client';
+import type { TemplateRsvpSubmission, PhotoUploadSubmission } from '@/components/templates/guestContracts';
+
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -28,9 +30,9 @@ import styles from './Template6.module.css';
 // ── Prop types (matches TemplateWrapper interface) ──────────────────────────
 interface Template6Props {
   wedding: Wedding;
-  onRSVP: (data: any) => Promise<void>;
+  onRSVP: (data: TemplateRsvpSubmission) => Promise<void>;
   onSubmitWish: (data: CreateWish) => Promise<void>;
-  onUploadPhoto?: (data: any) => Promise<void>;
+  onUploadPhoto?: (data: PhotoUploadSubmission) => Promise<void>;
   wishes: Wish[];
   photos: Photo[];
   photoBoothEnabled: boolean;

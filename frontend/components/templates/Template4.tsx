@@ -1,4 +1,6 @@
 'use client';
+import type { TemplateRsvpSubmission, PhotoUploadSubmission, TemplateWishSubmission } from '@/components/templates/guestContracts';
+
 
 import { useContext, useState, useEffect, useRef } from 'react';
 import { useCountdownToDate as useCountdown } from './_shared/hooks/useCountdownToDate';
@@ -16,9 +18,9 @@ const API_BASE = process.env.NEXT_PUBLIC_API_URL?.replace('/api', '') ?? '';
 
 interface Template4Props {
   wedding: Wedding;
-  onRSVP: (data: any) => Promise<void>;
-  onSubmitWish: (data: any) => Promise<void>;
-  onUploadPhoto?: (data: any) => Promise<void>;
+  onRSVP: (data: TemplateRsvpSubmission) => Promise<void>;
+  onSubmitWish: (data: TemplateWishSubmission) => Promise<void>;
+  onUploadPhoto?: (data: PhotoUploadSubmission) => Promise<void>;
   wishes: Wish[];
   photos: Photo[];
   photoBoothEnabled: boolean;

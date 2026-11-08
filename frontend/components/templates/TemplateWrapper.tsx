@@ -49,6 +49,8 @@ export default function TemplateWrapper({
       t: (key: string, fallback: string) => customConfig?.[key] || fallback,
       wishes,
       photos,
+      coupleMedia,
+      previewOnly,
       tables: tables ?? [],
       itinerary: itinerary ?? [],
       seatingEnabled: Boolean(seatingEnabled),

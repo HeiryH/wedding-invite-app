@@ -1,4 +1,6 @@
 'use client';
+import type { TemplateRsvpSubmission } from '@/components/templates/guestContracts';
+
 import { useState, type CSSProperties } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { CreateGuest, Wedding } from '@/lib/api';
@@ -7,7 +9,7 @@ import SectionOverlay from '../SectionOverlay';
 import styles from '../Template6.module.css';
 
 interface Props {
-  onRSVP: (data: any) => Promise<void>;
+  onRSVP: (data: TemplateRsvpSubmission) => Promise<void>;
   customConfig?: Record<string, string>;
   wedding?: Wedding;
   overlayProps: { breakpoint: Breakpoint; config?: Record<string, string>; editor?: EditorHandle };

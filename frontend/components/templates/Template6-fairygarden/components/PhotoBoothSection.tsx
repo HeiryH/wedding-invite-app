@@ -1,4 +1,6 @@
 'use client';
+import type { PhotoUploadSubmission } from '@/components/templates/guestContracts';
+
 import { useRef, type CSSProperties } from 'react';
 import { motion } from 'framer-motion';
 import { Photo } from '@/lib/api';
@@ -11,7 +13,7 @@ const API_BASE = process.env.NEXT_PUBLIC_API_URL?.replace('/api', '') ?? '';
 
 interface Props {
   photos: Photo[];
-  onUploadPhoto?: (data: any) => Promise<void>;
+  onUploadPhoto?: (data: PhotoUploadSubmission) => Promise<void>;
   overlayProps: { breakpoint: Breakpoint; config?: Record<string, string>; editor?: EditorHandle };
   a: (stageId: string, elementId: string, base?: CSSProperties) => CSSProperties;
 }

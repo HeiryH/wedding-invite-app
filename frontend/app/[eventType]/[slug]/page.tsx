@@ -8,6 +8,7 @@ import {
   photoService,
   eventFeatureService,
   templateConfigService,
+  templateService,
   tableService,
   itineraryService,
   Event,
@@ -19,9 +20,9 @@ import {
   guestService,
 } from '@/lib/api';
 import { urlSegmentForEventType } from '@/lib/eventTypes';
-import DataTemplate from '@/components/templates/_shared/DataTemplate';
-import { useBreakpoint } from '@/components/templates/_shared/hooks/useBreakpoint';
-import type { StageDef, SlotProps } from '@/components/templates/_shared/types';
+import TemplateWrapper from '@/components/templates/TemplateWrapper';
+import { TEMPLATE_CAPABILITIES } from '@/components/templates/templateCapabilities';
+import type { TemplateRsvpSubmission, TemplateWishSubmission, PhotoUploadSubmission } from '@/components/templates/guestContracts';
 import ViewportProbe from '@/components/dev/ViewportProbe';
 
 export default function WeddingInvitationPage() {
@@ -48,6 +49,7 @@ export default function WeddingInvitationPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [currentTemplateId, setCurrentTemplateId] = useState<number | null>(null);
+  const [authoredStagesJson, setAuthoredStagesJson] = useState<string | null>(null);
 
   // The 7 template components (and their shared preview machinery) are out of scope for the
   // Event migration and still expect the legacy `Wedding` shape — adapt at this boundary only.
@@ -114,6 +116,13 @@ export default function WeddingInvitationPage() {
           : eventData.templateId;
 
         setCurrentTemplateId(templateIdToLoad);
+        // Custom authored IDs have no numbered module. Resolve their composition through the
+        // existing public template service; unknown IDs retain the wrapper's T1 fallback.
+        setAuthoredStagesJson(null);
+        if (!TEMPLATE_CAPABILITIES[templateIdToLoad]) {
+          const template = await templateService.getById(templateIdToLoad).catch(() => null);
+          setAuthoredStagesJson(template?.isAuthored ? template.stagesJson ?? null : null);
+        }
 
         // ❌ REMOVED: Fetch guests
         // const guestsData = await guestService.getByWeddingId(eventData.eventId);
@@ -170,7 +179,7 @@ export default function WeddingInvitationPage() {
     fetchData();
   }, [urlEventType, slug, previewTemplateId, router]);
 
-  const handleRSVP = async (data: any) => {
+  const handleRSVP = async (data: TemplateRsvpSubmission) => {
     if (!event) return;
     await guestService.rsvp(event.eventId, {
       guestName: data.guestName,
@@ -192,7 +201,7 @@ export default function WeddingInvitationPage() {
     // setGuests(updatedGuests);
   };
 
-  const handleSubmitWish = async (data: any) => {
+  const handleSubmitWish = async (data: TemplateWishSubmission) => {
     if (!event) return;
     await wishService.create(event.eventId, {
       guestName: data.guestName,
@@ -202,7 +211,7 @@ export default function WeddingInvitationPage() {
     setWishes(updatedWishes);
   };
 
-  const handleUploadPhoto = async (data: any) => {
+  const handleUploadPhoto = async (data: PhotoUploadSubmission) => {
     if (!event) return;
     await photoService.upload(
       event.eventId,
@@ -291,10 +300,9 @@ export default function WeddingInvitationPage() {
 
       {/* Render Template */}
       <div className={previewTemplateId ? 'pt-12' : ''}>
-        <TemplateRenderer
+        <TemplateWrapper
           key={currentTemplateId}
-          templateId={currentTemplateId}
-          wedding={wedding}
+          wedding={{ ...wedding, templateId: currentTemplateId, templateStagesJson: authoredStagesJson }}
           onRSVP={handleRSVP}
           onSubmitWish={handleSubmitWish}
           onUploadPhoto={handleUploadPhoto}
@@ -309,126 +317,5 @@ export default function WeddingInvitationPage() {
         />
       </div>
     </>
-  );
-}
-
-// Separate component for template rendering
-function TemplateRenderer({
-  templateId,
-  wedding,
-  onRSVP,
-  onSubmitWish,
-  onUploadPhoto,
-  wishes,
-  photos,
-  photoBoothEnabled,
-  seatingEnabled,
-  tables,
-  coupleMedia,
-  customConfig,
-  itinerary,
-}: {
-  templateId: number;
-  wedding: Wedding;
-  onRSVP: (data: any) => Promise<void>;
-  onSubmitWish: (data: any) => Promise<void>;
-  onUploadPhoto?: (data: any) => Promise<void>;
-  wishes: Wish[];
-  photos: Photo[];
-  photoBoothEnabled: boolean;
-  seatingEnabled: boolean;
-  tables: SeatingTable[];
-  coupleMedia?: Photo[];
-  customConfig?: Record<string, string>;
-  itinerary?: ItineraryItem[];
-}) {
-  const [TemplateComponent, setTemplateComponent] = useState<any>(null);
-  const breakpoint = useBreakpoint();
-
-  // Authored templates (Template.StagesJson — see _shared/DataTemplate.tsx) render through the
-  // shared engine directly; there's no Template{N}.tsx module to dynamically import for them.
-  const authoredStages = useMemo(() => {
-    if (!wedding.templateStagesJson) return null;
-    try {
-      return JSON.parse(wedding.templateStagesJson) as Record<string, StageDef>;
-    } catch {
-      return null;
-    }
-  }, [wedding.templateStagesJson]);
-
-  useEffect(() => {
-    if (authoredStages) return;
-    // Load template dynamically
-    const loadTemplate = async () => {
-      try {
-        const module = await import(`@/components/templates/Template${templateId}`);
-        setTemplateComponent(() => module.default);
-      } catch (error) {
-        console.error(`Failed to load Template${templateId}:`, error);
-        // Fallback to Template1
-        const fallback = await import(`@/components/templates/Template1`);
-        setTemplateComponent(() => fallback.default);
-      }
-    };
-
-    loadTemplate();
-  }, [templateId, authoredStages]);
-
-  if (authoredStages) {
-    const slotProps: SlotProps = {
-      wedding,
-      t: (key: string, fallback: string) => customConfig?.[key] || fallback,
-      wishes,
-      photos,
-      tables,
-      itinerary: itinerary ?? [],
-      seatingEnabled,
-      photoBoothEnabled,
-      onRSVP,
-      onSubmitWish,
-      onUploadPhoto,
-      editing: false,
-      config: customConfig,
-      breakpoint,
-    };
-    return (
-      <DataTemplate
-        stages={authoredStages}
-        stageIds={Object.keys(authoredStages)}
-        keyPrefix={`ta${templateId}`}
-        assetRoot=""
-        breakpoint={breakpoint}
-        customConfig={customConfig}
-        slotProps={slotProps}
-      />
-    );
-  }
-
-  if (!TemplateComponent) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-16 h-16 border-4 border-rose-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-          <p className="text-gray-600">Loading template...</p>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <TemplateComponent
-      wedding={wedding}
-      onRSVP={onRSVP}
-      onSubmitWish={onSubmitWish}
-      onUploadPhoto={onUploadPhoto}
-      wishes={wishes}
-      photos={photos}
-      photoBoothEnabled={photoBoothEnabled}
-      seatingEnabled={seatingEnabled}
-      tables={tables}
-      coupleMedia={coupleMedia}
-      customConfig={customConfig}
-      itinerary={itinerary}
-    />
   );
 }

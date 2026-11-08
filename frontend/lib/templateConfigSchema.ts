@@ -1,3 +1,4 @@
+import { templatesWith } from '@/components/templates/templateCapabilities';
 import { TemplateConfigField, TemplateConfigBlock, TemplateConfigSection } from './api/types';
 import { NAV_ADJUST_KEYS } from '@/components/templates/_shared/nav/appearance';
 import { TEMPLATE16_FIELDS } from './template16Config';
@@ -37,7 +38,7 @@ const SEATING_MODE: TemplateConfigField = {
   maxLength: 9, richText: false, adminOnly: false, section: 'rsvp',
   block: 'seating', group: 'Seating', chip: 'Seating', options: ['guest', 'organizer'],
   optionLabels: { guest: 'Guests choose a table', organizer: 'Organizer assigns tables' },
-  templateIds: [1, 2, 3, 4, 5, 7, 10, 11, 12, 13, 14, 15, 16],
+  templateIds: templatesWith('seating'),
 };
 
 const NAV_SECTIONS = [
@@ -57,7 +58,7 @@ function navItemFields(id: string, label: string, templateIds: number[]): Templa
 const SHARED_NAV_FIELDS: TemplateConfigField[] = [
   { key: 'nav.items', label: 'Menu items', fieldType: 'hidden', defaultValue: '', maxLength: 120,
     richText: false, adminOnly: false, section: 'navigation', group: 'Menu Items', chip: 'Items',
-    templateIds: [7, 10, 11, 12, 13, 14, 15, 16] },
+    templateIds: templatesWith('sharedNavigation') },
   { key: 'nav.layout', label: 'Legacy navigation layout', fieldType: 'hidden', defaultValue: 'hidden',
     maxLength: 12, richText: false, adminOnly: false, section: 'navigation', group: 'Navigation Bar', chip: 'Display',
     templateIds: [11, 12, 15, 16] },
@@ -65,22 +66,22 @@ const SHARED_NAV_FIELDS: TemplateConfigField[] = [
     options: ['pill', 'bar', 'bubbles', 'labels', 'hidden'],
     optionLabels: { pill: 'Pill', bar: 'Full bar', bubbles: 'Floating bubbles', labels: 'Floating labels', hidden: 'Hidden' },
     richText: false, adminOnly: false, section: 'navigation', group: 'Navigation Bar', chip: 'Display',
-    templateIds: [7, 10, 11, 12, 13, 14, 15, 16] },
+    templateIds: templatesWith('sharedNavigation') },
   { key: 'nav.position', label: 'Menu position', fieldType: 'select', defaultValue: 'bottom', maxLength: 6,
     options: ['top', 'bottom', 'left', 'right'],
     optionLabels: { top: 'Top', bottom: 'Bottom', left: 'Left side', right: 'Right side' },
     richText: false, adminOnly: false, section: 'navigation', group: 'Navigation Bar', chip: 'Display',
-    templateIds: [7, 10, 11, 12, 13, 14, 15, 16] },
+    templateIds: templatesWith('sharedNavigation') },
   { key: 'nav.content', label: 'Menu item display', fieldType: 'select', defaultValue: 'labels', maxLength: 6,
     options: ['labels', 'icons'], optionLabels: { labels: 'Labels', icons: 'Icons' },
     richText: false, adminOnly: false, section: 'navigation', group: 'Navigation Bar', chip: 'Display',
-    templateIds: [7, 10, 11, 12, 13, 14, 15, 16] },
+    templateIds: templatesWith('sharedNavigation') },
   ...NAV_ADJUST_KEYS.map((key): TemplateConfigField => ({
     key, label: key, fieldType: 'hidden', defaultValue: '', maxLength: 8,
     richText: false, adminOnly: false, section: 'navigation',
-    templateIds: [7, 10, 11, 12, 13, 14, 15, 16],
+    templateIds: templatesWith('sharedNavigation'),
   })),
-  ...NAV_SECTIONS.flatMap(([id, label]) => navItemFields(id, label, [7, 10, 11, 12, 13, 14, 15, 16])),
+  ...NAV_SECTIONS.flatMap(([id, label]) => navItemFields(id, label, templatesWith('sharedNavigation'))),
 ];
 
 const COUPLE_GALLERY_FIELDS: TemplateConfigField[] = [
@@ -100,15 +101,15 @@ const COUPLE_GALLERY_FIELDS: TemplateConfigField[] = [
     templateIds: [11, 12, 16] },
   { key: 'gallery.title', label: 'Gallery title', fieldType: 'text', defaultValue: 'Our photos', maxLength: 60,
     richText: false, adminOnly: false, section: 'photobooth', block: 'couple-gallery', group: 'Gallery', chip: 'Gallery',
-    templateIds: [7, 11, 12, 16] },
+    templateIds: templatesWith('coupleGallery') },
   { key: 'gallery.fit', label: 'Photo fit', fieldType: 'select', defaultValue: 'cover', maxLength: 7,
     options: ['cover', 'contain'], optionLabels: { cover: 'Fill the frame', contain: 'Show the full photo' },
     richText: false, adminOnly: false, section: 'photobooth', block: 'couple-gallery', group: 'Gallery', chip: 'Gallery',
-    templateIds: [7, 11, 12, 16] },
+    templateIds: templatesWith('coupleGallery') },
   { key: 'gallery.order', label: 'Photo order', fieldType: 'hidden', defaultValue: '', maxLength: 500,
     richText: false, adminOnly: false, section: 'photobooth', block: 'couple-gallery', group: 'Gallery', chip: 'Gallery',
-    templateIds: [7, 11, 12, 16] },
-  ...navItemFields('couple-gallery', 'Couple Gallery', [7, 11, 12, 16]),
+    templateIds: templatesWith('coupleGallery') },
+  ...navItemFields('couple-gallery', 'Couple Gallery', templatesWith('coupleGallery')),
 ];
 
 const COMMON_FIELDS: TemplateConfigField[] = [
@@ -301,7 +302,7 @@ const COMMON_FIELDS: TemplateConfigField[] = [
     ...field, label: 'Form layout', fieldType: 'select', defaultValue: 'button', maxLength: 6,
     richText: false, adminOnly: false, group: 'Form layout', chip: 'Layout',
     options: ['button', 'inline'], optionLabels: { button: 'Button opens pop-up', inline: 'Show form on page' },
-    templateIds: [7, 10, 11, 12, 13, 14],
+    templateIds: templatesWith('configurableForms'),
   })),
 
   SEATING_MODE,
@@ -376,7 +377,7 @@ const COMMON_FIELDS: TemplateConfigField[] = [
   ].map((field): TemplateConfigField => ({
     ...field, fieldType: 'boolean', defaultValue: 'true', maxLength: 5,
     richText: false, adminOnly: false, section: 'rsvp', group: 'Fields', chip: 'Fields',
-    templateIds: [7, 10, 11, 12, 13, 14, 15],
+    templateIds: templatesWith('configurableRsvpFields'),
   })),
 
   // ── Wishes ──────────────────────────────────────────────────────────────────

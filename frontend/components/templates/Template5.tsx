@@ -1,4 +1,6 @@
 'use client';
+import type { TemplateRsvpSubmission, PhotoUploadSubmission, TemplateWishSubmission } from '@/components/templates/guestContracts';
+
 
 import { Fragment, useContext, useState, useEffect, useMemo, useRef, type CSSProperties, type ReactNode } from 'react';
 import { useCountdownToDate as useCountdown } from './_shared/hooks/useCountdownToDate';
@@ -20,9 +22,9 @@ const API_BASE = process.env.NEXT_PUBLIC_API_URL?.replace('/api', '') ?? '';
 
 interface Template5Props {
   wedding: Wedding;
-  onRSVP: (data: any) => Promise<void>;
-  onSubmitWish: (data: any) => Promise<void>;
-  onUploadPhoto?: (data: any) => Promise<void>;
+  onRSVP: (data: TemplateRsvpSubmission) => Promise<void>;
+  onSubmitWish: (data: TemplateWishSubmission) => Promise<void>;
+  onUploadPhoto?: (data: PhotoUploadSubmission) => Promise<void>;
   guests?: any[];
   wishes: Wish[];
   photos: Photo[];
@@ -40,7 +42,7 @@ interface Template5Props {
 
 interface RSVPModalProps {
   wedding: Wedding;
-  onRSVP: (data: any) => Promise<void>;
+  onRSVP: (data: TemplateRsvpSubmission) => Promise<void>;
   onClose: () => void;
   seatingEnabled: boolean;
   tables: SeatingTable[];

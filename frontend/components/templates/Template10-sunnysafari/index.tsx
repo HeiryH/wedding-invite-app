@@ -1,4 +1,6 @@
 'use client';
+import type { TemplateRsvpSubmission, PhotoUploadSubmission } from '@/components/templates/guestContracts';
+
 
 import { useState, useMemo, useRef, useCallback } from 'react';
 import type { CSSProperties } from 'react';
@@ -44,9 +46,9 @@ const T10_NAV_VARS: CSSProperties = {
 
 interface Template10Props {
   wedding: Wedding;
-  onRSVP: (data: unknown) => Promise<void>;
+  onRSVP: (data: TemplateRsvpSubmission) => Promise<void>;
   onSubmitWish: (data: CreateWish) => Promise<void>;
-  onUploadPhoto?: (data: unknown) => Promise<void>;
+  onUploadPhoto?: (data: PhotoUploadSubmission) => Promise<void>;
   wishes: Wish[];
   photos: Photo[];
   photoBoothEnabled: boolean;

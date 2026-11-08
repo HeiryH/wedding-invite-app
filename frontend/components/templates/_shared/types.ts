@@ -1,3 +1,4 @@
+import type { TemplateRsvpSubmission, PhotoUploadSubmission } from '../guestContracts';
 import type { Wedding, Wish, Photo, ItineraryItem, SeatingTable, CreateWish } from '@/lib/api';
 
 /**
@@ -497,6 +498,9 @@ export interface StageLayout {
 export interface SlotProps {
   wedding: Wedding;
   featuredPortrait?: Photo;
+  /** Authored compositions may explicitly consume these; no gallery is injected. */
+  coupleMedia?: Photo[];
+  previewOnly?: boolean;
   /** Config lookup bound to the wedding's customConfig. */
   t: (key: string, fallback: string) => string;
   wishes: Wish[];
@@ -505,9 +509,9 @@ export interface SlotProps {
   itinerary: ItineraryItem[];
   seatingEnabled: boolean;
   photoBoothEnabled: boolean;
-  onRSVP: (data: unknown) => Promise<void>;
+  onRSVP: (data: TemplateRsvpSubmission) => Promise<void>;
   onSubmitWish: (data: CreateWish) => Promise<void>;
-  onUploadPhoto?: (data: unknown) => Promise<void>;
+  onUploadPhoto?: (data: PhotoUploadSubmission) => Promise<void>;
   /** True inside the Adjust panel — slots suppress submits so editing can't post real data. */
   editing: boolean;
   /** The raw config bag, for a slot that needs a lookup `t()` doesn't cover. */

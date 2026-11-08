@@ -1,4 +1,6 @@
 'use client';
+import type { TemplateRsvpSubmission, PhotoUploadSubmission } from '@/components/templates/guestContracts';
+
 
 import TemplateNav, { type NavLayout } from '../_shared/nav/TemplateNav';
 import { MusicSlot } from '../_shared/slots/ChromeSlots';
@@ -43,8 +45,8 @@ const SHEETS = {
   wish: [sheetLayer('wish-form', 'wishForm', 'wish', 2), sheetLayer('wish-photo', 'wishPhoto', 'wish', 1)],
 };
 interface Props {
-  wedding: Wedding; onRSVP: (data: unknown) => Promise<void>; onSubmitWish: (data: CreateWish) => Promise<void>;
-  onUploadPhoto?: (data: unknown) => Promise<void>; wishes: Wish[]; photos: Photo[]; photoBoothEnabled: boolean;
+  wedding: Wedding; onRSVP: (data: TemplateRsvpSubmission) => Promise<void>; onSubmitWish: (data: CreateWish) => Promise<void>;
+  onUploadPhoto?: (data: PhotoUploadSubmission) => Promise<void>; wishes: Wish[]; photos: Photo[]; photoBoothEnabled: boolean;
   seatingEnabled?: boolean; tables?: SeatingTable[]; customConfig?: Record<string, string>;
   itinerary?: ItineraryItem[]; editor?: EditorHandle;
 }
@@ -98,7 +100,7 @@ function PaintedPromise({ wedding, onRSVP, onSubmitWish, onUploadPhoto, wishes, 
       ? entry.presentation.opacity : setPresentation.get(entry.sceneSet.id) ?? entry.presentation.opacity } };
   });
   const t = useCallback((key: string, fallback: string) => customConfig?.[key] || fallback, [customConfig]);
-  const submitRsvp = async (data: unknown) => { await onRSVP(data); window.setTimeout(interaction.close, 1100); };
+  const submitRsvp = async (data: TemplateRsvpSubmission) => { await onRSVP(data); window.setTimeout(interaction.close, 1100); };
   const slotProps: SlotProps = { wedding, t, wishes, photos, tables, itinerary, seatingEnabled, photoBoothEnabled,
     onRSVP: submitRsvp, onSubmitWish, onUploadPhoto, editing: false, config: customConfig, breakpoint };
   const decorations: Record<string, CinematicLayerDecoration> = {};

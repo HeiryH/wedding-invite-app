@@ -1,4 +1,6 @@
 'use client';
+import type { TemplateRsvpSubmission, PhotoUploadSubmission, TemplateWishSubmission } from '@/components/templates/guestContracts';
+
 
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -39,9 +41,9 @@ const SHADOW_MAP: Record<string, string | undefined> = {
 
 interface Template9Props {
   wedding: Wedding;
-  onRSVP: (data: any) => Promise<void>;
-  onSubmitWish: (data: any) => Promise<void>;
-  onUploadPhoto?: (data: any) => Promise<void>;
+  onRSVP: (data: TemplateRsvpSubmission) => Promise<void>;
+  onSubmitWish: (data: TemplateWishSubmission) => Promise<void>;
+  onUploadPhoto?: (data: PhotoUploadSubmission) => Promise<void>;
   wishes: Wish[];
   photos: Photo[];
   photoBoothEnabled: boolean;
