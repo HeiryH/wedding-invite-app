@@ -117,3 +117,7 @@ Validation: full frontend suite passed at 61 files / 387 tests; TypeScript and t
 - Calendar/map controls were checked against actual consumers: T5/T7/T16 retain their controls; templates without those actions do not gain dead controls.
 
 Validation: full suite passed at 63 files / 394 tests before the additional autoplay-cleanup regression; final focused audio/utility/cinematic checks passed. TypeScript and new utility-hook ESLint passed. All 16 templates plus authored fixture rendered at mobile/desktop without page errors: `.einvite-run/consistency/phase6/`. No saved settings or geometry migrated.
+
+## Additional saved-layout defect found during Phase 7
+
+The preservation regression exposed that serializeStage emitted `deleted: true`, but applyPatch's allowed-field list omitted `deleted`; shipped layers therefore reappeared after reload. The shared resolver now applies that flag. A round-trip test verifies deletion, untouched desktop geometry and reset restoration without rewriting the config bag. This respects already-saved deletion intent across all engine consumers.

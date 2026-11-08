@@ -84,3 +84,18 @@ describe.each([
     });
   }
 });
+
+
+describe('saved layer tombstones', () => {
+  it('applies serialized deletion to shipped layers without changing other geometry', () => {
+    const definition: StageDef = { id: 'scene', label: 'Scene', bg: '', bgFit: 'cover', layers: [
+      { id: 'art', kind: 'img', src: 'art.webp', x: 50, y: 50, w: 30, h: 40, s: 1, z: 1, order: 0, chain: false, hidden: false, opacity: 1 },
+    ] };
+    const saved = serializeStage(definition, 'mobile', [], { bgFit: 'cover' });
+    const bag = { 't7.layout.mobile.scene': saved };
+    expect(resolveStage('t7', definition, 'mobile', bag).layers).toEqual([]);
+    expect(resolveStage('t7', definition, 'desktop', bag).layers[0]).toMatchObject({ id: 'art', x: 50, y: 50 });
+    expect(resolveStage('t7', definition, 'mobile', {}).layers[0].id).toBe('art');
+    expect(bag['t7.layout.mobile.scene']).toContain('"deleted":true');
+  });
+});

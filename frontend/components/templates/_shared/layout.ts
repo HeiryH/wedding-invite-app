@@ -15,7 +15,7 @@ export const layoutKey = (prefix: string, bp: Breakpoint, stage: StageId) =>
 export const OVERRIDABLE: (keyof Layer)[] = [
   'x', 'y', 'w', 'h', 's', 'z', 'order', 'chain', 'hidden', 'opacity', 'depth', 'textScale',
   'accentColor', 'containerMinHeight', 'containerPadding', 'containerOpacity', 'contentGap', 'contentAlignY', 'contentAlign',
-  'rotation', 'flipX', 'flipY', 'locked', 'overflowMode',
+  'rotation', 'flipX', 'flipY', 'locked', 'deleted', 'overflowMode',
   'color', 'fill', 'fontSize', 'fontWeight', 'lineHeight', 'radius', 'text', 'src', 'shape', 'label',
   'anim', 'animDur', 'animOut', 'animOutDur',
   // text styling (types.ts) — usable by kind 'text', and by kind 'anchor' when `styleable`.
