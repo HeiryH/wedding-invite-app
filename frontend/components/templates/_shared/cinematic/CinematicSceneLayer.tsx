@@ -285,7 +285,8 @@ export default function CinematicSceneLayer({
     return cloneElement(localElement, {
       style: localStyle,
       ...(layer.src && layer.kind === 'img' && localElement.type === 'img' ? { src: layer.src } : {}),
-      ...(layer.src && layer.kind === 'img' && localElement.type === 'figure' ? { children: <img src={layer.src} alt="Selected memory artwork" style={{ width: '100%', height: '100%', objectFit: layer.fit ?? 'cover' }} /> } : {}),
+      ...(layer.src && layer.kind === 'img' && localElement.type === 'figure' ? { children: /* eslint-disable-next-line @next/next/no-img-element -- Editable scene artwork must retain the generated element geometry and direct layer source. */
+                                                                                            <img src={layer.src} alt="Selected memory artwork" style={{ width: '100%', height: '100%', objectFit: layer.fit ?? 'cover' }} /> } : {}),
       ...(layer.kind === 'text' && layer.text ? { children: resolveBindings(layer.text, slotProps), dangerouslySetInnerHTML: undefined } : {}),
       ...{
         'data-cinematic-layer': layer.id, 'data-cinematic-parent': layer.parentId, 'data-effect-pose': pose?.side,

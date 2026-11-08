@@ -52,7 +52,8 @@ const registry: Record<string, Renderer> = {
     children: <div role={editing ? undefined : 'button'} tabIndex={!editing && available ? 0 : undefined} className={s.boardObject} onClick={() => !editing && available && fire()}
       onKeyDown={(event) => { if (!editing && available && (event.key === 'Enter' || event.key === ' ')) { event.preventDefault(); fire(); } }}
       aria-label="View programme">
-      {part('artwork', <img src={layer.src} alt="" />)}
+      {part('artwork', /* eslint-disable-next-line @next/next/no-img-element -- Scene artwork and guest memories retain native intrinsic geometry within animated layer parts. */
+                       <img src={layer.src} alt="" />)}
       {part('copy', <span className={s.boardCopy}>{part('title', <strong>{layer.title || t('itinerary.title', 'Programme')}</strong>)}
         {part('items', <span className={s.boardItems}>{itinerary.length
           ? itinerary.map((item, index) => <Fragment key={item.itineraryItemId}>{part(`row-${index}`, <span className={s.boardRow}>{part(`time-${index}`, <b>{item.detail}</b>)}{part(`label-${index}`, <i style={{ fontStyle: 'normal' }}>{item.label}</i>)}</span>)}</Fragment>)
@@ -68,7 +69,8 @@ const registry: Record<string, Renderer> = {
     children: <div role={editing ? undefined : 'button'} tabIndex={!editing && available ? 0 : undefined} className={s.letterButton} onClick={() => !editing && available && fire()}
       onKeyDown={(event) => { if (!editing && available && (event.key === 'Enter' || event.key === ' ')) { event.preventDefault(); fire(); } }}
       aria-label="Open RSVP form" data-interaction-phase={phase}>
-      {part('artwork', <img src={layer.src} alt="" className={s.envelope} />)}
+      {part('artwork', /* eslint-disable-next-line @next/next/no-img-element -- Scene artwork and guest memories retain native intrinsic geometry within animated layer parts. */
+                       <img src={layer.src} alt="" className={s.envelope} />)}
       {part('paper', <span className={s.letter} style={{ transform: `translate(-50%, ${phase === 'closing' ? 28 : motion?.y ?? -50}%) scale(${phase === 'closing' ? .78 : motion?.scale ?? 1})` }}>
         {part('subtitle', <small>{t('rsvp.subtitle', 'Kindly respond')}</small>)}{part('title', <strong>{layer.title || t('rsvp.title', 'RSVP')}</strong>)}{part('action', <em>Open response form</em>)}
       </span>)}
@@ -80,7 +82,8 @@ const registry: Record<string, Renderer> = {
     children: <div role={editing ? undefined : 'button'} tabIndex={!editing && available ? 0 : undefined} onClick={() => !editing && available && fire()} aria-label="Open best wishes form"
       onKeyDown={(event) => { if (!editing && available && (event.key === 'Enter' || event.key === ' ')) { event.preventDefault(); fire(); } }}
       className={`${s.bookButton} ${phase === 'closing' ? s.bookClosing : ''}`} data-interaction-phase={phase}>
-      {part('artwork', <img src={layer.src} alt="" />)}{part('copy', <span>{part('subtitle', <small>{t('wish.prompt', 'Write a blessing for the couple')}</small>)}
+      {part('artwork', /* eslint-disable-next-line @next/next/no-img-element -- Scene artwork and guest memories retain native intrinsic geometry within animated layer parts. */
+                       <img src={layer.src} alt="" />)}{part('copy', <span>{part('subtitle', <small>{t('wish.prompt', 'Write a blessing for the couple')}</small>)}
         {part('title', <strong>{layer.title || t('wish.title', 'Best Wishes')}</strong>)}{part('action', <em>Open guest book</em>)}</span>)}
     </div>,
   }),
@@ -88,14 +91,16 @@ const registry: Record<string, Renderer> = {
     const layout = theme.memory;
     const approved = photos.filter((photo) => photo.isApproved && photo.isVisible !== false).slice(0, layout.maxPhotos);
     return { visible: photoBoothEnabled, children: <section className={s.photoFinale}>
-      {part('artwork', <img src={layer.src} alt="" className={s.photoArch} />)}
+      {part('artwork', /* eslint-disable-next-line @next/next/no-img-element -- Scene artwork and guest memories retain native intrinsic geometry within animated layer parts. */
+                       <img src={layer.src} alt="" className={s.photoArch} />)}
       {part('frames', <div className={s.memoryFrames} style={{ gridTemplateColumns: `repeat(${layout.columns}, 1fr)`, gap: `${layout.gap}%` }}>
         {Array.from({ length: layout.frames }, (_, index) => {
           const photo = approved[index];
           return <Fragment key={`frame-${index}`}>{part(`frame-${index}`, <figure className={s.memoryFrame} style={{
             borderColor: `var(--frame-border-color, ${layout.frameColor})`, borderWidth: `var(--frame-border-width, ${layout.borderWidth}px)`,
             transform: `rotate(${index % 3 === 2 ? -layout.tilt * .8 : index % 2 ? layout.tilt : 0}deg)`,
-          }}>{photo ? <img src={getImageUrl(photo.photoUrl, apiBase)} alt={photo.caption || 'Approved guest memory'} />
+          }}>{photo ? /* eslint-disable-next-line @next/next/no-img-element -- Scene artwork and guest memories retain native intrinsic geometry within animated layer parts. */
+                      <img src={getImageUrl(photo.photoUrl, apiBase)} alt={photo.caption || 'Approved guest memory'} />
             : <span>{index === 0 ? t('photobooth.title', 'Our Memories') : layout.placeholder}</span>}</figure>)}</Fragment>;
         })}
       </div>)}
@@ -146,7 +151,8 @@ export function renderCinematicFunction(entry: CinematicSceneEntry, context: Cin
           fontSize: entry.layer.kind === 'text' ? `${entry.layer.fontSize ?? 4}cqi` : undefined,
           fontFamily: fontVar(entry.layer.fontFamily), fontWeight: entry.layer.fontWeight,
           lineHeight: entry.layer.lineHeight, letterSpacing: `${entry.layer.letterSpacing ?? 0}em`, textAlign: entry.layer.textAlign, whiteSpace: 'pre-wrap' }}>
-        {decoration.children ?? (entry.layer.kind === 'shape' ? <span style={{ display: 'block', width: '100%', height: '100%', background: entry.layer.fill, borderRadius: entry.layer.shape === 'ellipse' ? '50%' : entry.layer.radius }} /> : entry.layer.src ? <img src={entry.layer.src} alt="" style={{ width: '100%', height: '100%', objectFit: entry.layer.fit ?? 'contain' }} /> : resolveBindings(entry.layer.text, context.slotProps))}
+        {decoration.children ?? (entry.layer.kind === 'shape' ? <span style={{ display: 'block', width: '100%', height: '100%', background: entry.layer.fill, borderRadius: entry.layer.shape === 'ellipse' ? '50%' : entry.layer.radius }} /> : entry.layer.src ? /* eslint-disable-next-line @next/next/no-img-element -- Scene artwork and guest memories retain native intrinsic geometry within animated layer parts. */
+                                                                                                                                                                                                                                                                   <img src={entry.layer.src} alt="" style={{ width: '100%', height: '100%', objectFit: entry.layer.fit ?? 'contain' }} /> : resolveBindings(entry.layer.text, context.slotProps))}
       </button> };
   }
   return decoration;

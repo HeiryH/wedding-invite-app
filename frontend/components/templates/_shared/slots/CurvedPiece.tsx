@@ -59,6 +59,7 @@ export function CurvedPiece({ layer, text, anim, assetRoot }: {
           entirely, so without this the plate vanished whenever Shape wasn't 'flat'. Centred on
           the curve and free to be bigger than it, exactly as in the flat case. */}
       {backdropSrcOf(layer, assetRoot) && (
+        /* eslint-disable-next-line @next/next/no-img-element -- Curved-text backdrop retains intrinsic artwork ratios and container-relative transforms. */
         <img
           src={backdropSrcOf(layer, assetRoot)}
           alt=""

@@ -39,7 +39,8 @@ describe('persisted cinematic children', () => {
     expect(entries.find((entry) => entry.layer.id === 'memory-wall')?.presentation.opacity).toBe(0);
     const post = vi.spyOn(window.parent, 'postMessage').mockImplementation(() => {});
     try {
-      render(<CinematicPart {...props} rootId="memory-wall" part="artwork" element={<img alt="Photo arch" />}
+      render(<CinematicPart {...props} rootId="memory-wall" part="artwork" element={/* eslint-disable-next-line @next/next/no-img-element -- Native image fixture verifies editor registration against a plain DOM image. */
+                                                                                    <img alt="Photo arch" />}
         entries={entries} decorations={{}} editor={editor} />);
       const arch = screen.getByAltText('Photo arch');
       expect(arch).toHaveStyle({ pointerEvents: 'none', opacity: '1' });

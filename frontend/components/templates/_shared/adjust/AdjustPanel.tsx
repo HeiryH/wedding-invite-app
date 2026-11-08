@@ -1196,6 +1196,7 @@ export default function AdjustPanel({
                           video's own first frame, or close to it, so the swap is invisible — the
                           checkerboard behind the preview is the actual alpha channel, not a bug. */}
                       {current.posterSrc && (
+                        /* eslint-disable-next-line @next/next/no-img-element -- Uploaded poster previews retain intrinsic proportions and direct source loading. */
                         <img src={current.posterSrc} alt="Poster preview" className={styles.posterThumb} />
                       )}
                       {onUploadImage && (

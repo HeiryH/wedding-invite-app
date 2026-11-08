@@ -174,7 +174,8 @@ function PaintedPromise({ wedding, onRSVP, onSubmitWish, onUploadPhoto, wishes, 
       <div className={styles.world} data-cinematic-space="world" style={worldStyle}><CinematicSceneLayers {...sceneProps} space="world" /></div>
       {editing && editor?.cinematic?.mode !== 'scene' && <CinematicCameraSurface camera={camera}
         beatId={editor?.cinematic?.mode === 'camera-beat' ? editor.cinematic.beatId : undefined} className={styles.cameraEditorSurface} />}
-      {editing && editor?.cinematic?.referenceSrc && <img className={styles.referenceOverlay} src={editor.cinematic.referenceSrc} alt="" aria-hidden="true"
+      {editing && editor?.cinematic?.referenceSrc && /* eslint-disable-next-line @next/next/no-img-element -- The reference overlay must share the camera canvas geometry and direct upload source. */
+                                                     <img className={styles.referenceOverlay} src={editor.cinematic.referenceSrc} alt="" aria-hidden="true"
         style={{ opacity: editor.cinematic.referenceOpacity ?? .45, objectFit: editor.cinematic.referenceFit ?? 'contain' }} />}
       <SheetHost groups={SHEETS} slotProps={slotProps} themeStyle={sheetStyle} flatPanels />
       <ProgrammePopup slotProps={slotProps} artwork={layers.find((layer) => layer.behavior === 'programme-board')?.src || `${ROOT}/itinerary-v1/programme-board.png`}

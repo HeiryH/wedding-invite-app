@@ -73,7 +73,8 @@ export default function CinematicReferenceRail({ beat, visible, opacity, onVisib
       <header><strong id={`${id}-title`}>Reference</strong><button ref={closeRef} type="button" className={styles.icon} aria-label="Close reference information"
         onClick={() => { setPosition(undefined); infoRef.current?.focus(); }}><Icon name="x" size={16} /></button></header>
       <p className={styles.beat}>{beat.label}</p>
-      {hasReference ? <><img className={styles.thumbnail} src={beat.referenceSrc} alt={beat.referenceLabel || 'Composition reference'} />
+      {hasReference ? <>{/* eslint-disable-next-line @next/next/no-img-element -- Reference uploads retain intrinsic proportions and direct source loading in the editor. */}
+                        <img className={styles.thumbnail} src={beat.referenceSrc} alt={beat.referenceLabel || 'Composition reference'} />
         <p className={styles.name}>{beat.referenceLabel || 'Composition reference'}</p>
         <label className={styles.field}>Image fit<select aria-label="Reference fit" value={beat.referenceFit ?? 'contain'}
           onChange={(event) => onChange(beat.id, { referenceFit: event.target.value as ReferencePatch['referenceFit'] })}>

@@ -34,6 +34,7 @@ export default function ProgrammePopup({ slotProps: { wedding, itinerary = [], t
     onClick={(event) => { if (event.target === event.currentTarget) dismiss(); }}>
     <div className={styles.sheet} data-testid="programme-sheet">
     <div id="programme-popup-board" className={styles.board}>
+      {/* eslint-disable-next-line @next/next/no-img-element -- The programme board uses intrinsic artwork dimensions beneath its positioned copy. */}
       <img src={artwork} alt="" className={styles.artwork} />
       <div className={styles.copy}>
         <div className={styles.heading}>

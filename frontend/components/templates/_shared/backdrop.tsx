@@ -65,6 +65,7 @@ export function Backdrop({ layer, assetRoot, children, style, ...rest }: {
         ...style,
       }}
     >
+      {/* eslint-disable-next-line @next/next/no-img-element -- Backdrop artwork uses intrinsic ratios with container-relative geometry and transforms. */}
       <img
         src={src}
         alt=""
