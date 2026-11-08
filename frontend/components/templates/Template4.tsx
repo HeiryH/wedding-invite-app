@@ -1,4 +1,5 @@
 'use client';
+import { useDialogBehavior } from './_shared/hooks/useDialogBehavior';
 import { useGuestSubmission } from '@/components/templates/_shared/guest/useGuestSubmission';
 import { guestLimit, normalizeRsvp, validatedPhoto } from '@/components/templates/_shared/guest/rules';
 import type { TemplateRsvpSubmission, PhotoUploadSubmission, TemplateWishSubmission } from '@/components/templates/guestContracts';
@@ -239,6 +240,8 @@ function UploadSheet({
   submitting: boolean;
   success: boolean;
 }) {
+  const dialogRef = useRef<HTMLDivElement>(null);
+  useDialogBehavior(dialogRef, visible, onClose);
   const [name, setName] = useState('');
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
@@ -276,7 +279,7 @@ function UploadSheet({
           />
           {/* Sheet */}
           <motion.div
-            className="fixed bottom-0 left-0 right-0 z-50 bg-[#F7F6F1] rounded-t-3xl shadow-2xl"
+            ref={dialogRef} tabIndex={-1} role="dialog" aria-modal="true" aria-label="Share a photo" className="fixed bottom-0 left-0 right-0 z-50 bg-[#F7F6F1] rounded-t-3xl shadow-2xl"
             initial={{ y: '100%' }}
             animate={{ y: 0 }}
             exit={{ y: '100%' }}

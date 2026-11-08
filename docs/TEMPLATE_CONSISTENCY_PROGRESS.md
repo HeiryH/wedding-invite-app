@@ -97,3 +97,12 @@ Validation: two ordering-policy tests plus the four existing workspace tests pas
 - Fixed an editor edge case so removing all independently reorderable sections does not remove the Restore control.
 
 Validation: TypeScript passed; full frontend suite passed at 59 files / 383 tests. Shared guest-rule/controller files pass ESLint. Mock public callback checks passed (T3, T6, authored), and T3–T7/T16 mobile/desktop render smoke passed. Evidence is under `.einvite-run/consistency/phase4/` and `/tmp/consistency-phase4-*.log`.
+
+## Phase 5 — completed
+
+- GuestRuntime supplies explicit live/preview/Studio-simulation modes and accessible action feedback. Display-only preview blocks the shared submission boundary before callbacks; no reset/success follows a blocked action. Studio RSVP simulation keeps its intentional step preview and labels completion as unsaved simulation.
+- Wrapper, direct sample previews and public template-query previews use the same policy. Authored slots and Cinematic forms inherit it even when their visual editing state differs.
+- A shared modal hook handles Escape, first focus, Tab containment, reference-counted body scroll locking and focus return. Shared sheets/photo lightbox, T4 upload, T5 RSVP/calendar, T6 RSVP, shared calendar and T15 information popups use it. Native dialogs retain native lifecycle behavior. Forced editor sheets retain their non-dismissable selection behavior.
+- No template composition, saved config or form geometry changed.
+
+Validation: full frontend suite passed at 61 files / 387 tests; TypeScript and targeted new-file ESLint passed. New tests cover all execution modes plus keyboard/focus/scroll restoration. Existing shared-sheet tests pass. Mock public flow checks and mobile/desktop render checks for T3–T7/T15/T16 passed. Local evidence: `.einvite-run/consistency/phase5/` and `/tmp/consistency-phase5-*.log`.

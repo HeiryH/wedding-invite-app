@@ -301,6 +301,7 @@ export default function WeddingInvitationPage() {
       {/* Render Template */}
       <div className={previewTemplateId ? 'pt-12' : ''}>
         <TemplateWrapper
+          previewOnly={Boolean(previewTemplateId)}
           key={currentTemplateId}
           wedding={{ ...wedding, templateId: currentTemplateId, templateStagesJson: authoredStagesJson }}
           onRSVP={handleRSVP}

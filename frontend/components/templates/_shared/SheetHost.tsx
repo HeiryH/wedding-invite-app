@@ -1,7 +1,8 @@
 'use client';
 
+import { useDialogBehavior } from './hooks/useDialogBehavior';
 import { AnimatePresence, motion } from 'framer-motion';
-import { useCallback, useContext, useEffect, type CSSProperties } from 'react';
+import { useCallback, useContext, useRef, type CSSProperties } from 'react';
 import type { EditorHandle, SlotProps } from './types';
 import type { SheetLayer } from './slots';
 import { useEngine } from './engine';
@@ -62,16 +63,8 @@ export default function SheetHost({ groups, slotProps, themeStyle, editor, flatP
     close();
   }, [close, seatingPreview, seatingSheet]);
 
-  useEffect(() => {
-    if (!activeId || !dismissable) return;
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key !== 'Escape') return;
-      event.preventDefault();
-      dismiss();
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [activeId, dismiss, dismissable]);
+  const dialogRef = useRef<HTMLDivElement>(null);
+  useDialogBehavior(dialogRef, Boolean(layers?.length), dismiss, dismissable);
 
   return (
     <AnimatePresence>
@@ -92,6 +85,8 @@ export default function SheetHost({ groups, slotProps, themeStyle, editor, flatP
             className={`${styles.sheetCard} ${flatPanels ? styles.sheetCardFlat : ''}`}
             style={themeStyle}
             data-seen="true"
+            ref={dialogRef}
+            tabIndex={-1}
             role="dialog"
             aria-modal={dismissable ? 'true' : undefined}
             aria-label="Invitation form"

@@ -1,5 +1,6 @@
 'use client';
 
+import GuestRuntime from './_shared/guest/GuestRuntime';
 import { Suspense, useMemo } from 'react';
 import { TEMPLATE_COMPONENTS } from './templateComponents';
 import TemplateLoadBoundary, { TemplateLoading, TemplateReady } from './TemplateLoadBoundary';
@@ -8,7 +9,11 @@ import DataTemplate from './_shared/DataTemplate';
 import { useBreakpoint } from './_shared/hooks/useBreakpoint';
 import type { StageDef, SlotProps } from './_shared/types';
 
-export default function TemplateWrapper({
+export default function TemplateWrapper(props: TemplateRenderProps & { onTemplateReady?: () => void }) {
+  return <GuestRuntime preview={Boolean(props.previewOnly || props.editor?.enabled)}><TemplateContents {...props} /></GuestRuntime>;
+}
+
+function TemplateContents({
   wedding,
   onRSVP,
   onSubmitWish,

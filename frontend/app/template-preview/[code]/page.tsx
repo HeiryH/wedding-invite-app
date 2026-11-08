@@ -7,6 +7,7 @@ import { templateService, templateConfigService } from '@/lib/api';
 import { TEMPLATE_COMPONENTS } from '@/components/templates/templateComponents';
 import { templateIdForCode } from '@/components/templates/templateCatalog';
 import type { TemplateRenderProps } from '@/components/templates/templateTypes';
+import GuestRuntime from '@/components/templates/_shared/guest/GuestRuntime';
 import TemplateLoadBoundary, { TemplateLoading, TemplateReady, TemplateUnavailable } from '@/components/templates/TemplateLoadBoundary';
 import { waitForPreviewAssets } from '@/components/templates/previewReadiness';
 import { buildDefaultConfig } from '@/lib/templateConfigSchema';
@@ -226,7 +227,7 @@ function PreviewForCode({ code }: { code: string }) {
       {!TemplateComponent ? <TemplateUnavailable /> : customConfig === undefined ? <TemplateLoading /> : (
         <TemplateLoadBoundary>
           <Suspense fallback={<TemplateLoading />}>
-            <TemplateComponent {...previewPropsForCode(code, customConfig)} />
+            <GuestRuntime preview><TemplateComponent {...previewPropsForCode(code, customConfig)} /></GuestRuntime>
             <TemplateReady onReady={markMounted} />
           </Suspense>
         </TemplateLoadBoundary>

@@ -1,4 +1,5 @@
 'use client';
+import { useDialogBehavior } from './_shared/hooks/useDialogBehavior';
 import { useGuestSubmission } from '@/components/templates/_shared/guest/useGuestSubmission';
 import { guestLimit, normalizeRsvp, validatedPhoto } from '@/components/templates/_shared/guest/rules';
 import type { TemplateRsvpSubmission, PhotoUploadSubmission, TemplateWishSubmission } from '@/components/templates/guestContracts';
@@ -53,6 +54,8 @@ interface RSVPModalProps {
 }
 
 function RSVPModal({ wedding, onRSVP, onClose, seatingEnabled, tables, t, subtitleStyle }: RSVPModalProps) {
+  const dialogRef = useRef<HTMLDivElement>(null);
+  useDialogBehavior(dialogRef, true, onClose);
   const submission = useGuestSubmission();
   const paxLimit = guestLimit(wedding);
   const maxCapacity = wedding.maxCapacity ?? 0;
@@ -111,7 +114,7 @@ function RSVPModal({ wedding, onRSVP, onClose, seatingEnabled, tables, t, subtit
         exit={{ y: '100%', opacity: 0 }}
         transition={{ type: 'spring', stiffness: 300, damping: 35 }}
         onClick={(e) => e.stopPropagation()}
-        className={styles.modalSheet}
+        ref={dialogRef} tabIndex={-1} role="dialog" aria-modal="true" aria-label="RSVP" className={styles.modalSheet}
       >
         <div className={styles.modalFloral} />
         <div className={styles.modalFrost} />
@@ -135,7 +138,7 @@ function RSVPModal({ wedding, onRSVP, onClose, seatingEnabled, tables, t, subtit
                 {t('rsvp.subtitle', "We'd love to celebrate with you")}
               </p>
             </div>
-            <button onClick={onClose} className={styles.closeBtn}>×</button>
+            <button onClick={onClose} aria-label="Close RSVP" className={styles.closeBtn}>×</button>
           </div>
           {remainingPax !== null && (
             <p className={styles.rsvpPaxNotice}>
@@ -513,6 +516,8 @@ export default function Template5({
   const showAddToCalendar = t('general.showAddToCalendar', 'false') === 'true';
   const showVenueMap      = t('general.showVenueMap', 'false') === 'true';
   const [calendarOpen, setCalendarOpen] = useState(false);
+  const calendarRef = useRef<HTMLDivElement>(null);
+  useDialogBehavior(calendarRef, calendarOpen, () => setCalendarOpen(false));
   const [mapExpanded, setMapExpanded]   = useState(false);
 
   const customBg    = customConfig?.['template.bg'];
@@ -717,10 +722,6 @@ const NAV_EMOJIS: Record<string, string> = {
   const vbTop = Math.min(150, Math.round(250 - arcSagitta - 25));
   const vbH = 250 - vbTop;
 
-  useEffect(() => {
-    document.body.style.overflow = showRsvp ? 'hidden' : '';
-    return () => { document.body.style.overflow = ''; };
-  }, [showRsvp]);
 
   const sections: Record<SectionCode, ReactNode> = {
     welcome: (<>
@@ -1142,7 +1143,7 @@ const NAV_EMOJIS: Record<string, string> = {
                 onClick={() => setCalendarOpen(false)}
               >
                 <motion.div
-                  className={styles.calendarCard}
+                  ref={calendarRef} tabIndex={-1} role="dialog" aria-modal="true" aria-label="Add to Calendar" className={styles.calendarCard}
                   initial={{ opacity: 0, scale: 0.92, y: 20 }}
                   animate={{ opacity: 1, scale: 1, y: 0 }}
                   exit={{ opacity: 0, scale: 0.92, y: 20 }}

@@ -115,6 +115,7 @@ export function RsvpFormSlot({ wedding, onRSVP, seatingEnabled, tables, editing,
 
   return (
     <div className={styles.panel}>
+      {masterPreview && done && <p role="status">Simulation preview — no RSVP was saved.</p>}
       {closed ? (
         <p className={styles.notice}>{t('rsvp.closed_message', 'RSVPs are closed — thank you for your interest.')}</p>
       ) : done ? (
@@ -237,6 +238,7 @@ export function RsvpSeatingSlot({ wedding, onRSVP, tables, editing, editor, t, l
 
   return (
     <div className={styles.panel}>
+      {masterPreview && done && <p role="status">Simulation preview — no RSVP was saved.</p>}
       {done && !seatingPreview ? (
         <p className={styles.notice}>{t('rsvp.done_message', 'Thank you. We look forward to celebrating with you.')}</p>
       ) : (

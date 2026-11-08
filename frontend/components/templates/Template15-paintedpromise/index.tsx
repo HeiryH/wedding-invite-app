@@ -2,10 +2,11 @@
 import type { TemplateRsvpSubmission, PhotoUploadSubmission } from '@/components/templates/guestContracts';
 
 
+import { useDialogBehavior } from '../_shared/hooks/useDialogBehavior';
 import TemplateNav, { type NavLayout } from '../_shared/nav/TemplateNav';
 import { MusicSlot } from '../_shared/slots/ChromeSlots';
 import { animateScrollIntoView } from '../_shared/animateScrollTo';
-import { useCallback, useEffect, useMemo, type CSSProperties } from 'react';
+import { useCallback, useEffect, useMemo, useRef, type CSSProperties } from 'react';
 import type { Wedding, Wish, Photo, ItineraryItem, SeatingTable, CreateWish } from '@/lib/api';
 import type { EditorHandle, Layer, SlotProps } from '../_shared/types';
 import { useReducedMotion } from '@/lib/useReducedMotion';
@@ -99,6 +100,8 @@ function PaintedPromise({ wedding, onRSVP, onSubmitWish, onUploadPhoto, wishes, 
     return { ...entry, presentation: { ...entry.presentation, opacity: entry.layer.parentId ? entry.presentation.opacity : dismissed ? 0 : independent
       ? entry.presentation.opacity : setPresentation.get(entry.sceneSet.id) ?? entry.presentation.opacity } };
   });
+  const infoRef = useRef<HTMLElement>(null);
+  useDialogBehavior(infoRef, Boolean(interaction.info), interaction.dismissInfo);
   const t = useCallback((key: string, fallback: string) => customConfig?.[key] || fallback, [customConfig]);
   const submitRsvp = async (data: TemplateRsvpSubmission) => { await onRSVP(data); window.setTimeout(interaction.close, 1100); };
   const slotProps: SlotProps = { wedding, t, wishes, photos, tables, itinerary, seatingEnabled, photoBoothEnabled,
@@ -175,7 +178,7 @@ function PaintedPromise({ wedding, onRSVP, onSubmitWish, onUploadPhoto, wishes, 
       <ProgrammePopup slotProps={slotProps} artwork={layers.find((layer) => layer.behavior === 'programme-board')?.src || `${ROOT}/itinerary-v1/programme-board.png`}
         title={layers.find((layer) => layer.behavior === 'programme-board')?.title} />
       {interaction.info && <div className={styles.infoBackdrop} style={{ '--cinematic-open-duration': `${interaction.info.openMs}ms` } as CSSProperties} onClick={(event) => { if (event.target === event.currentTarget) interaction.dismissInfo(); }}>
-        <section data-cinematic-info role="dialog" aria-modal="true" aria-label={interaction.info.infoTitle} className={styles.infoDialog}>
+        <section ref={infoRef} tabIndex={-1} data-cinematic-info role="dialog" aria-modal="true" aria-label={interaction.info.infoTitle} className={styles.infoDialog}>
           <button type="button" onClick={interaction.dismissInfo}>Close</button><h2>{interaction.info.infoTitle}</h2>
           <div dangerouslySetInnerHTML={{ __html: cinematicRichHtml(interaction.info.infoBody) }} />
         </section>

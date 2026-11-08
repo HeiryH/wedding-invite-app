@@ -1,4 +1,5 @@
 'use client';
+import { useDialogBehavior } from '../hooks/useDialogBehavior';
 import { validateGuestPhoto } from '../guest/rules';
 import { useGuestSubmission } from '@/components/templates/_shared/guest/useGuestSubmission';
 
@@ -83,6 +84,8 @@ function PhotoBoothBody({ photos, onUploadPhoto, t, editing, upload }: SlotProps
   const [index, setIndex] = useState(0);
   const [direction, setDirection] = useState(1);
   const [lightbox, setLightbox] = useState<Photo | null>(null);
+  const dialogRef = useRef<HTMLDivElement>(null);
+  useDialogBehavior(dialogRef, Boolean(lightbox), () => setLightbox(null));
   // Portal target exists only on the client; SSR renders the lightbox nowhere (it's closed anyway).
   const mounted = useSyncExternalStore(subscribeNoop, () => true, () => false);
 
@@ -243,7 +246,7 @@ function PhotoBoothBody({ photos, onUploadPhoto, t, editing, upload }: SlotProps
             className={styles.lightboxOverlay}
             onClick={() => setLightbox(null)}
           >
-            <div className={styles.lightboxCard} onClick={(e) => e.stopPropagation()}>
+            <div ref={dialogRef} tabIndex={-1} role="dialog" aria-modal="true" aria-label="Guest photograph" className={styles.lightboxCard} onClick={(e) => e.stopPropagation()}>
               {framed ? (
                 <FramedPhoto
                   photo={lightbox}

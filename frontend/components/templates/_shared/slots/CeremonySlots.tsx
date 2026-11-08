@@ -1,6 +1,7 @@
 'use client';
+import { useDialogBehavior } from '../hooks/useDialogBehavior';
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { calendarLinks } from '@/lib/templateUtils';
 import type { SlotProps } from '../types';
 import { subLayerStyle, subLayersOf } from './subLayerStyle';
@@ -80,6 +81,8 @@ export function CeremonyDetailsSlot({ wedding, t }: SlotProps) {
   const showCalendar = t('general.showAddToCalendar', 'false') === 'true';
   const showMap = t('general.showVenueMap', 'false') === 'true';
   const [calendarOpen, setCalendarOpen] = useState(false);
+  const calendarRef = useRef<HTMLDivElement>(null);
+  useDialogBehavior(calendarRef, calendarOpen, () => setCalendarOpen(false));
   const [mapOpen, setMapOpen] = useState(false);
 
   return (
@@ -130,7 +133,7 @@ export function CeremonyDetailsSlot({ wedding, t }: SlotProps) {
 
       {calendarOpen && (
         <div className={styles.calendarOverlay} onClick={() => setCalendarOpen(false)}>
-          <div className={styles.calendarCard} onClick={(e) => e.stopPropagation()}>
+          <div ref={calendarRef} tabIndex={-1} role="dialog" aria-modal="true" aria-label="Add to Calendar" className={styles.calendarCard} onClick={(e) => e.stopPropagation()}>
             <p className={styles.panelTitle} style={{ fontSize: '1.1rem' }}>{t('ceremony.calendar_label', 'Add to Calendar')}</p>
             <div className={styles.calendarOptions}>
               <a href={links.google} target="_blank" rel="noopener noreferrer" className={styles.calendarOption}>Google Calendar</a>

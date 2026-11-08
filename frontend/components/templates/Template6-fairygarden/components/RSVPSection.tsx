@@ -1,9 +1,10 @@
 'use client';
+import { useDialogBehavior } from '../../_shared/hooks/useDialogBehavior';
 import { useGuestSubmission } from '@/components/templates/_shared/guest/useGuestSubmission';
 import { guestLimit, normalizeRsvp } from '@/components/templates/_shared/guest/rules';
 import type { TemplateRsvpSubmission } from '@/components/templates/guestContracts';
 
-import { useContext, useState, type CSSProperties } from 'react';
+import { useContext, useState, useRef, type CSSProperties } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Wedding, SeatingTable } from '@/lib/api';
 import type { Breakpoint, EditorHandle } from '@/components/templates/_shared/types';
@@ -30,6 +31,8 @@ export default function RSVPSection({ onRSVP, customConfig, wedding, seatingEnab
   const [step, setStep] = useState<'form' | 'seating'>('form');
   const [selectedTableId, setSelectedTableId] = useState<number | null>(null);
   const [open, setOpen] = useState(false);
+  const dialogRef = useRef<HTMLDivElement>(null);
+  useDialogBehavior(dialogRef, Boolean(open || seatingPreview), () => { setOpen(false); seatingPreview?.dismiss(); });
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(false);
   const [form, setForm] = useState({
@@ -116,13 +119,13 @@ export default function RSVPSection({ onRSVP, customConfig, wedding, seatingEnab
               onClick={() => { setOpen(false); seatingPreview?.dismiss(); }}
             />
             <motion.div
-              className={styles.modalSheet}
+              ref={dialogRef} tabIndex={-1} role="dialog" aria-modal="true" aria-label="Your RSVP" className={styles.modalSheet}
               initial={{ y: '100%' }}
               animate={{ y: 0 }}
               exit={{ y: '100%' }}
               transition={{ type: 'spring', damping: 28, stiffness: 280 }}
             >
-              <button className={styles.modalClose} onClick={() => { setOpen(false); seatingPreview?.dismiss(); }}>✕</button>
+              <button aria-label="Close RSVP" className={styles.modalClose} onClick={() => { setOpen(false); seatingPreview?.dismiss(); }}>✕</button>
               <h3 className={styles.modalTitle}>Your RSVP</h3>
 
               {(seatingPreview || step === 'seating') ? <SeatingStep
