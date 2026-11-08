@@ -1,4 +1,5 @@
 'use client';
+import { initialPetals } from '../data/particles';
 import { useRef, useMemo, useEffect } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
@@ -16,19 +17,7 @@ export default function PetalRain({ count, color, reduced }: Props) {
   const meshRef = useRef<THREE.InstancedMesh>(null);
   const dummy = useMemo(() => new THREE.Object3D(), []);
 
-  const petals = useMemo(() =>
-    Array.from({ length: count }, () => ({
-      x: (Math.random() - 0.5) * AREA * 2,
-      y: Math.random() * HEIGHT - 2,
-      z: (Math.random() - 0.5) * AREA,
-      speed: 0.006 + Math.random() * 0.012,
-      rotX: Math.random() * Math.PI * 2,
-      rotZ: Math.random() * Math.PI * 2,
-      wobble: Math.random() * Math.PI * 2,
-      driftAmp: 0.002 + Math.random() * 0.003,
-    })),
-    [count]
-  );
+  const petals = useMemo(() => initialPetals(count), [count]);
 
   const material = useMemo(
     () =>

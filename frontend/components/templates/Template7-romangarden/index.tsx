@@ -160,7 +160,8 @@ export default function Template7({
     } as CSSProperties)
     : ({} as CSSProperties);
 
-  const gallery = useMemo(() => orderedCoupleGallery(coupleMedia, customConfig?.['gallery.order']), [coupleMedia, customConfig?.['gallery.order']]);
+  const galleryOrder = customConfig?.['gallery.order'];
+  const gallery = useMemo(() => orderedCoupleGallery(coupleMedia, galleryOrder), [coupleMedia, galleryOrder]);
   const placement = t('gallery.placement', 'gallery');
   const featuredPortrait = placement === 'gallery' ? undefined : gallery[0];
   const hasGallery = gallery.length > 0 && placement !== 'scene';

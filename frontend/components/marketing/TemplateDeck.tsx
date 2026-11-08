@@ -38,7 +38,8 @@ export function TemplateDeck({
   templates: Template[];
   onUse: (t: Template) => void;
 }) {
-  const [order, setOrder] = useState<number[]>([]);
+  const [source, setSource] = useState(templates);
+  const [order, setOrder] = useState(() => templates.map((_, i) => i));
   const [selected, setSelected] = useState(false);
   const [ghost, setGhost] = useState<{ template: Template; startTransform: string; dir: 1 | -1 } | null>(null);
 
@@ -47,11 +48,12 @@ export function TemplateDeck({
   const topRef = useRef<HTMLDivElement>(null);
   const drag = useRef({ active: false, x: 0, y: 0, startX: 0, startY: 0, startT: 0, lastX: 0, lastT: 0, vx: 0, width: 240 });
 
-  useEffect(() => {
+  if (source !== templates) {
+    setSource(templates);
     setOrder(templates.map((_, i) => i));
     setSelected(false);
     setGhost(null);
-  }, [templates]);
+  }
 
   if (templates.length === 0 || order.length === 0) return null;
 

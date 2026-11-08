@@ -589,6 +589,7 @@ export default function CinematicTimeline({
     return !collapsedKinds.has(row.motion ? 'motion' : row.kind);
   }), [allRows, hiddenTracks, filter, collapsedKinds, expanded]);
   const editableRow = rows.find((row) => row.selected && row.editable && row.sourceTrackId && !lockedTracks.has(row.sourceTrackId));
+  const hasEditableRow = Boolean(editableRow);
   useLayoutEffect(() => {
     if (expanded || collapsed || !onFocusHeightChange || !timelineRef.current) return;
     // Measure intrinsic rows rather than the flex scroller, which fills the assigned dock height.
@@ -603,7 +604,7 @@ export default function CinematicTimeline({
     const observer = new ResizeObserver(measure);
     elements.forEach((element) => observer.observe(element));
     return () => observer.disconnect();
-  }, [expanded, collapsed, selectedAsset?.id, rows.length, Boolean(editableRow), onFocusHeightChange]);
+  }, [expanded, collapsed, selectedAsset?.id, rows.length, hasEditableRow, onFocusHeightChange]);
   const [snapGuide, setSnapGuide] = useState<SnapGuide>();
   const [clipHistory, setClipHistory] = useState<ClipHistoryEntry[]>([]);
   const activeEdit = useRef<ClipHistoryEntry | null>(null);

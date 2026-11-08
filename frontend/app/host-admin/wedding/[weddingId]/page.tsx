@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import {
   eventService, guestService, wishService, photoService,
@@ -42,16 +42,14 @@ export default function HostWeddingDetailPage() {
   const [tables, setTables] = useState<SeatingTable[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<Tab>('overview');
+  const [requestedTab, setActiveTab] = useState<Tab>('overview');
 
   const [searchTerm, setSearchTerm] = useState('');
   const [filterSide, setFilterSide] = useState<'All' | 'Bride' | 'Groom'>('All');
   const [filterAttending, setFilterAttending] = useState<'All' | 'Yes' | 'No'>('All');
   const [photoFilter, setPhotoFilter] = useState<'all' | 'pending' | 'approved' | 'featured'>('all');
 
-  useEffect(() => { fetchData(); }, [weddingId]);
-
-  const fetchData = async () => {
+  const fetchData = useCallback(async (signal?: AbortSignal) => {
     try {
       setLoading(true);
       const [weddingData, guestsData, wishesData, photosData, featuresData, templatesData, organizerAdminData, tablesData] = await Promise.all([
@@ -64,6 +62,7 @@ export default function HostWeddingDetailPage() {
         authService.getOrganizerAdmin(weddingId),
         tableService.getByWeddingId(weddingId),
       ]);
+      if (signal?.aborted) return;
       setWedding(weddingData);
       setGuests(guestsData);
       setWishes(wishesData);
@@ -73,11 +72,18 @@ export default function HostWeddingDetailPage() {
       setOrganizerAdmin(organizerAdminData);
       setTables(tablesData);
     } catch (err: any) {
+      if (signal?.aborted) return;
       setError(err.response?.data?.message || 'Failed to load wedding data');
     } finally {
-      setLoading(false);
+      if (!signal?.aborted) setLoading(false);
     }
-  };
+  }, [weddingId]);
+  useEffect(() => {
+    const controller = new AbortController();
+    void fetchData(controller.signal);
+    return () => controller.abort();
+  }, [fetchData]);
+
 
   const isFeatureEnabled = (code: string) => features.some(f => f.featureCode === code && f.isEnabled);
 
@@ -92,11 +98,8 @@ export default function HostWeddingDetailPage() {
     { key: 'access', label: 'Access' },
   ];
 
-  useEffect(() => {
-    if (!availableTabs.some(t => t.key === activeTab) && availableTabs.length > 0) {
-      setActiveTab(availableTabs[0].key);
-    }
-  }, [features]);
+  const activeTab = availableTabs.some(tab => tab.key === requestedTab) ? requestedTab : 'overview';
+  if (requestedTab !== activeTab) setActiveTab(activeTab);
 
   const handleDeleteGuest = async (guestId: number) => {
     if (!confirm('Remove this guest?')) return;

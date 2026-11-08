@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { photoService, eventService, Photo, Event } from '@/lib/api';
@@ -18,25 +18,28 @@ export default function PhotoManagementPage() {
     const [loading, setLoading] = useState(true);
     const [actionLoading, setActionLoading] = useState<number | null>(null);
 
-    useEffect(() => {
-        fetchData();
-    }, [weddingId]);
-
-    const fetchData = async () => {
+    const fetchData = useCallback(async (signal?: AbortSignal) => {
         try {
             setLoading(true);
             const [weddingData, photosData] = await Promise.all([
                 eventService.getById(weddingId),
                 photoService.getByWeddingId(weddingId),
             ]);
+            if (signal?.aborted) return;
             setWedding(weddingData);
             setPhotos(photosData);
         } catch (err) {
+            if (signal?.aborted) return;
             console.error('Failed to load data:', err);
         } finally {
-            setLoading(false);
+            if (!signal?.aborted) setLoading(false);
         }
-    };
+    }, [weddingId]);
+  useEffect(() => {
+    const controller = new AbortController();
+    void fetchData(controller.signal);
+    return () => controller.abort();
+  }, [fetchData]);
 
     const handleApprove = async (photoId: number) => {
         setActionLoading(photoId);

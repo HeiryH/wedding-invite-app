@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -55,7 +55,7 @@ export default function WeddingDetailPage() {
   const [features, setFeatures] = useState<EventFeature[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<Tab>('overview');
+  const [requestedTab, setActiveTab] = useState<Tab>('overview');
   const [templates, setTemplates] = useState<Template[]>([]);
   const [organizerAdmin, setOrganizerAdmin] = useState<OrganizerAdminUser | null>(null);
   const [tables, setTables] = useState<SeatingTable[]>([]);
@@ -85,10 +85,6 @@ export default function WeddingDetailPage() {
   const [slugStatus, setSlugStatus] = useState<SlugStatus>('idle');
 
   useEffect(() => {
-    fetchData();
-  }, [weddingId]);
-
-  useEffect(() => {
     if (wedding) {
       setEditWeddingData({
         brideName: wedding.name1 ?? '',
@@ -100,7 +96,7 @@ export default function WeddingDetailPage() {
     }
   }, [wedding]);
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async (signal?: AbortSignal) => {
     try {
       setLoading(true);
       const [weddingData, guestsData, wishesData, photosData, featuresData, templatesData, organizerAdminData, tablesData] = await Promise.all([
@@ -113,6 +109,7 @@ export default function WeddingDetailPage() {
         authService.getOrganizerAdmin(weddingId),
         tableService.getByWeddingId(weddingId),
       ]);
+      if (signal?.aborted) return;
 
       setWedding(weddingData);
       setGuests(guestsData);
@@ -123,11 +120,18 @@ export default function WeddingDetailPage() {
       setOrganizerAdmin(organizerAdminData);
       setTables(tablesData);
     } catch (err: any) {
+      if (signal?.aborted) return;
       setError(err.response?.data?.message || 'Failed to load wedding data');
     } finally {
-      setLoading(false);
+      if (!signal?.aborted) setLoading(false);
     }
-  };
+  }, [weddingId]);
+  useEffect(() => {
+    const controller = new AbortController();
+    void fetchData(controller.signal);
+    return () => controller.abort();
+  }, [fetchData]);
+
 
   const handleUpdateWedding = async () => {
     if (!wedding) return;
@@ -178,12 +182,8 @@ export default function WeddingDetailPage() {
   ];
 
   // Auto-switch to first available tab if current tab is hidden
-  useEffect(() => {
-    const isCurrentTabAvailable = availableTabs.some(tab => tab.key === activeTab);
-    if (!isCurrentTabAvailable && availableTabs.length > 0) {
-      setActiveTab(availableTabs[0].key);
-    }
-  }, [features]); // Re-run when features change
+  const activeTab = availableTabs.some(tab => tab.key === requestedTab) ? requestedTab : 'overview';
+  if (requestedTab !== activeTab) setActiveTab(activeTab);
 
   const handleDeleteGuest = async (guestId: number) => {
     if (!confirm('Are you sure you want to remove this guest?')) return;

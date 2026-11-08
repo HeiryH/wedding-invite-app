@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { AnimatePresence, motion } from 'framer-motion';
 import { getUser } from '@/lib/auth';
@@ -287,12 +287,7 @@ export default function OrganizerAdminDashboard() {
   const [showGuestModal, setShowGuestModal] = useState(false);
   const [editingGuest, setEditingGuest] = useState<Guest | null>(null);
 
-  useEffect(() => {
-    if (!weddingId) { router.push('/login'); return; }
-    fetchData();
-  }, [weddingId]);
-
-  const fetchData = async () => {
+  const fetchData = useCallback(async (signal?: AbortSignal) => {
     if (!weddingId) return;
     setLoading(true);
     try {
@@ -301,16 +296,25 @@ export default function OrganizerAdminDashboard() {
         photoService.getByWeddingId(weddingId), wishService.getByWeddingId(weddingId),
         eventFeatureService.getByEventId(weddingId), tableService.getByWeddingId(weddingId),
       ]);
+      if (signal?.aborted) return;
       setWedding(w); setGuests(g); setPhotos(p); setWishes(wi); setFeatures(f); setTables(t);
-      if (activeTab === null) {
-        if (f.some(x => x.featureCode === 'RSVP' && x.isEnabled)) setActiveTab('guests');
-        else if (f.some(x => x.featureCode === 'WISHES' && x.isEnabled)) setActiveTab('wishes');
-        else if (f.some(x => x.featureCode === 'PHOTO_BOOTH' && x.isEnabled)) setActiveTab('photos');
-        else if (f.some(x => x.featureCode === 'SEATING' && x.isEnabled)) setActiveTab('seating');
-      }
-    } catch { alert('Failed to load wedding data'); }
-    finally { setLoading(false); }
-  };
+      setActiveTab(current => {
+        if (current !== null) return current;
+        if (f.some(x => x.featureCode === 'RSVP' && x.isEnabled)) return 'guests';
+        if (f.some(x => x.featureCode === 'WISHES' && x.isEnabled)) return 'wishes';
+        if (f.some(x => x.featureCode === 'PHOTO_BOOTH' && x.isEnabled)) return 'photos';
+        if (f.some(x => x.featureCode === 'SEATING' && x.isEnabled)) return 'seating';
+        return null;
+      });
+    } catch { if (!signal?.aborted) alert('Failed to load wedding data'); }
+    finally { if (!signal?.aborted) setLoading(false); }
+  }, [weddingId]);
+  useEffect(() => {
+    if (!weddingId) { router.push('/login'); return; }
+    const controller = new AbortController();
+    void fetchData(controller.signal);
+    return () => controller.abort();
+  }, [fetchData, router, weddingId]);
 
   const isEnabled = (code: string) => features.some(f => f.featureCode === code && f.isEnabled);
 

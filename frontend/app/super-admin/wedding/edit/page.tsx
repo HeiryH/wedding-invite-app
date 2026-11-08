@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useCallback, useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { eventService, templateService, Event, Template } from '@/lib/api';
@@ -28,17 +28,14 @@ export default function EditWeddingPage() {
     isActive: true,
   });
 
-  useEffect(() => {
-    fetchData();
-  }, [weddingId]);
-
-  const fetchData = async () => {
+  const fetchData = useCallback(async (signal?: AbortSignal) => {
     try {
       setLoading(true);
       const [weddingData, templatesData] = await Promise.all([
         eventService.getById(weddingId),
         templateService.getActive(),
       ]);
+      if (signal?.aborted) return;
 
       setWedding(weddingData);
       setTemplates(templatesData);
@@ -68,11 +65,17 @@ export default function EditWeddingPage() {
         isActive: weddingData.isActive,
       });
     } catch (err: any) {
+      if (signal?.aborted) return;
       setError(err.response?.data?.message || 'Failed to load wedding');
     } finally {
-      setLoading(false);
+      if (!signal?.aborted) setLoading(false);
     }
-  };
+  }, [weddingId]);
+  useEffect(() => {
+    const controller = new AbortController();
+    void fetchData(controller.signal);
+    return () => controller.abort();
+  }, [fetchData]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

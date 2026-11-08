@@ -1,4 +1,5 @@
 'use client';
+import { particleSample } from '../data/particles';
 import styles from '../Template6.module.css';
 
 export default function FallbackBackground() {
@@ -9,10 +10,10 @@ export default function FallbackBackground() {
           key={i}
           className={styles.fallbackFirefly}
           style={{
-            left: `${Math.random() * 100}%`,
-            top: `${Math.random() * 100}%`,
-            animationDelay: `${Math.random() * 4}s`,
-            animationDuration: `${3 + Math.random() * 3}s`,
+            left: `${particleSample(i, 0) * 100}%`,
+            top: `${particleSample(i, 1) * 100}%`,
+            animationDelay: `${particleSample(i, 2) * 4}s`,
+            animationDuration: `${3 + particleSample(i, 3) * 3}s`,
           }}
         />
       ))}

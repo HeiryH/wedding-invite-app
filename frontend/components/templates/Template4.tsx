@@ -410,10 +410,11 @@ export default function Template4({
   const sections = [...(sectionOrder.includes('welcome') ? ['hero'] : []), ...varSections.map((c) => `t4-${c}`)];
   const [activeSection, setActiveSection] = useState('hero');
 
+  const sectionIds = sections.join(',');
   useEffect(() => {
     const handler = () => {
       const scrollY = window.scrollY + window.innerHeight / 3;
-      for (const id of sections) {
+      for (const id of sectionIds.split(',')) {
         const el = document.getElementById(id);
         if (el) {
           const { offsetTop, offsetHeight } = el;
@@ -426,7 +427,7 @@ export default function Template4({
     };
     window.addEventListener('scroll', handler, { passive: true });
     return () => window.removeEventListener('scroll', handler);
-  }, [sections.join(',')]);
+  }, [sectionIds]);
 
   const scrollTo = (id: string) => {
     document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' });
@@ -466,7 +467,7 @@ export default function Template4({
         author: p.guestName || undefined,
       })),
     ]);
-  }, [photos.length, extra1, extra2, extra3]);
+  }, [photos, extra1, extra2, extra3]);
 
   const handleSwipe = (_dir: 'left' | 'right') => {
     setCards((prev) => {

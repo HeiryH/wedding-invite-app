@@ -305,7 +305,7 @@ export default function CinematicAdjustPanel({
   const collapsedLayers = useMemo(() => new Set(sidebarPreferences.collapsedLayers), [sidebarPreferences.collapsedLayers]);
   const setCollapsedLayers = useCallback((update: (current: Set<string>) => Set<string>) => setSidebarPreferences((current) => ({ ...current, collapsedLayers: [...update(new Set(current.collapsedLayers))] })), [setSidebarPreferences]);
   const inspectorTab = sidebarPreferences.inspectorTab;
-  const setInspectorTab = useCallback((inspectorTab: typeof sidebarPreferences.inspectorTab) => setSidebarPreferences((current) => current.inspectorTab === inspectorTab ? current : { ...current, inspectorTab }), [setSidebarPreferences]);
+  const setInspectorTab = useCallback((inspectorTab: (typeof DEFAULT_SIDEBAR)['inspectorTab']) => setSidebarPreferences((current) => current.inspectorTab === inspectorTab ? current : { ...current, inspectorTab }), [setSidebarPreferences]);
   useEffect(() => {
     if (inspectorTab !== 'animation' || sidebarTab !== 'editing') onEditEffectPose?.();
   }, [inspectorTab, sidebarTab, onEditEffectPose]);

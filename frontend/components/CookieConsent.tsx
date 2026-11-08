@@ -1,23 +1,12 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { storeValue, useStoredValue } from '@/lib/useStoredValue';
 
 const STORAGE_KEY = 'cookie-consent';
 
 export function CookieConsent() {
-  const [visible, setVisible] = useState(false);
-
-  useEffect(() => {
-    // Show only once, after mount, if not already acknowledged.
-    if (typeof window !== 'undefined' && !localStorage.getItem(STORAGE_KEY)) {
-      setVisible(true);
-    }
-  }, []);
-
-  const accept = () => {
-    localStorage.setItem(STORAGE_KEY, 'accepted');
-    setVisible(false);
-  };
+  const visible = !useStoredValue(STORAGE_KEY, 'pending');
+  const accept = () => storeValue(STORAGE_KEY, 'accepted');
 
   if (!visible) return null;
 

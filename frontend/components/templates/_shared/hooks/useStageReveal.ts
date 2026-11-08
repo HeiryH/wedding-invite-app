@@ -16,7 +16,6 @@ import { useEffect, useState, useRef } from 'react';
 export function useStageReveal(reduced: boolean, stageKey = '') {
   const [seen, setSeen] = useState<Set<string>>(new Set());
   const seenRef = useRef(seen);
-  seenRef.current = seen;
   const rootRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -31,14 +30,21 @@ export function useStageReveal(reduced: boolean, stageKey = '') {
       .filter((s) => !seenRef.current.has(s.dataset.stage!));
     if (!stages.length) return;
 
-    // No motion, or no IntersectionObserver: show everything at once rather than never.
+    let active = true;
+    const timers = new Set<ReturnType<typeof setTimeout>>();
+    const markSeen = (ids: string[]) => {
+      if (!active) return;
+      const next = new Set(seenRef.current);
+      for (const id of ids) next.add(id);
+      if (next.size === seenRef.current.size) return;
+      seenRef.current = next;
+      setSeen(next);
+    };
+
+    // DOM discovery is external synchronization; reduced motion is visible immediately in CSS.
     if (reduced || typeof IntersectionObserver === 'undefined') {
-      setSeen((prev) => {
-        const next = new Set(prev);
-        for (const s of stages) next.add(s.dataset.stage!);
-        return next;
-      });
-      return;
+      const frame = requestAnimationFrame(() => markSeen(stages.map((stage) => stage.dataset.stage!)));
+      return () => { active = false; cancelAnimationFrame(frame); };
     }
 
     const io = new IntersectionObserver(
@@ -70,14 +76,8 @@ export function useStageReveal(reduced: boolean, stageKey = '') {
         // will be plainly quicker to guests, and re-verifiable the same way if it ever needs
         // revisiting. Still doesn't touch `--sl-delay`/`--sl-dur` once `data-seen` flips — see
         // Layer.tsx for the per-layer stagger, and reveal.css for the transition itself.
-        setTimeout(() => {
-          setSeen((prev) => {
-            const next = new Set(prev);
-            let changed = false;
-            for (const id of arrived) if (!next.has(id)) { next.add(id); changed = true; }
-            return changed ? next : prev;
-          });
-        }, 150);
+        const timer = setTimeout(() => { timers.delete(timer); markSeen(arrived); }, 150);
+        timers.add(timer);
 
         for (const e of entries) {
           if (e.isIntersecting && e.intersectionRatio > 0.15) io.unobserve(e.target);
@@ -87,7 +87,7 @@ export function useStageReveal(reduced: boolean, stageKey = '') {
     );
 
     stages.forEach((s) => io.observe(s));
-    return () => io.disconnect();
+    return () => { active = false; timers.forEach(clearTimeout); io.disconnect(); };
     // stageKey is a deliberate proxy for "the set of [data-stage] elements changed"; seen is read
     // via seenRef, not a dep, so a reveal never replays.
   }, [reduced, stageKey]);

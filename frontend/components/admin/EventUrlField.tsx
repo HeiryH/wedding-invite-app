@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { eventService } from '@/lib/api';
 import { urlSegmentForEventType } from '@/lib/eventTypes';
 import { slugifyWhileTyping, slugify, slugProblem } from '@/lib/slug';
@@ -48,8 +48,14 @@ export default function EventUrlField({
   hint?: string;
 }) {
   const [touched, setTouched] = useState(false);
-  const [status, setStatus] = useState<SlugStatus>('idle');
-  const [message, setMessage] = useState<string | null>(null);
+  const slug = slugify(value);
+  const problem = slugProblem(slug);
+  const [verdict, setVerdict] = useState<{
+    slug: string; excludeId?: number; status: SlugStatus; message: string | null;
+  } | null>(null);
+  const currentVerdict = verdict?.slug === slug && verdict.excludeId === excludeId ? verdict : null;
+  const status: SlugStatus = problem ? (slug ? 'invalid' : 'idle') : currentVerdict?.status ?? 'checking';
+  const message = problem ? (slug ? problem : null) : currentVerdict?.message ?? null;
 
   // Follow the names until the admin takes the field over.
   useEffect(() => {
@@ -59,35 +65,23 @@ export default function EventUrlField({
 
   useEffect(() => { onStatusChange?.(status); }, [status, onStatusChange]);
 
-  // Debounced check. The sequence guard matters: a slow answer for an older slug must not
-  // overwrite the verdict for what's in the box now.
-  const seq = useRef(0);
+  // Derive pending/invalid state from the current input. Cleanup also invalidates in-flight
+  // responses when the next input is invalid, or this editor unmounts.
   useEffect(() => {
-    const slug = slugify(value);
-    const problem = slugProblem(slug);
-    if (problem) {
-      setStatus(slug ? 'invalid' : 'idle');
-      setMessage(slug ? problem : null);
-      return;
-    }
-    setStatus('checking');
-    setMessage(null);
-    const mine = ++seq.current;
+    if (problem) return;
+    let active = true;
     const timer = setTimeout(async () => {
       try {
         const result = await eventService.checkSlug(slug, excludeId);
-        if (mine !== seq.current) return;
-        setStatus(result.available ? 'available' : 'taken');
-        setMessage(result.available ? null : result.reason ?? 'That URL is already taken.');
+        if (!active) return;
+        setVerdict({ slug, excludeId, status: result.available ? 'available' : 'taken',
+          message: result.available ? null : result.reason ?? 'That URL is already taken.' });
       } catch {
-        if (mine !== seq.current) return;
-        // A failed check must not block the save — the server checks again anyway.
-        setStatus('idle');
-        setMessage(null);
+        if (active) setVerdict({ slug, excludeId, status: 'idle', message: null });
       }
     }, 400);
-    return () => clearTimeout(timer);
-  }, [value, excludeId]);
+    return () => { active = false; clearTimeout(timer); };
+  }, [slug, problem, excludeId]);
 
   const tone =
     status === 'available' ? 'var(--success, #2f7d4f)'

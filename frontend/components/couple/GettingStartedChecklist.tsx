@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { storeValue, useStoredValue } from '@/lib/useStoredValue';
 import { Icon } from '@/components/ui/Icon';
 import { urlSegmentForEventType } from '@/lib/eventTypes';
 
@@ -21,28 +21,21 @@ const PREVIEWED_KEY = 'onboarding.previewed';
 export function GettingStartedChecklist({
   coupleName, eventType, detailsComplete, guestCount, isPublic, onEditDetails, onAddGuests,
 }: Props) {
-  // localStorage-backed flags for the two "explore" steps (no server signal for them).
-  const [customized, setCustomized] = useState(false);
-  const [previewed, setPreviewed] = useState(false);
-  const [dismissed, setDismissed] = useState(true); // default hidden until we read storage
-
-  useEffect(() => {
-    setCustomized(!!localStorage.getItem(CUSTOMIZED_KEY));
-    setPreviewed(!!localStorage.getItem(PREVIEWED_KEY));
-    setDismissed(!!localStorage.getItem(DISMISS_KEY));
-  }, []);
+  const customized = !!useStoredValue(CUSTOMIZED_KEY);
+  const previewed = !!useStoredValue(PREVIEWED_KEY);
+  const dismissed = !!useStoredValue(DISMISS_KEY, 'pending');
 
   const steps = [
     { label: 'Add your names, date & venue', done: detailsComplete,
       cta: 'Edit details', onClick: onEditDetails },
     { label: 'Design your invitation', done: customized,
       cta: 'Customize', href: '/organizer-admin/customize',
-      mark: () => { localStorage.setItem(CUSTOMIZED_KEY, '1'); setCustomized(true); } },
+      mark: () => { storeValue(CUSTOMIZED_KEY, '1'); } },
     { label: 'Invite your guests', done: guestCount > 0,
       cta: 'Add guests', onClick: onAddGuests },
     { label: 'Preview & share your invitation', done: previewed,
       cta: 'Preview', href: `/${urlSegmentForEventType(eventType)}/${coupleName}`, external: true,
-      mark: () => { localStorage.setItem(PREVIEWED_KEY, '1'); setPreviewed(true); } },
+      mark: () => { storeValue(PREVIEWED_KEY, '1'); } },
   ];
 
   const doneCount = steps.filter((s) => s.done).length;
@@ -50,7 +43,7 @@ export function GettingStartedChecklist({
 
   if (dismissed) return null;
 
-  const dismiss = () => { localStorage.setItem(DISMISS_KEY, '1'); setDismissed(true); };
+  const dismiss = () => { storeValue(DISMISS_KEY, '1'); };
 
   return (
     <section

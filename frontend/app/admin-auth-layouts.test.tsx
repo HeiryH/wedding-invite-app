@@ -1,0 +1,32 @@
+import { act, cleanup, render, screen } from '@testing-library/react';
+import { hydrateRoot } from 'react-dom/client';
+import { renderToString } from 'react-dom/server';
+import { afterEach, expect, test, vi } from 'vitest';
+import HostLayout from './host-admin/layout';
+import OrganizerLayout from './organizer-admin/layout';
+const push = vi.hoisted(() => vi.fn());
+const router = { push };
+vi.mock('next/navigation', () => ({ useRouter: () => router, usePathname: () => '/organizer-admin' }));
+vi.mock('@/components/admin/AdminShell', () => ({ default: ({ children }: { children: React.ReactNode }) => <main>{children}</main> }));
+vi.mock('@/lib/api', () => ({ authService: { logout: vi.fn() } }));
+afterEach(() => { cleanup(); localStorage.clear(); vi.clearAllMocks(); });
+test('withholds protected content and redirects when the role is invalid', () => {
+  localStorage.setItem('user', JSON.stringify({ role: 'ORGANIZER_ADMIN', email: 'a@test' }));
+  render(<HostLayout><span>protected</span></HostLayout>);
+  expect(screen.queryByText('protected')).toBeNull();
+  expect(push).toHaveBeenCalledWith('/login');
+});
+test('an authorized organizer hydrates without a login redirect', async () => {
+  localStorage.setItem('user', JSON.stringify({ role: 'ORGANIZER_ADMIN', email: 'a@test' }));
+  const element = <OrganizerLayout><span>protected</span></OrganizerLayout>;
+  const container = document.createElement('div');
+  container.innerHTML = renderToString(element);
+  expect(container.textContent).toContain('Checking authentication');
+  document.body.append(container);
+  let root!: ReturnType<typeof hydrateRoot>;
+  await act(async () => { root = hydrateRoot(container, element); });
+  expect(container.textContent).toBe('protected');
+  expect(push).not.toHaveBeenCalled();
+  await act(async () => root.unmount());
+  container.remove();
+});
