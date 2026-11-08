@@ -65,6 +65,8 @@ export default function Template6({
   wishes,
   photos,
   photoBoothEnabled,
+  seatingEnabled = false,
+  tables = [],
   customConfig,
   itinerary = [],
   editor,
@@ -152,7 +154,7 @@ export default function Template6({
       <CeremonySection customConfig={customConfig} overlayProps={overlayProps} a={a} />
     ),
     rsvp: (
-      <RSVPSection onRSVP={onRSVP} customConfig={customConfig} wedding={wedding} overlayProps={overlayProps} a={a} />
+      <RSVPSection seatingEnabled={seatingEnabled} tables={tables} onRSVP={onRSVP} customConfig={customConfig} wedding={wedding} overlayProps={overlayProps} a={a} />
     ),
     itinerary: (
       <ItinerarySection items={itinerary} overlayProps={overlayProps} a={a} />

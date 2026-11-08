@@ -1,4 +1,6 @@
 'use client';
+import { useGuestSubmission } from '@/components/templates/_shared/guest/useGuestSubmission';
+import { guestLimit, normalizeRsvp } from '@/components/templates/_shared/guest/rules';
 
 import { useContext } from 'react';
 import { MasterPreviewContext, SeatingPreviewContext } from './preview';
@@ -73,10 +75,11 @@ function visibleAnswers(form: RsvpFormData, fields: ReturnType<typeof rsvpFields
   };
 }
 
-export function RsvpFormSlot({ wedding, onRSVP, seatingEnabled, editing, editor, t, stageLayers }: SlotProps) {
+export function RsvpFormSlot({ wedding, onRSVP, seatingEnabled, tables, editing, editor, t, stageLayers }: SlotProps) {
+  const submission = useGuestSubmission();
   const masterPreview = useContext(MasterPreviewContext);
   const seatingPreview = useContext(SeatingPreviewContext);
-  const paxLimit = (wedding.maxPax ?? 0) > 0 ? Math.min(10, wedding.maxPax!) : 10;
+  const paxLimit = guestLimit(wedding);
   const fields = rsvpFields(wedding, t);
   const {
     step, setStep, form, setForm, submitting, setSubmitting, done, setDone,
@@ -88,7 +91,7 @@ export function RsvpFormSlot({ wedding, onRSVP, seatingEnabled, editing, editor,
   const send = async () => {
     setSubmitting(true);
     try {
-      await onRSVP({ ...visibleAnswers(form, fields), tableId: null });
+      if (!await submission.submit(() => onRSVP(normalizeRsvp({ ...visibleAnswers(form, fields), tableId: null }, wedding, tables)), 'Could not send your RSVP. Please try again.')) return;
       setDone(true);
     } catch {
       alert('Failed to submit RSVP');
@@ -206,6 +209,7 @@ export function RsvpFormSlot({ wedding, onRSVP, seatingEnabled, editing, editor,
 }
 
 export function RsvpSeatingSlot({ wedding, onRSVP, tables, editing, editor, t, layer }: SlotProps) {
+  const submission = useGuestSubmission();
   const masterPreview = useContext(MasterPreviewContext);
   const seatingPreview = useContext(SeatingPreviewContext);
   const fields = rsvpFields(wedding, t);
@@ -222,7 +226,7 @@ export function RsvpSeatingSlot({ wedding, onRSVP, tables, editing, editor, t, l
     if (editing) return; // laying out the stage must never post a real RSVP
     setSubmitting(true);
     try {
-      await onRSVP({ ...answers, tableId: selectedTableId });
+      if (!await submission.submit(() => onRSVP(normalizeRsvp({ ...answers, tableId: selectedTableId }, wedding, tables)), 'Could not send your RSVP. Please try again.')) return;
       setDone(true);
     } catch {
       alert('Failed to submit RSVP');

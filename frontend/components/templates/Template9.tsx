@@ -1,4 +1,6 @@
 'use client';
+import { useGuestSubmission } from '@/components/templates/_shared/guest/useGuestSubmission';
+import { guestLimit, normalizeRsvp, validatedPhoto } from '@/components/templates/_shared/guest/rules';
 import type { TemplateRsvpSubmission, PhotoUploadSubmission, TemplateWishSubmission } from '@/components/templates/guestContracts';
 
 
@@ -135,6 +137,7 @@ export default function Template9({
   customConfig,
   itinerary = [],
 }: Template9Props) {
+  const submission = useGuestSubmission();
   const t = (key: string, fallback: string) => customConfig?.[key] || fallback;
   const title = wedding.eventTitle || wedding.displayName || 'A Celebration';
   const hStyle = headingStyle(customConfig);
@@ -155,7 +158,7 @@ export default function Template9({
   };
 
   const eventDate = new Date(wedding.weddingDate);
-  const paxLimit = (wedding?.maxPax ?? 0) > 0 ? Math.min(10, wedding.maxPax!) : 10;
+  const paxLimit = guestLimit(wedding);
   const showIslamicDate = customConfig?.['general.showIslamicDate'] === 'true';
 
   const [rsvpStep, setRsvpStep] = useState<1 | 2>(1);
@@ -178,7 +181,7 @@ export default function Template9({
   const submitRSVP = async () => {
     setRsvpSubmitting(true);
     try {
-      await onRSVP({ ...rsvpData, isAttending, tableId: selectedTableId, brideOrGroomSide: null });
+      if (!await submission.submit(() => onRSVP(normalizeRsvp({ ...rsvpData, isAttending, tableId: selectedTableId, brideOrGroomSide: null }, wedding, tables)), 'Could not send your RSVP. Please try again.')) return;
       setRsvpSuccess(true);
       setRsvpStep(1);
       setSelectedTableId(null);
@@ -198,7 +201,7 @@ export default function Template9({
     e.preventDefault();
     setWishSubmitting(true);
     try {
-      await onSubmitWish(wishData);
+      if (!await submission.submit(() => onSubmitWish(wishData), 'Could not send your wish. Please try again.')) return;
       setWishSuccess(true);
       setWishData({ guestName: '', message: '' });
       setTimeout(() => setWishSuccess(false), 3000);
@@ -222,7 +225,7 @@ export default function Template9({
     if (!selectedFile || !onUploadPhoto) return;
     setPhotoSubmitting(true);
     try {
-      await onUploadPhoto({ ...photoData, file: selectedFile });
+      if (!await submission.submit(() => onUploadPhoto!(validatedPhoto({ ...photoData, file: selectedFile })), 'Could not send your photo. Please try again.')) return;
       setPhotoSuccess(true);
       setPhotoData({ guestName: '', caption: '' });
       setSelectedFile(null);

@@ -1,4 +1,5 @@
 'use client';
+import { getTemplateCapabilities } from '@/components/templates/templateCapabilities';
 import { sectionArrangement, moveIndependentSection } from '@/components/templates/sectionArrangement';
 
 import { useEffect, useState, useCallback, useMemo, useRef } from 'react';
@@ -2129,7 +2130,7 @@ export default function CustomizationWorkspace({ masterTemplateId }: { masterTem
 
   const showPortraitSlots = [3, 4].includes(wedding.templateId);
   const portraitSlots = wedding.templateId === 4 ? PORTRAIT_SLOTS_T4 : PORTRAIT_SLOTS_T3;
-  const canArrangeSections = schema.has('section.order') && !wedding.templateStagesJson && sectionArrangement(wedding.templateId, sectionOrder).movable.length > 0;
+  const canArrangeSections = schema.has('section.order') && !wedding.templateStagesJson && ['partial', 'dom', 'visual'].includes(getTemplateCapabilities(wedding.templateId).sectionOrder);
   const availableBlocks = canArrangeSections ? SECTION_BLOCKS.filter((b) => !sectionOrder.includes(b.code)) : [];
   const arrangement = sectionArrangement(wedding.templateId, sectionOrder);
   const activeSectionIndex = canArrangeSections ? arrangement.movable.indexOf(activeBlock) : -1;

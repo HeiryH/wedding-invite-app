@@ -1,4 +1,6 @@
 'use client';
+import { useGuestSubmission } from '@/components/templates/_shared/guest/useGuestSubmission';
+import { guestLimit, normalizeRsvp, validatedPhoto } from '@/components/templates/_shared/guest/rules';
 import type { TemplateRsvpSubmission, PhotoUploadSubmission, TemplateWishSubmission } from '@/components/templates/guestContracts';
 
 
@@ -233,7 +235,7 @@ function UploadSheet({
 }: {
   visible: boolean;
   onClose: () => void;
-  onSubmit: (data: { guestName: string; caption: string; file: File }) => Promise<void>;
+  onSubmit: (data: { guestName: string; caption: string; file: File }) => Promise<boolean>;
   submitting: boolean;
   success: boolean;
 }) {
@@ -254,7 +256,7 @@ function UploadSheet({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!file || !name.trim()) return;
-    await onSubmit({ guestName: name, caption: '', file });
+    if (!await onSubmit({ guestName: name, caption: '', file })) return;
     setName('');
     setFile(null);
     setPreview(null);
@@ -348,6 +350,7 @@ export default function Template4({
   itinerary = [],
   editor,
 }: Template4Props) {
+  const submission = useGuestSubmission();
   const t = (key: string, fallback: string) => customConfig?.[key] || fallback;
   const showIslamicDate = customConfig?.['general.showIslamicDate'] === 'true';
   const hStyle = headingStyle(customConfig);
@@ -359,7 +362,7 @@ export default function Template4({
   const overlayProps = { breakpoint: overlayBreakpoint, config: customConfig, editor };
   const { a, tx, sx, ax } = useAnchors(customConfig, overlayBreakpoint, editor);
 
-  const paxLimit = (wedding?.maxPax ?? 0) > 0 ? Math.min(10, wedding.maxPax!) : 10;
+  const paxLimit = guestLimit(wedding);
 
   const sectionOrder = resolveSectionOrder(
     customConfig?.['section.order'],
@@ -471,7 +474,7 @@ export default function Template4({
     if (seatingPreview) return;
     setRsvpSubmitting(true);
     try {
-      await onRSVP({ ...rsvpData, isAttending, tableId: selectedTableId });
+      if (!await submission.submit(() => onRSVP(normalizeRsvp({ ...rsvpData, isAttending, tableId: selectedTableId }, wedding, tables)), 'Could not send your RSVP. Please try again.')) return;
       setRsvpSuccess(true);
       setRsvpStep(1);
       setSelectedTableId(null);
@@ -496,7 +499,7 @@ export default function Template4({
     e.preventDefault();
     setWishSubmitting(true);
     try {
-      await onSubmitWish(wishData);
+      if (!await submission.submit(() => onSubmitWish(wishData), 'Could not send your wish. Please try again.')) return;
       setWishSuccess(true);
       setWishData({ guestName: '', message: '' });
       setTimeout(() => setWishSuccess(false), 3000);
@@ -509,12 +512,13 @@ export default function Template4({
   const [photoSuccess, setPhotoSuccess] = useState(false);
 
   const handlePhotoUpload = async (data: { guestName: string; caption: string; file: File }) => {
-    if (!onUploadPhoto) return;
+    if (!onUploadPhoto) return false;
     setPhotoSubmitting(true);
     try {
-      await onUploadPhoto(data);
+      if (!await submission.submit(() => onUploadPhoto!(validatedPhoto(data)), 'Could not send your photo. Please try again.')) return false;
       setPhotoSuccess(true);
       setTimeout(() => { setPhotoSuccess(false); setShowUpload(false); }, 2000);
+      return true;
     } finally { setPhotoSubmitting(false); }
   };
 

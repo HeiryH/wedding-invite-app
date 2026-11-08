@@ -1,4 +1,5 @@
 'use client';
+import { seatsAvailable, tableCanFit } from '@/components/templates/_shared/guest/rules';
 import { SeatingTable } from '@/lib/api';
 // The table icon is a deliberate, accepted T7 art borrow (see slots.module.css's .tableIcon
 // comment) — not generalized to a neutral asset in this pass.
@@ -36,8 +37,8 @@ export default function SeatingChart({
   fullLabel = 'Full',
   seatsLeftLabel = 'seats left',
 }: Props) {
-  const availableSeats = (t: SeatingTable) => t.capacity - t.guestCount;
-  const canFit = (t: SeatingTable) => availableSeats(t) >= numberOfAttendees;
+  const availableSeats = seatsAvailable;
+  const canFit = (table: SeatingTable) => tableCanFit(table, numberOfAttendees);
 
   if (tables.length === 0) {
     return (

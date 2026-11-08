@@ -1,4 +1,6 @@
 'use client';
+import { useGuestSubmission } from '@/components/templates/_shared/guest/useGuestSubmission';
+import { guestLimit, normalizeRsvp, validatedPhoto } from '@/components/templates/_shared/guest/rules';
 import type { TemplateRsvpSubmission, PhotoUploadSubmission, TemplateWishSubmission } from '@/components/templates/guestContracts';
 
 
@@ -51,8 +53,8 @@ interface RSVPModalProps {
 }
 
 function RSVPModal({ wedding, onRSVP, onClose, seatingEnabled, tables, t, subtitleStyle }: RSVPModalProps) {
-  const maxPax = wedding.maxPax ?? 0;
-  const paxLimit = maxPax > 0 ? Math.min(10, maxPax) : 10;
+  const submission = useGuestSubmission();
+  const paxLimit = guestLimit(wedding);
   const maxCapacity = wedding.maxCapacity ?? 0;
   const remainingPax = (maxCapacity > 0 && wedding.showCapacityWarning)
     ? Math.max(0, maxCapacity - wedding.totalAttending)
@@ -77,7 +79,7 @@ function RSVPModal({ wedding, onRSVP, onClose, seatingEnabled, tables, t, subtit
     if (seatingPreview) return;
     setRsvpSubmitting(true);
     try {
-      await onRSVP({ ...rsvpData, isAttending, tableId: selectedTableId });
+      if (!await submission.submit(() => onRSVP(normalizeRsvp({ ...rsvpData, isAttending, tableId: selectedTableId }, wedding, tables)), 'Could not send your RSVP. Please try again.')) return;
       setRsvpSuccess(true);
       setTimeout(() => { setRsvpSuccess(false); onClose(); }, 2000);
     } catch (error: any) {
@@ -439,6 +441,7 @@ export default function Template5({
   itinerary = [],
   editor,
 }: Template5Props) {
+  const submission = useGuestSubmission();
   const t = (key: string, fallback: string) => customConfig?.[key] || fallback;
 
   // Decorative-overlay breakpoint: pinned by the Adjust panel while editing, else responsive.
@@ -658,7 +661,7 @@ const NAV_EMOJIS: Record<string, string> = {
     e.preventDefault();
     setWishSubmitting(true);
     try {
-      await onSubmitWish({ ...wishData, brideOrGroomSide: wishSide });
+      if (!await submission.submit(() => onSubmitWish({ ...wishData, brideOrGroomSide: wishSide }), 'Could not send your wish. Please try again.')) return;
       setWishSuccess(true);
       setWishData({ guestName: '', message: '' });
       setWishExpanded(false);
@@ -688,7 +691,7 @@ const NAV_EMOJIS: Record<string, string> = {
     if (!selectedFile || !onUploadPhoto) return;
     setPhotoSubmitting(true);
     try {
-      await onUploadPhoto({ ...photoData, file: selectedFile });
+      if (!await submission.submit(() => onUploadPhoto!(validatedPhoto({ ...photoData, file: selectedFile })), 'Could not send your photo. Please try again.')) return;
       setPhotoSuccess(true);
       setPhotoData({ guestName: '', caption: '' });
       setSelectedFile(null);

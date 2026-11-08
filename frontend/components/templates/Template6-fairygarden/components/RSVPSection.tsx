@@ -1,10 +1,14 @@
 'use client';
+import { useGuestSubmission } from '@/components/templates/_shared/guest/useGuestSubmission';
+import { guestLimit, normalizeRsvp } from '@/components/templates/_shared/guest/rules';
 import type { TemplateRsvpSubmission } from '@/components/templates/guestContracts';
 
-import { useState, type CSSProperties } from 'react';
+import { useContext, useState, type CSSProperties } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { CreateGuest, Wedding } from '@/lib/api';
+import { Wedding, SeatingTable } from '@/lib/api';
 import type { Breakpoint, EditorHandle } from '@/components/templates/_shared/types';
+import SeatingStep from '../../SeatingStep';
+import { SeatingPreviewContext } from '../../_shared/slots/preview';
 import SectionOverlay from '../SectionOverlay';
 import styles from '../Template6.module.css';
 
@@ -12,13 +16,19 @@ interface Props {
   onRSVP: (data: TemplateRsvpSubmission) => Promise<void>;
   customConfig?: Record<string, string>;
   wedding?: Wedding;
+  seatingEnabled?: boolean;
+  tables?: SeatingTable[];
   overlayProps: { breakpoint: Breakpoint; config?: Record<string, string>; editor?: EditorHandle };
   a: (stageId: string, elementId: string, base?: CSSProperties) => CSSProperties;
 }
 
-export default function RSVPSection({ onRSVP, customConfig, wedding, overlayProps, a }: Props) {
-  const paxLimit = (wedding?.maxPax ?? 0) > 0 ? Math.min(10, wedding!.maxPax!) : 10;
+export default function RSVPSection({ onRSVP, customConfig, wedding, seatingEnabled = false, tables = [], overlayProps, a }: Props) {
+  const submission = useGuestSubmission();
+  const paxLimit = guestLimit(wedding);
   const t = (key: string, fallback: string) => customConfig?.[key] || fallback;
+  const seatingPreview = useContext(SeatingPreviewContext);
+  const [step, setStep] = useState<'form' | 'seating'>('form');
+  const [selectedTableId, setSelectedTableId] = useState<number | null>(null);
   const [open, setOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(false);
@@ -32,11 +42,14 @@ export default function RSVPSection({ onRSVP, customConfig, wedding, overlayProp
     songRequest: '',
   });
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async (e?: React.FormEvent) => {
+    e?.preventDefault();
+    if (seatingPreview) return;
+    if (wedding?.isRsvpOpen === false) return;
+    if (seatingEnabled && form.isAttending && step === 'form') { setStep('seating'); return; }
     setSubmitting(true);
     try {
-      await onRSVP(form);
+      if (!await submission.submit(() => onRSVP(normalizeRsvp({ ...form, tableId: selectedTableId }, wedding, tables)), 'Could not send your RSVP. Please try again.')) return;
       setDone(true);
       setOpen(false);
     } finally {
@@ -93,14 +106,14 @@ export default function RSVPSection({ onRSVP, customConfig, wedding, overlayProp
 
       {/* Modal */}
       <AnimatePresence>
-        {open && (
+        {(open || seatingPreview) && (
           <>
             <motion.div
               className={styles.modalOverlay}
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              onClick={() => setOpen(false)}
+              onClick={() => { setOpen(false); seatingPreview?.dismiss(); }}
             />
             <motion.div
               className={styles.modalSheet}
@@ -109,10 +122,14 @@ export default function RSVPSection({ onRSVP, customConfig, wedding, overlayProp
               exit={{ y: '100%' }}
               transition={{ type: 'spring', damping: 28, stiffness: 280 }}
             >
-              <button className={styles.modalClose} onClick={() => setOpen(false)}>✕</button>
+              <button className={styles.modalClose} onClick={() => { setOpen(false); seatingPreview?.dismiss(); }}>✕</button>
               <h3 className={styles.modalTitle}>Your RSVP</h3>
 
-              <form onSubmit={handleSubmit} className={styles.rsvpForm}>
+              {(seatingPreview || step === 'seating') ? <SeatingStep
+                tables={tables} numberOfAttendees={form.numberOfAttendees} selectedTableId={selectedTableId}
+                onSelect={setSelectedTableId} onBack={() => { setStep('form'); seatingPreview?.dismiss(); }}
+                onSubmit={() => { void handleSubmit(); }} submitting={submitting}
+              /> : <form onSubmit={handleSubmit} className={styles.rsvpForm}>
                 <input
                   className={styles.rsvpInput}
                   placeholder="Full Name *"
@@ -161,6 +178,7 @@ export default function RSVPSection({ onRSVP, customConfig, wedding, overlayProp
                     value={form.numberOfAttendees}
                     onChange={(e) => {
                       const raw = Number(e.target.value) || 1;
+                      setSelectedTableId(null);
                       setForm((f) => ({ ...f, numberOfAttendees: Math.max(1, Math.min(raw, paxLimit)) }));
                     }}
                   />
@@ -198,7 +216,7 @@ export default function RSVPSection({ onRSVP, customConfig, wedding, overlayProp
                 >
                   {submitting ? '✨ Sending…' : '✨ Submit RSVP'}
                 </motion.button>
-              </form>
+              </form>}
             </motion.div>
           </>
         )}

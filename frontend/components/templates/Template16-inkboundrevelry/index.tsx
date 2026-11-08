@@ -1,4 +1,6 @@
 'use client';
+import { useGuestSubmission } from '@/components/templates/_shared/guest/useGuestSubmission';
+import { guestLimit, normalizeRsvp, seatsAvailable, tableCanFit } from '@/components/templates/_shared/guest/rules';
 
 import { useContext, useEffect, useId, useRef, useState, type FormEvent } from 'react';
 import { SeatingPreviewContext } from '../_shared/slots/preview';
@@ -111,6 +113,7 @@ function VenueActions({ wedding, t }: Pick<TemplateRenderProps, 'wedding'> & { t
 }
 
 function ReplyForm({ wedding, onRSVP, seatingEnabled = false, tables = [], editor, previewOnly, t }: TemplateRenderProps & { t: Copy }) {
+  const submission = useGuestSubmission();
   const [form, setForm] = useState({ guestName: '', email: '', phoneNumber: '', brideOrGroomSide: 'Bride' as 'Bride' | 'Groom', numberOfAttendees: 1, isAttending: true, songRequest: '' });
   const [step, setStep] = useState<'form' | 'seating'>('form');
   const seatingPreview = useContext(SeatingPreviewContext);
@@ -119,7 +122,7 @@ function ReplyForm({ wedding, onRSVP, seatingEnabled = false, tables = [], edito
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState(false);
   const [error, setError] = useState('');
-  const max = Math.min(10, (wedding.maxPax ?? 0) > 0 ? wedding.maxPax! : 10);
+  const max = guestLimit(wedding);
   const submit = async (event: FormEvent) => {
     event.preventDefault(); setError('');
     if (wedding.isRsvpOpen === false || busy) return;
@@ -127,7 +130,7 @@ function ReplyForm({ wedding, onRSVP, seatingEnabled = false, tables = [], edito
     if (editor?.enabled || previewOnly) { setError('Preview only — no RSVP was submitted.'); return; }
     setBusy(true);
     try {
-      await onRSVP({ ...form, tableId: seatingEnabled && form.isAttending ? tableId : null }); setDone(true);
+      if (!await submission.submit(() => onRSVP(normalizeRsvp({ ...form, tableId: seatingEnabled && form.isAttending ? tableId : null }, wedding, tables)), 'We could not send your RSVP. Please try again.', setError)) return; setDone(true);
     } catch { setError('We could not send your RSVP. Please try again.'); }
     finally { setBusy(false); }
   };
@@ -145,8 +148,8 @@ function ReplyForm({ wedding, onRSVP, seatingEnabled = false, tables = [], edito
     </> : <><div><h3>{t('rsvp.seating_prompt', 'Choose your table')}</h3>
       {!tables.length && <p>No tables have been set up yet — your seat will be assigned by the couple.</p>}
       <div className={styles.tableGrid}>{tables.map((table) => {
-        const available = table.capacity - table.guestCount;
-        return <button key={table.tableId} type="button" className={styles.outlineButton} disabled={available < form.numberOfAttendees}
+        const available = seatsAvailable(table);
+        return <button key={table.tableId} type="button" className={styles.outlineButton} disabled={!tableCanFit(table, form.numberOfAttendees)}
           aria-pressed={tableId === table.tableId} onClick={() => setTableId(table.tableId)}>
           {table.tableName} · {available < form.numberOfAttendees ? 'Not enough seats' : `${available} seats left`}
         </button>;
@@ -157,6 +160,7 @@ function ReplyForm({ wedding, onRSVP, seatingEnabled = false, tables = [], edito
 }
 
 function Guestbook({ onSubmitWish, wishes, editor, previewOnly, t }: TemplateRenderProps & { t: Copy }) {
+  const submission = useGuestSubmission();
   const [form, setForm] = useState({ guestName: '', message: '' });
   const [shown, setShown] = useState(10);
   const [busy, setBusy] = useState(false);
@@ -166,7 +170,7 @@ function Guestbook({ onSubmitWish, wishes, editor, previewOnly, t }: TemplateRen
     event.preventDefault(); if (busy) return; setError(''); setStatus('');
     if (editor?.enabled || previewOnly) { setStatus('Preview only — no wish was submitted.'); return; }
     setBusy(true);
-    try { await onSubmitWish(form); setForm({ guestName: '', message: '' }); setStatus(t('wish.sent_message', 'Thank you — your wish was sent.')); }
+    try { if (!await submission.submit(() => onSubmitWish(form), 'We could not send your wish. Please try again.', setError)) return; setForm({ guestName: '', message: '' }); setStatus(t('wish.sent_message', 'Thank you — your wish was sent.')); }
     catch { setError('We could not send your wish. Please try again.'); }
     finally { setBusy(false); }
   };
@@ -183,6 +187,7 @@ function Guestbook({ onSubmitWish, wishes, editor, previewOnly, t }: TemplateRen
 }
 
 function Album({ photos, onUploadPhoto, editor, previewOnly, t }: TemplateRenderProps & { t: Copy }) {
+  const submission = useGuestSubmission();
   const inputId = useId();
   const [layout, setLayout] = useState<'stack' | 'grid'>('stack');
   const [index, setIndex] = useState(0);
@@ -203,7 +208,7 @@ function Album({ photos, onUploadPhoto, editor, previewOnly, t }: TemplateRender
     setError(''); setStatus('');
     if (editor?.enabled || previewOnly) { setStatus('Preview only — no photo was uploaded.'); return; }
     setBusy(true);
-    try { await uploadPhotoFile(onUploadPhoto, file); setStatus('Your photo was uploaded.'); }
+    try { if (!await submission.submit(() => uploadPhotoFile(onUploadPhoto, file), 'We could not upload your photo. Please try again.', setError)) return; setStatus('Your photo was uploaded.'); }
     catch { setError('We could not upload your photo. Please try again.'); }
     finally { setBusy(false); }
   };

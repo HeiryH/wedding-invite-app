@@ -1,4 +1,5 @@
 'use client';
+import { useGuestSubmission } from '@/components/templates/_shared/guest/useGuestSubmission';
 import { useState, type CSSProperties } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Wish, CreateWish } from '@/lib/api';
@@ -15,6 +16,7 @@ interface Props {
 }
 
 export default function WishesSection({ wishes, onSubmitWish, customConfig, overlayProps, a }: Props) {
+  const submission = useGuestSubmission();
   const t = (key: string, fallback: string) => customConfig?.[key] || fallback;
   const [name, setName] = useState('');
   const [message, setMessage] = useState('');
@@ -26,7 +28,7 @@ export default function WishesSection({ wishes, onSubmitWish, customConfig, over
     if (!name.trim() || !message.trim()) return;
     setSubmitting(true);
     try {
-      await onSubmitWish({ guestName: name.trim(), message: message.trim() });
+      if (!await submission.submit(() => onSubmitWish({ guestName: name.trim(), message: message.trim() }), 'Could not send your wish. Please try again.')) return;
       setSubmitted(true);
       setName('');
       setMessage('');

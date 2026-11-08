@@ -42,7 +42,7 @@ describe('template capability contract', () => {
   it('retains current production control scopes exactly', () => {
     const ids = (key: string) => Object.values(TEMPLATE_IDS_BY_CODE).filter((id) => getConfigFields(id, 'SUPER_ADMIN', 'PRO').some((f) => f.key === key));
     expect(ids('rsvp.form_layout')).toEqual([7, 10, 11, 12, 13, 14]);
-    expect(ids('seating.mode')).toEqual([1, 2, 3, 4, 5, 7, 10, 11, 12, 13, 14, 15, 16]);
+    expect(ids('seating.mode')).toEqual([1, 2, 3, 4, 5, 6, 7, 10, 11, 12, 13, 14, 15, 16]);
     expect(ids('gallery.title')).toEqual([7, 11, 12, 16]);
     expect(inlineFormSheet('ta99', 'rsvp', { 'rsvp.form_layout': 'inline' })).toBeUndefined();
   });

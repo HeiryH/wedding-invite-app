@@ -1,4 +1,5 @@
 'use client';
+import { seatsAvailable, tableCanFit } from '@/components/templates/_shared/guest/rules';
 
 import { motion } from 'framer-motion';
 import { SeatingTable } from '@/lib/api';
@@ -27,8 +28,8 @@ export default function SeatingStep({
   accentClass = 'bg-gradient-to-r from-rose-500 to-pink-500',
   accentBorderClass = 'border-rose-500 bg-rose-50',
 }: SeatingStepProps) {
-  const availableSeats = (table: SeatingTable) => table.capacity - table.guestCount;
-  const canFit = (table: SeatingTable) => availableSeats(table) >= numberOfAttendees;
+  const availableSeats = seatsAvailable;
+  const canFit = (table: SeatingTable) => tableCanFit(table, numberOfAttendees);
   const isFull = (table: SeatingTable) => table.guestCount >= table.capacity;
 
   const availableTables = tables.filter(canFit);

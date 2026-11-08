@@ -1,4 +1,6 @@
 'use client';
+import { useGuestSubmission } from '@/components/templates/_shared/guest/useGuestSubmission';
+import { guestLimit, normalizeRsvp, validatedPhoto } from '@/components/templates/_shared/guest/rules';
 import { useScrollSection } from './_shared/nav/useScrollSection';
 import { animateScrollIntoView } from './_shared/animateScrollTo';
 import OrderedSections from './_shared/OrderedSections';
@@ -49,6 +51,7 @@ export default function Template2({
     itinerary = [],
     editor,
 }: Template2Props) {
+  const submission = useGuestSubmission();
     const t = (key: string, fallback: string) => customConfig?.[key] || fallback;
     const showIslamicDate = customConfig?.['general.showIslamicDate'] === 'true';
     const hStyle = headingStyle(customConfig);
@@ -80,7 +83,7 @@ export default function Template2({
 
     const weddingDate = new Date(wedding.weddingDate);
 
-    const paxLimit = (wedding?.maxPax ?? 0) > 0 ? Math.min(10, wedding.maxPax!) : 10;
+    const paxLimit = guestLimit(wedding);
 
     // RSVP Form State
     const [isAttending, setIsAttending] = useState(true);
@@ -126,7 +129,7 @@ export default function Template2({
       if (seatingPreview) return;
         setRsvpSubmitting(true);
         try {
-            await onRSVP({ ...rsvpData, isAttending, tableId: selectedTableId });
+            if (!await submission.submit(() => onRSVP(normalizeRsvp({ ...rsvpData, isAttending, tableId: selectedTableId }, wedding, tables)), 'Could not send your RSVP. Please try again.')) return;
             setRsvpSuccess(true);
             setRsvpStep(1);
             setSelectedTableId(null);
@@ -148,7 +151,7 @@ export default function Template2({
         e.preventDefault();
         setWishSubmitting(true);
         try {
-            await onSubmitWish(wishData);
+            if (!await submission.submit(() => onSubmitWish(wishData), 'Could not send your wish. Please try again.')) return;
             setWishSuccess(true);
             setWishData({ guestName: '', message: '' });
             setTimeout(() => setWishSuccess(false), 3000);
@@ -188,10 +191,10 @@ export default function Template2({
 
         setPhotoSubmitting(true);
         try {
-            await onUploadPhoto({
+            if (!await submission.submit(() => onUploadPhoto!(validatedPhoto({
                 ...photoData,
                 file: selectedFile,
-            });
+            })), 'Could not send your photo. Please try again.')) return;
             setPhotoSuccess(true);
             setPhotoData({ guestName: '', caption: '' });
             setSelectedFile(null);

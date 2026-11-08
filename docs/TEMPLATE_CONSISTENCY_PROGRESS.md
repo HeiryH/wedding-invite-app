@@ -86,3 +86,14 @@ No T4 structural changes have been made. Phases 4–7 have not started. T8/T9 pr
 The user selected preservation of Minimal Noir's grouped composition. The editor now projects its grouped cover/details/programme entries ahead of the independently reorderable RSVP/Wishes/Photo Booth entries. Movement swaps only independent entries in the original saved logical order; it never rewrites grouped layout data. Grouped entries do not offer misleading move/remove controls. Existing content and the decorative hardcoded schedule remain unchanged. Prototype/cinematic/fixed compositions do not gain unsupported reorder controls.
 
 Validation: two ordering-policy tests plus the four existing workspace tests passed; TypeScript passed before subsequent phase work. T8/T9 productionization remains excluded.
+
+## Phase 4 — completed
+
+- Guest forms retain their template markup/state but now share an immediate submission lock, failure handling and retry semantics. Success/reset actions run only after a successful callback. T16 retains its inline error presentation; the cinematic RSVP wrapper continues to propagate real failures to the shared form controller.
+- Shared RSVP normalization enforces party limits, clears invalid/stale table selections and omits wedding family-side answers for other event types. SeatingStep/SeatingChart share capacity rules; T16 uses the same rules.
+- Photo callbacks validate the backend's current nonempty/image/10 MB/JPG-PNG-GIF-WebP constraints. Server signature validation remains authoritative. T4's upload sheet retains file/name on failed upload.
+- T6 now consumes seating props, supports Back/table selection and forced Seating preview, and exposes the existing gated Seating mode control through capabilities. The public feature/tier gate and organizer-assignment mode remain the authority.
+- No form-layout keys, custom geometry, optional wish-photo flow or T5 Wishes metadata were removed. Prototype renderers received shared request handling, not productionization or Adjust parity.
+- Fixed an editor edge case so removing all independently reorderable sections does not remove the Restore control.
+
+Validation: TypeScript passed; full frontend suite passed at 59 files / 383 tests. Shared guest-rule/controller files pass ESLint. Mock public callback checks passed (T3, T6, authored), and T3–T7/T16 mobile/desktop render smoke passed. Evidence is under `.einvite-run/consistency/phase4/` and `/tmp/consistency-phase4-*.log`.

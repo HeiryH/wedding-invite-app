@@ -1,4 +1,6 @@
 'use client';
+import { validateGuestPhoto } from '../guest/rules';
+import { useGuestSubmission } from '@/components/templates/_shared/guest/useGuestSubmission';
 
 import { useRef, useState, useSyncExternalStore } from 'react';
 import { createPortal } from 'react-dom';
@@ -70,6 +72,7 @@ const stackVariants = {
  * static grid.
  */
 function PhotoBoothBody({ photos, onUploadPhoto, t, editing, upload }: SlotProps & { upload: boolean }) {
+  const submission = useGuestSubmission();
   // The engraved-frame overlay is T7 art specifically — a template whose own photobooth scene
   // doesn't want it (e.g. Sunny Safari draws its own gallery board) sets `photobooth.frameArt` to
   // 'none' in its schema defaults. Any other value (including the unset default) keeps it.
@@ -86,7 +89,7 @@ function PhotoBoothBody({ photos, onUploadPhoto, t, editing, upload }: SlotProps
   const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !onUploadPhoto || editing) return;
-    await uploadPhotoFile(onUploadPhoto, file);
+    if (!await submission.submit(() => uploadPhotoFile(onUploadPhoto, file), 'Could not send your photo. Please try again.')) return;
     e.target.value = '';
   };
 
@@ -105,6 +108,7 @@ function PhotoBoothBody({ photos, onUploadPhoto, t, editing, upload }: SlotProps
           <input ref={inputRef} type="file" accept="image/*" className={styles.hiddenInput} onChange={handleFile} />
           <button
             type="button"
+            disabled={submission.busy}
             className={`${styles.plaque} ${styles.plaqueBtn}`}
             onClick={() => inputRef.current?.click()}
           >
@@ -274,6 +278,7 @@ export async function uploadPhotoFile(
   file: File,
   meta?: { guestName?: string; caption?: string },
 ): Promise<void> {
+  validateGuestPhoto(file);
   await onUploadPhoto({
     guestName: meta?.guestName?.trim() || 'Guest',
     caption: meta?.caption?.trim() || '',

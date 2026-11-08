@@ -29,7 +29,7 @@ export const TEMPLATE_CAPABILITIES: Readonly<Record<number, Readonly<TemplateCap
   3: { ...classic, sectionOrder: 'dom' },
   4: { ...classic, sectionOrder: 'partial' },
   5: { ...classic, sectionOrder: 'dom', music: 'legacy' },
-  6: { ...classic, sectionOrder: 'dom', seating: false, music: 'legacy' },
+  6: { ...classic, sectionOrder: 'dom', seating: true, music: 'legacy' },
   7: { ...stage, coupleGallery: true },
   8: { ...classic, editor: 'none', sectionOrder: 'fixed', prototype: true },
   9: { ...classic, editor: 'none', sectionOrder: 'fixed', prototype: true },

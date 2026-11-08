@@ -1,4 +1,5 @@
 'use client';
+import { useGuestSubmission } from '@/components/templates/_shared/guest/useGuestSubmission';
 
 import { useRef, useState } from 'react';
 import type { SlotProps } from '../types';
@@ -36,6 +37,7 @@ export function WishPromptSlot({ t }: SlotProps) {
  * work) is gone rather than ported.
  */
 export function WishFormSlot({ onSubmitWish, editing, editor, t, photoBoothEnabled, onUploadPhoto, stageLayers, layer }: SlotProps) {
+  const submission = useGuestSubmission();
   const { step, setStep, form, setForm, submitting, setSubmitting, sent, setSent } = useWishFlow();
   const { close } = useSheets();
 
@@ -47,7 +49,7 @@ export function WishFormSlot({ onSubmitWish, editing, editor, t, photoBoothEnabl
     if (editing) return; // laying out the stage must never post a real wish
     setSubmitting(true);
     try {
-      await onSubmitWish(form);
+      if (!await submission.submit(() => onSubmitWish(form), 'Could not send your wish. Please try again.')) return;
       setForm({ guestName: '', message: '' });
       setSent(true);
       // Unlike the RSVP flow, the step advance sits *inside* the success branch rather than being
@@ -99,6 +101,7 @@ export function WishFormSlot({ onSubmitWish, editing, editor, t, photoBoothEnabl
  * (`SLOT_AVAILABLE.wishPhoto`), so with the feature off the flow simply ends at step 1.
  */
 export function WishPhotoSlot({ onUploadPhoto, editing, editor, t, layer }: SlotProps) {
+  const submission = useGuestSubmission();
   const { step, setStep, sent, setSent } = useWishFlow();
   const { close } = useSheets();
   const inputRef = useRef<HTMLInputElement>(null);
@@ -114,7 +117,7 @@ export function WishPhotoSlot({ onUploadPhoto, editing, editor, t, layer }: Slot
     if (!file || !onUploadPhoto || editing) return;
     setBusy(true);
     try {
-      await uploadPhotoFile(onUploadPhoto, file, { caption });
+      if (!await submission.submit(() => uploadPhotoFile(onUploadPhoto, file, { caption }), 'Could not send your photo. Please try again.')) return;
       finish();
     } catch {
       alert('Failed to upload your photo');

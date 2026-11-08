@@ -1,4 +1,6 @@
 'use client';
+import { useGuestSubmission } from '@/components/templates/_shared/guest/useGuestSubmission';
+import { guestLimit, normalizeRsvp, validatedPhoto } from '@/components/templates/_shared/guest/rules';
 import { useScrollSection } from './_shared/nav/useScrollSection';
 import { animateScrollIntoView } from './_shared/animateScrollTo';
 import OrderedSections from './_shared/OrderedSections';
@@ -85,6 +87,7 @@ export default function Template3({
   itinerary = [],
   editor,
 }: Template3Props) {
+  const submission = useGuestSubmission();
   const t = (key: string, fallback: string) => customConfig?.[key] || fallback;
   const showIslamicDate = customConfig?.['general.showIslamicDate'] === 'true';
   const hStyle = headingStyle(customConfig);
@@ -158,7 +161,7 @@ export default function Template3({
 
   const weddingDate = new Date(wedding.weddingDate);
 
-  const paxLimit = (wedding?.maxPax ?? 0) > 0 ? Math.min(10, wedding.maxPax!) : 10;
+  const paxLimit = guestLimit(wedding);
 
   const navItems = sectionOrder.map((code) => ({ name: NAV_LABELS[code], section: code }));
 
@@ -172,7 +175,7 @@ export default function Template3({
     if (seatingPreview) return;
     setRsvpSubmitting(true);
     try {
-      await onRSVP({ ...rsvpData, isAttending, tableId: selectedTableId });
+      if (!await submission.submit(() => onRSVP(normalizeRsvp({ ...rsvpData, isAttending, tableId: selectedTableId }, wedding, tables)), 'Could not send your RSVP. Please try again.')) return;
       setRsvpSuccess(true);
       setRsvpStep(1);
       setSelectedTableId(null);
@@ -191,7 +194,7 @@ export default function Template3({
     e.preventDefault();
     setWishSubmitting(true);
     try {
-      await onSubmitWish(wishData);
+      if (!await submission.submit(() => onSubmitWish(wishData), 'Could not send your wish. Please try again.')) return;
       setWishSuccess(true);
       setWishData({ guestName: '', message: '' });
     } finally {
@@ -204,7 +207,7 @@ export default function Template3({
     if (!selectedFile || !onUploadPhoto) return;
     setPhotoSubmitting(true);
     try {
-      await onUploadPhoto({ ...photoData, file: selectedFile });
+      if (!await submission.submit(() => onUploadPhoto!(validatedPhoto({ ...photoData, file: selectedFile })), 'Could not send your photo. Please try again.')) return;
       setPhotoSuccess(true);
       setSelectedFile(null);
       setPreviewUrl(null);
