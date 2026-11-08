@@ -1,5 +1,7 @@
 # Frontend lint cleanup execution plan
 
+Execution complete. See [validated results and commits](LINT_CLEANUP_PROGRESS.md).
+
 Status: planning only; no application changes authorized or implemented by this plan.
 Starting branch: `fix/template-consistency`.
 Starting implementation checkpoint: `3d8c80a`.

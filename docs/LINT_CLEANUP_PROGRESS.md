@@ -41,4 +41,27 @@ No merge, deployment, migration, dependency upgrade or saved-config rewrite is i
 - Normal production build passes (font resolver needed a retry). Backend: 206 tests pass.
 - Compared public/admin photo grids against isolated pre-image commit `e6a7c61` at 390px/1440px: identical image boxes (within 0.1px), identical direct source and one request per image. No speed/bandwidth improvement is claimed.
 - Browser renders: all 16 templates plus authored fixture, mobile/desktop (34 cases), no page errors. Public T3 seating, T6 multipart photo submission and authored renderer pass against mocked API. Saved-order/layout/navigation checks pass for T1–T3/T6 in preview/public, mobile/desktop. T7 stack/rail navigation passes.
-- Final editor/admin integration checks are in progress. No real guest data or saved config was written during browser checks.
+- Details/Adjust browser checks pass for T4/T5/T6/T7/T15, with saved custom layouts, preview rendering and a T7 deletion tombstone preserved. No real guest data or saved config was written during browser checks.
+
+## Phase 5 — Complete
+
+Final validation:
+- Strict ESLint (`npx eslint --max-warnings=0`): **0 errors, 0 warnings**, from **159 errors, 92 warnings**. The 41 reviewed native-image exceptions are documented explicitly; no rule severity was lowered.
+- TypeScript: pass.
+- Frontend: **418 tests pass** across 73 files (404 at the starting point).
+- Backend: **206 tests pass**.
+- Normal Turbopack production build: pass. The existing middleware-to-proxy deprecation notice remains; migrating middleware/framework conventions was not part of this cleanup. Transient Google-font resolver failures required retries, with no application workaround.
+- Browser: 34 mobile/desktop template renders, 16 saved-order/layout/navigation cases, T7 stack/rail, public T3/T6/authored flows, and T4/T5/T6/T7/T15 Details/Adjust checks pass.
+- Admin browser checks pass for valid/invalid authentication, event editing, guest creation with unchanged omitted defaults, host API error messages, photo grids, and internal navigation. Picker deck selection passes after switching to a category containing one template.
+- Image comparison against pre-image commit `e6a7c61`: public/admin photo grids at 390px and 1440px retain boxes within 0.1px, direct sources and one request per image. Avatar tests preserve relative/external/blob sources. No performance improvement is claimed from the image dispositions.
+
+All application changes are committed and pushed on `fix/template-consistency`; each phase is independently revertible. No human decision was needed to complete this scope. No merge, deployment, database migration or saved-setting rewrite occurred. `ae-unified` remains at the recovery checkpoint.
+
+Local QA screenshots/results are under `.einvite-run/consistency/lint-*` (ignored); diagnostic logs are `/tmp/lint-cleanup-*`. Temporary baseline checkout/server are removed after verification; the user's existing port-3000 server is left running.
+
+Commits:
+- `195188c`: React lifecycle and dependencies.
+- `4dec6da`: API/template type boundaries.
+- `e6a7c61`: JSX, links and unused code.
+- `f17010f`: Content images and source contracts.
+- `727518e`: Engine/cinematic native-image rationale.
