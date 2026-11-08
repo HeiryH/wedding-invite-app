@@ -881,6 +881,7 @@ export default function Template1({
               />
 
               {previewUrl && (
+                /* eslint-disable-next-line @next/next/no-img-element -- Guest uploads retain the existing preview/gallery sizing and direct source loading. */
                 <img
                   src={previewUrl}
                   alt="Preview"
@@ -942,6 +943,7 @@ export default function Template1({
                     key={photo.photoId}
                     className="bg-white rounded-xl overflow-hidden shadow-md hover:shadow-xl transition-shadow"
                   >
+                    {/* eslint-disable-next-line @next/next/no-img-element -- Guest uploads retain the existing preview/gallery sizing and direct source loading. */}
                     <img
                       src={getImageUrl(photo.photoUrl, API_BASE)}
                       alt={photo.caption}

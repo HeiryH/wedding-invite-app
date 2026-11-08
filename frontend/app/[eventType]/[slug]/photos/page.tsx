@@ -1,5 +1,7 @@
 'use client';
 
+import Image from 'next/image';
+
 import { apiErrorMessage } from '@/lib/api/errors';
 
 import { useEffect, useState } from 'react';
@@ -303,9 +305,9 @@ export default function PhotoBoothPage() {
                   <motion.div
                     initial={{ opacity: 0, scale: 0.95 }}
                     animate={{ opacity: 1, scale: 1 }}
-                    className="relative"
+                    className="relative h-64"
                   >
-                    <img
+                    <Image fill unoptimized loading="eager" sizes="(min-width: 768px) 33vw, 100vw"
                       src={previewUrl}
                       alt="Preview"
                       className="w-full h-64 object-cover rounded-lg"
@@ -390,7 +392,7 @@ export default function PhotoBoothPage() {
                   className="bg-white rounded-xl shadow-md overflow-hidden hover:shadow-xl transition-shadow"
                 >
                   <div className="relative h-64">
-                    <img
+                    <Image fill unoptimized loading="eager" sizes="(min-width: 768px) 33vw, 100vw"
                       src={photo.photoUrl}
                       alt={photo.caption || 'Wedding photo'}
                       className="w-full h-full object-cover"

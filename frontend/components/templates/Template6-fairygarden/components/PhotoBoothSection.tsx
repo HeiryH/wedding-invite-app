@@ -77,6 +77,7 @@ export default function PhotoBoothSection({ photos, onUploadPhoto, overlayProps,
                 viewport={{ once: true }}
                 transition={{ delay: i * 0.06, duration: 0.5 }}
               >
+                {/* eslint-disable-next-line @next/next/no-img-element -- Guest media retains the animated card sizing and existing lazy-loading behavior. */}
                 <img
                   src={getImageUrl(p.photoUrl, API_BASE)}
                   alt={p.guestName ?? 'Guest photo'}

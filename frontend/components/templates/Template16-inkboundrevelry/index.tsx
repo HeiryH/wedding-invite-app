@@ -235,13 +235,15 @@ function Album({ photos, onUploadPhoto, editor, previewOnly, t }: TemplateRender
     {!photos.length && <p className={styles.empty}>Our album is waiting for its first memory.</p>}
     <div className={layout === 'grid' ? styles.galleryGrid : styles.galleryStack}>
       {(layout === 'grid' ? photos : photos.slice(active, active + 1)).map((photo) => <figure key={photo.photoId}>
-        <button type="button" className={styles.photoButton} onClick={() => setOpened(photos.indexOf(photo))} aria-label={`Open ${photo.caption || 'guest photo'}`}><img src={`${base}${photo.photoUrl}`} alt={photo.caption || 'Guest photo'} loading="lazy" /></button>
+        <button type="button" className={styles.photoButton} onClick={() => setOpened(photos.indexOf(photo))} aria-label={`Open ${photo.caption || 'guest photo'}`}>{/* eslint-disable-next-line @next/next/no-img-element -- Guest media retains the template grid/lightbox sizing and direct arbitrary upload URLs. */}
+                                                                                                                                                                    <img src={`${base}${photo.photoUrl}`} alt={photo.caption || 'Guest photo'} loading="lazy" /></button>
         {photo.caption && <figcaption>{photo.caption}</figcaption>}
       </figure>)}
     </div>
     <dialog ref={dialog} className={styles.lightbox} aria-label="Guest photograph" onClose={() => setOpened(null)} onCancel={() => setOpened(null)}>
       <button ref={closeButton} type="button" onClick={() => setOpened(null)}>Close photograph</button>
-      {opened !== null && photos[opened] && <><img src={`${base}${photos[opened].photoUrl}`} alt={photos[opened].caption || 'Guest photo'} /><p>{photos[opened].caption}</p></>}
+      {opened !== null && photos[opened] && <>{/* eslint-disable-next-line @next/next/no-img-element -- Guest media retains the template grid/lightbox sizing and direct arbitrary upload URLs. */}
+                                              <img src={`${base}${photos[opened].photoUrl}`} alt={photos[opened].caption || 'Guest photo'} /><p>{photos[opened].caption}</p></>}
     </dialog>
   </>;
 }

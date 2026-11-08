@@ -1,5 +1,7 @@
 'use client';
 
+import Image from 'next/image';
+
 import { useCallback, useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -234,7 +236,7 @@ export default function PhotoManagementPage() {
 
                                     {/* Image */}
                                     <div className="relative aspect-square">
-                                        <img
+                                        <Image fill unoptimized loading="eager" sizes="(min-width: 768px) 33vw, 100vw"
                                             src={photo.photoUrl}
 
                                             alt={photo.caption || 'Wedding photo'}

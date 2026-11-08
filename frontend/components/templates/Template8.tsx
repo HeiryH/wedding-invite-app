@@ -546,7 +546,8 @@ export default function Template8({
               {photoSuccess && <div style={{ background: `${C.teal}14`, borderRadius: 10, padding: 12, marginBottom: 14, textAlign: 'center', color: C.teal, fontWeight: 600 }}>Photo uploaded!</div>}
               <form onSubmit={handlePhotoSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                 <input type="file" accept="image/*" onChange={handleFileSelect} style={inputStyle} />
-                {previewUrl && <img src={previewUrl} alt="Preview" style={{ width: '100%', height: 220, objectFit: 'cover', borderRadius: 12 }} />}
+                {previewUrl && /* eslint-disable-next-line @next/next/no-img-element -- Prototype guest media retains existing sizing and unrestricted upload sources. */
+                               <img src={previewUrl} alt="Preview" style={{ width: '100%', height: 220, objectFit: 'cover', borderRadius: 12 }} />}
                 <input required placeholder="Your Name *" value={photoData.guestName} onChange={(e) => setPhotoData({ ...photoData, guestName: e.target.value })} style={inputStyle} />
                 <input placeholder="Caption (optional)" value={photoData.caption} onChange={(e) => setPhotoData({ ...photoData, caption: e.target.value })} style={inputStyle} />
                 <button type="submit" disabled={photoSubmitting || !selectedFile} style={{ padding: '13px', borderRadius: 12, border: 'none', color: '#fff', fontWeight: 700, cursor: 'pointer', background: photoSubmitting || !selectedFile ? '#a8a29a' : C.terracotta }}>
@@ -560,6 +561,7 @@ export default function Template8({
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: 14 }}>
                 {photos.map((photo) => (
                   <div key={photo.photoId} style={{ background: '#fff', borderRadius: 14, overflow: 'hidden', border: `1px solid ${C.gold}22` }}>
+                    {/* eslint-disable-next-line @next/next/no-img-element -- Prototype guest media retains existing sizing and unrestricted upload sources. */}
                     <img src={getImageUrl(photo.photoUrl, API_BASE)} alt={photo.caption} style={{ width: '100%', height: 130, objectFit: 'cover' }} />
                     <div style={{ padding: 10 }}>
                       <p style={{ fontSize: 12, fontWeight: 700, margin: 0 }}>{photo.guestName}</p>

@@ -1340,6 +1340,7 @@ const NAV_EMOJIS: Record<string, string> = {
                   <input type="file" accept="image/*" onChange={handleFileSelect} className={styles.fileInput} />
                   {previewUrl ? (
                     <div className={styles.photoPreviewWrapper}>
+                      {/* eslint-disable-next-line @next/next/no-img-element -- The envelope template retains native uploaded-media ratios, clipping and loading behavior. */}
                       <img src={previewUrl} alt="Preview" loading="lazy" decoding="async" className={styles.photoPreview} />
                       <button
                         type="button"
@@ -1423,6 +1424,7 @@ const NAV_EMOJIS: Record<string, string> = {
                     {photos.length > 2 && (
                       <div className={styles.stackGhost2}>
                         <div className={styles.stackPolaroid}>
+                          {/* eslint-disable-next-line @next/next/no-img-element -- The envelope template retains native uploaded-media ratios, clipping and loading behavior. */}
                           <img
                             src={getImageUrl(photos[(ghostIndex + 2) % photos.length].photoUrl, API_BASE)}
                             className={styles.stackPhoto} alt="" draggable={false}
@@ -1433,6 +1435,7 @@ const NAV_EMOJIS: Record<string, string> = {
                     {photos.length > 1 && (
                       <div className={styles.stackGhost1}>
                         <div className={styles.stackPolaroid}>
+                          {/* eslint-disable-next-line @next/next/no-img-element -- The envelope template retains native uploaded-media ratios, clipping and loading behavior. */}
                           <img
                             src={getImageUrl(photos[(ghostIndex + 1) % photos.length].photoUrl, API_BASE)}
                             className={styles.stackPhoto} alt="" draggable={false}
@@ -1465,6 +1468,7 @@ const NAV_EMOJIS: Record<string, string> = {
                       >
                         <div className={styles.stackPolaroid}>
                           <div className={styles.polaroidTape} />
+                          {/* eslint-disable-next-line @next/next/no-img-element -- The envelope template retains native uploaded-media ratios, clipping and loading behavior. */}
                           <img
                             src={getImageUrl(photos[stackIndex].photoUrl, API_BASE)}
                             alt={photos[stackIndex].caption ?? ''}
@@ -1508,6 +1512,7 @@ const NAV_EMOJIS: Record<string, string> = {
                       <div key={photo.photoId} className={styles.polaroid}
                         onClick={() => setLightboxPhoto(photo)}>
                         <div className={styles.polaroidTape} />
+                        {/* eslint-disable-next-line @next/next/no-img-element -- The envelope template retains native uploaded-media ratios, clipping and loading behavior. */}
                         <img src={getImageUrl(photo.photoUrl, API_BASE)} alt={photo.caption ?? ''}
                           loading="lazy" decoding="async" className={styles.polaroidPhoto} />
                         {photo.caption && (
@@ -1589,6 +1594,7 @@ const NAV_EMOJIS: Record<string, string> = {
             onClick={() => setLightboxPhoto(null)}
           >
             <div className={styles.lightboxCard} onClick={(e) => e.stopPropagation()}>
+              {/* eslint-disable-next-line @next/next/no-img-element -- The envelope template retains native uploaded-media ratios, clipping and loading behavior. */}
               <img
                 src={getImageUrl(lightboxPhoto.photoUrl, API_BASE)}
                 alt={lightboxPhoto.caption ?? ''}

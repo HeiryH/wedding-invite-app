@@ -33,3 +33,12 @@ No merge, deployment, migration, dependency upgrade or saved-config rewrite is i
 - Escaped JSX punctuation without changing rendered copy, and converted 17 distinct flagged internal anchors to Next Link (21 diagnostics included duplicate reports). External links/download behavior is unchanged.
 - Removed unused imports, bindings and side-effect-free values; retained the used T4 swipe handler and always-visible T2 navigation. Removed only the obsolete T5 disable comment, retaining its effect/dependency list.
 - TypeScript and all 415 frontend tests pass. ESLint: 0 errors, 48 warnings, all image-disposition warnings.
+
+## Phase 4 — Image dispositions
+
+- Reviewed all 48 warnings: 7 fixed-size images use Next Image with direct-source (`unoptimized`) loading; 41 native images have narrow, reasoned next-line exceptions. See `LINT_IMAGE_REVIEW.md` for each surface and rationale. No lint rule or remote-host policy changed.
+- ESLint passes with `--max-warnings=0` (0 errors, 0 warnings). TypeScript and 415 existing tests pass; 3 additional Avatar source-contract checks pass for relative, external and blob sources.
+- Normal production build passes (font resolver needed a retry). Backend: 206 tests pass.
+- Compared public/admin photo grids against isolated pre-image commit `e6a7c61` at 390px/1440px: identical image boxes (within 0.1px), identical direct source and one request per image. No speed/bandwidth improvement is claimed.
+- Browser renders: all 16 templates plus authored fixture, mobile/desktop (34 cases), no page errors. Public T3 seating, T6 multipart photo submission and authored renderer pass against mocked API. Saved-order/layout/navigation checks pass for T1–T3/T6 in preview/public, mobile/desktop. T7 stack/rail navigation passes.
+- Final editor/admin integration checks are in progress. No real guest data or saved config was written during browser checks.

@@ -466,7 +466,8 @@ export default function Template9({
               {photoSuccess && <div style={{ border: `1px solid ${C.gold}`, padding: 10, marginBottom: 14, textAlign: 'center', fontSize: 13 }}>Photo uploaded.</div>}
               <form onSubmit={handlePhotoSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                 <input type="file" accept="image/*" onChange={handleFileSelect} style={inputStyle} />
-                {previewUrl && <img src={previewUrl} alt="Preview" style={{ width: '100%', height: 200, objectFit: 'cover' }} />}
+                {previewUrl && /* eslint-disable-next-line @next/next/no-img-element -- Prototype guest media retains existing sizing and unrestricted upload sources. */
+                               <img src={previewUrl} alt="Preview" style={{ width: '100%', height: 200, objectFit: 'cover' }} />}
                 <input required placeholder="Your Name *" value={photoData.guestName} onChange={(e) => setPhotoData({ ...photoData, guestName: e.target.value })} style={inputStyle} />
                 <input placeholder="Caption (optional)" value={photoData.caption} onChange={(e) => setPhotoData({ ...photoData, caption: e.target.value })} style={inputStyle} />
                 <button type="submit" disabled={photoSubmitting || !selectedFile} style={{ padding: '12px', border: 'none', color: C.bg, fontSize: 13, letterSpacing: '0.1em', textTransform: 'uppercase', fontFamily: 'var(--font-jetbrains), monospace', cursor: 'pointer', background: photoSubmitting || !selectedFile ? '#9a9384' : C.ink }}>
@@ -480,6 +481,7 @@ export default function Template9({
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: 10 }}>
                 {photos.map((photo) => (
                   <div key={photo.photoId} style={{ border: `1px solid ${C.gold}30` }}>
+                    {/* eslint-disable-next-line @next/next/no-img-element -- Prototype guest media retains existing sizing and unrestricted upload sources. */}
                     <img src={getImageUrl(photo.photoUrl, API_BASE)} alt={photo.caption} style={{ width: '100%', height: 120, objectFit: 'cover' }} />
                     <div style={{ padding: 8 }}>
                       <p style={{ fontSize: 11.5, fontWeight: 600, margin: 0 }}>{photo.guestName}</p>

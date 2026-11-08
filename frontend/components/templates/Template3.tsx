@@ -51,6 +51,7 @@ function PortraitSlot({ src, label }: { src: string | null; label: string }) {
   if (src) {
     return (
       <div className="relative overflow-hidden rounded-2xl shadow-xl aspect-[3/4]">
+        {/* eslint-disable-next-line @next/next/no-img-element -- Uploaded portraits and guest media retain intrinsic sizing within the template framing. */}
         <img src={src} alt={label} className="w-full h-full object-cover" />
         <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-4">
           <p className="text-white text-sm font-medium text-center">{label}</p>
@@ -72,6 +73,7 @@ function ExtraImageSlot({ src, alt }: { src: string | null; alt: string }) {
   if (!src) return null;
   return (
     <div className="rounded-xl overflow-hidden shadow-md aspect-video">
+      {/* eslint-disable-next-line @next/next/no-img-element -- Uploaded portraits and guest media retain intrinsic sizing within the template framing. */}
       <img src={src} alt={alt} className="w-full h-full object-cover" />
     </div>
   );
@@ -658,6 +660,7 @@ export default function Template3({
                   />
                   <label className="block border-2 border-dashed border-green-300 rounded-xl p-6 text-center cursor-pointer hover:border-green-500 transition-colors">
                     {previewUrl ? (
+                      /* eslint-disable-next-line @next/next/no-img-element -- Uploaded portraits and guest media retain intrinsic sizing within the template framing. */
                       <img src={previewUrl} alt="Preview" loading="lazy" decoding="async" className="max-h-48 mx-auto rounded-lg object-cover" />
                     ) : (
                       <div className="text-green-400">
@@ -684,6 +687,7 @@ export default function Template3({
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                 {photos.map((photo) => (
                   <div key={photo.photoId} className="overflow-hidden rounded-xl shadow-sm">
+                    {/* eslint-disable-next-line @next/next/no-img-element -- Uploaded portraits and guest media retain intrinsic sizing within the template framing. */}
                     <img
                       src={getImageUrl(photo.photoUrl, API_BASE)}
                       alt={photo.caption || 'Wedding photo'}

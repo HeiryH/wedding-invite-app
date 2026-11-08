@@ -180,6 +180,7 @@ function CardStack({
               transition={{ type: 'spring', stiffness: 300, damping: 30 }}
               style={{ zIndex: VISIBLE - offset }}
             >
+              {/* eslint-disable-next-line @next/next/no-img-element -- Swipe cards and uploaded portraits retain native sizing, clipping and direct source loading. */}
               <img
                 src={card.src}
                 alt={card.caption || 'Wedding photo'}
@@ -203,6 +204,7 @@ function CardStack({
         animate={{ scale: 1, opacity: 1 }}
         transition={{ type: 'spring', stiffness: 320, damping: 28 }}
       >
+        {/* eslint-disable-next-line @next/next/no-img-element -- Swipe cards and uploaded portraits retain native sizing, clipping and direct source loading. */}
         <img
           src={cards[0].src}
           alt={cards[0].caption || 'Wedding photo'}
@@ -302,6 +304,7 @@ function UploadSheet({
                 <label className="block cursor-pointer">
                   {preview ? (
                     <div className="relative w-full h-44 rounded-xl overflow-hidden">
+                      {/* eslint-disable-next-line @next/next/no-img-element -- Swipe cards and uploaded portraits retain native sizing, clipping and direct source loading. */}
                       <img src={preview} alt="Preview" loading="lazy" decoding="async" className="w-full h-full object-cover" />
                       <div className="absolute inset-0 bg-black/20 flex items-center justify-center">
                         <p className="text-white text-xs tracking-widest uppercase">Tap to change</p>
@@ -581,6 +584,7 @@ export default function Template4({
         {/* Full-bleed hero photo */}
         {heroPhoto ? (
           <div className="absolute inset-0">
+            {/* eslint-disable-next-line @next/next/no-img-element -- Swipe cards and uploaded portraits retain native sizing, clipping and direct source loading. */}
             <img src={heroPhoto} alt="Couple" className="w-full h-full object-cover object-top" />
             <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-black/20 to-black/70" />
           </div>
@@ -787,6 +791,7 @@ export default function Template4({
         {/* Mid couple photo */}
         {midPhoto && (
           <div className="w-full overflow-hidden" style={a('t4-schedule', 'photo', { maxHeight: 440 })}>
+            {/* eslint-disable-next-line @next/next/no-img-element -- Swipe cards and uploaded portraits retain native sizing, clipping and direct source loading. */}
             <img src={midPhoto} alt="Couple" loading="lazy" decoding="async" className="w-full object-cover" style={{ maxHeight: 440 }} />
           </div>
         )}

@@ -1,5 +1,7 @@
 'use client';
 
+import Image from 'next/image';
+
 import { motion, AnimatePresence } from 'framer-motion';
 import { Photo } from '@/lib/api';
 import { StatCard } from '@/components/ui/Card';
@@ -127,7 +129,7 @@ export default function PhotosTab({
 
                 {/* Image */}
                 <div className="relative aspect-square">
-                  <img
+                  <Image fill unoptimized loading="eager" sizes="(min-width: 768px) 33vw, 100vw"
                     src={photo.photoUrl}
                     alt={photo.caption || 'Wedding photo'}
                     className="w-full h-full object-cover"

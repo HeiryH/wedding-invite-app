@@ -17,6 +17,7 @@ export function TemplatePreview({
   const src = thumbnailUrl && thumbnailUrl.trim() ? thumbnailUrl : `/template-previews/${templateCode}.png`;
   return (
     <div style={{ width: '100%', height: aspect ? '100%' : undefined, aspectRatio: aspect, lineHeight: 0, background: '#f3f4f6', overflow: 'hidden' }}>
+      {/* eslint-disable-next-line @next/next/no-img-element -- Uploaded thumbnails have unknown intrinsic ratios; preserve both natural-height and cropped modes plus drag behavior. */}
       <img
         src={src}
         alt={templateCode}

@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import Image from "next/image";
 
 const HUES = [
   "var(--hue-claret)", "var(--hue-terracotta)", "var(--hue-ochre)",
@@ -59,7 +60,7 @@ export function Avatar({ name = "", src, size = 36, ring = false, square = false
       {...rest}
     >
       {src
-        ? <img src={src} alt={name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+        ? <Image unoptimized loading="eager" width={size} height={size} src={src} alt={name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
         : initials(name)}
     </span>
   );
