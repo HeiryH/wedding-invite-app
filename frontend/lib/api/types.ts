@@ -198,6 +198,7 @@ export const TemplateSlots = {
   TEMPLATE5_GLOBAL_BG: 13,
   // Adjust-panel layer images — non-upserting, so a stage can hold many.
   LAYER_IMAGE: 20,
+  COUPLE_GALLERY: 21,
 } as const;
 
 export interface ApprovePhotoRequest {
@@ -373,11 +374,13 @@ export type TemplateConfigBlock =
   | 'welcome'
   | 'walimah'
   | 'rsvp'
+  | 'seating'
   | 'itinerary'
   | 'wishes'
   | 'photobooth'
   | 'music'
-  | 'navigation';
+  | 'navigation'
+  | 'couple-gallery';
 
 export interface TemplateConfigField {
   key: string;

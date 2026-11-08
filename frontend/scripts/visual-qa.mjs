@@ -113,9 +113,10 @@ for (const bp of BREAKPOINTS) {
   await page.goto(`${BASE}/organizer-admin/preview`, { waitUntil: 'domcontentloaded' });
   await page.waitForTimeout(1500); // font + art decode
 
-  const stageIds = await page.$$eval('[data-stage]', (els) => els.map((el) => el.getAttribute('data-stage')));
+  const sectionSelector = await page.locator('[data-stage]').count() ? '[data-stage]' : 'section[data-section]';
+  const stageIds = await page.$$eval(sectionSelector, (els) => els.map((el) => el.getAttribute('data-stage') || el.getAttribute('data-section')));
   if (stageIds.length === 0) {
-    console.error(`  FAIL: no [data-stage] elements found — template ${templateId} did not render at all`);
+    console.error(`  FAIL: no [data-stage] or section[data-section] elements found — template ${templateId} did not render at all`);
     failures++;
     await context.close();
     continue;
@@ -123,7 +124,7 @@ for (const bp of BREAKPOINTS) {
   console.log(`  found ${stageIds.length} stage(s): ${stageIds.join(', ')}`);
 
   for (const stageId of stageIds) {
-    const el = await page.$(`[data-stage="${stageId}"]`);
+    const el = await page.$(`${sectionSelector}[${sectionSelector === '[data-stage]' ? 'data-stage' : 'data-section'}="${stageId}"]`);
     if (!el) continue;
     await el.scrollIntoViewIfNeeded();
     await page.waitForTimeout(600); // let the reveal + parallax settle after scroll

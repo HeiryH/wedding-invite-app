@@ -23,9 +23,14 @@ describe('asset animation editor', () => {
     expect(onPreview.mock.calls[0][0].enter.easing).toBe('linear');
     fireEvent.click(screen.getAllByRole('button', { name: 'Select on timeline' })[1]);
     expect(onSelectTrack).toHaveBeenCalledWith('asset-motion:programme-board:move-2');
+    fireEvent.click(screen.getByRole('button', { name: 'Animation actions 2' }));
     fireEvent.click(screen.getAllByRole('button', { name: 'Remove animation' })[1]);
+    expect(screen.getByLabelText('x of animation 2')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Confirm remove animation' }));
     expect(screen.queryByLabelText('x of animation 2')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Animation actions 1' }));
     fireEvent.click(screen.getByRole('button', { name: 'Remove animation' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Confirm remove animation' }));
     expect(screen.queryByLabelText('x of animation 1')).toBeNull();
   });
 });

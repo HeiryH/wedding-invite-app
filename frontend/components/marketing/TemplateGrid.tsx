@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
+import { useDismissSelection } from './useDismissSelection';
 import { TemplatePreview } from '@/components/templates/TemplatePreview';
 import type { Template } from '@/lib/api';
 
@@ -18,6 +19,8 @@ export function TemplateGrid({
   onUse: (t: Template) => void;
 }) {
   const [selectedId, setSelectedId] = useState<number | null>(null);
+  const selectedCard = useRef<HTMLDivElement>(null);
+  useDismissSelection(selectedId !== null, selectedCard, () => setSelectedId(null));
 
   return (
     <div
@@ -32,6 +35,7 @@ export function TemplateGrid({
         const selected = selectedId === t.templateId;
         return (
           <div key={t.templateId} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
+            <div ref={selected ? selectedCard : undefined} style={{ position: 'relative', width: '100%', zIndex: selected ? 1 : undefined }}>
             <button
               type="button"
               onClick={() => setSelectedId(selected ? null : t.templateId)}
@@ -47,19 +51,21 @@ export function TemplateGrid({
               }}
             >
               <TemplatePreview templateCode={t.templateCode} thumbnailUrl={t.thumbnailUrl} aspect={CARD_ASPECT} />
-              {selected && (
-                <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(23,19,13,.18)' }}>
-                  <span
-                    role="button"
-                    onClick={(e) => { e.stopPropagation(); onUse(t); }}
-                    className="mkt-btn mkt-btn-dark"
-                    style={{ display: 'inline-block', fontSize: 15, padding: '12px 20px', whiteSpace: 'nowrap', animation: 'mkt-pop .3s ease both', boxShadow: '0 8px 22px rgba(23,19,13,.35)' }}
-                  >
-                    Use this template
-                  </span>
-                </div>
-              )}
+              {selected && <div style={{ position: 'absolute', inset: 0, background: 'rgba(23,19,13,.18)' }} />}
             </button>
+            {selected && (
+              <div style={{ position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%,-50%)', zIndex: 2 }}>
+                <button
+                  type="button"
+                  onClick={() => onUse(t)}
+                  className="mkt-btn mkt-btn-dark"
+                  style={{ display: 'inline-block', fontSize: 15, padding: '12px 20px', whiteSpace: 'nowrap', animation: 'mkt-pop .3s ease both', boxShadow: '0 8px 22px rgba(23,19,13,.35)' }}
+                >
+                  Use this template
+                </button>
+              </div>
+            )}
+            </div>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, flexWrap: 'wrap', textAlign: 'center' }}>
               <span style={{ fontFamily: 'var(--mkt-serif)', fontWeight: 600, fontSize: 15, color: 'var(--mkt-ink)' }}>{t.templateName}</span>
               <span style={{ flexShrink: 0, fontFamily: 'var(--mkt-sans)', fontWeight: 600, fontSize: 11, letterSpacing: '.04em', textTransform: 'uppercase', color: 'var(--mkt-gold-ink)', border: '1.5px solid var(--mkt-gold)', borderRadius: 999, padding: '2px 8px' }}>

@@ -21,7 +21,7 @@ public class EventExportServiceTests
         new EventRepository(db.Context),
         new UserRepository(db.Context),
         new TemplateService(new TemplateRepository(db.Context)),
-        new GuestService(new GuestRepository(db.Context), new EventRepository(db.Context)),
+        db.CreateGuestService(),
         new WishService(new WishRepository(db.Context), new EventRepository(db.Context)),
         new TableService(new TableRepository(db.Context), new GuestRepository(db.Context), new EventRepository(db.Context)),
         new ItineraryService(new ItineraryRepository(db.Context), new EventRepository(db.Context)),

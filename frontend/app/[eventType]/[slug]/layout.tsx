@@ -3,7 +3,7 @@ import { notFound } from 'next/navigation';
 import { eventTypeFromUrlSegment } from '@/lib/eventTypes';
 
 // Server-side base URL for the .NET API (backend:5000 in Docker, localhost in dev).
-const BACKEND_URL = process.env.BACKEND_URL ?? 'http://localhost:5000';
+const BACKEND_URL = process.env.BACKEND_URL ?? 'http://localhost:5050';
 
 // Per-event social share preview — so invite links pasted into WhatsApp/social
 // render the event's display name, date, and venue instead of a blank card.

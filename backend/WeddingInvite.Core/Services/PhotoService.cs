@@ -105,7 +105,7 @@ namespace WeddingInvite.Core.Services
 
             // 5. For couple uploads: upsert (delete existing slot if any). LayerImage is exempt — a
             //    stage can hold many, so those uploads always insert a fresh row.
-            if (isCouple && uploadDto.TemplateSlot.HasValue && uploadDto.TemplateSlot.Value != TemplateSlots.LayerImage)
+            if (isCouple && uploadDto.TemplateSlot.HasValue && uploadDto.TemplateSlot.Value is not (TemplateSlots.LayerImage or TemplateSlots.CoupleGallery))
             {
                 var existing = await _photoRepo.GetByTemplateSlotAsync(eventId, uploadDto.TemplateSlot.Value);
                 if (existing != null)

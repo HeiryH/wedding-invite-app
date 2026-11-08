@@ -9,15 +9,18 @@ namespace WeddingInvite.Core.Services
         private readonly ITemplateConfigRepository _repo;
         private readonly ITemplateConfigDefaultRepository _defaultRepo;
         private readonly IEventRepository _eventRepo;
+        private readonly ITemplateShippedDesignStore? _shippedDesigns;
 
         public TemplateConfigService(
             ITemplateConfigRepository repo,
             ITemplateConfigDefaultRepository defaultRepo,
-            IEventRepository eventRepo)
+            IEventRepository eventRepo,
+            ITemplateShippedDesignStore? shippedDesigns = null)
         {
             _repo = repo;
             _defaultRepo = defaultRepo;
             _eventRepo = eventRepo;
+            _shippedDesigns = shippedDesigns;
         }
 
         /// <summary>
@@ -85,11 +88,19 @@ namespace WeddingInvite.Core.Services
             await _repo.UpsertAsync(eventId, overrides, CanWrite);
         }
 
-        public Task<Dictionary<string, string>> GetDefaultAsync(int templateId) =>
-            _defaultRepo.GetByTemplateIdAsync(templateId);
+        public async Task<Dictionary<string, string>> GetDefaultAsync(int templateId)
+        {
+            var result = _shippedDesigns == null ? new Dictionary<string, string>() : await _shippedDesigns.GetAsync(templateId);
+            var published = await _defaultRepo.GetByTemplateIdAsync(templateId);
+            // A cinematic project is one atomic document; never blend chunks from two revisions.
+            foreach (var project in published.Keys.Select(TemplateConfigPolicy.CinematicProjectBaseKey).Where(x => x != null).Distinct())
+                foreach (var key in result.Keys.Where(k => k == project || k.StartsWith(project + ".", StringComparison.Ordinal)).ToList()) result.Remove(key);
+            foreach (var (key, value) in published) result[key] = value;
+            return result;
+        }
 
-        public Task<int> GetDefaultKeyCountAsync(int templateId) =>
-            _defaultRepo.CountAsync(templateId);
+        public async Task<int> GetDefaultKeyCountAsync(int templateId) =>
+            (await GetDefaultAsync(templateId)).Count;
 
         public async Task SetDefaultFromWeddingAsync(int templateId, int eventId)
         {
@@ -98,6 +109,12 @@ namespace WeddingInvite.Core.Services
             // uploaded music). Everything else — layout, colours, scene, titles, order — is the design.
             var config = await GetConfigAsync(eventId);
 
+            var design = PrepareDefaultDesign(config);
+            await _defaultRepo.ReplaceAsync(templateId, design);
+        }
+
+        public static Dictionary<string, string> PrepareDefaultDesign(Dictionary<string, string> config)
+        {
             var design = config
                 .Where(kv => !TemplateConfigPolicy.IsCoupleContent(kv.Key))
                 .ToDictionary(
@@ -112,7 +129,7 @@ namespace WeddingInvite.Core.Services
 
             ReassembleCapturedCinematicProjects(design);
 
-            await _defaultRepo.ReplaceAsync(templateId, design);
+            return design;
         }
 
         public Task ClearDefaultAsync(int templateId) =>
@@ -123,7 +140,7 @@ namespace WeddingInvite.Core.Services
         {
             var evt = await _eventRepo.GetByIdAsync(eventId);
             if (evt == null) return new Dictionary<string, string>(StringComparer.Ordinal);
-            return await _defaultRepo.GetByTemplateIdAsync(evt.TemplateId);
+            return await GetDefaultAsync(evt.TemplateId);
         }
 
         /// <summary>

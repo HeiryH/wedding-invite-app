@@ -35,11 +35,12 @@ export function WishPromptSlot({ t }: SlotProps) {
  * so the expand/collapse (and the `onBlur` containment check that made tabbing between fields
  * work) is gone rather than ported.
  */
-export function WishFormSlot({ onSubmitWish, editing, editor, t, photoBoothEnabled, onUploadPhoto }: SlotProps) {
+export function WishFormSlot({ onSubmitWish, editing, editor, t, photoBoothEnabled, onUploadPhoto, stageLayers, layer }: SlotProps) {
   const { step, setStep, form, setForm, submitting, setSubmitting, sent, setSent } = useWishFlow();
   const { close } = useSheets();
 
-  if (!isActiveWishStep(editing, editor?.selectedLayer, step, 'form')) return null;
+  const photoSelected = photoBoothEnabled && !!stageLayers?.some((candidate) => candidate.id === editor?.selectedLayer && candidate.slot === 'wishPhoto');
+  if (!isActiveWishStep(editing, photoSelected, step, 'form')) return null;
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -57,7 +58,7 @@ export function WishFormSlot({ onSubmitWish, editing, editor, t, photoBoothEnabl
       if (photoBoothEnabled && onUploadPhoto) {
         setStep('photo');
       } else {
-        setTimeout(() => { setSent(false); close(); }, 1500);
+        setTimeout(() => { setSent(false); if (layer?.presentation !== 'inline') close(); }, 1500);
       }
     } catch {
       alert('Failed to submit your wish');
@@ -97,7 +98,7 @@ export function WishFormSlot({ onSubmitWish, editing, editor, t, photoBoothEnabl
  * when a guest is already in a sharing frame of mind. Gated on `photoBoothEnabled`
  * (`SLOT_AVAILABLE.wishPhoto`), so with the feature off the flow simply ends at step 1.
  */
-export function WishPhotoSlot({ onUploadPhoto, editing, editor, t }: SlotProps) {
+export function WishPhotoSlot({ onUploadPhoto, editing, editor, t, layer }: SlotProps) {
   const { step, setStep, sent, setSent } = useWishFlow();
   const { close } = useSheets();
   const inputRef = useRef<HTMLInputElement>(null);
@@ -105,9 +106,9 @@ export function WishPhotoSlot({ onUploadPhoto, editing, editor, t }: SlotProps) 
   const [caption, setCaption] = useState('');
   const [busy, setBusy] = useState(false);
 
-  if (!isActiveWishStep(editing, editor?.selectedLayer, step, 'photo')) return null;
+  if (!isActiveWishStep(editing, Boolean(layer && layer.id === editor?.selectedLayer), step, 'photo')) return null;
 
-  const finish = () => { setStep('form'); setSent(false); setFile(null); setCaption(''); close(); };
+  const finish = () => { setStep('form'); setSent(false); setFile(null); setCaption(''); if (layer?.presentation !== 'inline') close(); };
 
   const send = async () => {
     if (!file || !onUploadPhoto || editing) return;

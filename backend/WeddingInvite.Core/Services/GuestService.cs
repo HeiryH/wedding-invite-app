@@ -8,13 +8,16 @@ namespace WeddingInvite.Core.Services
     {
         private readonly IGuestRepository _guestRepo;
         private readonly IEventRepository _eventRepo;
+        private readonly ITemplateConfigService _templateConfig;
 
         public GuestService(
             IGuestRepository guestRepo,
-            IEventRepository eventRepo)
+            IEventRepository eventRepo,
+            ITemplateConfigService templateConfig)
         {
             _guestRepo = guestRepo;
             _eventRepo = eventRepo;
+            _templateConfig = templateConfig;
         }
 
         public async Task<GuestDto?> GetByIdAsync(int id)
@@ -67,14 +70,25 @@ namespace WeddingInvite.Core.Services
             if (string.IsNullOrWhiteSpace(createDto.GuestName))
                 throw new ArgumentException("Guest name is required");
 
-            // 4. Validate side selection — only required/meaningful for WEDDING events. Non-WEDDING
-            //    events don't have a "side" concept, so the value is simply not required or stored.
+            var isWedding = evt.EventType == Models.EventTypes.Wedding;
+            var config = enforceRsvpOpen && ((isWedding && createDto.GuestSide == null) || createDto.TableId.HasValue)
+                ? await _templateConfig.GetConfigAsync(eventId) : null;
+
+            // 4. Weddings require a side unless the public RSVP has disabled that question.
             string? guestSide = null;
-            if (evt.EventType == Models.EventTypes.Wedding)
+            if (isWedding)
             {
-                if (createDto.GuestSide != "PRIMARY" && createDto.GuestSide != "SECONDARY")
-                    throw new ArgumentException("Please select either Bride or Groom side");
-                guestSide = createDto.GuestSide;
+                if (createDto.GuestSide is "PRIMARY" or "SECONDARY")
+                {
+                    guestSide = createDto.GuestSide;
+                }
+                else
+                {
+                    var sideHidden = createDto.GuestSide == null
+                        && config?.GetValueOrDefault("rsvp.fields.family_side") == "false";
+                    if (!sideHidden)
+                        throw new ArgumentException("Please select either Bride or Groom side");
+                }
             }
 
             // 5. Validate number of attendees
@@ -108,7 +122,8 @@ namespace WeddingInvite.Core.Services
                 SongRequest = createDto.SongRequest.Trim(),
                 IsAttending = createDto.IsAttending,
                 RespondedDate = DateTime.UtcNow,
-                TableId = createDto.IsAttending ? createDto.TableId : null,
+                TableId = createDto.IsAttending && config?.GetValueOrDefault("seating.mode") != "organizer"
+                    ? createDto.TableId : null,
             };
 
             var created = await _guestRepo.CreateAsync(guest);

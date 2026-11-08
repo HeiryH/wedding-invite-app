@@ -7,6 +7,7 @@ export * from './feature.service';
 export * from './eventFeature.service';
 export * from './photo.service';
 export * from './template.service';
+export * from './templateStudio.service';
 export * from './package.service';
 export * from './auth.service';
 export * from './templateConfig.service';

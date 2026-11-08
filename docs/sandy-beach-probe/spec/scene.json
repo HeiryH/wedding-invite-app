@@ -1,0 +1,14 @@
+{
+  "spec_version": 1,
+  "slug": "sandy-beach",
+  "grain_parity": false,
+  "scale_anchor": { "name": "large smooth beach pebble", "height_pct": 18 },
+  "sections": {
+    "welcome": {
+      "background": "Pastel sunset beach seen straight down the shoreline: a low sun sitting on the sea horizon with its reflection running down wet sand, a single foamy sea-glass wave breaking at left, pink cumulus clouds in a powder-blue sky, and a broad empty stretch of pale dry sand filling the lower half",
+      "horizon_pct": 34,
+      "empty_band_pct": [19, 61],
+      "bands": { "sky": 0.55, "sea": 1.0, "shore": 1.35 }
+    }
+  }
+}

@@ -9,10 +9,287 @@ template (**Template10, "Sunny Safari"**, slug `sunny-safari`, PRO tier, PARTY �
 slot) and produced one Classic-family template (**Template11, "Rose Horizon"**, slug
 `rose-horizon`, PRO tier, WEDDING — see 2026-09-10 below, the pipeline's first Classic run).
 
-This file documents how the pipeline actually works today. It is a living reference — the
-authoritative, always-current source for each stage's exact instructions is
-`~/.hermes/scripts/kanban-task-templates/*.md`; this doc explains how those pieces fit
-together, plus a running list of known issues.
+This file contains the current new-run contract followed by frozen/historical versions.
+New intakes use `~/.hermes/scripts/kanban-task-templates/build-choice-v4/`;
+`.pipeline/task-bodies/`, `pipeline.json`, `run.json` and hashed `intake.json` govern each run.
+Existing `vnext/` reference-led-art-v2 snapshots and root legacy bodies are preserved.
+
+## Guest controls for new templates
+
+- Specify where RSVP and Wishes appear in both button and inline modes. Leave room for the inline form to grow, including seating and the optional wish photo step.
+- Define guest navigation targets and the music control. Check section visibility, safe areas, and playback on mobile.
+- Reserve a placement for organizer photos and document its crop, empty state, and maximum capacity. Keep the guest Photo Booth separate.
+- Check the same settings in Master Studio, the organizer preview, and the public invitation. Include long forms and scroll gestures over the content itself.
+
+## Current new-run contract — 2026-11-05, reference-led-build-v4
+
+Nine-question intent capture and genuine exact-revision image approval remain. After EACH
+initial or regenerated approved design batch, a new `build-choice` human gate asks:
+
+- `DIRECT_SVG`: implement the approved composition directly using hand-authored SVG/CSS/React,
+  editable DOM text and real functional slots/APIs. No PNG extraction prerequisite.
+- `EXTRACT_ART`: use the guarded native extraction, independent art review and ingest path.
+
+The model may recommend based on observed complexity; it must never select, infer from image
+approval, or reuse a prior batch's choice. Native human task.result is the route authority.
+The frozen route gate binds run/task/current art-render parent and freshly verified per-section
+approval selectors, rechecking original native ancestry, current input bundles and actual bytes.
+Missing, summary-only, ambiguous or stale choices block; MANUAL_ART cannot bypass this gate.
+
+    approved art-render -> build-choice [HUMAN]
+        DIRECT_SVG -> direct-build (coder; assemble+code) -> code-review
+        EXTRACT_ART -> art-layer -> art-review -> ingest -> assemble -> code -> code-review
+    both -> migration (scaffold only) -> preview -> independent visual-qa [HUMAN] -> audit
+
+Direct SVG art must not be a bitmap wrapped in SVG, a base64 design screenshot, inert forms or
+placeholder geometry claimed as finished. Use real existing engine/contracts, both public and
+customize/preview paths, selected features, tier/events and responsive editable UI. Real guest
+photos remain ordinary user content. Extraction-specific background/overlay/contract/ingest
+checks are `N/A — human-selected DIRECT_SVG`, never fabricated PASS; independent code review,
+actual build/tests and final human screenshot approval remain mandatory. Direct code review
+uses run.json.base_commit, because there is no assemble commit on that branch.
+
+Existing v3/v2 snapshots are unchanged unless the human explicitly authorizes that run's
+upgrade. `build-route-upgrade.py` is operator-only: stage new bodies, preserve all identity,
+intake/approval/budget bytes, archive old snapshot separately and rollback on validation failure.
+For the current explicitly user-requested switch, an exact current-chat quote is bound to
+`.pipeline/route-authorization.json` SHA in run metadata and revalidated against genuine native
+artwork approvals by `pipeline-run.py direct-authorization`. This is NOT a manufactured native
+human choice task/result and not an ordinary future-run bypass. No image budget reset, new art,
+paid fallback, merge/deploy or migration apply is implied. Failed extraction remains history,
+not a pretend accepted layer stage.
+
+## Frozen prior contract — 2026-11-05, reference-led-visual-v3
+
+The human answers NINE explicit numbered questions before researcher/model/worktree creation:
+reference URLs; INSPIRED or EXTRACT; selected art_style/illustration/colors/theme/typography/layout;
+CLOSE/BALANCED/EXPLORATORY freedom; architecture A/B; event types; BASIC/PREMIUM/PRO;
+ordered sections plus explicit features; must-keep/must-avoid (or explicit none).
+`intake-contract.py` rejects missing/duplicate/legacy answers and preserves raw answers/native
+intake task ID. Snapshot reparses the raw reply and freezes its exact contract hash.
+
+Both modes build a NEW template. INSPIRED is original interpretation of chosen qualities;
+EXTRACT transfers only selected traits into a fresh composition, not a clone. Unselected
+visible qualities are observations, not instructions. Illustration means treatment, not
+identical subjects/poses; layout means principles, not tracing signature arrangements.
+Every assets3 proposal binds the exact reference policy and a declared novelty plan:
+meaningful composition changes, avoided source signatures and honest proposed additions.
+Schema/novelty declarations cannot prove originality; actual visual comparison is required.
+
+Research, manifest/style and section specifications are INTERNAL nongates. No Design Brief,
+style JSON or specification sheets are sent directly OR as full subscribed board comments.
+The first human design approval is real composed section images with short intent captions,
+material limitations and exact revision/hash approval controls. Layer review and final QA
+also deliver actual diagnostic images/screenshots plus short captions, not technical reports.
+Full specs, evidence, source measurements, prompts, receipts and technical findings stay on disk.
+
+    intake (nine actual human answers)
+      -> scene-research [internal single fresh proposal, no human direction:A]
+      -> scene-manifest [assets3 + validated style2, no human style gate]
+      -> section-spec [internal, no human text gate]
+      -> art-render [FIRST human visual revision/hash gate]
+      -> art-layer [fail-closed native canvas/alpha/preflight]
+      -> art-review [independent visual review + human visual gate]
+      -> ingest -> assemble -> code -> code-review -> migration (scaffold ONLY)
+      -> preview -> visual-qa [integrated screenshots + human gate]
+      -> audit [human final merge/repair decision, no automatic merge/deploy]
+
+`pipeline-run.py inputs --worktree <WT> --section <id> --output <revision>/render-input.json`
+creates a no-overwrite render-input bundle before generation. It hashes the frozen intake,
+policy/assets, style, actual section spec and original source files, with run/section identity.
+`render-gate.json` and `review-gate.json` require `input_bundle_sha256`; routing rechecks the
+bundle against CURRENT bytes. Any changed input invalidates approval, even if design.png
+is unchanged. Local files/summaries never substitute for actual human native task.result.
+V3 approval enforcement is selected by frozen run identity, never mutable assets metadata;
+assets downgrades and run-version disagreement with frozen pipeline.json are rejected.
+Named redo results may mix `APPROVE <revision> <sha256>` and `REDO <section>: <changes>`.
+The manager passes each original actual native gate payload with repeatable
+`--prior-parent-json`; routing checks same-run/stage direct ancestry, original approving task
+IDs, current bytes, whole-run decision coverage and per-section redo limits. Unchanged
+sections retain genuine approvals without rerender or renewed approval. Missing/unrelated/
+summary-only histories block. Every direct native art-gate parent must be supplied,
+recursively to completed section-spec/art-layer producer records (also required); missing
+history cannot be treated as a first attempt or reset redo counts. Ingest reruns this check,
+not merely current partial parent.result or selected.json. Migration reads the parsed frozen
+intake tier/event_types, never legacy raw-answer indexes. Review after layer repair explicitly depends on BOTH the
+completed repair and original human review gate; old gate files are never rewritten.
+Internal proposal receipts explicitly say NOT_HUMAN_APPROVED; they bind research task/hash
+without reviving old direction/text gates. Assets3, style2 and art-contract2 are separate versions.
+
+Fresh intake states explicitly that its completion authorizes one initial per selected section;
+ONE redo requires an explicit human request naming the section/changes. One targeted layer
+correction maximum remains. Existing attempts/images/receipts are history and are not erased,
+reset or automatically re-approved. `EINVITE_RESTART_FROM_TASK=t_<8 hex>` records previous art
+lineage in a fresh snapshot; the new intake is its own authorization, never inherited approval.
+A tooling-only retry/restart without a renewed human intake is NOT a renewed render budget.
+
+Use the existing `einvite-intake` cron only after checking no intake is already waiting.
+Direct cron run is synchronous; launch through a verified durable caller when waiting for
+Telegram, and reserve script-timeout headroom for research. `--resume` remains disabled.
+Existing v1/v2 snapshots and source bundles are not upgraded or silently changed. A new v3
+run requires fresh intent and approvals; source/body changes apply only to future snapshots.
+Tests cover local wiring/bindings and fake intake dispatch, not actual artistic novelty,
+faithful editable layers or a completed live v3 template. No resize or paid provider fallback.
+
+## Frozen prior contract — 2026-11-04, reference-led-art-v2
+
+Image production is wired into NEW intakes, by explicit human authorization after the isolated
+layer pilot failed. This is guarded integration for testing, NOT proof that the image backend
+can deliver faithful editable layers or that an end-to-end template has passed this new flow.
+Do not migrate, unblock, rerun or rewrite existing cards merely because this section changed.
+
+```text
+intake (four human answers)
+  -> scene-research [reference-led composition proposals; human direction choice]
+  -> scene-manifest [chosen assets v2 + validated style.json]
+  -> section-spec [human text/style approval]
+  -> art-render (image-gen / Sol) [exact revision/hash human approval]
+  -> art-layer (image-gen / Sol) [mechanical PASS or block]
+  -> art-review (image-reviewer / Terra) [independent review + human approval]
+  -> ingest (designer; declared-bounds overlay export)
+  -> assemble -> code -> code-review -> migration (scaffold ONLY) -> preview
+  -> final visual-qa [fresh integrated screenshots + human approval]
+  -> audit [blocked ALIGNED/DRIFT for human merge/repair decision]
+```
+
+`manager` still handles advance/code-review/audit; changing the generic `reviewer` profile
+model did not reassign any stage. Workers never create successors; only manager advance does.
+The graph is serial: never run two Git-writing workers in a shared worktree concurrently.
+No automatic merge, deployment or database migration apply is authorized.
+
+### Start and new-run isolation
+
+Use `hermes cron list` to identify `einvite-intake`, then `hermes cron run <job-id>`.
+On the installed Hermes version the direct run is synchronous: it stays attached to the caller
+while waiting, and interrupting the caller can interrupt the intake. The current known ID is
+`9f4abc993089`; recheck rather than guessing if it changes. The gateway and Telegram credentials
+must work, and there must not already be an intake awaiting answers. The script sends four
+questions, waits boundedly and abandons on timeout. Intake-send or setup failures are nonzero;
+missing references never open downstream stage tasks. If an interrupted intake is completed
+later, a fresh cron run creates another intake; it does not resume the old one. Reconcile
+existing side effects before any explicit recovery; never improvise a researcher prompt.
+
+Intake creates a fresh `<slug>-<date>-<intake-id>` worktree off ae-unified, then uses
+`~/.hermes/scripts/pipeline-run.py snapshot` before opening scene-research. Every stage body,
+advance body and routing manifest is copied and hashed under `.pipeline/`; a changed/missing
+snapshot blocks rather than falling back to global files. New advances inherit that same
+worktree/branch, use native Kanban idempotency keys for both stage and advance cards, and
+recover missing pairs instead of spawning duplicates. This is idempotent task creation, not
+a transaction over image calls, the filesystem and Kanban.
+
+Workers use native `kanban_show/create/comment/block/complete` for board access, not shell
+board CLI commands. The local native adapter exposes `branch_name` and `max_retries` in
+show/create, and create accepts these explicitly alongside workspace and idempotency key.
+Never infer missing parent fields or invoke a different process/DB writer to bypass worker
+restrictions. Save the native parent response verbatim for `pipeline-run.py route`.
+Native show exposes persisted `latest_summary` from task_runs.summary; ordinary worker
+completion can leave task.result null. Nongates use actual result OR this persisted handoff,
+including failure-text checks. Human gates require actual task.result and NEVER borrow a
+worker summary. Tests exercise complete->native show->route for good/failed nongates and
+summary-only attempts to approve a human gate, not only manually populated human results.
+Workspace sharing remains explicit; absent fields still mean fresh isolated workspace.
+Use known lineage/children and durable attempt IDs, not a mandatory worker-wide list tool.
+Full Telegram gate reports remain direct sends; an unavailable native subscription helper
+is not an eligibility blocker. Terminal ALIGNED audit uses native block `needs_input`, since
+the worker surface has no scheduling tool. Neither ALIGNED nor a tooling repair authorizes
+merge, migration apply, image calls or self-completing a human gate.
+
+The branch/retry adapter is a local patch in `~/.hermes/hermes-agent/tools/kanban_tools.py`.
+Reverify it after Hermes updates; start a fresh worker process for new tool schemas rather
+than mutating a running conversation's tools or weakening the worker protocol. Regression
+coverage includes actual native handlers + isolated SQLite + route CLI + deduplicated child
+creation, not only fake shell commands.
+
+### Reference interpretation and composition (v2)
+
+Palette numbers must come from original-reference pixels, not model-authored HEX. The corrected
+`style-extract/sample-palette.py` preserves full-resolution pixels and chooses supported-color
+diversity; automatic output still is not proof of semantic coverage. For a visually observed
+small motif/ink it misses, use repeatable `--anchor X,Y` source-coordinate measurement and
+record image SHA256, original coordinates, measured HEX and visual rationale in provenance.
+Inspect-only enlarged crops are not measurement sources. The sampler supports style-v2's
+4–10 entries; six is an example, not a fixed gate. No invented padding for monochrome images.
+A tracked unchanged `spec/style.json` with another template's slug is inherited checkout data,
+not this run's approval: preserve its exact bytes under `spec/inherited/` before producing the
+current style. Modified/ambiguous files and actual current-run approvals remain protected.
+
+The stage names `scene-research`/`scene-manifest` are routing identifiers, not input-format
+restrictions. A finished card, photo, ornamental layout, scene or mixed reference is valid.
+Workers inspect actual original pixels, separate observed evidence from proposals, and adapt
+visual language/composition into an original responsive invite. Do not demand a replacement
+scene, five physical views, a horizon, depth bands or movable objects simply to pass a gate.
+A/B is the human's page architecture, independent of graphic/spatial/hybrid geometry metadata.
+
+Frozen `reference-contract.md` defines assets spec_version 2. Candidate files
+`spec/direction-A.json` (B/C only if useful) contain original-reference hashes, observations,
+per-section content zones, fixed motifs and optional movable `props`. The human selects
+`direction: A`; `pipeline-run.py route` verifies preserved bytes against `direction-gate.json`
+and the actual human task result before advancing. `direction-validate.py` checks structure
+and evidence links, not whether visual observations are true. Legacy assets/scene schemas
+remain for legacy runs; v2 does not require or fabricate `scene.json`.
+
+Section specs preserve approved composition instead of applying a universal landscape or
+single-column wrapper. React text/UI stays editable; source names/date and sample mockup UI
+are not shipping image pixels. For A, section specs must define shared-background continuity
+and responsive crops/reflow. Final QA compares resemblance to the original reference as well
+as approved specs/revisions; internal consistency alone is insufficient.
+
+Existing frozen runs are unchanged unless the human explicitly authorizes an upgrade. Preserve
+old snapshots, brief and task lineage before replacement; never treat a contract fix as
+approval of a direction, text specification or artwork.
+
+### Artwork approvals and handoff
+
+- Revisions live at `docs/<slug>-art/<section>/revisions/<revision-id>/`; use IDs unique across
+  sections, e.g. welcome-r1. Keep design.png and copied spec.md immutable. No resize/stretch/
+  pad-to-number; report actual decoded dimensions, not requested/tool-reported dimensions.
+- Render gate uses render-gate.json. Human reply is one `APPROVE <revision-id> <design-sha256>`
+  line per section. Manager reads the actual task.result, not a worker summary; pipeline-run.py
+  route checks section coverage, task identity and real spec/design hashes before selecting.
+- Review uses review-gate.json, with verdict plus design/spec/background/props/contract hashes.
+  Never overwrite the original render receipt. Changed layers invalidate review even when the
+  design hash is unchanged. Local hashes establish consistency, not independent human identity;
+  actual human Kanban results are the approval authority.
+- art-layer must produce a static same-native-canvas background and transparent prop OVERLAY,
+  explicit exclusive prop bounds and art-contract.json version 2 for reference-led assets.
+  Zero removable props is valid: keep approved fixed ornament in the text/UI-free background,
+  use props=[] and create an entirely transparent native-canvas props.png locally (no image
+  call for empty overlay). Version 1 remains positive-count for legacy runs. Catalogue layout
+  and unresolvable overlapping ownership still block; never fabricate dummy props.
+- Run art-preflight.py on every selected revision. Its PASS is mechanical only. Independent
+  art-review must inspect actual cutouts, alpha edges, reassembly, original prop footprints
+  revealed by moved-prop tests where applicable, composition/style fidelity and removal of
+  representative text/UI. Zero-prop move checks are N/A, not an unperformed visual PASS.
+- Ingest uses crop-tools/export-overlay.py, not heuristic background-diff matching, for the new
+  overlay contract. It losslessly exports original crop pixels and native geometry from approved
+  bounds, writes versioned manifests/reassembly and refuses to overwrite an output revision.
+  Shipping files retain actual sizes; assembly consumes measured manifest.pct coordinates.
+
+The pilot design was 948x1659 while both attempted background edits were 985x1596. That is
+still a BLOCK condition, not something this rewire repaired. If it recurs, the stage stops
+for a human decision; no automatic stretching, cost-bearing provider fallback or blind rerun.
+Each section gets one initial design plus one human-requested redo and at most one targeted
+layer correction. Explicit MANUAL_ART permits manual supply under the SAME preflight/review;
+it is not permission to skip ingest checks. Codex-auth access does not imply free/unlimited
+quota. Record real calls; monetary/quota consumption stays UNKNOWN unless observed.
+
+### Readiness and verification boundary
+
+Local regression/integration tests use isolated fixture directories and fake CLI executables,
+never the live board, image-generation quota, production database or Telegram. They verify
+wiring, frozen snapshots, gate routing, revision binding, failure handling and pixel-preserving
+exports. They do not constitute a real human-gated artwork run. A real end-to-end run remains
+necessary before describing this image-production path as production-proven.
+
+Rollback backup for this wiring: `~/.hermes/backups/einvite-rewire/wire-20261104-085544/`
+(index.json maps original paths). No credentials were copied into this wiring snapshot.
+Restore scripts from that map to revert NEW intakes; do not erase active worktrees or rewrite
+cards. Existing root legacy task bodies were deliberately left intact.
+
+## Historical/manual-run reference below
+
+The timeline and older stage tables below describe prior implementations, particularly the
+manual-art flow. They do NOT override the codex-art-v1 contract above for new intakes.
 
 ## Timeline
 

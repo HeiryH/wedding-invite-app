@@ -1,5 +1,8 @@
 'use client';
 
+import TemplateNav, { type NavLayout } from '../_shared/nav/TemplateNav';
+import { MusicSlot } from '../_shared/slots/ChromeSlots';
+import { animateScrollIntoView } from '../_shared/animateScrollTo';
 import { useCallback, useEffect, useMemo, type CSSProperties } from 'react';
 import type { Wedding, Wish, Photo, ItineraryItem, SeatingTable, CreateWish } from '@/lib/api';
 import type { EditorHandle, Layer, SlotProps } from '../_shared/types';
@@ -28,6 +31,7 @@ import { cinematicRichHtml, renderCinematicFunction } from '../_shared/cinematic
 import { PAINTED_PROMISE_CAMERA, PAINTED_PROMISE_SCENE_SETS, PAINTED_PROMISE_SEQUENCE, PAINTED_PROMISE_WORLD } from './data/cinematic';
 import { PAINTED_PROMISE_DIRECTION } from './data/direction';
 import styles from './Template15.module.css';
+import ProgrammePopup from './ProgrammePopup';
 
 const ROOT = '/templates/painted-promise/assets';
 const API_BASE = process.env.NEXT_PUBLIC_API_URL?.replace('/api', '') ?? '';
@@ -71,7 +75,8 @@ function PaintedPromise({ wedding, onRSVP, onSubmitWish, onUploadPhoto, wishes, 
   )), [sequence, breakpoint, cinematicConfig]);
   const tracksById = useMemo(() => new Map(tracks.map((track) => [track.id, track])), [tracks]);
   const interaction = useDirectedInteractions({ definitions: direction.interactions, tracks, beats: sequence.beats, progress, seek, editing });
-  const effects = useMemo(() => sampleCinematicEffects(direction.effects, tracks, progress, breakpoint), [direction.effects, tracks, progress, breakpoint]);
+  const effectPose = editing ? editor?.cinematic?.effectPose : undefined;
+  const effects = useMemo(() => sampleCinematicEffects(direction.effects, tracks, progress, breakpoint, effectPose), [direction.effects, tracks, progress, breakpoint, effectPose]);
   const scene = resolveCinematicScene({ layers, sceneSets, tracks, progress, behaviors: {
     background: (set) => tracksById.get(set.definition.timingTrackId ?? '')?.kind === 'effect' ? { opacity: 1, xVw: 0, yVh: 0, scale: 1 } : {},
   } });
@@ -164,7 +169,9 @@ function PaintedPromise({ wedding, onRSVP, onSubmitWish, onUploadPhoto, wishes, 
         beatId={editor?.cinematic?.mode === 'camera-beat' ? editor.cinematic.beatId : undefined} className={styles.cameraEditorSurface} />}
       {editing && editor?.cinematic?.referenceSrc && <img className={styles.referenceOverlay} src={editor.cinematic.referenceSrc} alt="" aria-hidden="true"
         style={{ opacity: editor.cinematic.referenceOpacity ?? .45, objectFit: editor.cinematic.referenceFit ?? 'contain' }} />}
-      <SheetHost groups={SHEETS} slotProps={slotProps} themeStyle={sheetStyle} />
+      <SheetHost groups={SHEETS} slotProps={slotProps} themeStyle={sheetStyle} flatPanels />
+      <ProgrammePopup slotProps={slotProps} artwork={layers.find((layer) => layer.behavior === 'programme-board')?.src || `${ROOT}/itinerary-v1/programme-board.png`}
+        title={layers.find((layer) => layer.behavior === 'programme-board')?.title} />
       {interaction.info && <div className={styles.infoBackdrop} style={{ '--cinematic-open-duration': `${interaction.info.openMs}ms` } as CSSProperties} onClick={(event) => { if (event.target === event.currentTarget) interaction.dismissInfo(); }}>
         <section data-cinematic-info role="dialog" aria-modal="true" aria-label={interaction.info.infoTitle} className={styles.infoDialog}>
           <button type="button" onClick={interaction.dismissInfo}>Close</button><h2>{interaction.info.infoTitle}</h2>
@@ -172,5 +179,14 @@ function PaintedPromise({ wedding, onRSVP, onSubmitWish, onUploadPhoto, wishes, 
         </section>
       </div>}
     </main>
+    <TemplateNav
+      items={anchors.filter((anchor) => photoBoothEnabled || anchor.id !== 'photobooth')}
+      active={anchors.reduce<{ id: string; at: number } | undefined>((nearest, anchor) =>
+        anchor.at <= progress && (!nearest || anchor.at >= nearest.at) ? anchor : nearest, undefined)?.id ?? ''}
+      layout={t('nav.layout', 'hidden') as NavLayout}
+      config={customConfig}
+      onNav={(id) => { const target = document.getElementById(id); if (target) animateScrollIntoView(target); }}
+    />
+    <MusicSlot t={t} editing={editing} autoPlay={false} />
   </div>;
 }

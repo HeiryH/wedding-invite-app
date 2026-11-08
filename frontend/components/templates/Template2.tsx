@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useContext, useState, useEffect } from 'react';
+import { SeatingPreviewContext } from './_shared/slots/preview';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Wedding, Guest, Wish, Photo, SeatingTable, ItineraryItem } from '@/lib/api';
 import SeatingStep from './SeatingStep';
@@ -86,6 +87,7 @@ export default function Template2({
         numberOfAttendees: 1,
         songRequest: '',
     });
+    const seatingPreview = useContext(SeatingPreviewContext);
     const [rsvpStep, setRsvpStep] = useState<1 | 2>(1);
     const [selectedTableId, setSelectedTableId] = useState<number | null>(null);
     const [rsvpSubmitting, setRsvpSubmitting] = useState(false);
@@ -135,6 +137,7 @@ export default function Template2({
     }, [sectionOrder.join(',')]);
 
     const submitRSVP = async () => {
+      if (seatingPreview) return;
         setRsvpSubmitting(true);
         try {
             await onRSVP({ ...rsvpData, isAttending, tableId: selectedTableId });
@@ -249,7 +252,7 @@ export default function Template2({
             </AnimatePresence>
 
             {/* Section: Welcome */}
-            <section
+            {sectionOrder.includes('welcome') && <section
                 id="welcome"
                 className="relative min-h-screen flex items-center justify-center px-4 py-20"
                 style={{ order: sectionOrder.indexOf('welcome'), ...sectionBgStyle(customConfig?.['section.welcome.bg'], API_BASE) }}
@@ -406,7 +409,7 @@ export default function Template2({
                         </motion.div>
                     </motion.div>
                 </motion.div>
-            </section>
+            </section>}
 
             {/* Section: Walimah */}
             {sectionOrder.includes('walimah') && (
@@ -478,7 +481,7 @@ export default function Template2({
             )}
 
             {/* Section: RSVP */}
-            <section
+            {sectionOrder.includes('rsvp') && <section
                 id="rsvp"
                 className="relative min-h-screen flex items-center justify-center px-4 py-20"
                 style={{ order: sectionOrder.indexOf('rsvp'), ...sectionBgStyle(customConfig?.['section.ceremony.bg'], API_BASE) }}
@@ -501,7 +504,7 @@ export default function Template2({
                     </div>
 
                     <AnimatePresence mode="wait">
-                        {wedding.isRsvpOpen === false ? (
+                        {wedding.isRsvpOpen === false && !seatingPreview ? (
                             <motion.div
                                 key="closed"
                                 initial={{ opacity: 0, scale: 0.9 }}
@@ -513,7 +516,7 @@ export default function Template2({
                                 <h3 className="text-2xl font-bold text-gray-700 mb-2">RSVPs are closed</h3>
                                 <p className="text-gray-500">Thank you for your interest — we&apos;re no longer accepting responses.</p>
                             </motion.div>
-                        ) : rsvpSuccess ? (
+                        ) : rsvpSuccess && !seatingPreview ? (
                             <motion.div
                                 key="success"
                                 initial={{ opacity: 0, scale: 0.8 }}
@@ -527,14 +530,14 @@ export default function Template2({
                                 </h3>
                                 <p className="text-green-700">Thank you!</p>
                             </motion.div>
-                        ) : rsvpStep === 2 ? (
+                        ) : seatingPreview || rsvpStep === 2 ? (
                             <div key="step2" className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-2xl p-8 border-2 border-yellow-200">
                                 <SeatingStep
                                     tables={tables}
                                     numberOfAttendees={rsvpData.numberOfAttendees}
                                     selectedTableId={selectedTableId}
                                     onSelect={setSelectedTableId}
-                                    onBack={() => setRsvpStep(1)}
+                                    onBack={() => { setRsvpStep(1); seatingPreview?.dismiss(); }}
                                     onSubmit={submitRSVP}
                                     submitting={rsvpSubmitting}
                                     accentClass="bg-gradient-to-r from-yellow-500 to-amber-500"
@@ -701,10 +704,10 @@ export default function Template2({
                         )}
                     </AnimatePresence>
                 </motion.div>
-            </section>
+            </section>}
 
             {/* Section: Wishes */}
-            <section
+            {sectionOrder.includes('wishes') && <section
                 id="wishes"
                 className="relative min-h-screen flex items-center justify-center px-4 py-20"
                 style={{ order: sectionOrder.indexOf('wishes'), ...sectionBgStyle(customConfig?.['section.celebration.bg'], API_BASE) }}
@@ -808,7 +811,7 @@ export default function Template2({
                         </div>
                     </div>
                 </motion.div>
-            </section>
+            </section>}
 
             {/* Section: Photos (if enabled) */}
             {photoBoothEnabled && sectionOrder.includes('photobooth') && (

@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { getConfigFields } from '../templateConfigSchema';
+import { buildDefaultConfig, getConfigFields } from '../templateConfigSchema';
 
 // Guards the class of bug fixed 2026-09-09: a schema field declared for a template whose markup
 // never reads the key (T7's nav.size/nav.textSize sat inside TEMPLATE5_EXTRA_FIELDS — an array
@@ -44,9 +44,11 @@ const TEMPLATE_ROOTS: Record<number, string[]> = {
   8: ['Template8.tsx'],
   9: ['Template9.tsx'],
   10: ['Template10.tsx', 'Template10-sunnysafari', '_shared'],
+  11: ['Template11.tsx', 'Template11-rosehorizon', '_shared'],
   12: ['Template12.tsx', 'Template12-dreamywoodland', '_shared'],
   13: ['Template13.tsx', 'Template13-dinodoodle', '_shared'],
   14: ['Template14.tsx', 'Template14-sandybeach', '_shared'],
+  16: ['Template16.tsx', 'Template16-inkboundrevelry', '_shared'],
 };
 
 /** Keys with no literal call site anywhere in template markup — read some other way (a backend-
@@ -54,6 +56,8 @@ const TEMPLATE_ROOTS: Record<number, string[]> = {
  *  etc). Kept short and commented: every entry here is a deliberate exemption from the check, not
  *  a place to dump a failure you didn't investigate. */
 const NOT_LITERALLY_READ = new Set<string>([
+  // Public invitation route applies the mode to the shared seating capability before rendering.
+  'seating.mode',
   // Backend-only moderation setting — PhotoService.cs reads it when a photo is uploaded, no
   // template ever renders it as UI. See backend/WeddingInvite.Core/Services/PhotoService.cs.
   'photobooth.autoApprove',
@@ -105,6 +109,8 @@ describe('templateConfigSchema field scoping', () => {
         .map((f) => f.key)
         .filter((key) => !NOT_LITERALLY_READ.has(key))
         .filter((key) => !isLayoutKey(key))
+        // Shared TemplateNav reads these labels and icons by section id.
+        .filter((key) => !/^nav\.(label|icon)\./.test(key))
         .filter((key) => !source.includes(key));
 
       expect(
@@ -115,6 +121,28 @@ describe('templateConfigSchema field scoping', () => {
       ).toEqual([]);
     });
   }
+
+  it('keeps Dreaming Floral Sky color controls out of the content inspector', () => {
+    const fields = getConfigFields(5, 'SUPER_ADMIN');
+    expect(fields.filter((field) => field.fieldType === 'color')).toEqual([]);
+    for (const key of ['invite.heading.color', 'footer.tagline.color', 'itinerary.title.color', 'itinerary.item.color', 'rsvp.subtitle.color']) {
+      expect(fields.find((field) => field.key === key)?.fieldType).toBe('hidden');
+    }
+  });
+
+  it('exposes Rose Horizon RSVP controls without saving implicit field visibility', () => {
+    const fields = getConfigFields(11, 'ORGANIZER_ADMIN', 'PRO').filter((field) => field.section === 'rsvp');
+    expect(fields.map((field) => field.key)).toEqual(expect.arrayContaining([
+      'rsvp.title', 'rsvp.subtitle', 'rsvp.name_placeholder', 'rsvp.submit_label', 'sheet.rsvp.label',
+    ]));
+    const toggles = fields.filter((field) => field.group === 'Fields');
+    expect(toggles).toHaveLength(5);
+    const config = buildDefaultConfig(11);
+    for (const field of toggles) {
+      expect(field.defaultValue).toBe('true');
+      expect(config).not.toHaveProperty(field.key);
+    }
+  });
 
   it('exposes Dreamy Woodland copy and shared-slot controls', () => {
     const keys = new Set(getConfigFields(12, 'SUPER_ADMIN').map((field) => field.key));

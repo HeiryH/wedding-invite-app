@@ -371,7 +371,12 @@ export default function ThemesPage() {
                     </Button>
                   </div>
 
-                  {/* Starting design — the config a NEW invite of this theme is seeded with. */}
+                  <a href={theme.isAuthored ? `/super-admin/authoring/${theme.templateId}` : `/super-admin/template-studio/${theme.templateId}`}
+                    style={{ display: 'block', marginTop: 12, padding: '10px 14px', border: '1px solid var(--border-default)', borderRadius: 8, color: 'var(--brand)', textAlign: 'center', textDecoration: 'none', fontSize: 13, fontWeight: 600 }}>
+                    {theme.isAuthored ? 'Edit authored template' : 'Edit master design'}
+                  </a>
+
+                  {/* Starting design — inherited live by invitations without overrides. */}
                   {(() => {
                     const count = defaultCounts[theme.templateId] ?? 0;
                     const themeWeddings = weddings.filter(w => w.templateId === theme.templateId);

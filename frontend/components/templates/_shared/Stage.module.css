@@ -75,6 +75,26 @@
   container-type: inline-size;
 }
 
+.stage[data-form-flow='true'] .flowStack {
+  z-index: 10;
+  padding-block: clamp(64px, calc(var(--fsvh, 100svh) * 0.14), 128px);
+}
+
+.stage[data-form-flow='true'] :is([data-slot='rsvpForm'], [data-slot='rsvpSeating'], [data-slot='wishForm'], [data-slot='wishPhoto']) {
+  background: var(--slot-panel-bg, var(--slot-sheet-bg, #fffaf2));
+  border-radius: var(--slot-panel-radius, 20px);
+  padding: clamp(12px, 3cqi, 26px);
+  max-width: 42rem;
+}
+
+.stage[data-form-flow='true'] .flowItem[data-custom-form-background] {
+  background: transparent;
+}
+
+.flowItem:has(.flowSlotContent:empty) {
+  display: none;
+}
+
  /* ── Aspect-locked art canvas (StageDef.canvas) ──────────────────────────────────────────────
    The stage's scenery composed as ONE picture and cover-fitted to the device, exactly like `.bg`
    above — so the pieces scale and crop together instead of drifting apart on an unusual screen
@@ -176,7 +196,6 @@
   width: 100%;
   height: 100%;
   overflow-y: auto;
-  overscroll-behavior: contain;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
   container-type: inline-size;

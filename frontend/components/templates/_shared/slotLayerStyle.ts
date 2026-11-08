@@ -2,12 +2,19 @@ import type { CSSProperties } from 'react';
 import { fontVar } from '@/lib/fonts/registry';
 import type { Layer } from './types';
 
+export function hasCustomFormBackground(layer: Layer) {
+  return layer.containerOpacity !== undefined || layer.fill === 'transparent';
+}
+
 /**
  * Per-slot visual overrides used by both inline Layer slots and SheetHost slots. Keeping this in
  * one place matters: a form must not change appearance merely because it moved into a pop-up.
  */
 export function slotLayerStyle(layer: Layer): CSSProperties & Record<string, string | number> {
   const font = fontVar(layer.fontFamily);
+  const opacity = layer.containerOpacity;
+  const fill = opacity === undefined ? layer.fill
+    : `color-mix(in srgb, ${layer.fill || '#fffaf2'} ${Math.max(0, Math.min(100, opacity))}%, transparent)`;
   return {
     '--slot-text-scale': layer.textScale ?? 1,
     ...(layer.color ? {
@@ -21,7 +28,12 @@ export function slotLayerStyle(layer: Layer): CSSProperties & Record<string, str
       '--slot-font-serif': font,
       '--slot-font-body': font,
     } : null),
-    ...(layer.fill ? { '--slot-container-bg': layer.fill } : null),
+    ...(fill ? { '--slot-container-bg': fill } : null),
+    ...(hasCustomFormBackground(layer) ? { '--slot-container-blur': 'none' } : null),
+    ...(layer.fill === 'transparent' || opacity === 0 ? {
+      '--slot-container-shadow': 'none',
+      '--slot-container-border': 'none',
+    } : null),
     ...(layer.borderWidth !== undefined
       ? { '--slot-container-border': layer.borderWidth > 0
           ? `${layer.borderWidth}px solid ${layer.borderColor ?? '#000000'}`

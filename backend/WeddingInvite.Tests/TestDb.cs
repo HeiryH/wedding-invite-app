@@ -1,6 +1,8 @@
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using WeddingInvite.Data;
+using WeddingInvite.Core.Services;
+using WeddingInvite.Data.Repositories;
 
 namespace WeddingInvite.Tests;
 
@@ -34,6 +36,14 @@ public sealed class TestDb : IDisposable
     {
         Context.ChangeTracker.Clear();
         return Context;
+    }
+
+    public GuestService CreateGuestService()
+    {
+        var events = new EventRepository(Context);
+        var config = new TemplateConfigService(
+            new TemplateConfigRepository(Context), new TemplateConfigDefaultRepository(Context), events);
+        return new GuestService(new GuestRepository(Context), events, config);
     }
 
     public void Dispose()

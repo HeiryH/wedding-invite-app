@@ -6,7 +6,6 @@ import { templateService, Template, authService } from '@/lib/api';
 import type { TemplateConfigField } from '@/lib/api/types';
 import { getGuestFields, buildDefaultConfig, blockOf } from '@/lib/templateConfigSchema';
 import { resolveSectionOrder, SectionCode } from '@/lib/templateUtils';
-import { getUser } from '@/lib/auth';
 import { EVENT_TYPES, EventTypeKey } from '@/lib/eventTypes';
 
 const DRAFT_KEY = 'personalise_draft_v1';
@@ -238,8 +237,8 @@ function PersonaliseEditor() {
   const [saveError, setSaveError] = useState('');
   const [sheetOpen, setSheetOpen] = useState(false); // mobile bottom-sheet expanded?
 
-  // If logged in, hand off to the full dashboard.
-  useEffect(() => { if (getUser()) router.replace('/organizer-admin'); }, [router]);
+  // Keep this trial public even when a previous login remains in localStorage.
+  // Cached identity does not prove a live session and must not divert the picker flow.
 
   // Load templates.
   useEffect(() => { templateService.getActive().then(setTemplates).catch(() => {}); }, []);

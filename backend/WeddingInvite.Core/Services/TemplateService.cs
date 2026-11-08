@@ -10,13 +10,15 @@ namespace WeddingInvite.Core.Services
     public class TemplateService : ITemplateService
     {
         private readonly ITemplateRepository _templateRepo;
+        private readonly ITemplateShippedDesignStore? _shipped;
         private const long MaxThumbnailBytes = 10 * 1024 * 1024; // 10MB, mirrors PhotoService
         private static readonly string[] AllowedExtensions = { ".jpg", ".jpeg", ".png", ".gif", ".webp" };
         private const int MaxStagesJsonLength = 200_000; // a multi-stage composition, not a single config value
 
-        public TemplateService(ITemplateRepository templateRepo)
+        public TemplateService(ITemplateRepository templateRepo, ITemplateShippedDesignStore? shipped = null)
         {
             _templateRepo = templateRepo;
+            _shipped = shipped;
         }
         
         public async Task<TemplateDto?> GetByIdAsync(int id)
@@ -59,7 +61,7 @@ namespace WeddingInvite.Core.Services
                     TemplateName = t.TemplateName,
                     TemplateCode = t.TemplateCode,
                     Description = t.Description,
-                    ThumbnailUrl = t.ThumbnailUrl,
+                    ThumbnailUrl = string.IsNullOrWhiteSpace(t.ThumbnailUrl) ? _shipped?.GetThumbnail(t.TemplateCode) ?? t.ThumbnailUrl : t.ThumbnailUrl,
                     PrimaryColor = t.PrimaryColor,
                     SecondaryColor = t.SecondaryColor,
                     ComponentPath = t.ComponentPath,
@@ -151,7 +153,7 @@ namespace WeddingInvite.Core.Services
             return sb.ToString().Trim('-');
         }
 
-        public async Task<TemplateDto> SetThumbnailAsync(int id, IFormFile file)
+        public async Task<TemplateDto> SetThumbnailAsync(int id, IFormFile file, bool preservePrevious = false)
         {
             var template = await _templateRepo.GetByIdAsync(id);
             if (template == null)
@@ -186,7 +188,7 @@ namespace WeddingInvite.Core.Services
 
             // Clean up the previous upload, but only if it's one of ours — ThumbnailUrl could
             // point elsewhere (or be empty/the unused legacy default) and must never be deleted.
-            if (!string.IsNullOrWhiteSpace(template.ThumbnailUrl) && template.ThumbnailUrl.StartsWith("/uploads/templates/"))
+            if (!preservePrevious && !string.IsNullOrWhiteSpace(template.ThumbnailUrl) && template.ThumbnailUrl.StartsWith("/uploads/templates/"))
             {
                 var oldPath = Path.Combine("wwwroot", template.ThumbnailUrl.TrimStart('/').Replace('/', Path.DirectorySeparatorChar));
                 if (File.Exists(oldPath))
@@ -279,7 +281,7 @@ namespace WeddingInvite.Core.Services
                 TemplateName = template.TemplateName,
                 TemplateCode = template.TemplateCode,
                 Description = template.Description,
-                ThumbnailUrl = template.ThumbnailUrl,
+                ThumbnailUrl = string.IsNullOrWhiteSpace(template.ThumbnailUrl) ? _shipped?.GetThumbnail(template.TemplateCode) ?? template.ThumbnailUrl : template.ThumbnailUrl,
                 PrimaryColor = template.PrimaryColor,
                 SecondaryColor = template.SecondaryColor,
                 ComponentPath = template.ComponentPath,

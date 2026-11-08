@@ -174,9 +174,9 @@ function PickerInner() {
             )}
           </div>
         ) : view === 'grid' ? (
-          <TemplateGrid templates={shown} onUse={use} />
+          <TemplateGrid key={`${event}:${tier}`} templates={shown} onUse={use} />
         ) : (
-          <TemplateDeck templates={shown} onUse={use} />
+          <TemplateDeck key={`${event}:${tier}`} templates={shown} onUse={use} />
         )}
       </div>
 

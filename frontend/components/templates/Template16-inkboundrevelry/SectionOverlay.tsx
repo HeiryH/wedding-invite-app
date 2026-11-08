@@ -1,0 +1,51 @@
+'use client';
+
+import { useMemo } from 'react';
+import type { Breakpoint, EditorHandle } from '@/components/templates/_shared/types';
+import { EngineProvider, type Engine } from '@/components/templates/_shared/engine';
+import Layer from '@/components/templates/_shared/Layer';
+import { resolveStage } from '@/components/templates/_shared/layout';
+import { T16_STAGES } from './stages';
+import styles from './Template16.module.css';
+
+// Decorative layers are text/shape/uploaded-img only (no shipped slot registry, no bundled art).
+const ENGINE: Engine = { assetRoot: '', assetSizes: {}, slotRegistry: {} };
+
+export default function SectionOverlay({
+  stageId, breakpoint, config, editor,
+}: {
+  stageId: string;
+  breakpoint: Breakpoint;
+  config?: Record<string, string>;
+  editor?: EditorHandle;
+}) {
+  const def = T16_STAGES[stageId];
+  const { layers } = useMemo(
+    () => resolveStage('t16', def, breakpoint, config),
+    [def, breakpoint, config],
+  );
+
+  const dockOpen = Boolean(editor?.enabled);
+  const stageActive = dockOpen && editor?.selectedStage === stageId;
+  // Anchor layers have no overlay visual — they nudge real DOM elements (see useAnchors).
+  const visible = layers.filter((l) => !l.hidden && l.kind !== 'anchor');
+  if (!visible.length) return null;
+
+  return (
+    <EngineProvider value={ENGINE}>
+      <div className={styles.overlay} data-stage={stageId} data-seen="true" data-editing={dockOpen || undefined}>
+        {visible.map((l) => (
+          <Layer
+            key={l.id}
+            layer={l}
+            eager={false}
+            selected={stageActive && editor?.selectedLayer === l.id}
+            editing={dockOpen}
+            stageActive={stageActive}
+            stageId={stageId}
+          />
+        ))}
+      </div>
+    </EngineProvider>
+  );
+}

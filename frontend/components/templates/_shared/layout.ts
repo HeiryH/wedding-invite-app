@@ -13,7 +13,7 @@ export const layoutKey = (prefix: string, bp: Breakpoint, stage: StageId) =>
  *  resolved layers against each other. */
 export const OVERRIDABLE: (keyof Layer)[] = [
   'x', 'y', 'w', 'h', 's', 'z', 'order', 'chain', 'hidden', 'opacity', 'depth', 'textScale',
-  'accentColor', 'containerMinHeight', 'containerPadding', 'contentGap', 'contentAlignY', 'contentAlign',
+  'accentColor', 'containerMinHeight', 'containerPadding', 'containerOpacity', 'contentGap', 'contentAlignY', 'contentAlign',
   'rotation', 'flipX', 'flipY', 'locked', 'overflowMode',
   'color', 'fill', 'fontSize', 'fontWeight', 'lineHeight', 'radius', 'text', 'src', 'shape', 'label',
   'anim', 'animDur', 'animOut', 'animOutDur',
@@ -178,6 +178,21 @@ export function serializeStage(
   return Object.keys(out).length ? JSON.stringify(out) : '';
 }
 
+export function inlineFormSheet(prefix: string, stageId: StageId, config?: Record<string, string>) {
+  if (!/^t(7|10|11|12|13|14)$/.test(prefix)) return undefined;
+  if (stageId === 'rsvp' && config?.['rsvp.form_layout'] === 'inline') return 'rsvp';
+  if (stageId === 'wishes' && config?.['wish.form_layout'] === 'inline') return 'wish';
+}
+
+export function isInlineFormLayer(layer: Layer, sheetId: string | undefined) {
+  return Boolean(sheetId && layer.kind === 'slot' && layer.sheetId === sheetId &&
+    (layer.slot === 'rsvpForm' || layer.slot === 'rsvpSeating' || layer.slot === 'wishForm' || layer.slot === 'wishPhoto'));
+}
+
+export function appearsInFormLayout(layer: Layer, sheetId: string | undefined) {
+  return !sheetId || layer.sheetId !== sheetId || isInlineFormLayer(layer, sheetId);
+}
+
 export function useStageLayout(
   prefix: string,
   stages: Record<string, StageDef>,
@@ -189,7 +204,24 @@ export function useStageLayout(
     () =>
       stageIds.map((id) => {
         const def = stages[id];
-        return { def, ...resolveStage(prefix, def, breakpoint, config) };
+        const resolved = resolveStage(prefix, def, breakpoint, config);
+        const sheetId = inlineFormSheet(prefix, id, config);
+        if (!sheetId) return { def, ...resolved };
+
+        // Project the chosen presentation after applying saved geometry. The saved sheet
+        // layers and trigger stay intact so switching back restores the original composition.
+        const isForm = (layer: Layer) => isInlineFormLayer(layer, sheetId);
+        const body = resolved.layers.filter((layer) => appearsInFormLayout(layer, sheetId));
+        const formOrder = Math.max(0, ...body.filter((layer) => !isForm(layer) && layer.slot !== 'wishList')
+          .filter((layer) => layer.kind === 'slot' || layer.id === 'title' || layer.id === 'prompt')
+          .map((layer) => layer.order)) + 1;
+        return {
+          ...resolved,
+          def: { ...def, flow: true },
+          layers: body.map((layer) => isForm(layer)
+            ? { ...layer, presentation: 'inline' as const, order: formOrder, depth: 0 }
+            : layer.slot === 'wishList' ? { ...layer, order: Math.max(layer.order, formOrder + 1) } : layer),
+        };
       }),
     [prefix, stages, stageIds, breakpoint, config],
   );

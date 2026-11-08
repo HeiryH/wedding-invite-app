@@ -17,4 +17,9 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+  <ItemGroup>
+    <EmbeddedResource Include="../template-designs/*.json" LogicalName="TemplateDesigns.%(Filename)%(Extension)" />
+    <EmbeddedResource Include="../template-designs/assets/*" LogicalName="TemplateDesignAssets.%(Filename)%(Extension)" />
+  </ItemGroup>
+
 </Project>

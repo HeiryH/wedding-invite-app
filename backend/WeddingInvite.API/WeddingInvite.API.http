@@ -1,4 +1,4 @@
-@WeddingInvite.API_HostAddress = http://localhost:5000
+@WeddingInvite.API_HostAddress = http://localhost:5050
 
 GET {{WeddingInvite.API_HostAddress}}/weatherforecast/
 Accept: application/json

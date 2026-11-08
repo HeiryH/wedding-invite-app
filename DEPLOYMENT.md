@@ -122,7 +122,7 @@ ENV BACKEND_URL=$BACKEND_URL
 RUN npm run build   # BACKEND_URL is now available to next.config.ts
 ```
 
-Without this, the proxy target defaults to `localhost:5000` — which works on your Mac but fails inside Docker where the backend is reachable at `backend:5000` on the internal network.
+Without this, the proxy target defaults to the local development API at `localhost:5050` — which fails inside Docker where the backend is reachable at `backend:5000` on the internal network.
 
 ### 9. Remove localhost fallbacks from frontend API calls
 **Files:** `frontend/lib/api/client.ts`, `frontend/components/templates/Template*.tsx`
@@ -130,7 +130,7 @@ Without this, the proxy target defaults to `localhost:5000` — which works on y
 Changed:
 ```ts
 // Before
-?? 'http://localhost:5000'
+?? 'http://localhost:5050'
 
 // After
 ?? ''   // empty string = relative URL, routes through Next.js proxy

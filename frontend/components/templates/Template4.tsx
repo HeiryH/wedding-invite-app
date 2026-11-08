@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useContext, useState, useEffect, useRef } from 'react';
+import { SeatingPreviewContext } from './_shared/slots/preview';
 import { motion, useMotionValue, useTransform, animate, AnimatePresence } from 'framer-motion';
 import { Wedding, Wish, Photo, SeatingTable, TemplateSlots, ItineraryItem } from '@/lib/api';
 import SeatingStep from './SeatingStep';
@@ -384,7 +385,7 @@ export default function Template4({
   const varSections = sectionOrder.filter((c) => ['rsvp', 'wishes', 'photobooth'].includes(c));
 
   // Scroll spy
-  const sections = ['hero', ...varSections.map((c) => `t4-${c}`)];
+  const sections = [...(sectionOrder.includes('welcome') ? ['hero'] : []), ...varSections.map((c) => `t4-${c}`)];
   const [activeSection, setActiveSection] = useState('hero');
 
   useEffect(() => {
@@ -471,12 +472,14 @@ export default function Template4({
     numberOfAttendees: 1,
     songRequest: '',
   });
+  const seatingPreview = useContext(SeatingPreviewContext);
   const [rsvpStep, setRsvpStep] = useState<1 | 2>(1);
   const [selectedTableId, setSelectedTableId] = useState<number | null>(null);
   const [rsvpSubmitting, setRsvpSubmitting] = useState(false);
   const [rsvpSuccess, setRsvpSuccess] = useState(false);
 
   const submitRSVP = async () => {
+    if (seatingPreview) return;
     setRsvpSubmitting(true);
     try {
       await onRSVP({ ...rsvpData, isAttending, tableId: selectedTableId });
@@ -562,7 +565,7 @@ export default function Template4({
       {/* ══════════════════════════════════════
           SECTION 1 — HERO
       ══════════════════════════════════════ */}
-      <section id="hero" className="relative min-h-screen flex flex-col">
+      {sectionOrder.includes('welcome') && <section id="hero" className="relative min-h-screen flex flex-col">
         <SectionOverlay stageId="hero" {...overlayProps} />
         {/* Full-bleed hero photo */}
         {heroPhoto ? (
@@ -631,7 +634,7 @@ export default function Template4({
         <div className="relative z-10">
           <TornEdge fromDark />
         </div>
-      </section>
+      </section>}
 
       {/* ── Countdown + Details (cream) ── */}
       <div id="t4-details" className="relative bg-[#F7F6F1] py-16 px-6">
@@ -803,19 +806,19 @@ export default function Template4({
                   <p className="text-sm text-[#8A8A80] mt-2">{t('rsvp.subtitle', 'Will you be joining us?')}</p>
                 </div>
                 <AnimatePresence mode="wait">
-                  {wedding.isRsvpOpen === false ? (
+                  {wedding.isRsvpOpen === false && !seatingPreview ? (
                     <motion.div key="closed" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }} className="border border-[#E0DFD9] bg-white p-10 text-center">
                       <p className="text-2xl italic text-[#1C1C1A] mb-2">RSVPs are closed</p>
                       <p className="text-sm text-[#8A8A80]">Thank you for your interest — we&apos;re no longer accepting responses.</p>
                     </motion.div>
-                  ) : rsvpSuccess ? (
+                  ) : rsvpSuccess && !seatingPreview ? (
                     <motion.div key="success" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }} className="border border-[#E0DFD9] bg-white p-10 text-center">
                       <p className="text-2xl italic text-[#1C1C1A] mb-2">Thank you!</p>
                       <p className="text-sm text-[#8A8A80]">Your RSVP has been received.</p>
                     </motion.div>
-                  ) : rsvpStep === 2 ? (
+                  ) : seatingPreview || rsvpStep === 2 ? (
                     <div key="seating" className="border border-[#E0DFD9] bg-white p-6">
-                      <SeatingStep tables={tables} numberOfAttendees={rsvpData.numberOfAttendees} selectedTableId={selectedTableId} onSelect={setSelectedTableId} onBack={() => setRsvpStep(1)} onSubmit={submitRSVP} submitting={rsvpSubmitting} accentClass="bg-[#1C1C1A] hover:bg-[#333]" accentBorderClass="border-[#1C1C1A] bg-gray-50" />
+                      <SeatingStep tables={tables} numberOfAttendees={rsvpData.numberOfAttendees} selectedTableId={selectedTableId} onSelect={setSelectedTableId} onBack={() => { setRsvpStep(1); seatingPreview?.dismiss(); }} onSubmit={submitRSVP} submitting={rsvpSubmitting} accentClass="bg-[#1C1C1A] hover:bg-[#333]" accentBorderClass="border-[#1C1C1A] bg-gray-50" />
                     </div>
                   ) : (
                     <motion.form key="form" onSubmit={handleRSVPSubmit} className="border border-[#E0DFD9] bg-white p-6 space-y-3">

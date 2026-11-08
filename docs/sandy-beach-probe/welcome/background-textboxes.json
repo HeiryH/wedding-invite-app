@@ -1,0 +1,42 @@
+[
+  {
+    "x": 416,
+    "y": 869,
+    "w": 211,
+    "h": 22,
+    "text": "THE WEEDDING OF -",
+    "confidence": 1.0
+  },
+  {
+    "x": 268,
+    "y": 887,
+    "w": 484,
+    "h": 76,
+    "text": "Aisyarh & AaDaniel",
+    "confidence": 1.0
+  },
+  {
+    "x": 253,
+    "y": 958,
+    "w": 519,
+    "h": 57,
+    "text": "Satrday, 14 March 20077",
+    "confidence": 1.0
+  },
+  {
+    "x": 287,
+    "y": 1019,
+    "w": 439,
+    "h": 56,
+    "text": "Panti Seri Kennag\u0131an, Tutong",
+    "confidence": 1.0
+  },
+  {
+    "x": 315,
+    "y": 1077,
+    "w": 393,
+    "h": 30,
+    "text": "10 days \u2022 6 hours\u2022 \u2022 42 nimtues",
+    "confidence": 1.0
+  }
+]

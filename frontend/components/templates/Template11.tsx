@@ -3,6 +3,9 @@
 import { useCallback, useEffect, useMemo, useState, type CSSProperties } from 'react';
 import { Wedding, Wish, Photo, ItineraryItem, SeatingTable } from '@/lib/api';
 import { resolveSectionOrder, toHijriString, type SectionCode } from '@/lib/templateUtils';
+import CoupleGallery, { orderedCoupleGallery } from '@/components/templates/_shared/CoupleGallery';
+import SectionNavigation from '@/components/templates/_shared/nav/SectionNavigation';
+import { MusicSlot } from '@/components/templates/_shared/slots/ChromeSlots';
 import { useReducedMotion } from '@/lib/useReducedMotion';
 import { useParallax } from '@/components/templates/_shared/hooks/useParallax';
 import { useStageReveal } from '@/components/templates/_shared/hooks/useStageReveal';
@@ -52,6 +55,7 @@ interface Template11Props {
   onUploadPhoto?: SlotProps['onUploadPhoto'];
   wishes: Wish[];
   photos: Photo[];
+  coupleMedia?: Photo[];
   photoBoothEnabled: boolean;
   customConfig?: Record<string, string>;
   itinerary?: ItineraryItem[];
@@ -98,6 +102,7 @@ export default function Template11({
   onUploadPhoto,
   wishes,
   photos,
+  coupleMedia,
   photoBoothEnabled,
   customConfig,
   itinerary = [],
@@ -116,6 +121,7 @@ export default function Template11({
     photoBoothEnabled,
   );
 
+  const gallery = orderedCoupleGallery(coupleMedia, customConfig?.['gallery.order']);
   const reduced = useReducedMotion();
   const { rootRef, seen } = useStageReveal(reduced, sectionOrder.join(','));
   useParallax(rootRef, 'on', reduced);
@@ -362,12 +368,15 @@ export default function Template11({
         }
       })}
 
-      <footer className={styles.footer}>
+      <CoupleGallery photos={gallery} title={t('gallery.title', 'Our photos')} fit={t('gallery.fit', 'cover')} layout={t('gallery.layout', 'grid')} />
+          <footer className={styles.footer}>
         <p className={styles.footerTagline}>{t('footer.tagline', 'Made with love for our special day')}</p>
       </footer>
 
       {/* Inside the themed root deliberately — T11's --slot-* theme tokens are set inline on that
           div, so a sheet mounted outside it would render unthemed. Safe for `position: fixed`. */}
+      <SectionNavigation sections={gallery.length ? [...sectionOrder, 'couple-gallery'] : sectionOrder} config={customConfig} />
+      <MusicSlot t={t} editing={editing} autoPlay={false} />
       <SheetHost groups={sheetGroups} slotProps={slotProps} editor={editor} />
     </div>
     </EngineProvider>

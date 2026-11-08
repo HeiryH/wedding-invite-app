@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { useDismissSelection } from './useDismissSelection';
 import { TemplatePreview } from '@/components/templates/TemplatePreview';
 import type { Template } from '@/lib/api';
 
@@ -42,6 +43,7 @@ export function TemplateDeck({
   const [ghost, setGhost] = useState<{ template: Template; startTransform: string; dir: 1 | -1 } | null>(null);
 
   const boxRef = useRef<HTMLDivElement>(null);
+  useDismissSelection(selected, boxRef, () => setSelected(false));
   const topRef = useRef<HTMLDivElement>(null);
   const drag = useRef({ active: false, x: 0, y: 0, startX: 0, startY: 0, startT: 0, lastX: 0, lastT: 0, vx: 0, width: 240 });
 

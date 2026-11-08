@@ -6,12 +6,17 @@ import type { SlotProps } from '../types';
 import { resolveBindings } from '../bindings';
 import { fontVar } from '@/lib/fonts/registry';
 import type { CinematicWorldLayer, CinematicWorldGeometry } from './world';
+import { resizeCinematicLayer } from './world';
+import type { CinematicEffectPose, CinematicMotion } from './direction';
+import { frameW } from '../frameViewport';
 
 interface Props {
   layer: CinematicWorldLayer;
   cssVars?: CSSProperties;
   editor?: EditorHandle;
   visibility?: number;
+  /** DOM ancestors already apply their fades visually; include them only for hit testing. */
+  ancestorOpacity?: number;
   transition?: { xVw?: number; yVh?: number; scale?: number };
   ambient?: {
     /** Percentage offsets within the layer's containing space. */
@@ -49,31 +54,41 @@ interface DragState {
   layerY: number;
   layerW: number;
   layerH?: number;
+  lockAspect?: boolean;
   moved: boolean;
   inverse?: { a: number; b: number; c: number; d: number };
+  pose?: CinematicEffectPose;
+  screenWidth?: number;
 }
 
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
 
 /** One directly-manipulable piece of a continuous Cinematic world. */
 export default function CinematicSceneLayer({
-  layer, cssVars, editor, visibility = 1, transition, ambient, className, boxClassName, imageClassName,
+  layer, cssVars, editor, visibility = 1, ancestorOpacity = 1, transition, ambient, className, boxClassName, imageClassName,
   selectedClassName, resizeHandleClassName, children, slotProps, interactive = false, localElement,
 }: Props) {
   const selected = Boolean(editor?.enabled && editor.selectedLayer === layer.id);
   const editable = Boolean(editor?.enabled && editor.cinematic?.mode === 'scene');
+  const pose = editable && editor?.cinematic?.effectPose?.layerId === layer.id ? editor.cinematic.effectPose : undefined;
+  // An endpoint must stay visible/editable even when its appearance track fades out there.
+  if (pose) { visibility = 1; transition = undefined; ambient = { ...ambient, opacity: 1 }; }
+  const canHit = !layer.hidden && (Boolean(pose) || layer.opacity * visibility * (ambient?.opacity ?? 1) * ancestorOpacity > .02);
   const dragRef = useRef<DragState | null>(null);
   const suppressClickRef = useRef(false);
   const rafRef = useRef(0);
   const pendingPatchRef = useRef<Partial<CinematicWorldGeometry> | null>(null);
+  const pendingPoseRef = useRef<{ effectId: string; layerId: string; side: 'from' | 'to'; patch: Partial<CinematicMotion> } | null>(null);
 
   const postSelection = useCallback((layerId: string | undefined) => {
-    if (!editable) return;
+    if (!editable || !canHit) return;
+    if (selected && layerId === layer.id) return;
+    if (pose && !layerId) return;
     window.parent.postMessage(
       { type: 'PREVIEW_CINEMATIC_LAYER_SELECT', layerId },
       window.location.origin,
     );
-  }, [editable]);
+  }, [editable, canHit, pose, selected, layer.id]);
 
   const ensureSelected = useCallback(() => {
     if (!selected) postSelection(layer.id);
@@ -83,6 +98,9 @@ export default function CinematicSceneLayer({
     rafRef.current = 0;
     const patch = pendingPatchRef.current;
     pendingPatchRef.current = null;
+    const posePatch = pendingPoseRef.current;
+    pendingPoseRef.current = null;
+    if (posePatch) window.parent.postMessage({ type: 'PREVIEW_CINEMATIC_EFFECT_POSE_EDIT', ...posePatch }, window.location.origin);
     if (patch) {
       window.parent.postMessage(
         { type: 'PREVIEW_CINEMATIC_LAYER_EDIT', layerId: layer.id, patch },
@@ -101,19 +119,20 @@ export default function CinematicSceneLayer({
   }, []);
 
   const beginDrag = (event: ReactPointerEvent<HTMLElement>, mode: DragState['mode']) => {
-    if (!editable) return;
+    if (!editable || !canHit) return;
     event.stopPropagation();
     ensureSelected();
     if (layer.locked) return;
-    const frame = localElement ? event.currentTarget : event.currentTarget.closest<HTMLElement>('[data-cinematic-space]');
+    const artwork = event.currentTarget.closest<HTMLElement>('[data-cinematic-layer]') ?? event.currentTarget;
+    const frame = localElement ? artwork : artwork.closest<HTMLElement>('[data-cinematic-space]');
     const rect = frame?.getBoundingClientRect();
     if (!rect || rect.width === 0 || rect.height === 0) return;
     let inverse: DragState['inverse'];
-    if (localElement && typeof DOMMatrix !== 'undefined') {
+    if ((localElement || pose) && typeof DOMMatrix !== 'undefined') {
       // Convert screen pointer motion back through the camera and all transformed parents.
       // The child's individual translate lives before its own rotate/scale, so exclude itself.
       let matrix = new DOMMatrix();
-      for (let node = event.currentTarget.parentElement; node; node = node.parentElement) {
+      for (let node = artwork.parentElement; node; node = node.parentElement) {
         const style = getComputedStyle(node);
         const scale = style.scale === 'none' ? [1, 1] : style.scale.split(' ').map(Number);
         const rotation = Number.parseFloat(style.rotate) || 0;
@@ -129,14 +148,17 @@ export default function CinematicSceneLayer({
       mode,
       startX: event.clientX,
       startY: event.clientY,
-      rectW: inverse ? event.currentTarget.offsetWidth : localElement ? rect.width / (layer.w / 100) : rect.width,
-      rectH: inverse ? event.currentTarget.offsetHeight : localElement ? rect.height / ((layer.h ?? layer.w) / 100) : rect.height,
+      rectW: inverse ? artwork.offsetWidth : localElement ? rect.width / (layer.w / 100) : rect.width,
+      rectH: inverse ? artwork.offsetHeight : localElement ? rect.height / ((layer.h ?? layer.w) / 100) : rect.height,
       layerX: layer.x,
       layerY: layer.y,
       layerW: layer.w,
       layerH: layer.h,
+      lockAspect: layer.lockAspect,
       moved: false,
       inverse,
+      pose,
+      screenWidth: artwork.getBoundingClientRect().width,
     };
   };
 
@@ -154,9 +176,23 @@ export default function CinematicSceneLayer({
       if (Math.abs(event.clientX - drag.startX) >= Math.abs(event.clientY - drag.startY)) dy = 0;
       else dx = 0;
     }
+    if (drag.pose) {
+      const x = drag.inverse ? drag.inverse.a * screenX + drag.inverse.c * screenY : screenX;
+      const y = drag.inverse ? drag.inverse.b * screenX + drag.inverse.d * screenY : screenY;
+      const frameHeight = editor?.frame?.h ?? window.innerHeight;
+      const patch = drag.mode === 'resize'
+        ? { scale: clamp(drag.pose.motion.scale * (1 + screenX * 2 / (drag.screenWidth || 1)), .05, 10) }
+        : { xVw: drag.pose.motion.xVw + (event.shiftKey && dx === 0 ? 0 : x / frameW() * 100),
+            yVh: drag.pose.motion.yVh + (event.shiftKey && dy === 0 ? 0 : y / frameHeight * 100) };
+      pendingPoseRef.current = { effectId: drag.pose.effectId, layerId: layer.id, side: drag.pose.side, patch };
+      if (!rafRef.current) rafRef.current = requestAnimationFrame(flushPatch);
+      return;
+    }
     if (drag.mode === 'resize') {
       const width = clamp(drag.layerW + dx * 2, 3, 200);
-      schedulePatch(drag.layerH === undefined
+      schedulePatch(drag.lockAspect && drag.layerH !== undefined
+        ? resizeCinematicLayer({ w: drag.layerW, h: drag.layerH, lockAspect: true }, 'w', width)
+        : drag.layerH === undefined
         ? { w: width }
         : { w: width, h: clamp(drag.layerH + dy * 2, 3, 200) });
     } else {
@@ -179,8 +215,15 @@ export default function CinematicSceneLayer({
   };
 
   const keyDown = (event: ReactKeyboardEvent<HTMLDivElement>) => {
-    if (!editable || layer.locked) return;
+    if (!editable || !canHit || layer.locked) return;
     const step = event.shiftKey ? 2 : 0.5;
+    if (pose && ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(event.key)) {
+      event.preventDefault(); event.stopPropagation();
+      window.parent.postMessage({ type: 'PREVIEW_CINEMATIC_EFFECT_POSE_EDIT', effectId: pose.effectId, layerId: layer.id, side: pose.side,
+        patch: { xVw: pose.motion.xVw + (event.key === 'ArrowLeft' ? -step : event.key === 'ArrowRight' ? step : 0),
+          yVh: pose.motion.yVh + (event.key === 'ArrowUp' ? -step : event.key === 'ArrowDown' ? step : 0) } }, window.location.origin);
+      return;
+    }
     const patch: Partial<CinematicWorldGeometry> = {};
     const min = localElement ? -500 : -25, max = localElement ? 500 : 125;
     if (event.key === 'ArrowLeft') patch.x = clamp(layer.x - step, min, max);
@@ -214,6 +257,11 @@ export default function CinematicSceneLayer({
       rotate: `${layer.rotation + ambientRotate}deg`,
       position: localElement.props.style?.position ?? (['figure', 'strong', 'small', 'b', 'i', 'em', 'h2', 'p', 'time', 'address'].includes(String(localElement.type)) ? 'relative' : undefined),
       display: ['time', 'address'].includes(String(localElement.type)) ? 'block' : localElement.props.style?.display,
+      ...(layer.textWidth === undefined ? {} : {
+        width: `${clamp(layer.textWidth, 5, 200)}%`, minWidth: 0, maxWidth: 'none',
+        ...(layer.kind === 'text' ? { display: 'block' } : {}),
+        whiteSpace: 'pre-wrap', overflowWrap: 'anywhere', boxSizing: 'border-box',
+      } as CSSProperties),
       zIndex: layer.z || localElement.props.style?.zIndex,
       opacity: layer.opacity * visibility * (ambient?.opacity ?? 1) === 1 ? localElement.props.style?.opacity : layer.opacity * visibility * (ambient?.opacity ?? 1),
       ...(layer.color ? { color: layer.color } : {}),
@@ -225,11 +273,11 @@ export default function CinematicSceneLayer({
       ...(layer.letterSpacing === undefined ? {} : { letterSpacing: `${layer.letterSpacing}em` }),
       ...(layer.fill ? { background: layer.fill } : {}),
       ...(layer.radius === undefined ? {} : { borderRadius: layer.radius }),
-      ...(layer.borderColor ? { borderColor: layer.borderColor } : {}),
-      ...(layer.borderWidth === undefined ? {} : { borderWidth: layer.borderWidth, borderStyle: 'solid' } as CSSProperties),
+      ...(layer.borderColor && layer.part !== 'frames' ? { borderColor: layer.borderColor } : {}),
+      ...(layer.borderWidth === undefined || layer.part === 'frames' ? {} : { borderWidth: layer.borderWidth, borderStyle: 'solid' } as CSSProperties),
       filter: ambient?.blur ? `blur(${ambient.blur}px)` : localElement.props.style?.filter,
       outline: selected ? '2px solid #b48642' : undefined, outlineOffset: selected ? 3 : undefined,
-      pointerEvents: editable ? layer.opacity * visibility > .02 ? 'auto' : 'none' : undefined, touchAction: editable ? 'none' : undefined,
+      pointerEvents: !canHit ? 'none' : editable ? 'auto' : localElement.props.style?.pointerEvents, touchAction: editable ? 'none' : undefined,
       cursor: editable ? layer.locked ? 'not-allowed' : 'move' : undefined,
       ...cssVars,
     };
@@ -240,8 +288,9 @@ export default function CinematicSceneLayer({
       ...(layer.src && layer.kind === 'img' && localElement.type === 'figure' ? { children: <img src={layer.src} alt="Selected memory artwork" style={{ width: '100%', height: '100%', objectFit: layer.fit ?? 'cover' }} /> } : {}),
       ...(layer.kind === 'text' && layer.text ? { children: resolveBindings(layer.text, slotProps), dangerouslySetInnerHTML: undefined } : {}),
       ...{
-        'data-cinematic-layer': layer.id, 'data-cinematic-parent': layer.parentId,
-        role: editable ? 'button' : undefined, tabIndex: editable ? 0 : undefined,
+        'data-cinematic-layer': layer.id, 'data-cinematic-parent': layer.parentId, 'data-effect-pose': pose?.side,
+        role: editable ? 'button' : undefined, tabIndex: editable && canHit ? 0 : undefined,
+        'aria-hidden': !canHit || undefined,
         'aria-label': editable ? `Edit ${layer.label}` : undefined,
         onPointerDown: editable ? (event: ReactPointerEvent<HTMLElement>) => beginDrag(event, 'move') : undefined,
         onPointerMove: editable ? moveDrag : undefined, onPointerUp: editable ? endDrag : undefined,
@@ -249,7 +298,7 @@ export default function CinematicSceneLayer({
         onClick: editable ? (event: React.MouseEvent) => {
           event.stopPropagation();
           if (suppressClickRef.current) { suppressClickRef.current = false; return; }
-          postSelection(selected ? undefined : layer.id);
+          postSelection(layer.id);
         } : undefined,
       },
     });
@@ -268,7 +317,7 @@ export default function CinematicSceneLayer({
     opacity: layer.opacity * visibility * (ambient?.opacity ?? 1),
     filter: ambient?.blur ? `blur(${ambient.blur}px)` : undefined,
     transform: `translate(-50%, -50%) translate(${ambientX}%, ${ambientY}%) translate(calc(var(--fvw, 100vw) * ${ambientXVw / 100}), calc(var(--fvh, 100vh) * ${ambientYVh / 100})) scale(${ambientScale}) rotate(${layer.rotation + ambientRotate}deg) scaleX(${layer.flipX ? -1 : 1})`,
-    pointerEvents: (editable || interactive) && layer.opacity * visibility * (ambient?.opacity ?? 1) > 0.02 ? 'auto' : 'none',
+    pointerEvents: (editable || interactive) && canHit ? 'auto' : 'none',
     touchAction: editable ? 'none' : 'auto',
     ...cssVars,
   };
@@ -278,9 +327,11 @@ export default function CinematicSceneLayer({
       className={`${boxClassName} ${className ?? ''} ${selected ? selectedClassName : ''}`}
       style={boxStyle}
       data-cinematic-layer={layer.id}
+      data-effect-pose={pose?.side}
       data-cinematic-set={layer.group}
       role={editable ? 'button' : undefined}
-      tabIndex={editable ? 0 : undefined}
+      tabIndex={editable && canHit ? 0 : undefined}
+      aria-hidden={!canHit || undefined}
       aria-label={editable ? `Edit ${layer.label}` : undefined}
       onKeyDown={keyDown}
       onClick={(event) => {
@@ -289,7 +340,7 @@ export default function CinematicSceneLayer({
           suppressClickRef.current = false;
           return;
         }
-        postSelection(selected ? undefined : layer.id);
+        postSelection(layer.id);
       }}
       onPointerDown={(event) => beginDrag(event, 'move')}
       onPointerMove={moveDrag}

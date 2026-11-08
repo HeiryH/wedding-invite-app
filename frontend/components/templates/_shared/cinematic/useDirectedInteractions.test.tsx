@@ -28,12 +28,29 @@ describe('directed interactions', () => {
     expect(result.current.recordFor(world.find((layer) => layer.id === 'groom')!)?.id).toBe('rsvp');
   });
   it('focuses a saved beat and returns to the original playhead on a second click', () => {
-    const record = { ...defaults.interactions[0], availabilityTrackId: '' };
+    const record = { ...defaults.interactions[0], action: 'focus' as const, targetBeatId: 'programme-focus', returnMode: 'previous' as const, availabilityTrackId: '' };
     const seek = vi.fn();
     const args = { definitions: [record], tracks: sequence.tracks, beats: sequence.beats, progress: .6, seek, editing: false };
     const { result, rerender } = renderHook((props) => useDirectedInteractions(props), { initialProps: args, wrapper: SheetsProvider });
     act(() => result.current.trigger(record)); expect(seek).toHaveBeenLastCalledWith(sequence.beats.find((beat) => beat.id === record.targetBeatId)!.at);
     rerender({ ...args, progress: .7 }); act(() => result.current.trigger(record)); expect(seek).toHaveBeenLastCalledWith(.6);
+  });
+  it('opens and reopens the programme without camera beats or availability tracks', () => {
+    vi.useFakeTimers(); vi.spyOn(window, 'scrollTo').mockImplementation(() => {});
+    const record = defaults.interactions[0];
+    const seek = vi.fn();
+    const { result } = renderHook(() => useDirectedInteractions({ definitions: [record], tracks: [], beats: [], progress: .7, seek, editing: false }), { wrapper: SheetsProvider });
+    act(() => result.current.trigger(record));
+    expect(result.current.isOpen).toBe(true);
+    expect(document.body.style.position).toBe('fixed');
+    act(() => result.current.close());
+    act(() => vi.advanceTimersByTime(record.closeMs + 1));
+    expect(result.current.isOpen).toBe(false);
+    expect(document.body.style.position).toBe('');
+    act(() => result.current.trigger(record));
+    expect(result.current.isOpen).toBe(true);
+    expect(seek).not.toHaveBeenCalled();
+    act(() => result.current.close());
   });
   it('does not run actions in editing mode or outside availability', () => {
     const record = defaults.interactions[1];

@@ -12,7 +12,7 @@ export function expandCinematicParts(layers: CinematicWorldLayer[], options: Cin
     if (!index) return true;
     const root = cinematicAncestors(layer, layers).at(-1);
     if (index[1] === 'frame' && root?.behavior === 'memory-wall' && options.frames !== undefined) return Number(index[2]) < options.frames;
-    if (root?.behavior === 'programme-board' && options.programmeItems !== undefined) return Number(index[2]) < (options.programmeItems || 3);
+    if (root?.behavior === 'programme-board' && options.programmeItems !== undefined) return Number(index[2]) < options.programmeItems;
     return true;
   });
   const byId = new Map(active.map((layer) => [layer.id, layer]));
@@ -30,7 +30,10 @@ export function expandCinematicParts(layers: CinematicWorldLayer[], options: Cin
       add('artwork', 'Board artwork', 'img');
       const copy = add('copy', 'Programme copy', 'functional');
       add('title', 'Programme heading', 'text', copy);
-      for (let i = 0; i < Math.min(100, options.programmeItems || 3); i++) {
+      add('items', 'Programme items', 'functional', copy);
+      add('venue', 'Programme venue', 'text', copy);
+      add('calendar', 'Programme calendar label', 'text', copy);
+      for (let i = 0; i < Math.min(100, options.programmeItems ?? 3); i++) {
         const row = add(`row-${i}`, `Programme entry ${i + 1}`, 'functional', copy);
         add(`time-${i}`, `Time ${i + 1}`, 'text', row);
         add(`label-${i}`, `Activity ${i + 1}`, 'text', row);
@@ -62,6 +65,21 @@ export function expandCinematicParts(layers: CinematicWorldLayer[], options: Cin
     }
   }
   return [...byId.values()];
+}
+
+/** Keep legacy leaf records for lossless rendering/storage, but expose useful editing units only. */
+export function isCinematicEditorLayer(layer: CinematicWorldLayer, root?: CinematicWorldLayer): boolean {
+  if (root?.behavior === 'programme-board') return !['artwork', 'copy'].includes(layer.part ?? '') && !/^(row|time|label)-\d+$/.test(layer.part ?? '');
+  if (root?.behavior === 'memory-wall') return !/^frame-\d+$/.test(layer.part ?? '');
+  return true;
+}
+
+export function cinematicEditorLayers(layers: CinematicWorldLayer[]): CinematicWorldLayer[] {
+  const visible = layers.filter((layer) => isCinematicEditorLayer(layer, cinematicAncestors(layer, layers).at(-1)));
+  const ids = new Set(visible.map((layer) => layer.id));
+  return visible.map((layer) => layer.parentId && !ids.has(layer.parentId)
+    ? { ...layer, parentId: cinematicAncestors(layer, layers).find((parent) => ids.has(parent.id))?.id }
+    : layer);
 }
 
 export function cinematicAncestors(layer: CinematicWorldLayer, layers: CinematicWorldLayer[]): CinematicWorldLayer[] {

@@ -28,6 +28,7 @@ const CODES = [
   'dino-doodle-party',
   'sandy-beach',
   'painted-promise',
+  'inkbound-revelry',
 ];
 
 const BASE = 'http://localhost:3000';

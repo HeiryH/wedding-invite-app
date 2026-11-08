@@ -113,7 +113,9 @@ export function resolveSectionOrder(
   ];
   if (!raw) return canonical;
 
-  const stored = raw.split(',').map((s) => s.trim()) as SectionCode[];
+  const entries = raw.split(',').map((entry) => entry.trim());
+  const removed = new Set(entries.filter((entry) => entry.startsWith('!')).map((entry) => entry.slice(1)));
+  const stored = entries.filter((entry) => canonical.includes(entry as SectionCode)) as SectionCode[];
   // A gated section (walimah/itinerary/photobooth) that becomes available *after* a couple last
   // saved an explicit order — e.g. itinerary rows added once section reordering had already
   // written a full list without it — would otherwise be missing forever: `stored` can only be
@@ -123,7 +125,7 @@ export function resolveSectionOrder(
   // always at the very end.
   const merged = [...stored];
   for (const code of canonical) {
-    if (merged.includes(code)) continue;
+    if (merged.includes(code) || removed.has(code)) continue;
     let insertAt = merged.length;
     for (let i = canonical.indexOf(code) - 1; i >= 0; i--) {
       const idx = merged.indexOf(canonical[i]);
@@ -132,12 +134,7 @@ export function resolveSectionOrder(
     merged.splice(insertAt, 0, code);
   }
 
-  return merged.filter((code) => {
-    if (code === 'walimah') return hasWalimah;
-    if (code === 'itinerary') return hasItinerary;
-    if (code === 'photobooth') return hasPhotobooth;
-    return true;
-  });
+  return merged.filter((code) => !removed.has(code));
 }
 
 // ── Calendar links ───────────────────────────────────────────────────────────

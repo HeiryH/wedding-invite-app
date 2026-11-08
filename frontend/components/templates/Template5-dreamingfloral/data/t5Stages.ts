@@ -12,16 +12,11 @@ import type { Layer, StageDef } from '@/components/templates/_shared/types';
  *    weddings are unchanged until a PRO couple moves one.
  *  - **decorative** layers (text/shape/uploaded img) — added by the couple in the Adjust dock.
  *
- * There's no background image (`bg: ''`). The welcome section's `firstName`/`secondName`
- * (position-based — T5's own `brideFirst` config toggle decides who occupies which slot, so the
- * anchor follows the DOM slot, not bride/groom identity, consistent with how anchors work
- * everywhere else) and `connector` are real plain elements in every layout variant
- * (minimal/ornate/classic) and are anchored the same as any other template. The heading theme
- * label is arc-text (`<textPath>`) in the ornate/classic variants — left un-anchored for now (SVG
- * fill/positioning needs different handling than a CSS `color`/transform, unlike a plain element).
+ * The name anchors follow display position, so they respect the template's brideFirst toggle.
+ * The welcome heading anchor styles HTML in Minimal and SVG text in Classic and Ornate.
  *
- * The rsvp/envelope section carries exactly one layer, `kind: 'scrollVideo'` — the GSAP
- * ScrollTrigger + canvas chromakey effect (see `_shared/effects/ScrollVideoLayer.tsx`). It's
+ * The RSVP envelope's scrollVideo is the GSAP scroll-scrub and canvas chromakey effect
+ * (see `_shared/effects/ScrollVideoLayer.tsx`). It's
  * listed/editable here like any other layer (Adjust resolves and patches it the same way), but
  * Template5.tsx renders it directly rather than through the generic `<Layer>` dispatch — geometry
  * doesn't apply (it's not a positioned rectangle) and it needs a `triggerRef` + an `onOpenChange`
@@ -59,6 +54,7 @@ const scrollVideo = (id: string, label: string, effect: Partial<Layer>): Layer =
 
 export const T5_STAGES: Record<string, StageDef> = {
   welcome: stage('welcome', 'Welcome', [
+    anchor('heading', 'Welcome Heading', undefined, { styleable: true }),
     anchor('firstName', 'First Name (position 1)', undefined, { styleable: true, animatable: true }),
     anchor('secondName', 'Second Name (position 2)', undefined, { styleable: true, animatable: true }),
     // Static chrome text (not read from wedding data). Each layout variant's own historical default
@@ -68,8 +64,8 @@ export const T5_STAGES: Record<string, StageDef> = {
     anchor('connector', 'Names Connector', undefined, { hasText: true, styleable: true, animatable: true }),
   ]),
   countdown: stage('countdown', 'Countdown', [
-    anchor('label', 'Countdown Label'),
-    anchor('grid', 'Countdown Timer'),
+    anchor('label', 'Countdown Label', undefined, { styleable: true }),
+    anchor('grid', 'Countdown Timer', undefined, { styleable: true }),
     // Sub-layers: each timer block, nudgeable on its own (nested under the Timer).
     anchor('blk-days', 'Days', 'grid'),
     anchor('blk-hours', 'Hours', 'grid'),
@@ -77,21 +73,29 @@ export const T5_STAGES: Record<string, StageDef> = {
     anchor('blk-sec', 'Seconds', 'grid'),
   ]),
   ceremony: stage('ceremony', 'Ceremony', [
-    anchor('title', 'Ceremony Title'),
+    anchor('title', 'Ceremony Title', undefined, { styleable: true }),
     anchor('card', 'Ceremony Card'),
     // Sub-layers inside the glass card.
-    anchor('body', 'Ceremony Text', 'card'),
-    anchor('names', 'Couple Names', 'card'),
+    anchor('body', 'Ceremony Text', 'card', { styleable: true }),
+    anchor('names', 'Couple Names', 'card', { styleable: true }),
     // Date & location sit outside the glass card as their own rectangles (see Template5.tsx) —
     // previously un-anchored entirely.
     anchor('date', 'Date Card', undefined, { styleable: true, animatable: true }),
     anchor('location', 'Location Card', undefined, { styleable: true, animatable: true }),
   ]),
+  itinerary: stage('itinerary', 'Itinerary', [
+    anchor('title', 'Schedule Title', undefined, { styleable: true }),
+    anchor('items', 'Schedule Items', undefined, { styleable: true }),
+  ]),
+  footer: stage('footer', 'Footer', [
+    anchor('tagline', 'Footer Tagline', undefined, { styleable: true }),
+  ]),
   wishes: stage('wishes', 'Wishes', [
-    anchor('header', 'Wishes Heading'),
+    anchor('header', 'Wishes Heading', undefined, { styleable: true }),
+    anchor('prompt', 'Wishes Prompt', 'header', { styleable: true }),
   ]),
   photos: stage('photos', 'Photos', [
-    anchor('header', 'Photos Heading'),
+    anchor('header', 'Photos Heading', undefined, { styleable: true }),
   ]),
   envelope: stage('envelope', 'Envelope', [
     scrollVideo('video', 'Envelope Video', {
@@ -101,12 +105,19 @@ export const T5_STAGES: Record<string, StageDef> = {
       videoStartSec: 0.5, openThreshold: 0.85, resetSec: 0.2,
       chromaThreshold: 30, chromaFade: 20,
     }),
+    anchor('subtitle', 'RSVP Subtitle', undefined, { styleable: true }),
   ]),
 };
 
-/** Ordered stage ids for the Adjust dock; `photos` only when the photo booth is on. */
-export function t5StageIds(photoBoothEnabled: boolean): string[] {
-  const ids = ['welcome', 'countdown', 'ceremony', 'envelope', 'wishes'];
-  if (photoBoothEnabled) ids.push('photos');
-  return ids;
+const STAGES_BY_SECTION: Partial<Record<string, string[]>> = {
+  welcome: ['welcome', 'countdown'],
+  walimah: ['ceremony'],
+  itinerary: ['itinerary'],
+  rsvp: ['envelope'],
+  wishes: ['wishes'],
+  photobooth: ['photos'],
+};
+
+export function t5StageIds(sections: string[]): string[] {
+  return [...sections.flatMap((section) => STAGES_BY_SECTION[section] ?? []), 'footer'];
 }

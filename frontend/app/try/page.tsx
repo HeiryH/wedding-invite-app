@@ -5,7 +5,6 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { templateService, Template, authService } from '@/lib/api';
 import { TemplateLibrary } from '@/components/templates/TemplateLibrary';
 import { Wordmark } from '@/components/marketing/Wordmark';
-import { getUser } from '@/lib/auth';
 
 // ── Minimal field/input primitives ────────────────────────────────────────────
 
@@ -159,11 +158,7 @@ function TryEditor() {
     }).catch(console.error);
   }, [searchParams]);
 
-  // If already logged in, send to organizer-admin
-  useEffect(() => {
-    const user = getUser();
-    if (user) router.replace('/organizer-admin');
-  }, [router]);
+  // This trial stays public regardless of a cached login, just like /personalise.
 
   // Listen for preview ready
   useEffect(() => {

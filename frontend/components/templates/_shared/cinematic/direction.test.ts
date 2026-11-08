@@ -9,6 +9,14 @@ import { CINEMATIC_ENGINES } from './registry';
 import { editCinematicSceneSets } from './sceneSetEditing';
 
 describe('cinematic director data', () => {
+  it('upgrades the original programme camera action without changing custom actions', () => {
+    const legacy = { ...defaults, interactions: [{ ...defaults.interactions[0], action: 'focus' as const,
+      targetBeatId: 'programme-focus', availabilityTrackId: 'programme-focus-availability', returnMode: 'previous' as const }] };
+    const config = saveCinematicDirection('t15', {}, legacy);
+    expect(resolveCinematicDirection('t15', defaults, config).interactions[0]).toMatchObject({ action: 'programme', targetBeatId: '', availabilityTrackId: '', returnMode: 'stay', lockScroll: true });
+    const custom = { ...legacy, interactions: [{ ...legacy.interactions[0], targetBeatId: 'groom' }] };
+    expect(resolveCinematicDirection('t15', defaults, saveCinematicDirection('t15', {}, custom)).interactions[0]).toMatchObject({ action: 'focus', targetBeatId: 'groom' });
+  });
   it('preserves legacy geometry and content when saving every direction section', () => {
     const legacy = { [cinematicWorldKey('t15', 'mobile')]: JSON.stringify({ layers: [{ id: 'groom', x: 61 }] }), 'walimah.body': '<p>Family invitation</p>' };
     const next = { ...defaults, effects: [], interactions: [], navigation: [], theme: { ...defaults.theme, accent: '#123456' } };

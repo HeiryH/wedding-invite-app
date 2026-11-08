@@ -954,6 +954,60 @@ namespace WeddingInvite.Data.Migrations
                         });
                 });
 
+            modelBuilder.Entity("WeddingInvite.Models.TemplateCaptureJob", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Error")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("ExpiresAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("LeaseToken")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("OwnerEmail")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("PreviewSnapshotJson")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("PublishedDesignHash")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<int?>("PublishedRevision")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("TemplateId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Status", "ExpiresAt");
+
+                    b.HasIndex("TemplateId", "OwnerEmail")
+                        .IsUnique()
+                        .HasFilter("\"Status\" IN ('pending', 'processing', 'ready')");
+
+                    b.ToTable("TemplateCaptureJobs");
+                });
+
             modelBuilder.Entity("WeddingInvite.Models.TemplateConfigDefault", b =>
                 {
                     b.Property<int>("TemplateConfigDefaultId")
@@ -982,6 +1036,62 @@ namespace WeddingInvite.Data.Migrations
                         .IsUnique();
 
                     b.ToTable("TemplateConfigDefaults");
+                });
+
+            modelBuilder.Entity("WeddingInvite.Models.TemplateStudioDraft", b =>
+                {
+                    b.Property<int>("TemplateId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("ConfigJson")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("PublishedFingerprint")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("SampleJson")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("UpdatedDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("TemplateId");
+
+                    b.ToTable("TemplateStudioDrafts");
+                });
+
+            modelBuilder.Entity("WeddingInvite.Models.TemplateStudioRevision", b =>
+                {
+                    b.Property<int>("TemplateStudioRevisionId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("ConfigJson")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("PublishedDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Revision")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("TemplateId")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("TemplateStudioRevisionId");
+
+                    b.HasIndex("TemplateId", "Revision")
+                        .IsUnique();
+
+                    b.ToTable("TemplateStudioRevisions");
                 });
 
             modelBuilder.Entity("WeddingInvite.Models.User", b =>
@@ -1204,6 +1314,15 @@ namespace WeddingInvite.Data.Migrations
                     b.Navigation("Event");
                 });
 
+            modelBuilder.Entity("WeddingInvite.Models.TemplateCaptureJob", b =>
+                {
+                    b.HasOne("WeddingInvite.Models.Template", null)
+                        .WithMany()
+                        .HasForeignKey("TemplateId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("WeddingInvite.Models.TemplateConfigDefault", b =>
                 {
                     b.HasOne("WeddingInvite.Models.Template", "Template")
@@ -1213,6 +1332,24 @@ namespace WeddingInvite.Data.Migrations
                         .IsRequired();
 
                     b.Navigation("Template");
+                });
+
+            modelBuilder.Entity("WeddingInvite.Models.TemplateStudioDraft", b =>
+                {
+                    b.HasOne("WeddingInvite.Models.Template", null)
+                        .WithMany()
+                        .HasForeignKey("TemplateId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("WeddingInvite.Models.TemplateStudioRevision", b =>
+                {
+                    b.HasOne("WeddingInvite.Models.Template", null)
+                        .WithMany()
+                        .HasForeignKey("TemplateId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("WeddingInvite.Models.User", b =>

@@ -106,9 +106,12 @@ export default function Stage({
   // Flow mode splits layers into two populations rendered in separate containers (see
   // Stage.module.css's .flowOverlay/.flowStack) — decorative art still positions as a % of the
   // section; slot content flows normally and is what actually gives the section its height.
-  const decorative = def.flow ? visible.filter((l) => l.kind !== 'slot') : visible;
+  const formFlow = def.flow && (def.id === 'rsvp' || def.id === 'wishes') &&
+    visible.some((l) => l.presentation === 'inline' && (l.slot === 'rsvpForm' || l.slot === 'wishForm'));
+  const flows = (l: LayerModel) => l.kind === 'slot' || (formFlow && l.kind === 'text' && (l.id === 'title' || l.id === 'prompt'));
+  const decorative = def.flow ? visible.filter((l) => !flows(l)) : visible;
   const slotLayers = def.flow
-    ? visible.filter((l) => l.kind === 'slot').sort((a, b) => a.order - b.order)
+    ? visible.filter(flows).sort((a, b) => a.order - b.order)
     : [];
 
   return (
@@ -117,6 +120,7 @@ export default function Stage({
       className={styles.stage}
       data-stage={def.id}
       data-flow={def.flow || undefined}
+      data-form-flow={formFlow || undefined}
       data-has-canvas={canvasDef ? true : undefined}
       data-seen={seen}
       data-editing={editing || undefined}

@@ -3,6 +3,9 @@
 import { useCallback, useEffect, useMemo, useState, type CSSProperties } from 'react';
 import type { Wedding, Wish, Photo, ItineraryItem, SeatingTable } from '@/lib/api';
 import { resolveSectionOrder, toHijriString, type SectionCode } from '@/lib/templateUtils';
+import CoupleGallery, { orderedCoupleGallery } from '@/components/templates/_shared/CoupleGallery';
+import SectionNavigation from '@/components/templates/_shared/nav/SectionNavigation';
+import { MusicSlot } from '@/components/templates/_shared/slots/ChromeSlots';
 import { useReducedMotion } from '@/lib/useReducedMotion';
 import { useParallax } from '@/components/templates/_shared/hooks/useParallax';
 import { useStageReveal } from '@/components/templates/_shared/hooks/useStageReveal';
@@ -48,6 +51,7 @@ interface Template12Props {
   onUploadPhoto?: SlotProps['onUploadPhoto'];
   wishes: Wish[];
   photos: Photo[];
+  coupleMedia?: Photo[];
   photoBoothEnabled: boolean;
   customConfig?: Record<string, string>;
   itinerary?: ItineraryItem[];
@@ -59,7 +63,7 @@ interface Template12Props {
 const ENGINE = { assetRoot: '/templates/dreamy-woodland', assetSizes: {}, slotRegistry: SLOT_REGISTRY };
 
 export default function Template12({
-  wedding, onRSVP, onSubmitWish, onUploadPhoto, wishes, photos, photoBoothEnabled,
+  wedding, onRSVP, onSubmitWish, onUploadPhoto, wishes, photos, coupleMedia, photoBoothEnabled,
   customConfig, itinerary = [], seatingEnabled = false, tables = [], editor,
 }: Template12Props) {
   const t = useCallback((key: string, fallback: string) => {
@@ -72,6 +76,7 @@ export default function Template12({
     return fallback;
   }, [customConfig]);
   const sectionOrder = resolveSectionOrder(customConfig?.['section.order'], true, itinerary.length > 0, photoBoothEnabled);
+  const gallery = orderedCoupleGallery(coupleMedia, customConfig?.['gallery.order']);
   const reduced = useReducedMotion();
   const { rootRef, seen } = useStageReveal(reduced, sectionOrder.join(','));
   useParallax(rootRef, 'on', reduced);
@@ -185,8 +190,11 @@ export default function Template12({
             );
             return null;
           })}
+          <CoupleGallery photos={gallery} title={t('gallery.title', 'Our photos')} fit={t('gallery.fit', 'cover')} layout={t('gallery.layout', 'grid')} />
           <footer className={styles.footer}>{t('footer.tagline', 'With love, and with joy')}</footer>
-          <SheetHost groups={sheets} slotProps={slotProps} editor={editor} />
+          <SectionNavigation sections={gallery.length ? [...sectionOrder, 'couple-gallery'] : sectionOrder} config={customConfig} />
+      <MusicSlot t={t} editing={editing} autoPlay={false} />
+      <SheetHost groups={sheets} slotProps={slotProps} editor={editor} />
         </div>
       </EngineProvider>
     </SlotFlowProviders>

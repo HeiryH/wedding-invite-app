@@ -23,6 +23,7 @@ export default function TemplateWrapper({
   seatingEnabled,
   tables,
   editor,
+  previewOnly,
   onTemplateReady,
 }: TemplateRenderProps & { onTemplateReady?: () => void }) {
   // Pinned by the Adjust panel while editing (matches every hand-coded template's own convention).
@@ -97,6 +98,7 @@ export default function TemplateWrapper({
           seatingEnabled={seatingEnabled}
           tables={tables}
           editor={editor}
+          previewOnly={previewOnly}
         />
         <TemplateReady onReady={onTemplateReady} />
       </Suspense>

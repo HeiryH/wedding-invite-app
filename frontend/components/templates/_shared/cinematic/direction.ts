@@ -5,6 +5,13 @@ import { cinematicTrackPhase, resolveCinematicTrackClip, type CinematicEasing, t
 export interface CinematicMotion {
   x: number; y: number; xVw: number; yVh: number; scale: number; rotate: number; opacity: number; blur: number;
 }
+/** Transient editor state, never persisted into guest configuration. */
+export interface CinematicEffectPose {
+  effectId: string;
+  layerId: string;
+  side: 'from' | 'to';
+  motion: CinematicMotion;
+}
 export interface CinematicEffect {
   id: string; label: string; enabled: boolean; trackId: string; target: 'layer' | 'world'; targetId: string;
   kind: 'transform' | 'drift' | 'blur'; easing: CinematicEasing;
@@ -13,7 +20,7 @@ export interface CinematicEffect {
 }
 export interface CinematicInteraction {
   id: string; label: string; enabled: boolean; triggerLayerId: string;
-  action: 'rsvp' | 'wish' | 'info' | 'focus' | 'navigate' | 'return';
+  action: 'rsvp' | 'wish' | 'programme' | 'info' | 'focus' | 'navigate' | 'return';
   availabilityTrackId: string; resetTrackId: string; targetBeatId: string;
   returnMode: 'scene' | 'previous' | 'stay'; returnSetIds: string[]; revealSetIds: string[];
   lockScroll: boolean; openMs: number; closeMs: number; infoTitle: string; infoBody: string;
@@ -80,7 +87,7 @@ export function normalizeInteraction(value: unknown): CinematicInteraction | und
   if (!object(value) || !text(value.id)) return undefined;
   return {
     id: text(value.id), label: text(value.label, 'Interaction'), enabled: value.enabled !== false,
-    triggerLayerId: text(value.triggerLayerId), action: choose(value.action, ['rsvp', 'wish', 'info', 'focus', 'navigate', 'return'], 'info'),
+    triggerLayerId: text(value.triggerLayerId), action: choose(value.action, ['rsvp', 'wish', 'programme', 'info', 'focus', 'navigate', 'return'], 'info'),
     availabilityTrackId: text(value.availabilityTrackId), resetTrackId: text(value.resetTrackId), targetBeatId: text(value.targetBeatId),
     returnMode: choose(value.returnMode, ['scene', 'previous', 'stay'], 'scene'),
     returnSetIds: ids(value.returnSetIds), revealSetIds: ids(value.revealSetIds), lockScroll: value.lockScroll !== false,
@@ -110,7 +117,17 @@ export function resolveCinematicDirection(prefix: string, defaults: CinematicDir
   const color = (value: unknown, fallback: string) => typeof value === 'string' && /^#[\da-f]{3,8}$/i.test(value) ? value : fallback;
   return {
     effects: effectSource.flatMap((value) => { const effect = normalizeEffect(value); return effect ? [effect] : []; }),
-    interactions: interactionSource.flatMap((value) => { const interaction = normalizeInteraction(value); return interaction ? [interaction] : []; }),
+    interactions: interactionSource.flatMap((value) => {
+      const interaction = normalizeInteraction(value);
+      if (!interaction) return [];
+      // Upgrade only the original shipped focus action, not custom/retargeted actions.
+      const shipped = defaults.interactions.find((item) => item.id === interaction.id);
+      if (shipped?.action === 'programme' && interaction.action === 'focus' && interaction.targetBeatId === interaction.id) {
+        return [{ ...interaction, action: 'programme' as const, availabilityTrackId: '', targetBeatId: '',
+          returnMode: 'stay' as const, lockScroll: true }];
+      }
+      return [interaction];
+    }),
     pacing: { mobileVh: number(pacing.mobileVh, defaults.pacing.mobileVh, 300, 30000), desktopVh: number(pacing.desktopVh, defaults.pacing.desktopVh, 300, 30000), beats: beatPacing },
     navigation: anchors.flatMap((value) => object(value) && /^[a-zA-Z][\w-]{0,79}$/.test(text(value.id)) ? [{
       id: text(value.id), label: text(value.label, text(value.id)),
@@ -148,14 +165,15 @@ export const effectEase = (value: number, easing: CinematicEasing) => easing ===
   : easing === 'ease-out' ? 1 - (1 - value) ** 3 : easing === 'ease-in-out'
     ? value < .5 ? 4 * value ** 3 : 1 - (-2 * value + 2) ** 3 / 2 : value;
 
-export function sampleCinematicEffects(effects: CinematicEffect[], tracks: CinematicSequenceTrack[], progress: number, breakpoint: Breakpoint) {
+export function sampleCinematicEffects(effects: CinematicEffect[], tracks: CinematicSequenceTrack[], progress: number, breakpoint: Breakpoint, pose?: Pick<CinematicEffectPose, 'effectId' | 'side'>) {
   const byId = new Map(tracks.map((track) => [track.id, track]));
   const layers = new Map<string, CinematicMotion>();
   let world = { ...MOTION_DEFAULT };
   for (const base of effects) {
     const effect = breakpoint === 'desktop' ? { ...base, ...base.desktop } : base;
     if (!effect.enabled || !byId.has(effect.trackId)) continue;
-    const phase = effectEase(cinematicTrackPhase(progress, byId.get(effect.trackId), byId), effect.easing);
+    const phase = pose?.effectId === effect.id ? (pose.side === 'from' ? 0 : 1)
+      : effectEase(cinematicTrackPhase(progress, byId.get(effect.trackId), byId), effect.easing);
     const motion = Object.fromEntries(Object.keys(MOTION_DEFAULT).map((key) => [key,
       effect.from[key as keyof CinematicMotion] + (effect.to[key as keyof CinematicMotion] - effect.from[key as keyof CinematicMotion]) * phase,
     ])) as unknown as CinematicMotion;

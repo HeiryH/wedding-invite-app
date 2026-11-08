@@ -10,9 +10,9 @@ import { getTemplateComponent, TEMPLATE_COMPONENTS } from './templateComponents'
 import { templateIdForCode, TEMPLATE_IDS_BY_CODE } from './templateCatalog';
 
 describe('shared lazy template registry', () => {
-  it('declares all fifteen boundaries without running any template loader', () => {
-    expect(Object.keys(TEMPLATE_COMPONENTS).map(Number)).toEqual(Array.from({ length: 15 }, (_, index) => index + 1));
-    expect(state.loaders).toHaveLength(15);
+  it('declares all sixteen boundaries without running any template loader', () => {
+    expect(Object.keys(TEMPLATE_COMPONENTS).map(Number)).toEqual(Array.from({ length: 16 }, (_, index) => index + 1));
+    expect(state.loaders).toHaveLength(16);
     expect(state.paintedLoads).toBe(0);
   });
   it('selects the requested component and keeps the existing unknown-id fallback', () => {

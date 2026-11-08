@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
+import { useState, useMemo, useRef, useCallback } from 'react';
 import type { CSSProperties } from 'react';
 import {
   Wedding, Wish, Photo, ItineraryItem, SeatingTable, CreateWish,
@@ -19,8 +19,10 @@ import Stage from '@/components/templates/_shared/Stage';
 import HorizontalRail, { type RailPanel } from '@/components/templates/_shared/HorizontalRail';
 import { SLOT_REGISTRY, sheetLayerGroups, stageHasContent, visibleSlotLayers } from '@/components/templates/_shared/slots';
 import { SlotFlowProviders } from '@/components/templates/_shared/slots/FlowProviders';
+import CoupleGallery, { orderedCoupleGallery } from '@/components/templates/_shared/CoupleGallery';
 import SheetHost from '@/components/templates/_shared/SheetHost';
 import { fontVar } from '@/lib/fonts/registry';
+import { useScrollSection } from '@/components/templates/_shared/nav/useScrollSection';
 import TemplateNav, { type NavLayout } from '@/components/templates/_shared/nav/TemplateNav';
 import styles from './Template7.module.css';
 
@@ -97,6 +99,7 @@ export default function Template7({
   photoBoothEnabled,
   seatingEnabled = false,
   tables = [],
+  coupleMedia,
   customConfig,
   itinerary = [],
   editor,
@@ -113,7 +116,6 @@ export default function Template7({
   // lay out the mobile composition without resizing their window.
   const breakpoint: Breakpoint = useBreakpoint(editing ? editor!.breakpoint : undefined);
 
-  const [activeSection, setActiveSection] = useState('welcome');
   const [musicPlaying, setMusicPlaying] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
@@ -158,17 +160,22 @@ export default function Template7({
     } as CSSProperties)
     : ({} as CSSProperties);
 
+  const gallery = useMemo(() => orderedCoupleGallery(coupleMedia, customConfig?.['gallery.order']), [coupleMedia, customConfig?.['gallery.order']]);
+  const placement = t('gallery.placement', 'gallery');
+  const featuredPortrait = placement === 'gallery' ? undefined : gallery[0];
+  const hasGallery = gallery.length > 0 && placement !== 'scene';
+
   const slotProps: SlotProps = useMemo(
     () => ({
       wedding, t, wishes, photos, tables, itinerary,
       seatingEnabled, photoBoothEnabled,
       onRSVP, onSubmitWish, onUploadPhoto,
-      editing,
+      editing, featuredPortrait,
       // The hero slot uses these to resolve its own sub-layers (theme/names/date/timer).
       config: customConfig, breakpoint, editor,
     }),
     [wedding, t, wishes, photos, tables, itinerary, seatingEnabled, photoBoothEnabled,
-     onRSVP, onSubmitWish, onUploadPhoto, editing, customConfig, breakpoint, editor],
+     onRSVP, onSubmitWish, onUploadPhoto, editing, featuredPortrait, customConfig, breakpoint, editor],
   );
 
   // `section.order` keeps the six logical codes shared with every other template; T7 expands
@@ -177,11 +184,11 @@ export default function Template7({
     () =>
       resolveSectionOrder(
         t('section.order', 'welcome,walimah,rsvp,itinerary,wishes,photobooth'),
-        Boolean(t('walimah.body', '')),
+        Boolean(t('walimah.body', '') || featuredPortrait),
         itinerary.length > 0,
         photoBoothEnabled,
       ),
-    [t, itinerary.length, photoBoothEnabled],
+    [t, itinerary.length, photoBoothEnabled, featuredPortrait],
   );
 
   const stageIds = useMemo(
@@ -218,29 +225,7 @@ export default function Template7({
     return out;
   }, [sections, stages]);
 
-  // Which nav pill lights up. All three ceremony stages belong to one pill.
-  useEffect(() => {
-    const root = rootRef.current;
-    if (!root) return;
-    const stageToSection = new Map<string, string>();
-    for (const [code, ids] of Object.entries(STAGE_GROUPS)) {
-      for (const id of ids) stageToSection.set(id, code);
-    }
-
-    const io = new IntersectionObserver(
-      (entries) => {
-        const visible = entries
-          .filter((e) => e.isIntersecting)
-          .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
-        if (!visible) return;
-        const id = (visible.target as HTMLElement).dataset.stage!;
-        setActiveSection(stageToSection.get(id) ?? id);
-      },
-      { threshold: [0.35, 0.6] },
-    );
-    root.querySelectorAll('[data-stage]').forEach((s) => io.observe(s));
-    return () => io.disconnect();
-  }, [rootRef, stageIds]);
+  const activeSection = useScrollSection({ rootRef, stageGroups: STAGE_GROUPS });
 
   const toggleMusic = () => {
     const audio = audioRef.current;
@@ -251,14 +236,16 @@ export default function Template7({
   };
 
   const navTo = (code: string) => {
-    const first = STAGE_GROUPS[code]?.[0];
+    const first = code === 'couple-gallery' ? code : STAGE_GROUPS[code]?.[0];
     if (first) document.getElementById(first)?.scrollIntoView({ behavior: 'smooth' });
   };
 
-  const navItems = sections.map((code) => ({
+  const navItems: { id: string; label: string }[] = sections.map((code) => ({
     id: code,
     label: t(NAV_KEY[code], NAV_FALLBACK[code]),
   }));
+
+  if (hasGallery) navItems.push({ id: 'couple-gallery', label: t('gallery.title', 'Our photos') });
 
   return (
     <SlotFlowProviders>
@@ -294,14 +281,7 @@ export default function Template7({
           fontVar(customConfig?.['t7.layout.slotTheme.bodyFont'])
           ?? fontVar(customConfig?.['t7.layout.slotTheme.headingFont'])
           ?? fontVar('eb-garamond'),
-        // T7's hero scrim (behind the countdown/couple names) stays always-on regardless of Card
-        // style — it's protecting legibility over the busiest single spot on the page, not a
-        // decorative card a couple would want to switch off. `--slot-panel-*` (every other
-        // content slot — walimah/couple/details/RSVP/wishes) is the opposite: 'none' (default)
-        // leaves it fully transparent, and only 'radial'/'glass' add a backing, each building its
-        // own complete `--slot-panel-bg` — see cardStyleVars below.
-        '--slot-hero-scrim-1': 'rgba(244, 241, 234, 0.88)',
-        '--slot-hero-scrim-2': 'rgba(244, 241, 234, 0.62)',
+        '--slot-hero-background': 'none',
         '--slot-accent-ink': '#efebe1',
         '--slot-radius': '0',
         ...cardStyleVars,
@@ -373,12 +353,16 @@ export default function Template7({
         ));
       })}
 
+      {hasGallery && <CoupleGallery photos={gallery} title={t('gallery.title', 'Our photos')}
+        fit={t('gallery.fit', 'cover')} layout={t('gallery.layout', 'carousel')} />}
+
       {/* The art is baked monochrome sepia, so one multiply pass re-tones every stage at once. */}
       <div className={styles.tint} style={{ background: inkTint }} aria-hidden />
       {grain && <div className={styles.grain} aria-hidden />}
 
       <TemplateNav
         items={navItems}
+        config={customConfig}
         active={activeSection}
         onNav={navTo}
         layout={navLayout}

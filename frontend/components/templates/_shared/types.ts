@@ -179,6 +179,8 @@ export interface Layer {
   containerMinHeight?: number;
   /** kind 'slot' only. Inner padding of the rendered form/content container in px. */
   containerPadding?: number;
+  /** Background alpha as a percentage. An omitted value inherits the template surface. */
+  containerOpacity?: number;
   /** kind 'slot' only. Space between the block's own stacked pieces (title/prompt/button/…), in
    *  `em` of the block's base size so it tracks Text Size. A composite slot reads it as
    *  `--slot-gap`; a single-element slot has nothing to space and ignores it. */
@@ -494,6 +496,7 @@ export interface StageLayout {
 
 export interface SlotProps {
   wedding: Wedding;
+  featuredPortrait?: Photo;
   /** Config lookup bound to the wedding's customConfig. */
   t: (key: string, fallback: string) => string;
   wishes: Wish[];
@@ -562,6 +565,7 @@ export interface EditorHandle {
   /** Editor-only controls for the continuous Cinematic family. Unlike selectedStage/selectedLayer,
    * this is a playhead through one world rather than selection inside one discrete stage. */
   cinematic?: {
+    effectPose?: import('./cinematic/direction').CinematicEffectPose;
     progress: number;
     beatId?: string;
     mode: 'scene' | 'camera-compose' | 'camera-beat';

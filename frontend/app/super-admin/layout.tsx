@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { getUser, logout } from '@/lib/auth';
 import { authService } from '@/lib/api';
 import AdminShell from '@/components/admin/AdminShell';
@@ -23,6 +23,7 @@ const MENU_ITEMS = [
 
 export default function SuperAdminLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
+  const pathname = usePathname();
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -32,6 +33,7 @@ export default function SuperAdminLayout({ children }: { children: React.ReactNo
       router.push('/login');
       return;
     }
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- Read browser-only session metadata after hydration.
     setIsAuthenticated(true);
     setIsLoading(false);
   }, [router]);
@@ -53,6 +55,8 @@ export default function SuperAdminLayout({ children }: { children: React.ReactNo
       </div>
     );
   }
+
+  if (pathname.startsWith('/super-admin/template-studio/')) return <>{children}</>;
 
   return (
     <AdminShell

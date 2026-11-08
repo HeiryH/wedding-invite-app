@@ -17,4 +17,6 @@ export interface TemplateRenderProps {
   seatingEnabled?: boolean;
   tables?: SeatingTable[];
   editor?: EditorHandle;
+  /** Display-only preview: no persistence or success claims, even outside Adjust mode. */
+  previewOnly?: boolean;
 }

@@ -15,6 +15,7 @@ export const TEMPLATE_IDS_BY_CODE = {
   'dino-doodle-party': 13,
   'sandy-beach': 14,
   'painted-promise': 15,
+  'inkbound-revelry': 16,
 } as const;
 
 export function templateIdForCode(code: string) {

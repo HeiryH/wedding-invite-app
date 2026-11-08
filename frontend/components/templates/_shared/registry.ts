@@ -11,6 +11,7 @@ import { T11_STAGES, t11StageIds } from '../Template11-rosehorizon/data/roseHori
 import { T12_STAGES, t12StageIds } from '../Template12-dreamywoodland/data/dreamyWoodlandStages';
 import { T13_STAGES, T13_ASSETS, STAGE_GROUPS as T13_STAGE_GROUPS } from '../Template13-dinodoodle/data/stages';
 import { T14_STAGES, T14_ASSETS, STAGE_GROUPS as T14_STAGE_GROUPS } from '../Template14-sandybeach/data/stages';
+import { T16_STAGES } from '../Template16-inkboundrevelry/stages';
 
 /**
  * Everything a template's `layout` resolution needs, computed once per render in the customize
@@ -76,7 +77,7 @@ export const TEMPLATE_ENGINES: Record<number, TemplateEngine> = {
   2: { keyPrefix: 't2', reveal: false, resolveStages: () => T2_STAGES, stageIds: (ctx) => t2StageIds(ctx.codes) },
   3: { keyPrefix: 't3', reveal: false, resolveStages: () => T3_STAGES, stageIds: (ctx) => t3StageIds(ctx.codes) },
   4: { keyPrefix: 't4', reveal: false, resolveStages: () => T4_STAGES, stageIds: (ctx) => t4StageIds(ctx.photoBoothEnabled) },
-  5: { keyPrefix: 't5', reveal: false, resolveStages: () => T5_STAGES, stageIds: (ctx) => t5StageIds(ctx.photoBoothEnabled) },
+  5: { keyPrefix: 't5', reveal: false, resolveStages: () => T5_STAGES, stageIds: (ctx) => t5StageIds(ctx.codes) },
   6: { keyPrefix: 't6', reveal: false, resolveStages: () => T6_STAGES, stageIds: (ctx) => t6StageIds(ctx.codes) },
   7: {
     keyPrefix: 't7',
@@ -149,6 +150,7 @@ export const TEMPLATE_ENGINES: Record<number, TemplateEngine> = {
     resolveStages: () => T14_STAGES,
     stageIds: (ctx) => ctx.codes.flatMap((c) => T14_STAGE_GROUPS[c] ?? []),
   },
+  16: { keyPrefix: 't16', reveal: false, resolveStages: () => T16_STAGES, stageIds: (ctx) => ctx.codes.filter((id) => id in T16_STAGES) },
 };
 
 /**
@@ -189,8 +191,11 @@ export function sectionAnchorId(
   ctx?: { draftConfig?: Record<string, string> },
 ): string | undefined {
   if (templateId === 4) return T4_SECTION_IDS[block];
+  if (templateId === 5 && block === 'walimah') return 'ceremony';
+  if (templateId === 5 && block === 'photobooth') return 'photos';
   if (block === 'details' || block === 'music' || block === 'navigation') return undefined;
   if (templateId === 7) {
+    if (block === 'couple-gallery') return ctx?.draftConfig?.['gallery.placement'] === 'scene' ? 'ceremony-couple' : block;
     // In the compiled ceremony row, the walimah/couple/details beats' own art is stripped and the
     // shared "Ceremony Backdrop" (ceremony-rail) leads the room — land there instead of the first
     // (now art-less) beat, matching how the Adjust panel's own stage tabs already handle this.

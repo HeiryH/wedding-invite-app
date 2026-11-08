@@ -9,6 +9,7 @@ import { templateIdForCode } from '@/components/templates/templateCatalog';
 import type { TemplateRenderProps } from '@/components/templates/templateTypes';
 import TemplateLoadBoundary, { TemplateLoading, TemplateReady, TemplateUnavailable } from '@/components/templates/TemplateLoadBoundary';
 import { waitForPreviewAssets } from '@/components/templates/previewReadiness';
+import { buildDefaultConfig } from '@/lib/templateConfigSchema';
 
 const DUMMY: Wedding = {
   weddingId: 0,
@@ -153,6 +154,21 @@ function previewPropsForCode(code: string, customConfig: Record<string, string>)
     case 'painted-promise': return { ...PAINTED_PROMISE_PROPS, customConfig: {
       'walimah.body': 'We request the pleasure of your company as Aisha and Adam begin their life together.', ...customConfig,
     } };
+    case 'inkbound-revelry': return {
+      ...props,
+      wedding: { ...DUMMY, templateId: 16, eventType: 'WEDDING', brideName: 'Alya', groomName: 'Idris', weddingDate: '2027-02-14T12:00:00+08:00', venue: 'The Glasshouse' },
+      // Explicit sample-only preview; the actual public route supplies real callbacks and gates.
+      previewOnly: true,
+      editor: { enabled: true, breakpoint: 'mobile' },
+      photoBoothEnabled: true, onUploadPhoto: noOp,
+      itinerary: [
+        { itineraryItemId: 1, eventId: 0, label: 'Guests arrive', detail: '12:00 pm', sortOrder: 0 },
+        { itineraryItemId: 2, eventId: 0, label: 'Lunch & celebration', detail: '12:30 pm', sortOrder: 1 },
+        { itineraryItemId: 3, eventId: 0, label: 'A moment for photographs', detail: '2:00 pm', sortOrder: 2 },
+        { itineraryItemId: 4, eventId: 0, label: 'Until we meet again', detail: '4:00 pm', sortOrder: 3 },
+      ],
+      customConfig: { ...buildDefaultConfig(16), ...customConfig },
+    };
     default: return props;
   }
 }
@@ -199,10 +215,10 @@ function PreviewForCode({ code }: { code: string }) {
     <div
       ref={rootRef}
       style={{
-        width: code === 'dreamy-woodland' || code === 'dino-doodle-party' || code === 'painted-promise' ? '100%' : 390,
-        height: code === 'dreamy-woodland' || code === 'dino-doodle-party' || code === 'painted-promise' ? 'auto' : 700,
+        width: code === 'dreamy-woodland' || code === 'dino-doodle-party' || code === 'painted-promise' || code === 'inkbound-revelry' ? '100%' : 390,
+        height: code === 'dreamy-woodland' || code === 'dino-doodle-party' || code === 'painted-promise' || code === 'inkbound-revelry' ? 'auto' : 700,
         minHeight: 700,
-        overflow: code === 'dreamy-woodland' || code === 'dino-doodle-party' || code === 'painted-promise' ? 'visible' : 'hidden',
+        overflow: code === 'dreamy-woodland' || code === 'dino-doodle-party' || code === 'painted-promise' || code === 'inkbound-revelry' ? 'visible' : 'hidden',
         position: 'relative', margin: 0, padding: 0,
       }}
       {...(ready ? { 'data-preview-ready': 'true' } : {})}

@@ -25,12 +25,12 @@
   gap: var(--slot-gap, 0);
   height: 100%;
   text-align: var(--slot-text-align, center);
-  background: radial-gradient(
+  background: var(--slot-hero-background, radial-gradient(
     ellipse at center,
-    var(--slot-hero-scrim-1, rgba(246, 245, 243, 0.88)) 0%,
-    var(--slot-hero-scrim-2, rgba(246, 245, 243, 0.62)) 55%,
+    rgba(246, 245, 243, 0.88) 0%,
+    rgba(246, 245, 243, 0.62) 55%,
     transparent 78%
-  );
+  ));
 }
 .coupleNames {
   display: flex;
@@ -277,11 +277,11 @@
   padding: var(--slot-container-padding, clamp(1rem, 3cqi, 1.6rem));
   text-align: center;
   background: var(--slot-container-bg, var(--slot-panel-bg, transparent));
-  backdrop-filter: var(--slot-panel-blur, none);
-  -webkit-backdrop-filter: var(--slot-panel-blur, none);
+  backdrop-filter: var(--slot-container-blur, var(--slot-panel-blur, none));
+  -webkit-backdrop-filter: var(--slot-container-blur, var(--slot-panel-blur, none));
   border: var(--slot-container-border, var(--slot-panel-border, none));
   border-radius: var(--slot-container-radius, var(--slot-panel-radius, 0));
-  box-shadow: var(--slot-panel-shadow, none);
+  box-shadow: var(--slot-container-shadow, var(--slot-panel-shadow, none));
 }
 .panelTitle {
   font-family: var(--slot-font-display, system-ui, sans-serif);
@@ -717,6 +717,7 @@
      divergence found investigating the text-size mismatch. */
   container-type: inline-size;
   overflow-y: auto;
+  overscroll-behavior-y: contain;
   /* `env(safe-area-inset-bottom)` is always 0 inside an iframe — there's no real device notch to
      query — so the preview always understated this padding, on top of the sheet's height itself
      being wrong (see max-height above). `--fsab` carries the *emulated* inset from the previewed
@@ -725,6 +726,10 @@
   border-radius: 24px 24px 0 0;
   background: var(--slot-panel-bg, #fdfaf5);
 }
+.sheetCardFlat { box-shadow: none; }
+.sheetCardFlat .panel { background: var(--slot-container-bg, transparent); box-shadow: none; backdrop-filter: none; -webkit-backdrop-filter: none; }
+/* Inactive form steps leave an empty wrapper. Only the visible step can clear the sheet surface. */
+.sheetCard:has(> [data-custom-form-background]:not(:empty)) { background: transparent; }
 .sheetDragHandle {
   width: 2.5rem;
   height: 0.28rem;
@@ -1089,4 +1094,15 @@
   color: #fff;
   font-size: 1.6rem;
   cursor: pointer;
+}
+
+.featuredPortrait {
+  display: block;
+  width: min(68%, 15rem);
+  height: auto;
+  aspect-ratio: 4 / 3;
+  margin: 0 auto .75rem;
+  border: 1px solid currentColor;
+  padding: .2rem;
+  background: var(--slot-accent-ink, #efebe1);
 }

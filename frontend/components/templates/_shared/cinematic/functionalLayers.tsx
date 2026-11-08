@@ -45,19 +45,19 @@ const plainPart = (_part: string, element: ReactElement): ReactNode => element;
 const registry: Record<string, Renderer> = {
   artwork: () => ({}),
   background: (_, context) => ({ className: context.styles.clouds }),
-  'programme-board': ({ layer }, { styles: s, slotProps: { t, itinerary = [] }, editing, available, focused, fire, renderPart: part = plainPart }) => ({
+  'programme-board': ({ layer }, { styles: s, slotProps: { wedding, t, itinerary = [] }, editing, available, fire, renderPart: part = plainPart }) => ({
     interactive: !editing && available,
     children: <div role={editing ? undefined : 'button'} tabIndex={!editing && available ? 0 : undefined} className={s.boardObject} onClick={() => !editing && available && fire()}
       onKeyDown={(event) => { if (!editing && available && (event.key === 'Enter' || event.key === ' ')) { event.preventDefault(); fire(); } }}
-      aria-label={focused ? 'Return from the wedding programme' : 'Focus the wedding programme'}>
+      aria-label="View programme">
       {part('artwork', <img src={layer.src} alt="" />)}
       {part('copy', <span className={s.boardCopy}>{part('title', <strong>{layer.title || t('itinerary.title', 'Programme')}</strong>)}
-        {(itinerary.length ? itinerary : [
-          { itineraryItemId: 1, label: 'Guest arrival', detail: '10:30' },
-          { itineraryItemId: 2, label: 'Walimatul Urus', detail: '11:00' },
-          { itineraryItemId: 3, label: 'Celebration feast', detail: '12:30' },
-        ]).map((item, index) => <Fragment key={item.itineraryItemId}>{part(`row-${index}`, <span>{part(`time-${index}`, <b>{item.detail}</b>)}{part(`label-${index}`, <i style={{ fontStyle: 'normal' }}>{item.label}</i>)}</span>)}</Fragment>)}
-      </span>)}{part('action', <span className={s.boardAction} aria-hidden="true">{focused ? 'Return' : 'Focus'}</span>)}
+        {part('items', <span className={s.boardItems}>{itinerary.length
+          ? itinerary.map((item, index) => <Fragment key={item.itineraryItemId}>{part(`row-${index}`, <span className={s.boardRow}>{part(`time-${index}`, <b>{item.detail}</b>)}{part(`label-${index}`, <i style={{ fontStyle: 'normal' }}>{item.label}</i>)}</span>)}</Fragment>)
+          : <span>The programme will be shared here soon.</span>}</span>)}
+        {(wedding.venue || wedding.venueAddress) && part('venue', <span className={s.boardVenue}>{wedding.venue || wedding.venueAddress}</span>)}
+        {part('calendar', <span className={s.boardCalendar}>{t('ceremony.calendar_label', 'Save to calendar')}{(wedding.venue || wedding.venueAddress) ? ' · View venue' : ''}</span>)}
+      </span>)}{part('action', <span className={s.boardAction} aria-hidden="true">View programme</span>)}
     </div>,
   }),
   'rsvp-envelope': ({ layer }, { styles: s, slotProps: { t }, editing, available, phase, fire, contentMotion: motion, renderPart: part = plainPart }) => ({
@@ -91,7 +91,7 @@ const registry: Record<string, Renderer> = {
         {Array.from({ length: layout.frames }, (_, index) => {
           const photo = approved[index];
           return <Fragment key={`frame-${index}`}>{part(`frame-${index}`, <figure className={s.memoryFrame} style={{
-            borderColor: layout.frameColor, borderWidth: layout.borderWidth,
+            borderColor: `var(--frame-border-color, ${layout.frameColor})`, borderWidth: `var(--frame-border-width, ${layout.borderWidth}px)`,
             transform: `rotate(${index % 3 === 2 ? -layout.tilt * .8 : index % 2 ? layout.tilt : 0}deg)`,
           }}>{photo ? <img src={`${apiBase}${photo.photoUrl}`} alt={photo.caption || 'Approved guest memory'} />
             : <span>{index === 0 ? t('photobooth.title', 'Our Memories') : layout.placeholder}</span>}</figure>)}</Fragment>;

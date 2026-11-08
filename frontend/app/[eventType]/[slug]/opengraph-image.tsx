@@ -5,7 +5,7 @@ export const size = { width: 1200, height: 630 };
 export const contentType = 'image/png';
 export const alt = 'Invitation';
 
-const BACKEND_URL = process.env.BACKEND_URL ?? 'http://localhost:5000';
+const BACKEND_URL = process.env.BACKEND_URL ?? 'http://localhost:5050';
 
 export default async function Image({ params }: { params: Promise<{ eventType: string; slug: string }> }) {
   const { slug } = await params;

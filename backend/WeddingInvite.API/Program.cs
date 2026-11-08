@@ -66,6 +66,12 @@ builder.Services.AddScoped<IPackageService, PackageService>();
 builder.Services.AddScoped<IAuthService, AuthService>(); // ADD THIS
 builder.Services.AddScoped<IEventAuthorizationService, EventAuthorizationService>(); // ✅ RENAMED
 builder.Services.AddScoped<ITemplateConfigService, TemplateConfigService>();
+builder.Services.AddScoped<ITemplateShippedDesignStore, EmbeddedTemplateDesignStore>();
+builder.Services.AddScoped<TemplateStudioService>();
+builder.Services.AddScoped<TemplateStudioExportService>();
+builder.Services.AddSingleton<CaptureWorkerPresence>();
+builder.Services.AddScoped<TemplateCaptureService>();
+builder.Services.AddHostedService<TemplateCaptureCleanup>();
 builder.Services.AddScoped<IEventExportService, EventExportService>();
 builder.Services.AddScoped<ITemplateDesignService, TemplateDesignService>();
 builder.Services.AddScoped<ITableService, TableService>();

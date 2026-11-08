@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
+import { useState, useMemo, useRef, useCallback } from 'react';
 import type { CSSProperties } from 'react';
 import {
   Wedding, Wish, Photo, ItineraryItem, SeatingTable, CreateWish,
@@ -21,6 +21,7 @@ import { SLOT_REGISTRY, sheetLayerGroups, stageHasContent, visibleSlotLayers } f
 import { SlotFlowProviders } from '@/components/templates/_shared/slots/FlowProviders';
 import SheetHost from '@/components/templates/_shared/SheetHost';
 import { fontVar } from '@/lib/fonts/registry';
+import { useScrollSection } from '@/components/templates/_shared/nav/useScrollSection';
 import TemplateNav, { type NavLayout } from '@/components/templates/_shared/nav/TemplateNav';
 import styles from './Template10.module.css';
 
@@ -111,7 +112,6 @@ export default function Template10({
   // lay out the mobile composition without resizing their window.
   const breakpoint: Breakpoint = useBreakpoint(editing ? editor!.breakpoint : undefined);
 
-  const [activeSection, setActiveSection] = useState('welcome');
   const [musicPlaying, setMusicPlaying] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
@@ -195,29 +195,7 @@ export default function Template10({
 
   const firstStageId = stages[0]?.def.id;
 
-  // Which nav pill lights up.
-  useEffect(() => {
-    const root = rootRef.current;
-    if (!root) return;
-    const stageToSection = new Map<string, string>();
-    for (const [code, ids] of Object.entries(STAGE_GROUPS)) {
-      for (const id of ids) stageToSection.set(id, code);
-    }
-
-    const io = new IntersectionObserver(
-      (entries) => {
-        const visible = entries
-          .filter((e) => e.isIntersecting)
-          .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
-        if (!visible) return;
-        const id = (visible.target as HTMLElement).dataset.stage!;
-        setActiveSection(stageToSection.get(id) ?? id);
-      },
-      { threshold: [0.35, 0.6] },
-    );
-    root.querySelectorAll('[data-stage]').forEach((s) => io.observe(s));
-    return () => io.disconnect();
-  }, [rootRef, stageIds]);
+  const activeSection = useScrollSection({ rootRef, stageGroups: STAGE_GROUPS });
 
   const toggleMusic = () => {
     const audio = audioRef.current;
@@ -352,6 +330,7 @@ export default function Template10({
 
       <TemplateNav
         items={navItems}
+        config={customConfig}
         active={activeSection}
         onNav={navTo}
         layout={navLayout}

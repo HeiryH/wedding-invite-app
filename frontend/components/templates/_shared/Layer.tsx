@@ -13,7 +13,7 @@ import ScrollVideoLayer from './effects/ScrollVideoLayer';
 import PlayOnceVideoLayer from './effects/PlayOnceVideoLayer';
 import WaterLayer from './effects/WaterLayer';
 import { resolveBindings } from './bindings';
-import { slotLayerStyle } from './slotLayerStyle';
+import { hasCustomFormBackground, slotLayerStyle } from './slotLayerStyle';
 import styles from './Stage.module.css';
 import './reveal.css';
 
@@ -413,6 +413,8 @@ export default function Layer({ layer, slotProps, eager, selected, editing, stag
       className={flow ? styles.flowItem : styles.layerBox}
       style={flow ? flowBox : box}
       data-kind={layer.kind}
+      data-slot={layer.slot}
+      data-custom-form-background={layer.kind === 'slot' && hasCustomFormBackground(layer) || undefined}
       data-depth={layer.depth ?? layer.z / 10}
       data-layer={layer.id}
       data-selected={selected || undefined}

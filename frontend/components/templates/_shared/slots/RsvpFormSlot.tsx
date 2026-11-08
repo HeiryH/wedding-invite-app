@@ -1,8 +1,10 @@
 'use client';
 
-import type { EditorHandle, SlotProps } from '../types';
+import { useContext } from 'react';
+import { MasterPreviewContext, SeatingPreviewContext } from './preview';
+import type { SlotProps } from '../types';
 import SeatingChart from './SeatingChart';
-import { useRsvpFlow } from './rsvpFlow';
+import { useRsvpFlow, type RsvpFormData } from './rsvpFlow';
 import styles from './slots.module.css';
 
 /**
@@ -40,33 +42,53 @@ export function RsvpPromptSlot({ t }: SlotProps) {
  */
 function isActiveStep(
   editing: boolean,
-  editor: EditorHandle | undefined,
+  seatingSelected: boolean,
   step: 'form' | 'seating',
   thisStep: 'form' | 'seating',
 ): boolean {
   if (!editing) return step === thisStep;
   // Form is the default view — selecting any *other* layer (Title, Prompt, the decorative art)
   // must not blank it out. Only explicitly selecting the Seating layer brings that forward.
-  const seatingSelected = editor?.selectedLayer === 'seating';
   return thisStep === 'form' ? !seatingSelected : seatingSelected;
 }
 
-export function RsvpFormSlot({ wedding, onRSVP, seatingEnabled, editing, editor, t }: SlotProps) {
+function rsvpFields(wedding: SlotProps['wedding'], t: SlotProps['t']) {
+  return {
+    email: t('rsvp.fields.email', 'true') !== 'false',
+    phone: t('rsvp.fields.phone', 'true') !== 'false',
+    partySize: t('rsvp.fields.party_size', 'true') !== 'false',
+    familySide: (wedding.eventType ?? 'WEDDING') === 'WEDDING' && t('rsvp.fields.family_side', 'true') !== 'false',
+    songRequest: t('rsvp.fields.song_request', 'true') !== 'false',
+  };
+}
+
+function visibleAnswers(form: RsvpFormData, fields: ReturnType<typeof rsvpFields>) {
+  return {
+    ...form,
+    email: fields.email ? form.email : '',
+    phoneNumber: fields.phone ? form.phoneNumber : '',
+    numberOfAttendees: fields.partySize ? form.numberOfAttendees : 1,
+    brideOrGroomSide: fields.familySide ? form.brideOrGroomSide : null,
+    songRequest: fields.songRequest ? form.songRequest : '',
+  };
+}
+
+export function RsvpFormSlot({ wedding, onRSVP, seatingEnabled, editing, editor, t, stageLayers }: SlotProps) {
+  const masterPreview = useContext(MasterPreviewContext);
+  const seatingPreview = useContext(SeatingPreviewContext);
   const paxLimit = (wedding.maxPax ?? 0) > 0 ? Math.min(10, wedding.maxPax!) : 10;
-  // WEDDING is the only event type with two "sides" to ask about — a PARTY/CEREMONY guest has one
-  // honoree or none at all. Template 8 already posts `brideOrGroomSide: null` for PARTY; mirrored
-  // here so any compositor template gets the same behaviour for free.
-  const isWedding = (wedding.eventType ?? 'WEDDING') === 'WEDDING';
+  const fields = rsvpFields(wedding, t);
   const {
-    step, setStep, form, setForm, selectedTableId, submitting, setSubmitting, done, setDone,
+    step, setStep, form, setForm, submitting, setSubmitting, done, setDone,
   } = useRsvpFlow();
 
-  if (!isActiveStep(editing, editor, step, 'form')) return null;
+  const seatingSelected = seatingEnabled && !!stageLayers?.some((layer) => layer.id === editor?.selectedLayer && layer.slot === 'rsvpSeating');
+  if (seatingPreview || !isActiveStep(editing, seatingSelected, seatingEnabled ? step : 'form', 'form')) return null;
 
   const send = async () => {
     setSubmitting(true);
     try {
-      await onRSVP({ ...form, brideOrGroomSide: isWedding ? form.brideOrGroomSide : null, tableId: selectedTableId });
+      await onRSVP({ ...visibleAnswers(form, fields), tableId: null });
       setDone(true);
     } catch {
       alert('Failed to submit RSVP');
@@ -80,7 +102,8 @@ export function RsvpFormSlot({ wedding, onRSVP, seatingEnabled, editing, editor,
     // Advancing to the seating step is a pure UI transition — safe in the editor, and it's how an
     // editor reaches the seating layer at all (see isActiveStep above). Only the real network post
     // (send, below) needs to stay guarded.
-    if (form.isAttending && seatingEnabled && step === 'form') { setStep('seating'); return; }
+    if (form.isAttending && seatingEnabled) { setStep('seating'); return; }
+    if (masterPreview) { setDone(true); return; }
     if (editing) return;
     await send();
   };
@@ -94,7 +117,7 @@ export function RsvpFormSlot({ wedding, onRSVP, seatingEnabled, editing, editor,
       ) : done ? (
         <p className={styles.notice}>{t('rsvp.done_message', 'Thank you. We look forward to celebrating with you.')}</p>
       ) : (
-        <form onSubmit={handleSubmit} className={styles.form}>
+        <form onSubmit={handleSubmit} className={styles.form} noValidate={masterPreview}>
           <input
             className={styles.field}
             placeholder={t('rsvp.name_placeholder', 'Full name *')}
@@ -103,45 +126,49 @@ export function RsvpFormSlot({ wedding, onRSVP, seatingEnabled, editing, editor,
             onChange={(e) => setForm((f) => ({ ...f, guestName: e.target.value }))}
           />
 
-          <div className={styles.fieldRow}>
-            <input
-              className={styles.field}
-              type="email"
-              placeholder={t('rsvp.email_placeholder', 'Email')}
-              value={form.email}
-              onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
-            />
-            <input
-              className={styles.field}
-              placeholder={t('rsvp.phone_placeholder', 'Phone')}
-              value={form.phoneNumber}
-              onChange={(e) => setForm((f) => ({ ...f, phoneNumber: e.target.value }))}
-            />
-          </div>
-
-          <div className={styles.fieldRow}>
-            {isWedding && (
-              <select
+          {(fields.email || fields.phone) && (
+            <div className={styles.fieldRow}>
+              {fields.email && <input
                 className={styles.field}
-                value={form.brideOrGroomSide}
-                onChange={(e) => setForm((f) => ({ ...f, brideOrGroomSide: e.target.value as 'Bride' | 'Groom' }))}
-              >
-                <option value="Bride">{t('rsvp.bride_side_label', "Bride's side")}</option>
-                <option value="Groom">{t('rsvp.groom_side_label', "Groom's side")}</option>
-              </select>
-            )}
-            <input
-              className={styles.field}
-              type="number"
-              min={1}
-              max={paxLimit}
-              value={form.numberOfAttendees}
-              onChange={(e) => {
-                const raw = Number(e.target.value) || 1;
-                setForm((f) => ({ ...f, numberOfAttendees: Math.max(1, Math.min(raw, paxLimit)) }));
-              }}
-            />
-          </div>
+                type="email"
+                placeholder={t('rsvp.email_placeholder', 'Email')}
+                value={form.email}
+                onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
+              />}
+              {fields.phone && <input
+                className={styles.field}
+                placeholder={t('rsvp.phone_placeholder', 'Phone')}
+                value={form.phoneNumber}
+                onChange={(e) => setForm((f) => ({ ...f, phoneNumber: e.target.value }))}
+              />}
+            </div>
+          )}
+
+          {(fields.familySide || fields.partySize) && (
+            <div className={styles.fieldRow}>
+              {fields.familySide && (
+                <select
+                  className={styles.field}
+                  value={form.brideOrGroomSide}
+                  onChange={(e) => setForm((f) => ({ ...f, brideOrGroomSide: e.target.value as 'Bride' | 'Groom' }))}
+                >
+                  <option value="Bride">{t('rsvp.bride_side_label', "Bride's side")}</option>
+                  <option value="Groom">{t('rsvp.groom_side_label', "Groom's side")}</option>
+                </select>
+              )}
+              {fields.partySize && <input
+                className={styles.field}
+                type="number"
+                min={1}
+                max={paxLimit}
+                value={form.numberOfAttendees}
+                onChange={(e) => {
+                  const raw = Number(e.target.value) || 1;
+                  setForm((f) => ({ ...f, numberOfAttendees: Math.max(1, Math.min(raw, paxLimit)) }));
+                }}
+              />}
+            </div>
+          )}
 
           <div className={styles.choiceRow}>
             <button
@@ -160,12 +187,12 @@ export function RsvpFormSlot({ wedding, onRSVP, seatingEnabled, editing, editor,
             </button>
           </div>
 
-          <input
+          {fields.songRequest && <input
             className={styles.field}
             placeholder={t('rsvp.song_placeholder', 'Song request (optional)')}
             value={form.songRequest}
             onChange={(e) => setForm((f) => ({ ...f, songRequest: e.target.value }))}
-          />
+          />}
 
           <div className={styles.formActions}>
             <button type="submit" className={`${styles.plaque} ${styles.plaqueBtn}`} disabled={submitting}>
@@ -178,19 +205,24 @@ export function RsvpFormSlot({ wedding, onRSVP, seatingEnabled, editing, editor,
   );
 }
 
-export function RsvpSeatingSlot({ wedding, onRSVP, tables, editing, editor, t }: SlotProps) {
-  const isWedding = (wedding.eventType ?? 'WEDDING') === 'WEDDING';
+export function RsvpSeatingSlot({ wedding, onRSVP, tables, editing, editor, t, layer }: SlotProps) {
+  const masterPreview = useContext(MasterPreviewContext);
+  const seatingPreview = useContext(SeatingPreviewContext);
+  const fields = rsvpFields(wedding, t);
   const {
     step, setStep, form, selectedTableId, setSelectedTableId, submitting, setSubmitting, done, setDone,
   } = useRsvpFlow();
 
-  if (!isActiveStep(editing, editor, step, 'seating')) return null;
+  if (!seatingPreview && !isActiveStep(editing, Boolean(layer && layer.id === editor?.selectedLayer), step, 'seating')) return null;
 
+  const answers = visibleAnswers(form, fields);
   const send = async () => {
+    if (seatingPreview) return;
+    if (masterPreview) { setDone(true); return; }
     if (editing) return; // laying out the stage must never post a real RSVP
     setSubmitting(true);
     try {
-      await onRSVP({ ...form, brideOrGroomSide: isWedding ? form.brideOrGroomSide : null, tableId: selectedTableId });
+      await onRSVP({ ...answers, tableId: selectedTableId });
       setDone(true);
     } catch {
       alert('Failed to submit RSVP');
@@ -201,13 +233,13 @@ export function RsvpSeatingSlot({ wedding, onRSVP, tables, editing, editor, t }:
 
   return (
     <div className={styles.panel}>
-      {done ? (
+      {done && !seatingPreview ? (
         <p className={styles.notice}>{t('rsvp.done_message', 'Thank you. We look forward to celebrating with you.')}</p>
       ) : (
         <form onSubmit={(e) => { e.preventDefault(); void send(); }} className={styles.form}>
           <SeatingChart
             tables={tables}
-            numberOfAttendees={form.numberOfAttendees}
+            numberOfAttendees={answers.numberOfAttendees}
             selectedTableId={selectedTableId}
             onSelect={setSelectedTableId}
             prompt={t('rsvp.seating_prompt', 'Choose your table')}
@@ -217,7 +249,7 @@ export function RsvpSeatingSlot({ wedding, onRSVP, tables, editing, editor, t }:
             seatsLeftLabel={t('rsvp.seating_seats_left_label', 'seats left')}
           />
           <div className={styles.formActions}>
-            <button type="button" className={styles.linkBtn} onClick={() => setStep('form')}>
+            <button type="button" className={styles.linkBtn} onClick={() => { setStep('form'); seatingPreview?.dismiss(); }}>
               {t('rsvp.seating_back_label', 'Back')}
             </button>
             <button type="submit" className={`${styles.plaque} ${styles.plaqueBtn}`} disabled={submitting}>

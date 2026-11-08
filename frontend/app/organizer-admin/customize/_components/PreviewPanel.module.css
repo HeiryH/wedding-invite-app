@@ -1,0 +1,24 @@
+.preview { container-type: inline-size; }
+.toolbar { position: absolute; top: 16px; left: 16px; right: 16px; z-index: 5; display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: start; gap: 12px; pointer-events: none; }
+.deviceToolbar, .actionsToolbar { pointer-events: auto; display: flex; align-items: center; gap: 2px; padding: 5px 6px; border: 1px solid var(--border-subtle); border-radius: 24px; background: var(--surface-card); box-shadow: var(--shadow-md); }
+.leftTools { display: flex; align-items: flex-start; gap: 8px; pointer-events: auto; }
+.toolMenu { position: relative; }
+.toolTrigger { display: grid; place-items: center; width: 36px; height: 36px; border: 1px solid var(--border-subtle); border-radius: 50%; background: var(--surface-card); color: var(--text-muted); box-shadow: var(--shadow-md); cursor: pointer; }
+.toolTrigger:hover, .toolTrigger[aria-expanded='true'] { color: var(--brand); background: var(--surface-sunken); }
+.toolTrigger[aria-pressed='true'] { color: var(--brand); background: var(--surface-sunken); }
+.workspace { position: relative; }
+.panSurface { position: absolute; inset: 0; z-index: 3; touch-action: none; }
+.toolFlyout { position: absolute; top: 100%; left: 0; padding-top: 8px; width: max-content; max-width: calc(100cqw - 76px); }
+.deviceToolbar { justify-content: center; flex-wrap: wrap; width: 350px; max-width: 100%; border-radius: 14px; padding: 10px; gap: 6px; }
+.zoomPanel { display: flex; align-items: center; gap: 6px; padding: 10px; border: 1px solid var(--border-subtle); border-radius: 12px; background: var(--surface-card); box-shadow: var(--shadow-md); }
+.sizePanel { width: 100%; padding: 12px 4px 4px; border-top: 1px solid var(--border-subtle); max-height: min(520px, calc(100svh - 220px)); overflow-y: auto; }
+.actionsToolbar { position: relative; padding: 4px; }
+.deviceToolbar button { flex-shrink: 0; }
+.toolbar button:focus-visible, .toolbar a:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+.infoPopover { position: absolute; top: calc(100% + 8px); right: 0; z-index: 10; width: 230px; max-width: calc(100vw - 32px); padding: 14px; display: grid; gap: 8px; border: 1px solid var(--border-subtle); border-radius: 12px; background: var(--surface-card); box-shadow: var(--shadow-lg); color: var(--text-strong); font: 12px/1.5 var(--font-ui); }
+.infoPopover p { margin: 0; color: var(--text-muted); }
+.liveStatus { display: flex; align-items: center; gap: 6px; color: var(--gold-600); }
+.timelineResizeGrip { position: absolute; top: -12px; left: calc(50% - 28px); width: 56px; height: 12px; display: grid; place-items: center; cursor: ns-resize; touch-action: none; border-radius: 6px; }
+.timelineResizeGrip::after { content: ''; width: 28px; height: 3px; border-radius: 3px; background: var(--border-default); }
+.timelineResizeGrip:hover::after { background: var(--text-muted); }
+.timelineResizeGrip:focus-visible { outline: 2px solid var(--brand); outline-offset: 1px; }

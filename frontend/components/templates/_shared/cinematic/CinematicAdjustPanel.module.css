@@ -12,20 +12,39 @@
 }
 
 .card {
+  position: relative;
+  width: 100%;
+  border: 1px solid var(--border-subtle);
+  border-radius: 14px;
+  background: var(--surface-card);
+  margin-bottom: 12px;
+}
+
+.floatingInspector {
   position: absolute;
-  top: 8px;
-  right: calc(100% + 10px);
-  z-index: 30;
-  width: 310px;
-  max-height: calc(100% - 16px);
-  overflow: hidden;
+  right: calc(100% + 12px);
+  top: 16px;
+  z-index: 20;
+  width: min(320px, calc(100vw - 380px));
+  max-height: calc(100% - 32px);
+  overflow: auto;
+  overscroll-behavior: contain;
   border: 1px solid var(--border-subtle);
   border-radius: 14px;
   background: var(--surface-card);
   box-shadow: var(--shadow-lg);
+  scrollbar-width: thin;
 }
+.floatingInspector .card { margin: 0; border: 0; border-radius: 0; }
+.floatingInspector .cardHeader { top: 0; }
+.floatingInspector .inspectorTabs { top: 46px; }
+.floatingInspector .setEditor { margin: 0; border: 0; }
 
 .cardHeader {
+  position: sticky;
+  top: 48px;
+  z-index: 4;
+  background: var(--surface-card);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -34,7 +53,12 @@
   border-bottom: 1px solid var(--border-subtle);
 }
 
+.cardHeader:has(details[open]) { z-index: 8; }
+.header:has(details[open]) { position: relative; z-index: 10; }
+
 .cardTitle {
+  flex: 1;
+  min-width: 0;
   overflow: hidden;
   color: var(--text-strong);
   font-size: 12px;
@@ -44,20 +68,29 @@
 }
 
 .cardBody {
-  max-height: calc(100vh - 112px);
-  overflow-y: auto;
+  overflow: visible;
   padding: 12px 13px 14px;
 }
+.inspectorActions { display: flex; justify-content: flex-end; gap: 8px; padding: 8px 10px; }
+.inspectorActions button, .returnInspector { border: 1px solid var(--border-subtle); border-radius: 6px; background: var(--surface-card); color: var(--text-muted); padding: 6px 9px; cursor: pointer; font: 12px var(--font-ui); }
+.returnInspector { margin-bottom: 10px; width: 100%; text-align: left; }
+.inspectorTabs { position: sticky; top: 94px; z-index: 4; display: flex; gap: 4px; padding: 6px; border-block: 1px solid var(--border-subtle); background: var(--surface-card); }
+.inspectorTabs button { flex: 1; padding: 7px 4px; border: 0; border-radius: 5px; color: var(--text-muted); background: transparent; font: 600 12px var(--font-ui); cursor: pointer; }
+.inspectorTabs button[aria-selected='true'] { color: var(--brand); background: var(--surface-sunken); }
+.inspectorTabs button:focus-visible, .inspectorActions button:focus-visible, .returnInspector:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
 
 .header {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 8px;
   padding: 12px 15px 11px;
   border-bottom: 1px solid var(--border-subtle);
 }
 
 .title {
+  flex: 1;
+  min-width: 0;
   font-size: 13px;
   letter-spacing: .16em;
   text-transform: uppercase;
@@ -98,7 +131,29 @@
 
 .label:first-child { margin-top: 0; }
 
+.proportionLock {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  padding: 7px 8px;
+  margin: 4px 0 8px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 6px;
+  background: var(--surface-card);
+  color: var(--text-muted);
+  font: inherit;
+  font-size: 10px;
+  cursor: pointer;
+}
+.proportionLock[aria-pressed='true'] { background: var(--surface-sunken); color: var(--brand); border-color: var(--brand); }
+.proportionLock:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+
 .modeSwitch {
+  position: sticky;
+  top: 0;
+  z-index: 5;
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 5px;
@@ -108,9 +163,7 @@
   border: 1px solid var(--border-subtle);
 }
 
-.modeButton,
-.beatButton,
-.referenceToggle {
+.modeButton {
   border: 1px solid transparent;
   border-radius: 7px;
   background: transparent;
@@ -133,15 +186,34 @@
   font-size: 11.5px;
   line-height: 1.45;
 }
+.modeNote { margin: 12px 0 14px; line-height: 1.55; }
 
 .layers {
-  max-height: 310px;
-  overflow-y: auto;
+  overflow: visible;
   padding: 5px;
   border: 1px solid var(--border-subtle);
   border-radius: 9px;
   background: var(--surface-sunken);
 }
+.sceneBody { display: flex; flex-direction: column; }
+.sceneBody > * { flex-shrink: 0; }
+.sceneBody .layers { flex: 0 0 auto; }
+.sceneSetsToggle { display: flex; align-items: center; gap: 7px; border: 0; padding: 4px 0; color: inherit; background: transparent; text-align: left; }
+.sceneSetsToggle small { color: var(--text-muted); font-size: 10px; }
+.sceneSetsToggle:focus-visible { outline: 2px solid var(--brand); outline-offset: 3px; }
+.layerFilters { display: flex; gap: 5px; margin: 8px 0 5px; }
+.layerFilters button { flex: 1; display: flex; align-items: center; justify-content: center; gap: 7px; padding: 7px 5px; border: 1px solid var(--border-subtle); border-radius: 6px; background: var(--surface-card); color: var(--text-muted); font: 600 11px var(--font-ui); cursor: pointer; }
+.layerFilters button[aria-pressed='true'] { border-color: var(--brand); background: var(--surface-sunken); color: var(--brand); }
+.layerFilters button:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+.layerFilters span { font-size: 10px; font-weight: 400; }
+.filterHint { margin: 0 0 8px; color: var(--text-muted); font-size: 10px; line-height: 1.4; }
+.layerBrowser { position: relative; }
+.layerBrowserHeader { position: sticky; top: 48px; z-index: 6; display: flex; align-items: center; justify-content: space-between; gap: 6px; min-height: 48px; padding: 8px 0; background: var(--surface-card); }
+.layerBrowserHeader .label { margin: 0; flex: 1; min-width: 0; font-size: 9px; letter-spacing: .08em; }
+.layerTools { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
+.layerToolButton { display: grid; place-items: center; width: 30px; height: 30px; border: 1px solid var(--border-subtle); border-radius: 6px; background: var(--surface-card); color: var(--text-muted); cursor: pointer; }
+.layerToolButton:hover, .layerToolButton[aria-pressed='true'] { color: var(--gold-700); border-color: var(--gold-400); background: var(--gold-50); }
+.layerToolButton:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
 
 .layerGroup + .layerGroup {
   margin-top: 5px;
@@ -249,26 +321,7 @@
   color: var(--gold-600);
   cursor: pointer;
 }
-
-.addButton {
-  width: 100%;
-  height: 34px;
-  display: grid;
-  place-items: center;
-  margin-top: 7px;
-  border: 1px dashed var(--border-default);
-  border-radius: 8px;
-  background: transparent;
-  color: var(--gold-600);
-  cursor: pointer;
-}
-
-.addButton:hover,
-.addButtonActive {
-  border-color: var(--gold-400);
-  background: var(--gold-50);
-  color: var(--gold-700);
-}
+.layerDisclosure { display: grid; place-items: center; width: 28px; height: 28px; flex-shrink: 0; }
 
 .addGrid {
   display: grid;
@@ -309,6 +362,18 @@
   border-color: color-mix(in srgb, var(--brand) 42%, var(--border-subtle));
   background: color-mix(in srgb, var(--brand) 7%, var(--surface-card));
 }
+.cameraHeader {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 0 10px;
+  margin-bottom: 12px;
+  border-bottom: 1px solid color-mix(in srgb, var(--border-default) 70%, transparent);
+  background: transparent;
+}
+.cameraHeader:has(details[open]) { z-index: 8; }
+.cameraHeader strong { flex: 1; min-width: 0; font-size: 12px; line-height: 1.45; overflow-wrap: anywhere; }
 
 .cameraModeSwitch {
   display: grid;
@@ -539,18 +604,6 @@
   font: 11px var(--font-ui);
 }
 
-.organizeTimingButton {
-  width: 100%;
-  margin-top: 7px;
-  padding: 7px;
-  border: 1px solid var(--border-default);
-  border-radius: 7px;
-  background: var(--surface-card);
-  color: var(--text-muted);
-  cursor: pointer;
-  font: 600 10.5px var(--font-ui);
-}
-
 .timingSelectionBar {
   display: grid;
   gap: 7px;
@@ -627,30 +680,44 @@
 
 .setEditor {
   margin-top: 8px;
-  padding: 9px;
+  padding: 14px;
   border: 1px solid var(--gold-300, var(--border-subtle));
   border-radius: 8px;
-  background: var(--surface-sunken);
+  background: var(--surface-card);
 }
 
 .setEditorHeader {
   display: grid;
-  grid-template-columns: 1fr 26px;
+  grid-template-columns: minmax(0, 1fr) 30px;
   align-items: center;
   gap: 6px;
+  padding: 9px 10px;
+  margin: 0 0 10px;
+  border-radius: 6px;
+  background: var(--surface-sunken);
 }
 
 .setEditorHeader > strong { font-size: 11px; }
 .setEditorHeader > button {
-  height: 26px;
-  border: 0;
-  background: transparent;
+  display: grid;
+  place-items: center;
+  height: 30px;
+  border: 1px solid var(--border-default);
+  border-radius: 6px;
+  background: var(--surface-card);
   color: var(--text-muted);
   cursor: pointer;
   font-size: 18px;
 }
+.setEditorHeader > button:hover { background: var(--gold-50); border-color: var(--gold-400); }
+.setEditorHeader > button:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
 
 .setActions { margin-top: 9px; }
+.timingTrackActions { display: grid; gap: 8px; margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--border-subtle); }
+.timingTrackActions .setActions { display: flex; flex-wrap: wrap; gap: 8px; margin: 0; }
+.timingTrackActions button { min-height: 32px; padding: 6px 10px; border: 1px solid var(--border-default); border-radius: 6px; background: var(--surface-card); color: var(--text-muted); font: 11px var(--font-ui); cursor: pointer; }
+.timingTrackActions button:hover { border-color: var(--gold-400); background: var(--gold-50); }
+.timingTrackActions button:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
 .setActions .dangerButton { margin: 0; background: var(--surface-card); }
 
 .deleteSetConfirm {
@@ -683,13 +750,6 @@
 }
 
 .deleteSetConfirm button:last-child { color: var(--danger, #b42318); }
-
-.cameraActions {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 6px;
-  margin-top: 9px;
-}
 
 .composeCommit,
 .beatProperties {
@@ -731,22 +791,6 @@
   color: #fff;
   cursor: pointer;
   font: 650 11px/1.2 var(--font-ui);
-}
-
-.cameraActions button {
-  padding: 7px;
-  border: 1px solid var(--border-default);
-  border-radius: 6px;
-  background: var(--surface-card);
-  color: var(--text-muted);
-  cursor: pointer;
-  font-family: inherit;
-  font-size: 10.5px;
-}
-
-.cameraActions .deleteBeat {
-  grid-column: 1 / -1;
-  color: var(--danger, #b42318);
 }
 
 .deleteMomentConfirm {
@@ -803,7 +847,6 @@
 
 .deleteMomentConfirm .deleteBeat { grid-column: auto; }
 
-.cameraActions button:disabled { cursor: default; opacity: .4; }
 
 .deletedMoments {
   display: grid;
@@ -847,8 +890,8 @@
   display: grid;
   grid-template-columns: 52px 1fr 54px;
   align-items: center;
-  gap: 7px;
-  margin-bottom: 7px;
+  gap: 10px;
+  margin-bottom: 12px;
 }
 
 .field,
@@ -865,7 +908,7 @@
 }
 
 .field,
-.compactField select { height: 30px; padding: 4px 7px; }
+.compactField select { height: 34px; padding: 6px 10px; }
 
 .textarea {
   min-height: 70px;
@@ -884,7 +927,8 @@
 
 .compactField {
   display: grid;
-  gap: 4px;
+  gap: 7px;
+  margin-bottom: 12px;
   color: var(--text-muted);
   font-size: 10.5px;
 }
@@ -897,6 +941,17 @@
   border-radius: 6px;
   background: var(--surface-sunken);
 }
+
+/* Keep native dropdown behaviour, but inset a consistent chevron from the field edge. */
+.panel select {
+  appearance: none;
+  padding-right: 30px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='m3 4.5 3 3 3-3' fill='none' stroke='%236b706c' stroke-width='1.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+}
+.floatingInspector .cardBody { padding: 16px; }
+.floatingInspector [aria-label='Position and size'] { margin-top: 14px; }
 
 .replaceButton,
 .dangerButton {
@@ -946,12 +1001,13 @@
   display: grid;
   grid-template-columns: 1fr auto 1fr;
   align-items: center;
-  gap: 6px;
-  margin-bottom: 7px;
+  gap: 10px;
+  margin: 10px 0 14px;
 }
 
 .beatStepper button {
-  padding: 6px;
+  min-height: 34px;
+  padding: 8px 10px;
   border: 1px solid var(--border-default);
   border-radius: 6px;
   background: var(--surface-card);
@@ -965,13 +1021,13 @@
 .beatStepper button:disabled { cursor: default; opacity: .38; }
 
 .beatStepper span {
+  padding-inline: 4px;
   color: var(--text-subtle);
   font-family: var(--font-mono);
   font-size: 9px;
 }
 
-.actionRow button,
-.resetButton {
+.actionRow button {
   padding: 6px;
   border: 1px solid var(--border-default);
   border-radius: 6px;
@@ -980,40 +1036,6 @@
   cursor: pointer;
   font-family: inherit;
   font-size: 10.5px;
-}
-
-.beats {
-  display: grid;
-  gap: 4px;
-}
-
-.beatButton {
-  display: grid;
-  grid-template-columns: 23px 1fr auto;
-  align-items: center;
-  gap: 7px;
-  padding: 7px 8px;
-  text-align: left;
-  background: var(--surface-sunken);
-  border-color: var(--border-subtle);
-}
-
-.beatActive {
-  border-color: var(--gold-400);
-  background: var(--gold-50);
-  color: var(--gold-700);
-}
-
-.beatNumber {
-  color: var(--text-subtle);
-  font-family: var(--font-mono);
-  font-size: 10px;
-}
-
-.beatProgress {
-  color: var(--text-subtle);
-  font-family: var(--font-mono);
-  font-size: 10px;
 }
 
 .rangeRow {
@@ -1035,71 +1057,10 @@
   text-align: right;
 }
 
-.referenceCard {
-  overflow: hidden;
-  border: 1px solid var(--border-subtle);
-  border-radius: 9px;
-  background: var(--surface-sunken);
-}
-
-.referencePreview {
-  width: 100%;
-  height: 132px;
-  display: block;
-  object-fit: contain;
-  background: #eee8dc;
-}
-
-.referenceControls { padding: 9px; }
-
-.referenceTop {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  margin-bottom: 8px;
-}
-
-.referenceName {
-  min-width: 0;
-  overflow: hidden;
-  color: var(--text-muted);
-  font-size: 11.5px;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.referenceToggle {
-  flex-shrink: 0;
-  padding: 4px 8px;
-  border-color: var(--border-default);
-  background: var(--surface-card);
-  font-size: 11px;
-}
-
-.referenceToggleActive {
-  border-color: var(--gold-400);
-  background: var(--gold-50);
-  color: var(--gold-700);
-}
-
-.phaseNotice {
-  margin-top: 16px;
-  padding: 10px 11px;
-  border: 1px solid var(--border-subtle);
-  border-radius: 9px;
-  background: var(--surface-sunken);
-  color: var(--text-muted);
-  font-size: 11.5px;
-  line-height: 1.45;
-}
-
-.resetButton {
-  width: 100%;
-  margin-top: 9px;
-  background: var(--surface-card);
-}
-.sceneSetsManager { margin-bottom: 20px; }
+.sceneSetsManager { margin-bottom: 8px; }
+.sceneSetsManager[data-collapsed='true'] { margin-bottom: 0; }
+.sceneSetsManager[data-collapsed='true'] .sceneSetsHeading { margin-bottom: 0; }
+.sceneSetsManager[data-collapsed='true'] + .label { margin-top: 8px; }
 .sceneSetsHeading { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 8px; }
 .sceneSetsHeading strong { font-size: 13px; }
 .sceneSetsManager button { font: inherit; cursor: pointer; }

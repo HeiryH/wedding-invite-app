@@ -24,6 +24,7 @@ export const TEMPLATE_COMPONENTS = {
   13: dynamic<TemplateRenderProps>(() => import('./Template13')),
   14: dynamic<TemplateRenderProps>(() => import('./Template14')),
   15: dynamic<TemplateRenderProps>(() => import('./Template15')),
+  16: dynamic<TemplateRenderProps>(() => import('./Template16')),
 } satisfies Record<number, ComponentType<TemplateRenderProps>>;
 
 export function getTemplateComponent(templateId: number) {

@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useContext, useState, useEffect } from 'react';
+import { SeatingPreviewContext } from './_shared/slots/preview';
 import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
 import { Wedding, Wish, Photo, SeatingTable, ItineraryItem } from '@/lib/api';
@@ -102,6 +103,7 @@ export default function Template1({
   }, [editor?.selectedStage, editor?.enabled]);
 
   // RSVP Form State
+  const seatingPreview = useContext(SeatingPreviewContext);
   const [rsvpStep, setRsvpStep] = useState<1 | 2>(1);
   const [isAttending, setIsAttending] = useState(true);
   const [selectedTableId, setSelectedTableId] = useState<number | null>(null);
@@ -141,9 +143,10 @@ export default function Template1({
   const navItems = sectionOrder.map((code) => ({ name: NAV_LABELS[code], section: code }));
 
   const goToSeating = () => setRsvpStep(2);
-  const goBackToForm = () => setRsvpStep(1);
+  const goBackToForm = () => { setRsvpStep(1); seatingPreview?.dismiss(); };
 
   const submitRSVP = async () => {
+    if (seatingPreview) return;
     setRsvpSubmitting(true);
     try {
       await onRSVP({ ...rsvpData, isAttending, tableId: selectedTableId });
@@ -301,7 +304,7 @@ export default function Template1({
       {/* Content: single-page flow — every section renders at once, nav scrolls between them */}
       <main className="max-w-4xl mx-auto px-4 py-12 flex flex-col">
           {/* Welcome Section */}
-            <motion.div
+            {sectionOrder.includes('welcome') && <motion.div
               id="welcome"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -450,7 +453,7 @@ export default function Template1({
                     : 'Be the first to RSVP!'}
                 </p>
               </div>
-            </motion.div>
+            </motion.div>}
 
           {/* Walimah Section */}
           {sectionOrder.includes('walimah') && (
@@ -510,7 +513,7 @@ export default function Template1({
           )}
 
           {/* RSVP Section */}
-            <motion.div
+            {sectionOrder.includes('rsvp') && <motion.div
               id="rsvp"
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
@@ -528,7 +531,7 @@ export default function Template1({
               </div>
 
               <AnimatePresence mode="wait">
-                {wedding.isRsvpOpen === false ? (
+                {wedding.isRsvpOpen === false && !seatingPreview ? (
                   <motion.div
                     key="closed"
                     initial={{ opacity: 0, scale: 0.9 }}
@@ -540,7 +543,7 @@ export default function Template1({
                     <h3 className="text-2xl font-bold text-gray-700 mb-2">RSVPs are closed</h3>
                     <p className="text-gray-500">Thank you for your interest — we&apos;re no longer accepting responses.</p>
                   </motion.div>
-                ) : rsvpSuccess ? (
+                ) : rsvpSuccess && !seatingPreview ? (
                   <motion.div
                     key="success"
                     initial={{ opacity: 0, scale: 0.8 }}
@@ -552,7 +555,7 @@ export default function Template1({
                     <h3 className="text-2xl font-bold text-green-800 mb-2">RSVP Submitted!</h3>
                     <p className="text-green-700">Thank you! Redirecting to wishes...</p>
                   </motion.div>
-                ) : rsvpStep === 2 ? (
+                ) : seatingPreview || rsvpStep === 2 ? (
                   <div key="step2" className="bg-white rounded-2xl shadow-xl p-8">
                     <SeatingStep
                       tables={tables}
@@ -727,10 +730,10 @@ export default function Template1({
                   </motion.form>
                 )}
               </AnimatePresence>
-            </motion.div>
+            </motion.div>}
 
           {/* Wishes Section */}
-            <motion.div
+            {sectionOrder.includes('wishes') && <motion.div
               id="wishes"
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
@@ -832,7 +835,7 @@ export default function Template1({
                   )}
                 </div>
               </div>
-            </motion.div>
+            </motion.div>}
 
           {/* Photos Section */}
       {sectionOrder.includes('photobooth') && photoBoothEnabled && (

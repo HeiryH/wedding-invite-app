@@ -12,7 +12,7 @@ const layer: CinematicWorldLayer = {
 describe('CinematicSceneLayer', () => {
   afterEach(() => vi.restoreAllMocks());
 
-  it('deselects itself when the selected canvas layer is clicked again', () => {
+  it('keeps the selected layer and its inspector open when clicked again', () => {
     const postMessage = vi.spyOn(window, 'postMessage').mockImplementation(() => undefined);
     render(
       <div data-cinematic-space="viewport">
@@ -31,9 +31,6 @@ describe('CinematicSceneLayer', () => {
     const editableLayer = screen.getByRole('button', { name: 'Edit Custom text' });
     expect(editableLayer).toHaveStyle({ zIndex: String(layer.z) });
     fireEvent.click(editableLayer);
-    expect(postMessage).toHaveBeenCalledWith(
-      { type: 'PREVIEW_CINEMATIC_LAYER_SELECT', layerId: undefined },
-      window.location.origin,
-    );
+    expect(postMessage).not.toHaveBeenCalled();
   });
 });

@@ -17,7 +17,7 @@ import { PUBLIC_EVENT_TYPE_SLUGS, urlSegmentForEventType } from '@/lib/eventType
  * A/CNAME at the server.
  */
 
-const BACKEND_URL = process.env.BACKEND_URL ?? 'http://localhost:5000';
+const BACKEND_URL = process.env.BACKEND_URL ?? 'http://localhost:5050';
 
 // Any of the 3 public invite prefixes — an already-prefixed path is left untouched.
 const INVITE_PREFIXES = Object.values(PUBLIC_EVENT_TYPE_SLUGS).map((s) => `/${s}/`);

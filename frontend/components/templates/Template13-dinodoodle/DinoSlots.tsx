@@ -193,7 +193,8 @@ export function DinoItinerarySlot(props: SlotProps) {
 }
 
 export function DinoRsvpSlot(props: SlotProps) {
-  const { stageLayers, layer, editor, seatingEnabled, editing } = props;
+  const { stageLayers, layer, editor, seatingEnabled, editing, t } = props;
+  const inline = t('rsvp.form_layout', 'button') === 'inline';
   const sub = usePieces(stageLayers, layer?.id ?? 'rsvp');
   const { open } = useSheets();
   const activate = () => { if (!editing) open('rsvp'); };
@@ -201,22 +202,22 @@ export function DinoRsvpSlot(props: SlotProps) {
     <div className={`${styles.composite} ${styles.actionSection}`}>
       <Piece layer={sub['rsvp-title']} editor={editor} id="rsvp-title"><h2 className={styles.sectionTitle}>{bound(props, sub, 'rsvp-title', 'Join the Expedition')}</h2></Piece>
       <Piece layer={sub['rsvp-prompt']} editor={editor} id="rsvp-prompt"><p className={styles.copy}>{bound(props, sub, 'rsvp-prompt', 'Will your explorer be joining the crew?')}</p></Piece>
-      <Piece layer={sub['rsvp-trigger']} editor={editor} id="rsvp-trigger"><button type="button" className={styles.actionButton} onClick={activate}>{bound(props, sub, 'rsvp-trigger', 'Confirm attendance')}</button></Piece>
+      {!inline && <Piece layer={sub['rsvp-trigger']} editor={editor} id="rsvp-trigger"><button type="button" className={styles.actionButton} onClick={activate}>{bound(props, sub, 'rsvp-trigger', 'Confirm attendance')}</button></Piece>}
       <Piece layer={sub['rsvp-deadline']} editor={editor} id="rsvp-deadline"><p className={styles.note}>{bound(props, sub, 'rsvp-deadline', 'Reply by 10 October')}</p></Piece>
-      {seatingEnabled && <Piece layer={sub['rsvp-seating']} editor={editor} id="rsvp-seating"><button type="button" className={styles.textButton} onClick={activate}>{bound(props, sub, 'rsvp-seating', 'Check your seat')}</button></Piece>}
+      {seatingEnabled && !inline && <Piece layer={sub['rsvp-seating']} editor={editor} id="rsvp-seating"><button type="button" className={styles.textButton} onClick={activate}>{bound(props, sub, 'rsvp-seating', 'Check your seat')}</button></Piece>}
     </div>
   );
 }
 
 export function DinoWishesSlot(props: SlotProps) {
-  const { stageLayers, layer, editor, editing } = props;
+  const { stageLayers, layer, editor, editing, t } = props;
   const sub = usePieces(stageLayers, layer?.id ?? 'wishes');
   const { open } = useSheets();
   return (
     <div className={`${styles.composite} ${styles.actionSection}`}>
       <Piece layer={sub['wishes-title']} editor={editor} id="wishes-title"><h2 className={styles.sectionTitle}>{bound(props, sub, 'wishes-title', 'Field Notes')}</h2></Piece>
       <Piece layer={sub['wishes-prompt']} editor={editor} id="wishes-prompt"><p className={styles.copy}>{bound(props, sub, 'wishes-prompt', 'Leave a birthday message for the expedition journal.')}</p></Piece>
-      <Piece layer={sub['wishes-trigger']} editor={editor} id="wishes-trigger"><button type="button" className={styles.actionButton} onClick={() => { if (!editing) open('wish'); }}>{bound(props, sub, 'wishes-trigger', 'Write a wish')}</button></Piece>
+      {t('wish.form_layout', 'button') !== 'inline' && <Piece layer={sub['wishes-trigger']} editor={editor} id="wishes-trigger"><button type="button" className={styles.actionButton} onClick={() => { if (!editing) open('wish'); }}>{bound(props, sub, 'wishes-trigger', 'Write a wish')}</button></Piece>}
       <Piece layer={sub['wishes-list']} editor={editor} id="wishes-list"><div className={styles.wishList}><WishListSlot {...props} /></div></Piece>
     </div>
   );

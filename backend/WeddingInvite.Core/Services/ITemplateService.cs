@@ -12,7 +12,7 @@ namespace WeddingInvite.Core.Services
         Task<IEnumerable<TemplateUsageDto>> GetAllWithUsageAsync();
         Task<TemplateDto> UpdateAsync(int id, UpdateTemplateMetaDto updateDto);
         Task<TemplateDto> CreateAsync(CreateTemplateDto createDto);
-        Task<TemplateDto> SetThumbnailAsync(int id, IFormFile file);
+        Task<TemplateDto> SetThumbnailAsync(int id, IFormFile file, bool preservePrevious = false);
         Task<string> UploadAssetAsync(int id, IFormFile file);
         Task<TemplateDto> SetStagesAsync(int id, string stagesJson);
         Task<TemplateDto> ClearStagesAsync(int id);

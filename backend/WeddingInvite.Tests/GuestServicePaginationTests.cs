@@ -1,5 +1,4 @@
 using WeddingInvite.Core.Services;
-using WeddingInvite.Data.Repositories;
 using WeddingInvite.Models;
 using Xunit;
 
@@ -13,7 +12,7 @@ public class GuestServicePaginationTests : IDisposable
 
     public GuestServicePaginationTests()
     {
-        _sut = new GuestService(new GuestRepository(_db.Context), new EventRepository(_db.Context));
+        _sut = _db.CreateGuestService();
 
         var evt = new Event { Slug = "paged", TemplateId = 1, EventDate = DateTime.UtcNow.AddMonths(2) };
         _db.Context.Events.Add(evt);

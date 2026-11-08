@@ -34,6 +34,10 @@ export interface CinematicWorldLayer {
   textAlign?: 'left' | 'center' | 'right';
   lineHeight?: number;
   letterSpacing?: number;
+  rowGap?: number;
+  columnGap?: number;
+  /** Nested text box width, as a percentage of its containing block; unlike w, does not scale type. */
+  textWidth?: number;
   shape?: 'rect' | 'ellipse';
   fill?: string;
   radius?: number;
@@ -44,6 +48,8 @@ export interface CinematicWorldLayer {
   w: number;
   /** Omitted means preserve the source aspect ratio. */
   h?: number;
+  /** Preserve the current explicit box proportions during size edits. Natural-height art is already proportional. */
+  lockAspect?: boolean;
   z: number;
   rotation: number;
   flipX: boolean;
@@ -59,8 +65,8 @@ export interface CinematicWorldLayer {
 export type CinematicWorldGeometry = Pick<
   CinematicWorldLayer,
   'parentId' | 'part' | 'label' | 'group' | 'space' | 'kind' | 'src' | 'text' | 'color' | 'fontSize' | 'fontFamily' |
-  'fontWeight' | 'textAlign' | 'lineHeight' | 'letterSpacing' | 'shape' | 'fill' | 'radius' |
-  'borderColor' | 'borderWidth' | 'x' | 'y' | 'w' | 'h' | 'z' | 'rotation' | 'flipX' |
+  'fontWeight' | 'textAlign' | 'lineHeight' | 'letterSpacing' | 'rowGap' | 'columnGap' | 'textWidth' | 'shape' | 'fill' | 'radius' |
+  'borderColor' | 'borderWidth' | 'x' | 'y' | 'w' | 'h' | 'lockAspect' | 'z' | 'rotation' | 'flipX' |
   'hidden' | 'locked' | 'opacity' | 'fit' | 'behavior' | 'contentKey' | 'title' | 'titleSize' | 'timingTrackId' | 'interactionId' | 'aspectRatio' | 'animations'
 >;
 
@@ -71,13 +77,23 @@ interface WorldLayout { layers?: StoredLayer[] }
 const OVERRIDABLE: (keyof CinematicWorldGeometry)[] = [
   'parentId', 'part',
   'label', 'group', 'space', 'kind', 'src', 'text', 'color', 'fontSize', 'fontFamily',
-  'fontWeight', 'textAlign', 'lineHeight', 'letterSpacing', 'shape', 'fill', 'radius',
-  'borderColor', 'borderWidth', 'x', 'y', 'w', 'h', 'z', 'rotation', 'flipX', 'hidden',
+  'fontWeight', 'textAlign', 'lineHeight', 'letterSpacing', 'rowGap', 'columnGap', 'textWidth', 'shape', 'fill', 'radius',
+  'borderColor', 'borderWidth', 'x', 'y', 'w', 'h', 'lockAspect', 'z', 'rotation', 'flipX', 'hidden',
   'locked', 'opacity', 'fit', 'behavior', 'contentKey', 'title', 'titleSize', 'timingTrackId', 'interactionId', 'aspectRatio', 'animations',
 ];
 
 export const cinematicWorldKey = (prefix: string, breakpoint: Breakpoint) =>
   `${prefix}.layout.${breakpoint}.cinematic-world`;
+
+/** Shared by inspector size fields and canvas handles so linked boxes cannot drift or distort at limits. */
+export function resizeCinematicLayer(layer: Pick<CinematicWorldLayer, 'w' | 'h' | 'lockAspect'>, axis: 'w' | 'h', value: number): Partial<CinematicWorldGeometry> {
+  if (!Number.isFinite(value)) return {};
+  const size = Math.max(3, Math.min(200, value));
+  if (!layer.lockAspect || layer.h === undefined || layer.w <= 0 || layer.h <= 0) return { [axis]: size };
+  const factor = Math.max(Math.max(3 / layer.w, 3 / layer.h),
+    Math.min(Math.min(200 / layer.w, 200 / layer.h), size / layer[axis]!));
+  return { w: layer.w * factor, h: layer.h * factor };
+}
 
 function applyPatch(layer: CinematicWorldLayer, patch: Partial<CinematicWorldGeometry>) {
   const next = { ...layer };

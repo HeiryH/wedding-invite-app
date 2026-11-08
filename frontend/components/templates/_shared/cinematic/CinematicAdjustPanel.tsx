@@ -1,10 +1,11 @@
 'use client';
 
-import { useEffect, useRef, useState, type ChangeEvent } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ChangeEvent } from 'react';
 import type { Breakpoint } from '../types';
 import type { CinematicBeat, CinematicEditorMode } from './registry';
 import type { CinematicLayerGroup, CinematicWorldGeometry, CinematicWorldLayer } from './world';
-import { cinematicAncestors, cinematicDescendantIds, cinematicLayerTree } from './parts';
+import { resizeCinematicLayer } from './world';
+import { cinematicAncestors, cinematicDescendantIds, cinematicLayerTree, cinematicEditorLayers } from './parts';
 import type { CameraState } from './useCinematicScroll';
 import {
   resolveCinematicLayerTiming, resolveCinematicTrackClip,
@@ -19,6 +20,8 @@ import SceneSetManager from './SceneSetManager';
 import AssetAnimationEditor from './AssetAnimationEditor';
 import DirectorSettings from './DirectorSettings';
 import CinematicRichText from './CinematicRichText';
+import { EditorActions, ConfirmEditorAction } from './EditorActions';
+import { useWorkspacePreference, DEFAULT_SIDEBAR, decodeSidebar, decodeLayerFilter } from './workspacePreferences';
 import { CINEMATIC_FUNCTIONS } from './functionalLayers';
 import type { CinematicDirection } from './direction';
 import { BINDING_TOKENS } from '../bindings';
@@ -33,11 +36,14 @@ interface Props {
   selectedBeat: string;
   progress: number;
   mode: CinematicEditorMode;
-  referenceVisible: boolean;
-  referenceOpacity: number;
+  /** @deprecated Reference controls now live beside the preview. */
+  referenceVisible?: boolean;
+  referenceOpacity?: number;
   direction?: CinematicDirection;
   onDirectionChange?: (direction: CinematicDirection) => void;
   onAddEffectTrack?: (id: string, label: string) => void;
+  effectPose?: { effectId: string; side: 'from' | 'to' };
+  onEditEffectPose?: (pose?: { effectId: string; side: 'from' | 'to' }) => void;
   onReferenceChange?: (patch: { referenceSrc?: string; referenceLabel?: string; referenceFit?: 'contain' | 'cover' | 'fill'; referenceOpacity?: number }) => void;
   layers: CinematicWorldLayer[];
   sceneSets?: CinematicSceneSet[];
@@ -47,12 +53,13 @@ interface Props {
   visibilitySets: CinematicVisibilitySet[];
   tracks?: CinematicSequenceTrack[];
   selectedTimingTrack?: string;
+  selectedAnimationTrack?: boolean;
   timingSelectionRequest?: number;
   onSelectBeat: (id: string) => void;
   onProgressChange: (progress: number) => void;
   onModeChange: (mode: CinematicEditorMode) => void;
-  onReferenceVisibleChange: (visible: boolean) => void;
-  onReferenceOpacityChange: (opacity: number) => void;
+  onReferenceVisibleChange?: (visible: boolean) => void;
+  onReferenceOpacityChange?: (opacity: number) => void;
   onSelectLayer: (id: string | undefined) => void;
   onLayersChange: (layers: CinematicWorldLayer[]) => void;
   onResetLayer: (id: string) => void;
@@ -101,7 +108,7 @@ function Slider({ label, value, min, max, step, onChange }: {
       <span>{label}</span>
       <input type="range" min={min} max={max} step={step} value={value}
         onChange={(event) => onChange(Number(event.target.value))} />
-      <input className={styles.number} type="number" min={min} max={max} step={step} value={value}
+      <input className={styles.number} type="number" aria-label={label} min={min} max={max} step={step} value={value}
         onChange={(event) => onChange(Number(event.target.value))} />
     </label>
   );
@@ -264,12 +271,12 @@ function TimingTrackEditor({ track, onChange, onPreview, help }: {
 }
 
 export default function CinematicAdjustPanel({
-  beats, deletedBeats = [], breakpoint, selectedBeat, progress, mode, referenceVisible, referenceOpacity,
-  direction, onDirectionChange, onAddEffectTrack, onReferenceChange,
-  layers, sceneSets, onSceneSetAction, selectedLayer, selectedTimingTrack, timingSelectionRequest,
+  beats, deletedBeats = [], breakpoint, selectedBeat, progress, mode,
+  direction, onDirectionChange, onAddEffectTrack, effectPose, onEditEffectPose,
+  layers, sceneSets, onSceneSetAction, selectedLayer, selectedTimingTrack, selectedAnimationTrack = false, timingSelectionRequest,
   camera, visibilitySets, tracks = [],
-  onSelectBeat, onProgressChange, onModeChange, onReferenceVisibleChange,
-  onReferenceOpacityChange, onSelectLayer, onLayersChange, onResetWorld,
+  onSelectBeat, onProgressChange, onModeChange,
+  onSelectLayer, onLayersChange, onResetWorld,
   onResetLayer,
   onCameraChange, onResetCamera, onCopyCameraToOther,
   onTimingTrackChange, onResetTrack, onMakeTimingIndependent, onRelinkTiming,
@@ -291,24 +298,74 @@ export default function CinematicAdjustPanel({
   const [newTimingSetName, setNewTimingSetName] = useState('');
   const [selectedTimingSetId, setSelectedTimingSetId] = useState<string>();
   const [deleteConfirmSet, setDeleteConfirmSet] = useState<string>();
-  const [resetSequenceConfirm, setResetSequenceConfirm] = useState(false);
   const [selectedSceneSet, setSelectedSceneSet] = useState<string>();
   const [animationLayerId, setAnimationLayerId] = useState<string>();
-  const [collapsedLayers, setCollapsedLayers] = useState<Set<string>>(new Set());
+  const [sidebarPreferences, setSidebarPreferences, sidebarReady] = useWorkspacePreference('einvite.cinematic.sidebar.v1', DEFAULT_SIDEBAR, decodeSidebar);
+  const [layerFilter, setLayerFilter] = useWorkspacePreference('einvite.cinematic.layer-filter.v1', 'all', decodeLayerFilter);
+  const collapsedLayers = useMemo(() => new Set(sidebarPreferences.collapsedLayers), [sidebarPreferences.collapsedLayers]);
+  const setCollapsedLayers = useCallback((update: (current: Set<string>) => Set<string>) => setSidebarPreferences((current) => ({ ...current, collapsedLayers: [...update(new Set(current.collapsedLayers))] })), [setSidebarPreferences]);
+  const inspectorTab = sidebarPreferences.inspectorTab;
+  const setInspectorTab = useCallback((inspectorTab: typeof sidebarPreferences.inspectorTab) => setSidebarPreferences((current) => current.inspectorTab === inspectorTab ? current : { ...current, inspectorTab }), [setSidebarPreferences]);
+  useEffect(() => {
+    if (inspectorTab !== 'animation' || sidebarTab !== 'editing') onEditEffectPose?.();
+  }, [inspectorTab, sidebarTab, onEditEffectPose]);
+  useEffect(() => {
+    if (selectedTimingTrack && selectedAnimationTrack) setInspectorTab('animation');
+  }, [selectedTimingTrack, selectedAnimationTrack, timingSelectionRequest, setInspectorTab]);
+  const inspecting = mode === 'scene' && (layers.some((layer) => layer.id === selectedLayer) || popover === 'add');
+  const workspace = mode === 'scene' ? 'scene' : 'camera';
+  const scrollKey = workspace;
+  const bodyRef = useRef<HTMLDivElement>(null);
+  const layerBrowserHeaderRef = useRef<HTMLDivElement>(null);
+  const selectedRowRef = useRef<HTMLDivElement>(null);
+  const revealedLayerRef = useRef<string | undefined>(undefined);
+  const floatingRef = useRef<HTMLDivElement>(null);
+  const advancedBodyRef = useRef<HTMLDivElement>(null);
+  const workspaceScroll = useRef<Record<string, number>>({});
+  useLayoutEffect(() => {
+    if (bodyRef.current) bodyRef.current.scrollTop = workspaceScroll.current[scrollKey] ?? sidebarPreferences.scroll[scrollKey] ?? 0;
+    if (advancedBodyRef.current && sidebarTab === 'advanced') advancedBodyRef.current.scrollTop = workspaceScroll.current.advanced ?? sidebarPreferences.scroll.advanced ?? 0;
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- Restore on navigation/hydration only, never as the user scrolls.
+  }, [scrollKey, sidebarTab, sidebarReady]);
+  useEffect(() => { if (mode !== 'scene') setSidebarPreferences((current) => current.lastCameraMode === mode ? current : { ...current, lastCameraMode: mode }); }, [mode, setSidebarPreferences]);
+  const rememberScroll = (key: string, top: number) => {
+    const value = Math.round(top);
+    workspaceScroll.current[key] = value;
+    if (sidebarReady) setSidebarPreferences((current) => current.scroll[key] === value ? current : { ...current, scroll: { ...current.scroll, [key]: value } });
+  };
+  const floatingScrollKey = inspecting ? `inspector-${inspectorTab}` : 'timing-inspector';
+  useLayoutEffect(() => {
+    if (floatingRef.current) floatingRef.current.scrollTop = workspaceScroll.current[floatingScrollKey] ?? sidebarPreferences.scroll[floatingScrollKey] ?? 0;
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- Restore floating properties independently of sidebar navigation.
+  }, [floatingScrollKey, inspecting, selectedTimingSetId, sidebarReady, sidebarTab]);
   useEffect(() => {
     const selected = layers.find((layer) => layer.id === selectedLayer);
     if (selected) setCollapsedLayers((current) => new Set([...current].filter((id) =>
       !cinematicAncestors(selected, layers).some((parent) => parent.id === id))));
-  }, [selectedLayer, layers]);
+  }, [selectedLayer, layers, setCollapsedLayers]);
+  useLayoutEffect(() => {
+    if (!selectedLayer) { revealedLayerRef.current = undefined; return; }
+    if (mode !== 'scene' || sidebarTab !== 'editing' || revealedLayerRef.current === selectedLayer) return;
+    const row = selectedRowRef.current, sidebar = bodyRef.current;
+    // Wait for collapsed parents to expand before revealing the selected child.
+    if (!row || !sidebar) return;
+    const reveal = (container: HTMLElement, inset = 6) => {
+      const bounds = container.getBoundingClientRect(), item = row.getBoundingClientRect();
+      if (item.bottom > bounds.bottom - 6) container.scrollTop += item.bottom - bounds.bottom + 6;
+      else if (item.top < bounds.top + inset) container.scrollTop += item.top - bounds.top - inset;
+    };
+    reveal(sidebar, 58 + (layerBrowserHeaderRef.current?.getBoundingClientRect().height ?? 0)); // Clear both sticky navigation headers.
+    revealedLayerRef.current = selectedLayer;
+  }, [selectedLayer, collapsedLayers, mode, sidebarTab, layerFilter]);
   const fileRef = useRef<HTMLInputElement>(null);
-  const referenceFileRef = useRef<HTMLInputElement>(null);
   const replaceLayerRef = useRef<string | null>(null);
   const customLayerCounter = useRef(0);
   const transitionPreviewRef = useRef(0);
   const shipped = new Set(shippedLayerIds);
   const activeBeat = beats.find((beat) => beat.id === selectedBeat) ?? beats[0];
   const activeLayer = layers.find((layer) => layer.id === selectedLayer);
-  const frontToBack = [...layers].sort((a, b) => b.z - a.z);
+  const editorLayers = cinematicEditorLayers(layers);
+  const frontToBack = [...editorLayers].sort((a, b) => b.z - a.z);
   const activeTiming = activeLayer
     ? resolveCinematicLayerTiming(activeLayer.id, activeLayer.group, tracks, activeLayer.timingTrackId, layers)
     : undefined;
@@ -320,13 +377,16 @@ export default function CinematicAdjustPanel({
   const selectedTimingSet = tracks.find((track) => track.id === selectedTimingSetId &&
     track.target.type !== 'layer');
   const timingSetLayers = selectedTimingSet?.target.type === 'group'
-    ? layers.filter((layer) => layer.group === selectedTimingSet.target.id) : [];
+    ? editorLayers.filter((layer) => layer.group === selectedTimingSet.target.id) : [];
   const timingSetAnimationLayer = timingSetLayers.find((layer) => layer.id === animationLayerId) ?? timingSetLayers.find((layer) => !layer.parentId) ?? timingSetLayers[0];
   const availableSets = sceneSets ?? [...new Set(layers.map((layer) => layer.group))].map((id, z) => ({
     id, label: id, z, space: layers.find((layer) => layer.group === id)!.space,
     hidden: false, locked: false, system: false, opacity: 1,
   }));
   const setById = new Map(availableSets.map((set) => [set.id, set]));
+  const hiddenLayerIds = new Set(editorLayers.filter((layer) => layer.hidden || setById.get(layer.group)?.hidden ||
+    cinematicAncestors(layer, layers).some((parent) => parent.hidden)).map((layer) => layer.id));
+  const matchesLayerFilter = (layer: CinematicWorldLayer) => layerFilter === 'all' || hiddenLayerIds.has(layer.id) === (layerFilter === 'hidden');
   const spaceForGroup = (group: string) => setById.get(group)?.space ?? 'world';
   const currentSet = availableSets.find((set) => set.id === selectedSceneSet && !set.locked) ??
     availableSets.find((set) => !set.locked && tracks.some((track) =>
@@ -339,7 +399,7 @@ export default function CinematicAdjustPanel({
     group: set.id,
     layers: frontToBack.filter((layer) => layer.group === set.id),
     visibility: visibilitySets.find((visibility) => visibility.group === set.id),
-  })).filter((entry) => entry.layers.length > 0);
+  })).filter((entry) => entry.layers.some(matchesLayerFilter));
   const activeBeatIndex = Math.max(0, beats.findIndex((beat) => beat.id === activeBeat?.id));
   const isShippedBeat = Boolean(activeBeat && shippedBeatIds.includes(activeBeat.id));
   const ownedTracks = activeBeat ? tracks.filter((track) =>
@@ -386,7 +446,9 @@ export default function CinematicAdjustPanel({
     if (setById.get(layers.find((layer) => layer.id === id)?.group ?? '')?.locked) return;
     const target = layers.find((layer) => layer.id === id);
     if (target && cinematicAncestors(target, layers).some((parent) => parent.locked)) return;
-    onLayersChange(layers.map((layer) => layer.id === id ? { ...layer, ...patch } : layer));
+    onLayersChange(layers.map((layer) => layer.id === id ? { ...layer, ...patch }
+      : target?.behavior === 'programme-board' && patch.src !== undefined && layer.parentId === id && layer.part === 'artwork'
+        ? { ...layer, src: patch.src } : layer));
   };
 
   const nextCustomId = () => {
@@ -496,13 +558,14 @@ export default function CinematicAdjustPanel({
     setSelectedTimingSetId(undefined);
     onSelectTimingTrack?.(undefined);
     onSelectLayer(layer.id);
+  };
+
+  const goToAppearance = (layer: CinematicWorldLayer) => {
     const timing = resolveCinematicLayerTiming(layer.id, layer.group, tracks, layer.timingTrackId, layers);
     const track = timing.exact ?? timing.inherited;
     if (track) {
       const clip = resolveCinematicTrackClip(track, tracks);
-      if (progress < clip.start || progress > clip.end) {
-        onProgressChange((clip.enterEnd + clip.exitStart) / 2);
-      }
+      onProgressChange((clip.enterEnd + clip.exitStart) / 2);
     }
   };
 
@@ -546,21 +609,126 @@ export default function CinematicAdjustPanel({
     if (next) onSelectBeat(next.id);
   };
 
-  return (
-    <div className={styles.panel}>
-      <input ref={fileRef} type="file" accept="image/*" hidden onChange={handleFile} />
-      <input ref={referenceFileRef} type="file" accept="image/*" hidden onChange={async (event) => {
-        const file = event.target.files?.[0]; event.target.value = '';
-        if (!file || !onUploadImage || !onReferenceChange) return;
-        setUploading(true);
-        try { const referenceSrc = await onUploadImage(file); onReferenceChange({ referenceSrc, referenceLabel: file.name }); }
-        catch { window.alert('Could not upload reference image. Please try again.'); }
-        finally { setUploading(false); }
-      }} />
+  const cameraActions = activeBeat && mode === 'camera-beat' ? (
+                  <EditorActions key={`${activeBeat.id}-${breakpoint}`} label="Camera and beat actions" align="start">
+                  <ConfirmEditorAction label="Reset camera" description={`Reset only “${activeBeat.label}” framing on ${breakpoint}. Other beats, timing and layer placement stay unchanged.`} onConfirm={onResetCamera} />
+                  <button type="button" onClick={onCopyCameraToOther}>
+                    Copy to {breakpoint === 'mobile' ? 'desktop' : 'mobile'}
+                  </button>
+                  <button type="button" onClick={() => onDuplicateBeat?.(activeBeat.id)}>Duplicate beat</button>
+                  {isShippedBeat && <ConfirmEditorAction label="Reset beat" description={`Restore this beat’s name, scroll position, transition and reference, plus its ${breakpoint} camera. Other beats and layers stay unchanged.`} onConfirm={() => onResetBeat?.(activeBeat.id)} />}
+                  {deleteConfirmBeat === activeBeat.id ? (
+                    <div className={styles.deleteMomentConfirm} role="alert">
+                      <strong>Delete “{activeBeat.label}”?</strong>
+                      <p>This removes:</p>
+                      <ul>
+                        <li>Camera composition</li>
+                        {ownedTracks.map((track) => (
+                          <li key={track.id}>
+                            {track.label} <small>{ownedTrackImpact(track)}</small>
+                          </li>
+                        ))}
+                        <li>Allocated scroll segment</li>
+                      </ul>
+                      {removesInteraction && (
+                        <p className={styles.functionalWarning}>
+                          Guests will lose this form or interaction entry point.
+                        </p>
+                      )}
+                      <p>Shared scenery and timing sets stay in the story.</p>
+                      <div className={styles.deleteMomentActions}>
+                        <button type="button" onClick={() => setDeleteConfirmBeat(undefined)}>Cancel</button>
+                        <button type="button" className={styles.deleteBeat}
+                          onClick={() => {
+                            setDeleteConfirmBeat(undefined);
+                            onDeleteBeat?.(activeBeat.id);
+                          }}>Confirm delete moment</button>
+                      </div>
+                    </div>
+                  ) : (
+                    <button type="button" className={styles.deleteBeat}
+                      disabled={beats.length <= 1}
+                      onClick={() => setDeleteConfirmBeat(activeBeat.id)}>Delete moment</button>
+                  )}
+                  </EditorActions>
+  ) : null;
 
-      {sidebarTab === 'editing' && mode === 'scene' && (activeLayer || popover === 'add') && (
-        <div className={styles.card} data-cinematic-card={popover ?? 'detail'}>
+  const timingInspector = selectedTimingSet ? (
+              <section className={styles.setEditor} aria-label={`Timing track ${selectedTimingSet.label}`}>
+                <div className={styles.setEditorHeader}>
+                  {selectedTimingSet.target.type === 'set' ? (
+                    <input value={selectedTimingSet.label} aria-label="Timing set name"
+                      onChange={(event) => onRenameTimingSet?.(selectedTimingSet.id, event.target.value)} />
+                  ) : (
+                    <strong>{selectedTimingSet.label}</strong>
+                  )}
+                  <button type="button" aria-label="Go to appearance" title="Go to appearance"
+                    onClick={() => { const clip = resolveCinematicTrackClip(selectedTimingSet, tracks); onProgressChange((clip.enterEnd + clip.exitStart) / 2); }}>
+                    <Icon name="crosshair" size={17} />
+                  </button>
+                </div>
+                <TimingTrackEditor track={selectedTimingSet} onChange={onTimingTrackChange}
+                  onPreview={previewTrackTransition}
+                  help={selectedTimingSet.kind === 'interaction'
+                    ? 'This marker is an entry window. Opening RSVP or Best Wishes pauses the scene; the guest decides how long the form stays open.'
+                    : `${linkedAssetCount(selectedTimingSet.id)} assets follow this clip. Moving it moves every linked asset.`} />
+                {timingSetAnimationLayer && <>
+                  {timingSetLayers.length > 1 && <label className={styles.compactField}>Animate asset<select aria-label="Asset to animate" value={timingSetAnimationLayer.id} onChange={(event) => setAnimationLayerId(event.target.value)}>
+                    {timingSetLayers.map((layer) => <option key={layer.id} value={layer.id}>{layer.label}</option>)}
+                  </select></label>}
+                  <AssetAnimationEditor layer={timingSetAnimationLayer} tracks={tracks} layers={layers}
+                    disabled={timingSetAnimationLayer.locked || setById.get(timingSetAnimationLayer.group)?.locked}
+                    onChange={(animations) => patchLayer(timingSetAnimationLayer.id, { animations })}
+                    onSelectTrack={onSelectTimingTrack} onPreview={(track) => previewTrackTransition(track, 'enter')} />
+                </>}
+                {(onResetTrack || selectedTimingSet.target.type === 'set') && <div key={selectedTimingSet.id} className={styles.timingTrackActions} role="group" aria-label="Timing track actions">
+                {onResetTrack && (
+                  <div className={styles.setActions}>
+                    <ConfirmEditorAction label="Reset track" description="Restore this track’s template timing, or its full-story defaults if custom. Assets that follow this track are affected; unrelated tracks and layer placement stay unchanged." onConfirm={() => onResetTrack(selectedTimingSet.id)} />
+                  </div>
+                )}
+                {selectedTimingSet.target.type === 'set' && (
+                  <div className={styles.setActions}>
+                    <button type="button" onClick={() => {
+                      const id = onDuplicateTimingSet?.(selectedTimingSet.id);
+                      if (id) {
+                        setSelectedTimingSetId(id);
+                        onSelectTimingTrack?.(id);
+                      }
+                    }}>Duplicate set</button>
+                    {deleteConfirmSet === selectedTimingSet.id ? (
+                      <div className={styles.deleteSetConfirm} role="alert">
+                        <p>{linkedAssetCount(selectedTimingSet.id)} linked assets will keep their current timing as independent clips.</p>
+                        <button type="button" onClick={() => setDeleteConfirmSet(undefined)}>Cancel</button>
+                        <button type="button" onClick={() => {
+                          onDeleteTimingSet?.(selectedTimingSet.id);
+                          setSelectedTimingSetId(undefined);
+                          setDeleteConfirmSet(undefined);
+                          onSelectTimingTrack?.(undefined);
+                        }}>Delete set</button>
+                      </div>
+                    ) : (
+                      <button type="button" className={styles.dangerButton}
+                        onClick={() => setDeleteConfirmSet(selectedTimingSet.id)}>Delete set</button>
+                    )}
+                  </div>
+                )}
+                </div>}
+              </section>
+  ) : null;
+
+  const inspector = sidebarTab === 'editing' && inspecting && (activeLayer || popover === 'add') ? (
+        <section className={styles.card} data-cinematic-card={popover ?? 'detail'} aria-label="Object inspector">
           <div className={styles.cardHeader}>
+            {activeLayer && popover !== 'add' && <EditorActions key={`${activeLayer.id}-${breakpoint}`} label="Layer actions" align="start">
+              {shipped.has(activeLayer.id) || activeLayer.part ? <ConfirmEditorAction label="Reset this layer"
+                description={`Reset only “${activeLayer.label}” on ${breakpoint}. Its child layers and story timing stay unchanged.`}
+                disabled={activeLayer.locked || cinematicAncestors(activeLayer, layers).some((parent) => parent.locked) || setById.get(activeLayer.group)?.locked}
+                onConfirm={() => onResetLayer(activeLayer.id)} />
+                : <ConfirmEditorAction label="Delete this layer" description={`Remove “${activeLayer.label}” and its child layers on ${breakpoint}. Uploaded files are not deleted.`}
+                  disabled={activeLayer.locked || cinematicAncestors(activeLayer, layers).some((parent) => parent.locked) || setById.get(activeLayer.group)?.locked}
+                  onConfirm={() => removeLayer(activeLayer.id)} />}
+            </EditorActions>}
             <span className={styles.cardTitle}>{popover === 'add' ? 'Add to scene' : activeLayer?.label}</span>
             <button
               className={styles.close}
@@ -568,6 +736,25 @@ export default function CinematicAdjustPanel({
               aria-label="Close card"
             >×</button>
           </div>
+          {activeLayer && popover !== 'add' && <>
+            <div className={styles.inspectorActions}>
+              <button type="button" onClick={() => goToAppearance(activeLayer)} disabled={!activeTiming?.source}>Go to appearance</button>
+            </div>
+            <div className={styles.inspectorTabs} role="tablist" aria-label="Object properties">
+              {(['layout', 'style', 'animation'] as const).map((tab) => <button type="button" role="tab" key={tab}
+                id={`object-${tab}-tab`} aria-controls={`object-${tab}-panel`} aria-selected={inspectorTab === tab}
+                tabIndex={inspectorTab === tab ? 0 : -1}
+                onKeyDown={(event) => {
+                  const tabs = ['layout', 'style', 'animation'] as const;
+                  const offset = event.key === 'ArrowRight' ? 1 : event.key === 'ArrowLeft' ? -1 : 0;
+                  if (!offset && event.key !== 'Home' && event.key !== 'End') return;
+                  event.preventDefault();
+                  const next = event.key === 'Home' ? tabs[0] : event.key === 'End' ? tabs[2] : tabs[(tabs.indexOf(tab) + offset + 3) % 3];
+                  setInspectorTab(next); document.getElementById(`object-${next}-tab`)?.focus();
+                }}
+                onClick={() => setInspectorTab(tab)}>{tab === 'layout' ? 'Layout' : tab === 'style' ? 'Style' : 'Animation'}</button>)}
+            </div>
+          </>}
           <div className={styles.cardBody}>
             {popover === 'add' ? (
               <div className={styles.addGrid}>
@@ -589,6 +776,7 @@ export default function CinematicAdjustPanel({
               </div>
             ) : activeLayer ? (
               <>
+                <div role="tabpanel" id="object-layout-panel" aria-labelledby="object-layout-tab" hidden={inspectorTab !== 'layout'}>
                 <div className={styles.control} style={{ gridTemplateColumns: '52px 1fr' }}>
                   <span>Name</span>
                   <input className={styles.field} value={activeLayer.label}
@@ -611,13 +799,71 @@ export default function CinematicAdjustPanel({
                   </div>
                 )}
 
-                {activeLayer.parentId && <p className={styles.note}>Inside {layers.find((layer) => layer.id === activeLayer.parentId)?.label}. Position offsets and scale are local to its original responsive slot. Parent movement, visibility and timing are inherited. Blank text uses live event content.</p>}
+                {activeLayer.parentId && <p className={styles.note}>Inside {editorLayers.find((layer) => layer.id === editorLayers.find((item) => item.id === activeLayer.id)?.parentId)?.label}. Position offsets and scale are local to its original responsive slot. Parent movement, visibility and timing are inherited.</p>}
                 {!activeLayer.parentId && <label className={styles.compactField}>Function
                   <select aria-label="Layer function" value={activeLayer.behavior || 'artwork'} onChange={(event) =>
                     patchLayer(activeLayer.id, { behavior: event.target.value, kind: event.target.value === 'artwork' ? (activeLayer.src ? 'img' : 'text') : 'functional' })}>
                     {CINEMATIC_FUNCTIONS.map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}
                   </select>
                 </label>}
+                <div role="group" aria-label="Position and size">
+                <div className={styles.control} style={{ gridTemplateColumns: '52px 1fr' }}>
+                  <span>Space</span>
+                  <select className={styles.field} value={activeLayer.space}
+                    disabled={Boolean(onSceneSetAction)}
+                    onChange={(event) => patchLayer(activeLayer.id, { space: event.target.value as CinematicWorldLayer['space'] })}>
+                    <option value="world">Scene · moves with camera</option>
+                    <option value="viewport">Screen · stays with viewer</option>
+                  </select>
+                </div>
+
+                {activeLayer.locked || cinematicAncestors(activeLayer, layers).some((parent) => parent.locked) || setById.get(activeLayer.group)?.locked ? (
+                  <p className={styles.note}>Unlock this layer in the list to move or resize it.</p>
+                ) : (
+                  <>
+                    <Slider label="X" value={activeLayer.x} min={activeLayer.parentId ? -500 : -25} max={activeLayer.parentId ? 500 : 125} step={0.5}
+                      onChange={(value) => patchLayer(activeLayer.id, { x: value })} />
+                    <Slider label="Y" value={activeLayer.y} min={activeLayer.parentId ? -500 : -25} max={activeLayer.parentId ? 500 : 125} step={0.5}
+                      onChange={(value) => patchLayer(activeLayer.id, { y: value })} />
+                    <Slider label={activeLayer.parentId ? 'Scale %' : 'Width'} value={activeLayer.w} min={3} max={200} step={0.5}
+                      onChange={(value) => patchLayer(activeLayer.id, resizeCinematicLayer(activeLayer, 'w', value))} />
+                    {activeLayer.parentId && (activeLayer.kind === 'text' || ['items', 'copy', 'caption'].includes(activeLayer.part ?? '')) && <>
+                      <Slider label="Text width %" value={activeLayer.textWidth ?? 100} min={5} max={200} step={1}
+                        onChange={(textWidth) => patchLayer(activeLayer.id, { textWidth })} />
+                      <p className={styles.note}>Width within its parent. Text wraps without changing font size; alignment applies inside this box.</p>
+                      <div className={styles.actionRow}><button type="button" disabled={activeLayer.textWidth === undefined}
+                        onClick={() => patchLayer(activeLayer.id, { textWidth: undefined })}>Natural width</button></div>
+                    </>}
+                    {activeLayer.h !== undefined && <>
+                      <Slider label="Height" value={activeLayer.h} min={3} max={200} step={0.5}
+                        onChange={(value) => patchLayer(activeLayer.id, resizeCinematicLayer(activeLayer, 'h', value))} />
+                      <button type="button" className={styles.proportionLock} aria-label="Link width and height" aria-pressed={Boolean(activeLayer.lockAspect)}
+                        title="Keep the current width-to-height proportions when resizing"
+                        onClick={() => patchLayer(activeLayer.id, { lockAspect: !activeLayer.lockAspect })}>
+                        <Icon name={activeLayer.lockAspect ? 'lock' : 'unlock'} size={14} />
+                        {activeLayer.lockAspect ? 'Linked: height follows width' : 'Free: resize width and height separately'}
+                      </button>
+                    </>}
+                    <Slider label="Rotate" value={activeLayer.rotation} min={-180} max={180} step={1}
+                      onChange={(value) => patchLayer(activeLayer.id, { rotation: value })} />
+                    <Slider label="Depth" value={activeLayer.z} min={-10}
+                      max={Math.max(40, ...layers.filter((layer) => layer.space === activeLayer.space).map((layer) => layer.z + 5))}
+                      step={1} onChange={(value) => patchLayer(activeLayer.id, { z: value })} />
+                    <div className={styles.actionRow}>
+                      {!activeLayer.parentId && (activeLayer.src || activeLayer.kind === 'img') && <button type="button"
+                        onClick={() => placeBehindCurrentSet(activeLayer)}>Place behind current set</button>}
+                      {(activeLayer.kind ?? 'img') === 'img' && <button type="button"
+                        onClick={() => patchLayer(activeLayer.id, { flipX: !activeLayer.flipX })}>
+                        {activeLayer.flipX ? '✓ Mirrored' : 'Mirror'}
+                      </button>}
+                      <button type="button" onClick={() => moveLayer(activeLayer.id, 'backward')}>Send to back</button>
+                      <button type="button" onClick={() => moveLayer(activeLayer.id, 'forward')}>Bring to front</button>
+                    </div>
+                  </>
+                )}
+                </div>
+                </div>
+                <div role="tabpanel" id="object-style-panel" aria-labelledby="object-style-tab" hidden={inspectorTab !== 'style'}>
                 {activeLayer.behavior === 'narrative' && <>
                   <label className={styles.compactField}>Content binding<select aria-label="Narrative binding" value={activeLayer.contentKey || 'custom'}
                     onChange={(event) => patchLayer(activeLayer.id, { contentKey: event.target.value })}>
@@ -644,12 +890,12 @@ export default function CinematicAdjustPanel({
                   <Slider label="Leading" value={activeLayer.lineHeight ?? 1.45} min={.8} max={3} step={.05} onChange={(lineHeight) => patchLayer(activeLayer.id, { lineHeight })} />
                   <label className={styles.compactField}>Colour<input type="color" value={activeLayer.color || direction?.theme.ink || '#4a3a32'} onChange={(event) => patchLayer(activeLayer.id, { color: event.target.value })} /></label>
                 </>}
-                {activeLayer.behavior && activeLayer.behavior !== 'artwork' && activeLayer.behavior !== 'narrative' && <label className={styles.compactField}>
+                {activeLayer.behavior && !['artwork', 'narrative', 'programme-board'].includes(activeLayer.behavior) && <label className={styles.compactField}>
                   Label override<input value={activeLayer.title || ''} onChange={(event) => patchLayer(activeLayer.id, { title: event.target.value })} />
                 </label>}
-                {activeLayer.kind === 'text' && (
+                {(activeLayer.kind === 'text' || activeLayer.part === 'items') && (
                   <>
-                    <textarea className={styles.textarea} aria-label="Layer text" value={activeLayer.text ?? ''}
+                    {activeLayer.kind === 'text' ? <><textarea className={styles.textarea} aria-label="Layer text" value={activeLayer.text ?? ''}
                       onChange={(event) => patchLayer(activeLayer.id, { text: event.target.value })}
                       placeholder="Type text…" />
                     <select className={styles.field} value="" onChange={(event) => {
@@ -660,7 +906,7 @@ export default function CinematicAdjustPanel({
                       {BINDING_TOKENS.map((binding) => (
                         <option key={binding.token} value={binding.token}>{binding.label}</option>
                       ))}
-                    </select>
+                    </select></> : <p className={styles.note}>Applies to every programme time and activity. Edit the content in the event itinerary.</p>}
                     <div className={styles.twoColumn}>
                       <label className={styles.compactField}>
                         <span>Colour</span>
@@ -683,12 +929,20 @@ export default function CinematicAdjustPanel({
                         {CURATED_FONTS.map((font) => <option key={font.key} value={font.key}>{font.label}</option>)}
                       </select>
                     </div>
-                    <Slider label="Type size" value={activeLayer.fontSize ?? 4} min={1} max={14} step={0.25}
+                    <Slider label="Type size" value={activeLayer.fontSize ?? (activeLayer.part === 'items' ? .62 : 4)} min={.1} max={14} step={0.1}
                       onChange={(value) => patchLayer(activeLayer.id, { fontSize: value })} />
                     <Slider label="Weight" value={activeLayer.fontWeight ?? 600} min={100} max={900} step={100}
                       onChange={(value) => patchLayer(activeLayer.id, { fontWeight: value })} />
                     <Slider label="Spacing" value={activeLayer.letterSpacing ?? 0} min={-0.1} max={0.5} step={0.01}
                       onChange={(value) => patchLayer(activeLayer.id, { letterSpacing: value })} />
+                    <Slider label="Line spacing" value={activeLayer.lineHeight ?? 1.05} min={.8} max={3} step={.05}
+                      onChange={(lineHeight) => patchLayer(activeLayer.id, { lineHeight })} />
+                    {activeLayer.part === 'items' && <>
+                      <Slider label="Row spacing" value={activeLayer.rowGap ?? .28} min={0} max={3} step={.05}
+                        onChange={(rowGap) => patchLayer(activeLayer.id, { rowGap })} />
+                      <Slider label="Column gap" value={activeLayer.columnGap ?? .4} min={0} max={3} step={.05}
+                        onChange={(columnGap) => patchLayer(activeLayer.id, { columnGap })} />
+                    </>}
                   </>
                 )}
 
@@ -715,64 +969,36 @@ export default function CinematicAdjustPanel({
                   </>
                 )}
 
-                {(activeLayer.src || activeLayer.kind === 'img') && (
+                {(activeLayer.src || activeLayer.kind === 'img') && activeLayer.part !== 'frames' && (
                   <div className={styles.imageActions}>
-                    {!activeLayer.parentId && <button type="button" className={styles.replaceButton}
-                      onClick={() => placeBehindCurrentSet(activeLayer)}>Place behind current set</button>}
                     <button type="button" className={styles.replaceButton} disabled={!onUploadImage || uploading}
                       onClick={() => chooseImage(activeLayer.id)}>{uploading ? 'Uploading…' : 'Replace image'}</button>
                   </div>
                 )}
-                {activeLayer.parentId && activeLayer.kind !== 'text' && <>
-                  <Slider label="Border" value={activeLayer.borderWidth ?? 0} min={0} max={30} step={1}
+                {activeLayer.part === 'frames' && direction && onDirectionChange && <>
+                  <p className={styles.note}>All frames share these settings and fill automatically with approved photos.</p>
+                  {(['frames', 'columns', 'gap', 'tilt'] as const).map((key) => <Slider key={key}
+                    label={({ frames: 'Frame count', columns: 'Columns', gap: 'Frame gap', tilt: 'Frame tilt' })[key]}
+                    value={direction.theme.memory[key]} min={key === 'gap' ? 0 : key === 'tilt' ? -30 : 1}
+                    max={key === 'frames' ? 24 : key === 'columns' ? 6 : 30} step={key === 'tilt' ? .1 : 1}
+                    onChange={(value) => onDirectionChange({ ...direction, theme: { ...direction.theme, memory: { ...direction.theme.memory, [key]: value } } })} />)}
+                </>}
+                {activeLayer.parentId && activeLayer.kind !== 'text' && activeLayer.part !== 'items' && <>
+                  <Slider label="Border" value={activeLayer.borderWidth ?? (activeLayer.part === 'frames' ? direction?.theme.memory.borderWidth ?? 5 : 0)} min={0} max={30} step={1}
                     onChange={(borderWidth) => patchLayer(activeLayer.id, { borderWidth })} />
                   <label className={styles.compactField}>Border colour<input type="color" value={activeLayer.borderColor || direction?.theme.memory.frameColor || '#d4a65f'}
                     onChange={(event) => patchLayer(activeLayer.id, { borderColor: event.target.value })} /></label>
                 </>}
 
-                <div className={styles.control} style={{ gridTemplateColumns: '52px 1fr' }}>
-                  <span>Space</span>
-                  <select className={styles.field} value={activeLayer.space}
-                    disabled={Boolean(onSceneSetAction)}
-                    onChange={(event) => patchLayer(activeLayer.id, { space: event.target.value as CinematicWorldLayer['space'] })}>
-                    <option value="world">Scene · moves with camera</option>
-                    <option value="viewport">Screen · stays with viewer</option>
-                  </select>
+                <Slider label="Opacity" value={activeLayer.opacity} min={0} max={1} step={0.05}
+                  onChange={(value) => patchLayer(activeLayer.id, { opacity: value })} />
                 </div>
-
-                {activeLayer.locked || cinematicAncestors(activeLayer, layers).some((parent) => parent.locked) || setById.get(activeLayer.group)?.locked ? (
-                  <p className={styles.note}>Unlock this layer in the list to move or resize it.</p>
-                ) : (
-                  <>
-                    <Slider label="X" value={activeLayer.x} min={activeLayer.parentId ? -500 : -25} max={activeLayer.parentId ? 500 : 125} step={0.5}
-                      onChange={(value) => patchLayer(activeLayer.id, { x: value })} />
-                    <Slider label="Y" value={activeLayer.y} min={activeLayer.parentId ? -500 : -25} max={activeLayer.parentId ? 500 : 125} step={0.5}
-                      onChange={(value) => patchLayer(activeLayer.id, { y: value })} />
-                    <Slider label={activeLayer.parentId ? 'Scale %' : 'Width'} value={activeLayer.w} min={3} max={200} step={0.5}
-                      onChange={(value) => patchLayer(activeLayer.id, { w: value })} />
-                    {activeLayer.h !== undefined && <Slider label="Height" value={activeLayer.h} min={3} max={200} step={0.5}
-                      onChange={(value) => patchLayer(activeLayer.id, { h: value })} />}
-                    <Slider label="Rotate" value={activeLayer.rotation} min={-180} max={180} step={1}
-                      onChange={(value) => patchLayer(activeLayer.id, { rotation: value })} />
-                    <Slider label="Opacity" value={activeLayer.opacity} min={0} max={1} step={0.05}
-                      onChange={(value) => patchLayer(activeLayer.id, { opacity: value })} />
-                    <Slider label="Depth" value={activeLayer.z} min={-10}
-                      max={Math.max(40, ...layers.filter((layer) => layer.space === activeLayer.space).map((layer) => layer.z + 5))}
-                      step={1} onChange={(value) => patchLayer(activeLayer.id, { z: value })} />
-                    <div className={styles.actionRow}>
-                      {(activeLayer.kind ?? 'img') === 'img' && <button type="button"
-                        onClick={() => patchLayer(activeLayer.id, { flipX: !activeLayer.flipX })}>
-                        {activeLayer.flipX ? '✓ Mirrored' : 'Mirror'}
-                      </button>}
-                      <button type="button" onClick={() => moveLayer(activeLayer.id, 'backward')}>Send to back</button>
-                      <button type="button" onClick={() => moveLayer(activeLayer.id, 'forward')}>Bring to front</button>
-                      {shipped.has(activeLayer.id) || activeLayer.part
-                        ? <button type="button" onClick={() => onResetLayer(activeLayer.id)}>Reset prop</button>
-                        : <button type="button" className={styles.dangerButton} onClick={() => removeLayer(activeLayer.id)}>Delete layer</button>}
-                    </div>
-                  </>
-                )}
-
+                <div role="tabpanel" id="object-animation-panel" aria-labelledby="object-animation-tab" hidden={inspectorTab !== 'animation'}>
+                {direction && onDirectionChange && <DirectorSettings key={`${activeLayer.id}:${selectedTimingTrack ?? ''}`} standalone effectScope={activeLayer.id} selectedEffectTrackId={selectedTimingTrack}
+                  value={direction} onChange={onDirectionChange} breakpoint={breakpoint} layers={layers} sets={availableSets}
+                  beats={beats.map((beat, order) => ({ id: beat.id, label: beat.label, at: beat.progress, order, transitionIn: beat.transitionIn }))}
+                  tracks={tracks} onAddEffectTrack={onAddEffectTrack ?? (() => {})} pose={effectPose} onEditPose={onEditEffectPose}
+                  onPreview={(id) => { const track = tracks.find((item) => item.id === id); if (track) previewTrackTransition(track, 'enter'); }} />}
                 <div className={styles.timingEditor}>
                   <strong>Appearance timing</strong>
                   {activeTimingTrack ? (
@@ -822,22 +1048,33 @@ export default function CinematicAdjustPanel({
                   disabled={activeLayer.locked || setById.get(activeLayer.group)?.locked}
                   onChange={(animations) => patchLayer(activeLayer.id, { animations })}
                   onSelectTrack={onSelectTimingTrack} onPreview={(track) => previewTrackTransition(track, 'enter')} />
+                </div>
               </>
             ) : null}
           </div>
-        </div>
-      )}
+        </section>
+      ) : null;
 
+  return (
+    <div className={styles.panel}>
+      <input ref={fileRef} type="file" accept="image/*" hidden onChange={handleFile} />
       <div className={styles.header}>
+        <EditorActions key={breakpoint} label="Story actions" align="start">
+          <ConfirmEditorAction label="Reset scene layout" description={`Reset all layer edits and remove added layers on ${breakpoint}. Camera framing and timing stay unchanged.`} onConfirm={onResetWorld} />
+          <ConfirmEditorAction label="Reset all timing" description="Reset all appearance tracks, transitions and timing sets to the template defaults. Camera framing and layer placement stay unchanged." onConfirm={onResetVisibility} />
+          <ConfirmEditorAction label="Reset entire story" description="Reset all cinematic layer and scene-set edits, added layers, beats, cameras and timing on both devices to the template defaults. Event details, guests and uploaded files are not deleted." disabled={!onResetSequence} onConfirm={() => onResetSequence?.()} />
+        </EditorActions>
         <span className={styles.title}>Cinematic · {breakpoint}</span>
         <button className={styles.close} onClick={onClose} aria-label="Close">×</button>
       </div>
 
-      <div className={styles.body} hidden={sidebarTab !== 'editing'} role="tabpanel" id="cinematic-editing-panel" aria-labelledby="cinematic-editing-tab">
+      <div ref={bodyRef} className={`${styles.body} ${mode === 'scene' ? styles.sceneBody : ''}`} hidden={sidebarTab !== 'editing'} role="tabpanel" id="cinematic-editing-panel" aria-labelledby="cinematic-editing-tab"
+        onScroll={(event) => rememberScroll(scrollKey, event.currentTarget.scrollTop)}>
         <div className={styles.label}>Editing mode</div>
         <div className={styles.modeSwitch}>
           <button
             type="button"
+            aria-pressed={mode === 'scene'}
             className={`${styles.modeButton} ${mode === 'scene' ? styles.modeActive : ''}`}
             onClick={() => onModeChange('scene')}
           >
@@ -845,8 +1082,14 @@ export default function CinematicAdjustPanel({
           </button>
           <button
             type="button"
+            aria-pressed={mode !== 'scene'}
             className={`${styles.modeButton} ${mode !== 'scene' ? styles.modeActive : ''}`}
-            onClick={() => onModeChange(mode === 'camera-beat' ? 'camera-beat' : 'camera-compose')}
+            onClick={() => {
+              const target = mode === 'scene' ? sidebarPreferences.lastCameraMode : mode;
+              // Returning at an in-between playhead must not silently jump to a saved keyframe.
+              onModeChange(target === 'camera-beat' && Math.abs(progress - (activeBeat?.progress ?? progress)) > .0001
+                ? 'camera-compose' : target);
+            }}
           >
             Camera
           </button>
@@ -856,6 +1099,17 @@ export default function CinematicAdjustPanel({
             ? 'Scene mode will move the physical artwork without changing the camera.'
             : 'Camera mode changes the viewer’s framing without moving the physical artwork.'}
         </p>
+        {mode !== 'scene' && <section aria-label="Camera beats">
+          <div className={styles.label}>Cinematic beats</div>
+          <select className={styles.field} aria-label="Camera beat" value={activeBeat?.id ?? ''} onChange={(event) => onSelectBeat(event.target.value)}>
+            {beats.map((beat, index) => <option key={beat.id} value={beat.id}>{index + 1}. {beat.label} · {Math.round(beat.progress * 100)}%</option>)}
+          </select>
+          <div className={styles.beatStepper}>
+            <button type="button" onClick={() => stepBeat(-1)} disabled={activeBeatIndex === 0}>← Previous</button>
+            <span>{activeBeatIndex + 1} of {beats.length}</span>
+            <button type="button" onClick={() => stepBeat(1)} disabled={activeBeatIndex === beats.length - 1}>Next →</button>
+          </div>
+        </section>}
 
         {mode !== 'scene' && camera && (
           <div className={`${styles.cameraEditor} ${mode === 'camera-compose' ? styles.cameraCompose : ''}`}>
@@ -865,7 +1119,10 @@ export default function CinematicAdjustPanel({
               <button type="button" className={mode === 'camera-beat' ? styles.cameraModeActive : ''}
                 onClick={() => onModeChange('camera-beat')}>Edit beat</button>
             </div>
-            <strong>{mode === 'camera-compose' ? 'Compose camera' : activeBeat?.label}</strong>
+            <div className={styles.cameraHeader}>
+              {cameraActions}
+              <strong>{mode === 'camera-compose' ? 'Compose camera' : activeBeat?.label}</strong>
+            </div>
             <p className={styles.note}>
               {mode === 'camera-compose'
                 ? 'Explore freely at the current playhead. Nothing is committed until you set it as a beat.'
@@ -911,47 +1168,6 @@ export default function CinematicAdjustPanel({
                     </select>
                   </label>
                 </div>
-                <div className={styles.cameraActions}>
-                  <button type="button" onClick={onResetCamera}>Reset camera</button>
-                  <button type="button" onClick={onCopyCameraToOther}>
-                    Copy to {breakpoint === 'mobile' ? 'desktop' : 'mobile'}
-                  </button>
-                  <button type="button" onClick={() => onDuplicateBeat?.(activeBeat.id)}>Duplicate beat</button>
-                  {isShippedBeat && <button type="button" onClick={() => onResetBeat?.(activeBeat.id)}>Reset beat</button>}
-                  {deleteConfirmBeat === activeBeat.id ? (
-                    <div className={styles.deleteMomentConfirm} role="alert">
-                      <strong>Delete “{activeBeat.label}”?</strong>
-                      <p>This removes:</p>
-                      <ul>
-                        <li>Camera composition</li>
-                        {ownedTracks.map((track) => (
-                          <li key={track.id}>
-                            {track.label} <small>{ownedTrackImpact(track)}</small>
-                          </li>
-                        ))}
-                        <li>Allocated scroll segment</li>
-                      </ul>
-                      {removesInteraction && (
-                        <p className={styles.functionalWarning}>
-                          Guests will lose this form or interaction entry point.
-                        </p>
-                      )}
-                      <p>Shared scenery and timing sets stay in the story.</p>
-                      <div className={styles.deleteMomentActions}>
-                        <button type="button" onClick={() => setDeleteConfirmBeat(undefined)}>Cancel</button>
-                        <button type="button" className={styles.deleteBeat}
-                          onClick={() => {
-                            setDeleteConfirmBeat(undefined);
-                            onDeleteBeat?.(activeBeat.id);
-                          }}>Confirm delete moment</button>
-                      </div>
-                    </div>
-                  ) : (
-                    <button type="button" className={styles.deleteBeat}
-                      disabled={beats.length <= 1}
-                      onClick={() => setDeleteConfirmBeat(activeBeat.id)}>Delete moment</button>
-                  )}
-                </div>
               </>
             ) : null}
           </div>
@@ -975,8 +1191,41 @@ export default function CinematicAdjustPanel({
           <>
             {onSceneSetAction && <SceneSetManager sets={availableSets} layers={layers} tracks={tracks}
               selectedId={selectedSceneSet} onSelect={setSelectedSceneSet} onAction={onSceneSetAction} />}
-            <div className={styles.label}>Scene layers · front to back</div>
-            <div className={styles.layers}>
+            <section className={styles.layerBrowser} aria-label="Scene layer browser" data-active={timingSelectionMode || popover === 'add'}>
+            <div ref={layerBrowserHeaderRef} className={styles.layerBrowserHeader}>
+              <div className={styles.label}>Scene layers · front to back</div>
+              <div className={styles.layerTools} role="toolbar" aria-label="Scene layer actions">
+                <button type="button" className={styles.layerToolButton} aria-label="Organize timing sets" title="Organize timing sets"
+                  aria-pressed={timingSelectionMode} onClick={() => {
+                    if (timingSelectionMode) { cancelTimingSelection(); return; }
+                    setTimingSelectionMode(true);
+                    setSelectedTimingLayers(selectedLayer ? [selectedLayer] : []);
+                    setSelectedTimingSetId(undefined);
+                    onSelectTimingTrack?.(undefined);
+                  }}><Icon name="clock" size={16} /></button>
+                <button type="button" className={styles.layerToolButton}
+                  onClick={() => {
+                    onSelectLayer(undefined);
+                    setPopover((value) => value === 'add' ? null : 'add');
+                  }}
+                  aria-label="Add to scene" title="Add to scene"
+                  aria-pressed={popover === 'add'}>
+                  <Icon name="plus" size={16} />
+                </button>
+              </div>
+            </div>
+            <div className={styles.layerFilters} role="group" aria-label="Filter scene layers">
+              {(['all', 'visible', 'hidden'] as const).map((filter) => <button key={filter} type="button"
+                aria-pressed={layerFilter === filter} onClick={() => { revealedLayerRef.current = undefined; setLayerFilter(filter); }}>
+                {filter === 'all' ? 'All' : filter === 'visible' ? 'Visible' : 'Hidden'}
+                <span>{filter === 'all' ? editorLayers.length : filter === 'hidden' ? hiddenLayerIds.size : editorLayers.length - hiddenLayerIds.size}</span>
+              </button>)}
+            </div>
+            <p className={styles.filterHint}>Uses layer and set eye controls, not scroll timing.</p>
+            {activeLayer && !matchesLayerFilter(activeLayer) && <button type="button" className={styles.returnInspector}
+              onClick={() => { revealedLayerRef.current = undefined; setLayerFilter('all'); }}>Show selected layer · {activeLayer.label}</button>}
+            <div className={styles.layers} aria-label="Scene layers">
+              {!groupedLayers.length && <p className={styles.note} role="status">No {layerFilter === 'all' ? '' : `${layerFilter} `}layers.</p>}
               {groupedLayers.map(({ group, layers: groupLayers, visibility }) => {
                 const visibleNow = !visibility || cinematicSetOpacity(progress, visibility) > 0.08;
                 const groupTrack = tracks.find((track) =>
@@ -993,11 +1242,13 @@ export default function CinematicAdjustPanel({
                       }}>
                       <span className={`${styles.setDot} ${visibleNow ? styles.setDotActive : ''}`} />
                       <span>{setById.get(group)?.label ?? group}</span>
-                      <small>{groupLayers.length}</small>
+                      <small>{groupLayers.filter(matchesLayerFilter).length}</small>
                     </button>
-                    {cinematicLayerTree(groupLayers).filter(({ layer }) => !cinematicAncestors(layer, layers).some((parent) => collapsedLayers.has(parent.id))).map(({ layer, depth }) => (
+                    {cinematicLayerTree(groupLayers).filter(({ layer }) => matchesLayerFilter(layer) && (layerFilter !== 'all' || !cinematicAncestors(layer, editorLayers).some((parent) => collapsedLayers.has(parent.id)))).map(({ layer, depth }) => (
                       <div
                         key={layer.id}
+                        ref={layer.id === selectedLayer ? selectedRowRef : undefined}
+                        data-scene-layer={layer.id}
                         style={{ paddingLeft: `${6 + depth * 14}px` }}
                         className={`${styles.layerRow} ${layer.id === selectedLayer ? styles.layerRowActive : ''} ${selectedTimingLayers.includes(layer.id) ? styles.layerRowChecked : ''}`}
                       >
@@ -1007,13 +1258,14 @@ export default function CinematicAdjustPanel({
                             onChange={() => toggleTimingLayer(layer.id)}
                             aria-label={`Include ${layer.label} in timing set`} />
                         )}
-                        {layers.some((child) => child.parentId === layer.id) && <button type="button" className={styles.iconButton}
+                        {layerFilter === 'all' && editorLayers.some((child) => child.parentId === layer.id) && <button type="button" className={`${styles.iconButton} ${styles.layerDisclosure}`}
                           aria-label={`${collapsedLayers.has(layer.id) ? 'Expand' : 'Collapse'} ${layer.label}`}
                           aria-expanded={!collapsedLayers.has(layer.id)}
                           onClick={() => setCollapsedLayers((current) => { const next = new Set(current); if (next.has(layer.id)) next.delete(layer.id); else next.add(layer.id); return next; })}>
-                          {collapsedLayers.has(layer.id) ? '▸' : '▾'}
+                          <Icon name={collapsedLayers.has(layer.id) ? 'chevron-right' : 'chevron-down'} size={18} />
                         </button>}
-                        <button type="button" className={styles.layerName} onClick={() => selectLayer(layer)}>
+                        <button type="button" className={styles.layerName} aria-pressed={layer.id === selectedLayer}
+                          aria-current={layer.id === selectedLayer ? 'true' : undefined} onClick={() => selectLayer(layer)}>
                           {layer.label}
                           <small>{timingSourceLabel(layer)}</small>
                         </button>
@@ -1036,7 +1288,7 @@ export default function CinematicAdjustPanel({
               })}
             </div>
 
-            {timingSelectionMode ? (
+            {timingSelectionMode && (
               <div className={styles.timingSelectionBar}>
                 <div>
                   <strong>{selectedTimingLayers.length} selected</strong>
@@ -1051,16 +1303,6 @@ export default function CinematicAdjustPanel({
                     onClick={createTimingSet}>Create set</button>
                 </div>
               </div>
-            ) : (
-              <button type="button" className={styles.organizeTimingButton}
-                onClick={() => {
-                  setTimingSelectionMode(true);
-                  setSelectedTimingLayers(selectedLayer ? [selectedLayer] : []);
-                  setSelectedTimingSetId(undefined);
-                  onSelectTimingTrack?.(undefined);
-                }}>
-                Organize timing sets
-              </button>
             )}
 
             {customTimingSets.length > 0 && (
@@ -1080,173 +1322,23 @@ export default function CinematicAdjustPanel({
               </div>
             )}
 
-            {selectedTimingSet && (
-              <section className={styles.setEditor} aria-label={`Timing track ${selectedTimingSet.label}`}>
-                <div className={styles.setEditorHeader}>
-                  {selectedTimingSet.target.type === 'set' ? (
-                    <input value={selectedTimingSet.label} aria-label="Timing set name"
-                      onChange={(event) => onRenameTimingSet?.(selectedTimingSet.id, event.target.value)} />
-                  ) : (
-                    <strong>{selectedTimingSet.label}</strong>
-                  )}
-                  <button type="button" aria-label="Close timing track editor"
-                    onClick={() => {
-                      setSelectedTimingSetId(undefined);
-                      setDeleteConfirmSet(undefined);
-                      onSelectTimingTrack?.(undefined);
-                    }}>×</button>
-                </div>
-                <TimingTrackEditor track={selectedTimingSet} onChange={onTimingTrackChange}
-                  onPreview={previewTrackTransition}
-                  help={selectedTimingSet.kind === 'interaction'
-                    ? 'This marker is an entry window. Opening RSVP or Best Wishes pauses the scene; the guest decides how long the form stays open.'
-                    : `${linkedAssetCount(selectedTimingSet.id)} assets follow this clip. Moving it moves every linked asset.`} />
-                {timingSetAnimationLayer && <>
-                  {timingSetLayers.length > 1 && <label className={styles.compactField}>Animate asset<select aria-label="Asset to animate" value={timingSetAnimationLayer.id} onChange={(event) => setAnimationLayerId(event.target.value)}>
-                    {timingSetLayers.map((layer) => <option key={layer.id} value={layer.id}>{layer.label}</option>)}
-                  </select></label>}
-                  <AssetAnimationEditor layer={timingSetAnimationLayer} tracks={tracks} layers={layers}
-                    disabled={timingSetAnimationLayer.locked || setById.get(timingSetAnimationLayer.group)?.locked}
-                    onChange={(animations) => patchLayer(timingSetAnimationLayer.id, { animations })}
-                    onSelectTrack={onSelectTimingTrack} onPreview={(track) => previewTrackTransition(track, 'enter')} />
-                </>}
-                {onResetTrack && (
-                  <div className={styles.setActions}>
-                    <button type="button" onClick={() => onResetTrack(selectedTimingSet.id)}>Reset track</button>
-                  </div>
-                )}
-                {selectedTimingSet.target.type === 'set' && (
-                  <div className={styles.setActions}>
-                    <button type="button" onClick={() => {
-                      const id = onDuplicateTimingSet?.(selectedTimingSet.id);
-                      if (id) {
-                        setSelectedTimingSetId(id);
-                        onSelectTimingTrack?.(id);
-                      }
-                    }}>Duplicate set</button>
-                    {deleteConfirmSet === selectedTimingSet.id ? (
-                      <div className={styles.deleteSetConfirm} role="alert">
-                        <p>{linkedAssetCount(selectedTimingSet.id)} linked assets will keep their current timing as independent clips.</p>
-                        <button type="button" onClick={() => setDeleteConfirmSet(undefined)}>Cancel</button>
-                        <button type="button" onClick={() => {
-                          onDeleteTimingSet?.(selectedTimingSet.id);
-                          setSelectedTimingSetId(undefined);
-                          setDeleteConfirmSet(undefined);
-                          onSelectTimingTrack?.(undefined);
-                        }}>Delete set</button>
-                      </div>
-                    ) : (
-                      <button type="button" className={styles.dangerButton}
-                        onClick={() => setDeleteConfirmSet(selectedTimingSet.id)}>Delete set</button>
-                    )}
-                  </div>
-                )}
-              </section>
-            )}
 
-            <button
-              type="button"
-              className={`${styles.addButton} ${popover === 'add' ? styles.addButtonActive : ''}`}
-              onClick={() => {
-                onSelectLayer(undefined);
-                setPopover((value) => value === 'add' ? null : 'add');
-              }}
-              aria-label="Add to scene"
-              aria-pressed={popover === 'add'}
-            >
-              <Icon name="plus" size={16} />
-            </button>
+
+            </section>
           </>
         )}
 
-        <div className={styles.label}>Cinematic beats</div>
-        <div className={styles.beatStepper}>
-          <button type="button" onClick={() => stepBeat(-1)} disabled={activeBeatIndex === 0}>← Previous</button>
-          <span>{activeBeatIndex + 1} of {beats.length}</span>
-          <button type="button" onClick={() => stepBeat(1)} disabled={activeBeatIndex === beats.length - 1}>Next →</button>
-        </div>
-        <div className={styles.beats}>
-          {beats.map((beat, index) => (
-            <button
-              type="button"
-              key={beat.id}
-              className={`${styles.beatButton} ${beat.id === activeBeat?.id ? styles.beatActive : ''}`}
-              onClick={() => onSelectBeat(beat.id)}
-            >
-              <span className={styles.beatNumber}>{String(index + 1).padStart(2, '0')}</span>
-              <span>{beat.label}</span>
-              <span className={styles.beatProgress}>{Math.round(beat.progress * 100)}%</span>
-            </button>
-          ))}
-        </div>
-
-        <div className={styles.label}>Reference overlay</div>
-        {onReferenceChange && <div className={styles.actionRow}>
-          <button type="button" disabled={!onUploadImage || uploading} onClick={() => referenceFileRef.current?.click()}>{uploading ? 'Uploading…' : activeBeat?.referenceSrc ? 'Replace reference' : 'Add reference'}</button>
-          {activeBeat?.referenceSrc && <button type="button" onClick={() => onReferenceChange({ referenceSrc: '', referenceLabel: '' })}>Remove reference</button>}
-          <select aria-label="Reference fit" value={activeBeat?.referenceFit ?? 'contain'} onChange={(event) => onReferenceChange({ referenceFit: event.target.value as 'contain' | 'cover' | 'fill' })}>
-            <option value="contain">Contain</option><option value="cover">Cover</option><option value="fill">Stretch</option>
-          </select>
-        </div>}
-        {activeBeat?.referenceSrc ? (
-          <div className={styles.referenceCard}>
-            <img className={styles.referencePreview} src={activeBeat.referenceSrc} alt="" />
-            <div className={styles.referenceControls}>
-              <div className={styles.referenceTop}>
-                <span className={styles.referenceName}>{activeBeat.referenceLabel ?? 'Composition reference'}</span>
-                <button
-                  type="button"
-                  className={`${styles.referenceToggle} ${referenceVisible ? styles.referenceToggleActive : ''}`}
-                  onClick={() => onReferenceVisibleChange(!referenceVisible)}
-                >
-                  {referenceVisible ? 'Visible' : 'Hidden'}
-                </button>
-              </div>
-              <div className={styles.rangeRow}>
-                <input
-                  type="range"
-                  min={0.05}
-                  max={0.9}
-                  step={0.05}
-                  value={activeBeat.referenceOpacity ?? referenceOpacity}
-                  disabled={!referenceVisible}
-                  onChange={(event) => { onReferenceOpacityChange(Number(event.target.value)); onReferenceChange?.({ referenceOpacity: Number(event.target.value) }); }}
-                  aria-label="Reference overlay opacity"
-                />
-                <span className={styles.rangeValue}>{Math.round((activeBeat.referenceOpacity ?? referenceOpacity) * 100)}%</span>
-              </div>
-            </div>
-          </div>
-        ) : (
-          <p className={styles.note}>This beat has no reference image.</p>
-        )}
-
-        <div className={styles.phaseNotice}>
-          Scene and camera edits are stored independently. The timeline interpolates smoothly
-          between camera beats and reverses naturally when a guest scrolls upward.
-          <button type="button" className={styles.resetButton} onClick={onResetWorld}>Reset scene layout</button>
-          <button type="button" className={styles.resetButton} onClick={onResetVisibility}>Reset set timing</button>
-          {resetSequenceConfirm ? (
-            <div className={styles.deleteMomentConfirm} role="alert">
-              <strong>Reset the entire story?</strong>
-              <p>All beat positions, camera frames, transitions, timing tracks and restored/deleted moments return to the template starting design. Scene prop placement stays unchanged.</p>
-              <div className={styles.deleteMomentActions}>
-                <button type="button" onClick={() => setResetSequenceConfirm(false)}>Cancel</button>
-                <button type="button" className={styles.deleteBeat} onClick={() => {
-                  setResetSequenceConfirm(false);
-                  onResetSequence?.();
-                }}>Reset entire story</button>
-              </div>
-            </div>
-          ) : (
-            <button type="button" className={styles.resetButton}
-              onClick={() => setResetSequenceConfirm(true)}>Reset entire story</button>
-          )}
-        </div>
       </div>
+      {sidebarTab === 'editing' && mode === 'scene' && (inspector || selectedTimingSet) && (
+        <div ref={floatingRef} className={styles.floatingInspector} aria-label="Floating adjustment window"
+          onScroll={(event) => rememberScroll(floatingScrollKey, event.currentTarget.scrollTop)}>
+          {inspector ?? timingInspector}
+        </div>
+      )}
       {direction && onDirectionChange && <>
-        <div className={styles.body} hidden={sidebarTab !== 'advanced'} role="tabpanel" id="cinematic-advanced-panel" aria-labelledby="cinematic-advanced-tab">
-          <DirectorSettings standalone value={direction} onChange={onDirectionChange}
+        <div ref={advancedBodyRef} className={styles.body} hidden={sidebarTab !== 'advanced'} role="tabpanel" id="cinematic-advanced-panel" aria-labelledby="cinematic-advanced-tab"
+          onScroll={(event) => rememberScroll('advanced', event.currentTarget.scrollTop)}>
+          <DirectorSettings standalone effectScope="__world" value={direction} onChange={onDirectionChange}
             breakpoint={breakpoint} layers={layers} sets={availableSets} beats={beats.map((beat, order) => ({ id: beat.id, label: beat.label, at: beat.progress, order, transitionIn: beat.transitionIn }))}
             tracks={tracks} onAddEffectTrack={onAddEffectTrack ?? (() => {})} onPreview={(id) => {
               const track = tracks.find((candidate) => candidate.id === id);

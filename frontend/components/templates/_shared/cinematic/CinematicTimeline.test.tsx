@@ -1,5 +1,5 @@
 import { fireEvent, render, screen } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { PAINTED_PROMISE_SEQUENCE } from '../../Template15-paintedpromise/data/cinematic';
 import { beatsFromSequence } from './sequence';
 import CinematicTimeline from './CinematicTimeline';
@@ -24,6 +24,73 @@ function renderTimeline(overrides: Partial<React.ComponentProps<typeof Cinematic
 }
 
 describe('CinematicTimeline', () => {
+  beforeEach(() => localStorage.clear());
+  it('keeps a full-story scrubber available while collapsed without reopening the tracks', () => {
+    const onChange = vi.fn(), onCollapsedChange = vi.fn();
+    const props = { progress: .77, beats, tracks: PAINTED_PROMISE_SEQUENCE.tracks, expanded: true, collapsed: true,
+      onExpandedChange: vi.fn(), onChange, onCollapsedChange };
+    const view = render(<CinematicTimeline {...props} />);
+    const scrub = screen.getByRole('slider', { name: 'Scrub story' });
+    expect(scrub).toHaveValue('77');
+    expect(scrub).toHaveAttribute('min', '0');
+    expect(scrub).toHaveAttribute('max', '100');
+    fireEvent.change(scrub, { target: { value: '32.5' } });
+    expect(onChange).toHaveBeenLastCalledWith(.325);
+    fireEvent.change(scrub, { target: { value: '0' } });
+    expect(onChange).toHaveBeenLastCalledWith(0);
+    fireEvent.change(scrub, { target: { value: '100' } });
+    expect(onChange).toHaveBeenLastCalledWith(1);
+    expect(onCollapsedChange).not.toHaveBeenCalled();
+    expect(screen.queryByRole('region', { name: 'Timeline tracks' })).not.toBeInTheDocument();
+    view.rerender(<CinematicTimeline {...props} progress={.45} />);
+    expect(scrub).toHaveValue('45');
+    view.rerender(<CinematicTimeline {...props} collapsed={false} />);
+    expect(screen.queryByRole('slider', { name: 'Scrub story' })).not.toBeInTheDocument();
+  });
+  it('includes the selected layer’s dedicated effects in its focused timeline', () => {
+    const select = vi.fn();
+    renderTimeline({ selectedAsset: { id: 'welcome-ring', label: 'Wedding ring', trackId: 'welcome-ring', effectTrackIds: ['ring-motion'] }, onTrackSelect: select });
+    fireEvent.click(screen.getByRole('button', { name: 'Edit Ring fitting movement timing' }));
+    expect(select).toHaveBeenCalledWith('ring-motion');
+    expect(screen.queryByRole('button', { name: 'Edit Groom hand movement timing' })).not.toBeInTheDocument();
+  });
+  it('reports intrinsic Focus height instead of stretching the empty scroller', () => {
+    const measured = vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (this: HTMLElement) {
+      return { height: this.hasAttribute('data-focus-size') ? 30 : 500 } as DOMRect;
+    });
+    try {
+      const onFocusHeightChange = vi.fn();
+      renderTimeline({ onFocusHeightChange });
+      // Header, camera body, hint, plus the outer border. No false filter-empty message.
+      expect(onFocusHeightChange).toHaveBeenLastCalledWith(92);
+      expect(screen.queryByText(/No tracks match/)).not.toBeInTheDocument();
+    } finally { measured.mockRestore(); }
+  });
+  it('collapses without losing the selected track and exposes explicit appearance navigation', () => {
+    const onChange = vi.fn(), onCollapsedChange = vi.fn();
+    const common = { progress: .1, beats, tracks: PAINTED_PROMISE_SEQUENCE.tracks, expanded: false,
+      onExpandedChange: vi.fn(), onChange, onCollapsedChange,
+      selectedAsset: { id: 'programme-board', label: 'Board', trackId: 'programme' } };
+    const view = render(<CinematicTimeline {...common} />);
+    expect(screen.getByRole('button', { name: 'Collapse timeline' }).querySelector('svg')).toHaveAttribute('width', '20');
+    expect(onChange).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: 'Go to appearance' }));
+    const clip = PAINTED_PROMISE_SEQUENCE.tracks.find((track) => track.id === 'programme')!.clip;
+    expect(onChange).toHaveBeenCalledWith((clip.enterEnd + clip.exitStart) / 2);
+    fireEvent.click(screen.getByRole('button', { name: 'Collapse timeline' }));
+    expect(onCollapsedChange).toHaveBeenCalledWith(true);
+    view.rerender(<CinematicTimeline {...common} collapsed />);
+    expect(screen.queryByRole('region', { name: 'Timeline tracks' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'Expand timeline' })).toBeVisible();
+  });
+  it('shows only the selected object’s motion bars in focus view, even with shared timing', () => {
+    const parent = PAINTED_PROMISE_SEQUENCE.tracks.find((track) => track.id === 'programme')!;
+    const motion = (id: string) => ({ ...parent, id: `motion-${id}`, label: `${id} move`, kind: 'effect' as const,
+      assetAnimation: { layerId: id, animationId: 'move', sourceTrackId: parent.id } });
+    renderTimeline({ tracks: [parent, motion('board'), motion('other')], selectedAsset: { id: 'board', label: 'Board', trackId: parent.id } });
+    expect(screen.getByTestId('timeline-clip-motion-board')).toBeInTheDocument();
+    expect(screen.queryByTestId('timeline-clip-motion-other')).toBeNull();
+  });
   it('groups editable in-between bars under their source and exposes a dedicated filter', () => {
     const parent = { ...PAINTED_PROMISE_SEQUENCE.tracks.find((track) => track.id === 'dais')!, id: 'parent' };
     const motion = { ...parent, id: 'move', label: 'Board · Move left', kind: 'effect' as const,
@@ -114,11 +181,19 @@ describe('CinematicTimeline', () => {
     expect(onTrackSelect).toHaveBeenCalledTimes(2);
   });
 
-  it('shows camera beats and a compact current-track view', () => {
+  it('does not reserve an empty selection toolbar in All tracks', () => {
+    renderTimeline({ expanded: true });
+    expect(screen.queryByText('Double-click a bar to edit its timing.')).toBeNull();
+    expect(document.querySelector('[aria-label="Timeline selection controls"]')).toBeNull();
+    expect(screen.getByRole('slider', { name: 'Scrub camera timeline' })).toBeVisible();
+  });
+
+  it('keeps an unselected focus view quiet while retaining camera scrubbing', () => {
     renderTimeline();
     expect(screen.getAllByText('Groom close-up').length).toBeGreaterThan(0);
     expect(screen.getByRole('button', { name: 'Go to Bride close-up' })).toBeInTheDocument();
-    expect(screen.getByTestId('timeline-clip-dais')).toBeInTheDocument();
+    expect(screen.queryByTestId('timeline-clip-dais')).not.toBeInTheDocument();
+    expect(screen.getByText(/Select an object to see its timing/)).toBeInTheDocument();
     expect(screen.queryByTestId('timeline-clip-rsvp')).not.toBeInTheDocument();
   });
 

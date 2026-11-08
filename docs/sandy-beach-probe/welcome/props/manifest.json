@@ -1,0 +1,303 @@
+{
+  "design": "/Users/helmyheiry/wedding-invite-app/docs/sandy-beach-probe/welcome/design.png",
+  "canvas": {
+    "w": 1024,
+    "h": 1696
+  },
+  "section": "welcome",
+  "threshold": 0.4,
+  "props": [
+    {
+      "name": "driftwood wedding arch with frangipani garland",
+      "kind": "scenery",
+      "band": "shore",
+      "file": "01-driftwood-wedding-arch-with-frangipani-garland.png",
+      "status": "matched",
+      "bbox_px": {
+        "x": 85,
+        "y": 325,
+        "w": 902,
+        "h": 656
+      },
+      "pct": {
+        "x": 52.34,
+        "y": 19.16,
+        "w": 88.09,
+        "h": 38.68
+      },
+      "mask_area_px": 110370,
+      "coverage_pct": 6.36,
+      "components": 1,
+      "touches_edge": false,
+      "overlaps": [],
+      "bleed_pct": 24.7,
+      "size_ratio_vs_spec": 0.35,
+      "defects": [
+        "bleed:25%",
+        "undersized:0.35"
+      ]
+    },
+    {
+      "name": "pink frangipani blossom cluster",
+      "kind": "prop",
+      "band": "shore",
+      "file": "02-pink-frangipani-blossom-cluster.png",
+      "status": "matched",
+      "bbox_px": {
+        "x": 35,
+        "y": 1417,
+        "w": 246,
+        "h": 174
+      },
+      "pct": {
+        "x": 15.43,
+        "y": 83.55,
+        "w": 24.02,
+        "h": 10.26
+      },
+      "mask_area_px": 24391,
+      "coverage_pct": 1.4,
+      "components": 1,
+      "touches_edge": false,
+      "overlaps": [],
+      "bleed_pct": 10.2,
+      "size_ratio_vs_spec": 0.88,
+      "defects": []
+    },
+    {
+      "name": "pair of smooth beach pebbles",
+      "kind": "prop",
+      "band": "shore",
+      "file": "03-pair-of-smooth-beach-pebbles.png",
+      "status": "matched",
+      "bbox_px": {
+        "x": 675,
+        "y": 1445,
+        "w": 287,
+        "h": 165
+      },
+      "pct": {
+        "x": 79.93,
+        "y": 85.2,
+        "w": 28.03,
+        "h": 9.73
+      },
+      "mask_area_px": 29202,
+      "coverage_pct": 1.68,
+      "components": 1,
+      "touches_edge": false,
+      "overlaps": [],
+      "bleed_pct": 0.2,
+      "size_ratio_vs_spec": 0.5,
+      "defects": []
+    },
+    {
+      "name": "dune grass tuft",
+      "kind": "prop",
+      "band": "shore",
+      "file": "04-dune-grass-tuft.png",
+      "status": "matched",
+      "bbox_px": {
+        "x": 879,
+        "y": 1321,
+        "w": 145,
+        "h": 193
+      },
+      "pct": {
+        "x": 92.92,
+        "y": 77.89,
+        "w": 14.16,
+        "h": 11.38
+      },
+      "mask_area_px": 9755,
+      "coverage_pct": 0.56,
+      "components": 1,
+      "touches_edge": true,
+      "overlaps": [],
+      "bleed_pct": 69.9,
+      "size_ratio_vs_spec": 0.49,
+      "defects": [
+        "cropped:right",
+        "bleed:70%",
+        "undersized:0.49"
+      ],
+      "completions": [
+        {
+          "attempt": 1,
+          "file": "04-dune-grass-tuft-complete-v1.png",
+          "sides": [
+            "right"
+          ],
+          "seed": 4,
+          "overhang_px": {
+            "left": -5,
+            "right": 102,
+            "top": -5,
+            "bottom": 8
+          },
+          "new_pixels": 15032
+        },
+        {
+          "attempt": 2,
+          "file": "04-dune-grass-tuft-complete-v2.png",
+          "sides": [
+            "right"
+          ],
+          "seed": 4,
+          "overhang_px": {
+            "left": -5,
+            "right": 96,
+            "top": -5,
+            "bottom": -2
+          },
+          "new_pixels": 12978
+        },
+        {
+          "attempt": 3,
+          "file": "04-dune-grass-tuft-complete-v3.png",
+          "sides": [
+            "right"
+          ],
+          "seed": 4,
+          "overhang_px": {
+            "left": -5,
+            "right": 43,
+            "top": -5,
+            "bottom": -3
+          },
+          "new_pixels": 8876
+        }
+      ],
+      "rerenders": [
+        {
+          "attempt": 1,
+          "file": "04-dune-grass-tuft-rerender-v1.png",
+          "seed": 4,
+          "size_px": [
+            556,
+            528
+          ],
+          "components": 54,
+          "touches_edge": false
+        }
+      ]
+    },
+    {
+      "name": "pink cumulus cloud",
+      "kind": "scenery",
+      "band": "sky",
+      "file": "05-pink-cumulus-cloud.png",
+      "status": "matched",
+      "bbox_px": {
+        "x": 0,
+        "y": 73,
+        "w": 451,
+        "h": 229
+      },
+      "pct": {
+        "x": 22.02,
+        "y": 4.3,
+        "w": 44.04,
+        "h": 13.5
+      },
+      "mask_area_px": 60742,
+      "coverage_pct": 3.5,
+      "components": 1,
+      "touches_edge": true,
+      "overlaps": [],
+      "bleed_pct": 9.3,
+      "size_ratio_vs_spec": 0.24,
+      "defects": [
+        "cropped:left",
+        "undersized:0.24"
+      ],
+      "completions": [
+        {
+          "attempt": 1,
+          "file": "05-pink-cumulus-cloud-complete-v1.png",
+          "sides": [
+            "left"
+          ],
+          "seed": 4,
+          "overhang_px": {
+            "left": 230,
+            "right": -5,
+            "top": -5,
+            "bottom": -5
+          },
+          "new_pixels": 29630
+        },
+        {
+          "attempt": 2,
+          "file": "05-pink-cumulus-cloud-complete-v2.png",
+          "sides": [
+            "left"
+          ],
+          "seed": 4,
+          "overhang_px": {
+            "left": 225,
+            "right": -5,
+            "top": -5,
+            "bottom": -5
+          },
+          "new_pixels": 38979
+        },
+        {
+          "attempt": 3,
+          "file": "05-pink-cumulus-cloud-complete-v3.png",
+          "sides": [
+            "left"
+          ],
+          "seed": 4,
+          "overhang_px": {
+            "left": 225,
+            "right": -5,
+            "top": -5,
+            "bottom": -5
+          },
+          "new_pixels": 38979
+        },
+        {
+          "attempt": 4,
+          "file": "05-pink-cumulus-cloud-complete-v4.png",
+          "sides": [
+            "left"
+          ],
+          "seed": 4,
+          "overhang_px": {
+            "left": 225,
+            "right": -5,
+            "top": -5,
+            "bottom": -5
+          },
+          "new_pixels": 38979
+        }
+      ],
+      "rerenders": [
+        {
+          "attempt": 1,
+          "file": "05-pink-cumulus-cloud-rerender-v1.png",
+          "seed": 4,
+          "size_px": [
+            561,
+            333
+          ],
+          "components": 268,
+          "touches_edge": false
+        },
+        {
+          "attempt": 2,
+          "file": "05-pink-cumulus-cloud-rerender-v2.png",
+          "seed": 4,
+          "size_px": [
+            558,
+            259
+          ],
+          "components": 1,
+          "touches_edge": false,
+          "keyer": "sam3"
+        }
+      ]
+    }
+  ]
+}

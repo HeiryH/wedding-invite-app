@@ -1,5 +1,5 @@
 import type { FC } from 'react';
-import type { Layer, SlotProps } from '../types';
+import type { Layer, SlotProps, StageId } from '../types';
 import { CountdownSlot, EventHeroSlot, TimerSlot, ScrollCueSlot, HeroDateSlot } from './HeroSlots';
 import {
   WalimahTitleSlot, WalimahBodySlot, CoupleTitleSlot, CoupleNamesSlot,
@@ -126,16 +126,18 @@ export function visibleSlotLayers(layers: Layer[], slotProps: SlotProps): Layer[
  * Shared by T7 and `DataTemplate` for the same reason `stageHasContent`/`visibleSlotLayers` are —
  * so the two renderers can't drift.
  */
+export type SheetLayer = Layer & { sourceStageId?: StageId };
+
 export function sheetLayerGroups(
-  stages: { layers: Layer[] }[],
+  stages: { def: { id: StageId }; layers: Layer[] }[],
   slotProps: SlotProps,
-): Record<string, Layer[]> {
-  const groups: Record<string, Layer[]> = {};
+): Record<string, SheetLayer[]> {
+  const groups: Record<string, SheetLayer[]> = {};
   for (const stage of stages) {
     for (const l of stage.layers) {
       if (l.kind !== 'slot' || !l.slot || l.presentation !== 'sheet' || l.hidden) continue;
       if (!SLOT_AVAILABLE[l.slot]?.(slotProps)) continue;
-      (groups[l.sheetId || DEFAULT_SHEET] ??= []).push(l);
+      (groups[l.sheetId || DEFAULT_SHEET] ??= []).push({ ...l, sourceStageId: stage.def.id });
     }
   }
   for (const list of Object.values(groups)) list.sort((a, b) => b.z - a.z);

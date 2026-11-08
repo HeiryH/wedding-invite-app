@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent, type PointerEvent } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent, type PointerEvent } from 'react';
+import { useWorkspacePreference, DEFAULT_TIMELINE_CONTROLS, decodeTimelineControls } from './workspacePreferences';
 import {
   cinematicClipBeatSpan,
   constrainCinematicClip,
@@ -12,6 +13,7 @@ import {
   type CinematicSequenceTrack,
 } from './sequence';
 import styles from './CinematicTimeline.module.css';
+import { Icon } from '@/components/ui/Icon';
 
 export interface CinematicTimelineAsset {
   id: string;
@@ -19,6 +21,8 @@ export interface CinematicTimelineAsset {
   trackId?: string;
   sourceTrackId?: string;
   editableTrackId?: string;
+  /** Effects owned by this layer also appear in its focused timeline. */
+  effectTrackIds?: string[];
   timingStatus?: 'independent' | 'linked' | 'always' | 'hardcoded';
 }
 
@@ -31,6 +35,8 @@ interface Props {
   editableBeats?: boolean;
   dirty?: boolean;
   expanded: boolean;
+  collapsed?: boolean;
+  onCollapsedChange?: (collapsed: boolean) => void;
   onExpandedChange: (expanded: boolean) => void;
   onChange: (progress: number) => void;
   onBeatMove?: (id: string, progress: number) => void;
@@ -38,6 +44,7 @@ interface Props {
   onTrackSelect?: (id: string) => void;
   onClearSelection?: () => void;
   onResetTrack?: (id: string) => void;
+  onFocusHeightChange?: (height: number) => void;
 }
 
 interface DisplayTrack {
@@ -162,11 +169,13 @@ function displayRows(
   const selectedSource = selectedAsset?.sourceTrackId
     ? byId.get(selectedAsset.sourceTrackId)
     : selectedTrack;
-  const motionRows: DisplayTrack[] = tracks.filter((track) => track.assetAnimation).map((track) => ({
+  const motionRows: DisplayTrack[] = tracks.filter((track) => track.assetAnimation
+    ? (expanded || track.assetAnimation.layerId === selectedAsset?.id || track.id === selectedTrack?.id)
+    : !expanded && selectedAsset?.effectTrackIds?.includes(track.id)).map((track) => ({
     id: track.id, label: track.label, displayLabel: track.assetAnimation?.label,
-    meta: track.assetAnimation?.label ? track.label.slice(0, -(track.assetAnimation.label.length + 3)) : 'In-between animation', kind: track.kind, motion: true,
+    meta: track.assetAnimation?.label ? track.label.slice(0, -(track.assetAnimation.label.length + 3)) : track.assetAnimation ? 'In-between animation' : 'Layer effect', kind: track.kind, motion: Boolean(track.assetAnimation),
     clip: effectiveClip(track, byId), selected: track.id === selectedTrack?.id, editable: true, sourceTrackId: track.id,
-    parentTrackId: track.assetAnimation?.sourceTrackId,
+    parentTrackId: track.assetAnimation?.sourceTrackId ?? selectedTrack?.id,
     parentKind: byId.get(track.assetAnimation?.sourceTrackId ?? '')?.kind,
     bounds: track.assetAnimation?.startLimit !== undefined && track.assetAnimation?.endLimit !== undefined
       ? { start: track.assetAnimation.startLimit, end: track.assetAnimation.endLimit } : undefined,
@@ -233,27 +242,7 @@ function displayRows(
     }]);
   }
 
-  const isActive = (track: CinematicSequenceTrack) => {
-    const clip = effectiveClip(track, byId);
-    return progress >= clip.start && progress <= clip.end;
-  };
-  // Persistent ambient effects (for example the all-story cloud drift) should remain available in
-  // All Tracks without eclipsing the narrative set in the compact current-track view.
-  const active = tracks.find((track) => track.kind !== 'effect' && isActive(track))
-    ?? tracks.find(isActive)
-    ?? tracks.reduce<CinematicSequenceTrack | undefined>((closest, track) => {
-    if (!closest) return track;
-    return Math.abs(track.clip.start - progress) < Math.abs(closest.clip.start - progress) ? track : closest;
-  }, undefined);
-  return active ? withMoves([{
-    id: active.id,
-    label: active.label,
-    meta: trackKindLabel(active.kind),
-    kind: active.kind,
-    clip: effectiveClip(active, byId),
-    sourceTrackId: active.id,
-    interactionIcon: active.kind === 'interaction' ? interactionIcon(active) : undefined,
-  }]) : [];
+  return [];
 }
 
 function sameClip(left: CinematicSequenceClip, right: CinematicSequenceClip) {
@@ -554,27 +543,67 @@ function BeatMarker({ beat, selected, editable, onChange, onMove }: {
 
 export default function CinematicTimeline({
   progress, beats, tracks, selectedAsset, selectedBeat, editableBeats = false,
-  dirty = false, expanded, onExpandedChange, onChange, onBeatMove, onTrackClipChange,
+  dirty = false, expanded, collapsed = false, onCollapsedChange, onExpandedChange, onChange, onBeatMove, onTrackClipChange, onFocusHeightChange,
   onTrackSelect, onClearSelection, onResetTrack,
 }: Props) {
   const allRows = displayRows(tracks, selectedAsset, progress, expanded);
   const storyLabel = activeBeatLabel(progress, beats);
-  const [zoom, setZoom] = useState(1);
-  const [filter, setFilter] = useState<TrackFilter>('all');
-  const [collapsedKinds, setCollapsedKinds] = useState<Set<Exclude<TrackFilter, 'all'>>>(new Set());
-  const [hiddenTracks, setHiddenTracks] = useState<Set<string>>(new Set());
-  const [lockedTracks, setLockedTracks] = useState<Set<string>>(new Set());
+  const [preferences, setPreferences, preferencesReady] = useWorkspacePreference('einvite.cinematic.timeline-controls.v1', DEFAULT_TIMELINE_CONTROLS, decodeTimelineControls);
+  const { zoom, filter } = preferences;
+  const collapsedKinds = useMemo(() => new Set(preferences.collapsedKinds), [preferences.collapsedKinds]);
+  const setZoom = (update: number | ((value: number) => number)) => setPreferences((current) => ({ ...current, zoom: typeof update === 'function' ? update(current.zoom) : update }));
+  const setFilter = (filter: TrackFilter) => setPreferences((current) => ({ ...current, filter }));
+  const setCollapsedKinds = (update: (value: Set<Exclude<TrackFilter, 'all'>>) => Set<Exclude<TrackFilter, 'all'>>) =>
+    setPreferences((current) => ({ ...current, collapsedKinds: [...update(new Set(current.collapsedKinds))] }));
+  const hiddenTracks = useMemo(() => new Set(preferences.hiddenTracks), [preferences.hiddenTracks]);
+  const lockedTracks = useMemo(() => new Set(preferences.lockedTracks), [preferences.lockedTracks]);
+  const updateTrackPreference = (key: 'hiddenTracks' | 'lockedTracks', update: Set<string> | ((value: Set<string>) => Set<string>)) =>
+    setPreferences((current) => ({ ...current, [key]: [...(typeof update === 'function' ? update(new Set(current[key])) : update)] }));
+  const setHiddenTracks = (update: Set<string> | ((value: Set<string>) => Set<string>)) => updateTrackPreference('hiddenTracks', update);
+  const setLockedTracks = (update: Set<string> | ((value: Set<string>) => Set<string>)) => updateTrackPreference('lockedTracks', update);
   const [trackMenu, setTrackMenu] = useState<TrackMenu>();
   const timelineRef = useRef<HTMLElement>(null);
   const scrollerRef = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => {
+    if (preferencesReady && scrollerRef.current) {
+      scrollerRef.current.scrollTop = preferences.scrollTop;
+      scrollerRef.current.scrollLeft = preferences.scrollLeft;
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- Initial restore only; the user owns scroll position afterward.
+  }, [preferencesReady]);
+  useLayoutEffect(() => {
+    const scroller = scrollerRef.current;
+    if (!scroller || collapsed || scroller.scrollWidth <= scroller.clientWidth) return;
+    const labels = 132;
+    const x = labels + (scroller.scrollWidth - labels) * progress;
+    if (x < scroller.scrollLeft + labels + 12 || x > scroller.scrollLeft + scroller.clientWidth - 12) {
+      scroller.scrollLeft = Math.max(0, Math.min(scroller.scrollWidth - scroller.clientWidth, x - scroller.clientWidth / 2));
+    }
+  }, [progress, zoom, collapsed, preferencesReady]);
   const rows = useMemo(() => allRows.filter((row) => {
     if (hiddenTracks.has(row.id)) return false;
+    if (!expanded) return true;
     if (row.kind === 'selected-asset') return true;
     if (filter === 'motion' && !row.motion) return false;
     if (filter !== 'all' && filter !== 'motion' && row.kind !== filter && !(row.motion && row.parentKind === filter)) return false;
     return !collapsedKinds.has(row.motion ? 'motion' : row.kind);
-  }), [allRows, hiddenTracks, filter, collapsedKinds]);
+  }), [allRows, hiddenTracks, filter, collapsedKinds, expanded]);
   const editableRow = rows.find((row) => row.selected && row.editable && row.sourceTrackId && !lockedTracks.has(row.sourceTrackId));
+  useLayoutEffect(() => {
+    if (expanded || collapsed || !onFocusHeightChange || !timelineRef.current) return;
+    // Measure intrinsic rows rather than the flex scroller, which fills the assigned dock height.
+    const elements = [...timelineRef.current.querySelectorAll<HTMLElement>('[data-focus-size]')];
+    const measure = () => {
+      const height = elements.reduce((sum, element) => sum + element.getBoundingClientRect().height, 0);
+      const scroller = scrollerRef.current;
+      if (height > 0) onFocusHeightChange(Math.ceil(height + 2 + (scroller && scroller.scrollWidth > scroller.clientWidth ? 10 : 0)));
+    };
+    measure();
+    if (typeof ResizeObserver === 'undefined') return;
+    const observer = new ResizeObserver(measure);
+    elements.forEach((element) => observer.observe(element));
+    return () => observer.disconnect();
+  }, [expanded, collapsed, selectedAsset?.id, rows.length, Boolean(editableRow), onFocusHeightChange]);
   const [snapGuide, setSnapGuide] = useState<SnapGuide>();
   const [clipHistory, setClipHistory] = useState<ClipHistoryEntry[]>([]);
   const activeEdit = useRef<ClipHistoryEntry | null>(null);
@@ -692,16 +721,19 @@ export default function CinematicTimeline({
     : undefined;
 
   return (
-    <section ref={timelineRef} className={styles.timeline} aria-label="Cinematic timeline"
+    <section ref={timelineRef} className={styles.timeline} data-collapsed={collapsed} aria-label="Cinematic timeline"
       tabIndex={0} onKeyDown={handleTimelineKeyDown}
       onDoubleClick={(event) => event.preventDefault()}>
-      <header className={styles.header}>
+      <header className={styles.header} data-focus-size>
         <div className={styles.heading}>
           <span className={styles.statusDot} aria-hidden="true" />
           <span className={styles.title}>Story timeline</span>
           <span className={styles.storyPosition}>{storyLabel}</span>
         </div>
         <div className={styles.headerActions}>
+          {onCollapsedChange && <button type="button" className={`${styles.iconAction} ${styles.collapseToggle}`}
+            aria-label={collapsed ? 'Expand timeline' : 'Collapse timeline'} aria-expanded={!collapsed}
+            onClick={() => onCollapsedChange(!collapsed)}><Icon name={collapsed ? 'chevron-up' : 'chevron-down'} size={20} /></button>}
           <span className={styles.progress}>{Math.round(progress * 100)}%</span>
           <span className={`${styles.saveState} ${dirty ? styles.saveStateDirty : ''}`} role="status">
             {dirty ? 'Unsaved' : 'Saved'}
@@ -710,6 +742,10 @@ export default function CinematicTimeline({
             <button type="button" className={styles.iconAction} onClick={onClearSelection}
               aria-label="Clear timeline selection" title="Clear selection (Esc)">×</button>
           )}
+          {selectedAsset && !collapsed && <button type="button" className={styles.viewToggle} onClick={() => {
+            const selected = allRows.find((row) => row.selected);
+            if (selected) onChange((selected.clip.enterEnd + selected.clip.exitStart) / 2);
+          }}>Go to appearance</button>}
           <button
             type="button"
             className={styles.viewToggle}
@@ -720,7 +756,18 @@ export default function CinematicTimeline({
           </button>
         </div>
       </header>
-
+      {collapsed && <div className={styles.miniTimeline} aria-label="Mini timeline">
+        <div className={styles.miniBeats} aria-hidden="true">
+          {beats.filter((beat) => beat.progress >= 0 && beat.progress <= 1).map((beat) =>
+            <span key={beat.id} style={{ left: `${beat.progress * 100}%` }} />)}
+        </div>
+        <input className={styles.miniScrubber} type="range" min={0} max={100} step={0.1}
+          aria-label="Scrub story" aria-valuetext={`${(Math.max(0, Math.min(1, progress)) * 100).toFixed(1)}% · ${storyLabel}`}
+          value={Math.max(0, Math.min(1, progress)) * 100}
+          style={{ '--scrub-progress': `${Math.max(0, Math.min(1, progress)) * 100}%` } as CSSProperties}
+          onChange={(event) => onChange(Number(event.target.value) / 100)} />
+      </div>}
+      <div className={styles.content} hidden={collapsed}>
       {expanded && (
         <div className={styles.navigationBar} aria-label="Timeline navigation and filters"
           style={{ padding: '7px 12px', display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -746,9 +793,8 @@ export default function CinematicTimeline({
         </div>
       )}
 
-      {(editableRow || expanded) && (
-        <div className={`${styles.clipToolbar} ${expanded ? styles.clipToolbarExpanded : ''}`} aria-label={editableRow ? `Timeline controls for ${editableRow.label}` : 'Timeline selection controls'}>
-          {editableRow ? <>
+      {editableRow && (
+        <div data-focus-size className={`${styles.clipToolbar} ${expanded ? styles.clipToolbarExpanded : ''}`} aria-label={`Timeline controls for ${editableRow.label}`}>
           <div className={styles.clipSummary}>
             <strong>{editableRow.label}</strong>
             <span>{editableRow.interactionIcon ? 'Available from' : 'Start'}: {describeCinematicStoryPosition(editableRow.clip.start, beats)}</span>
@@ -761,12 +807,17 @@ export default function CinematicTimeline({
             <button type="button" onClick={undoClipEdit} disabled={!clipHistory.length}
               title="Undo the most recent timeline timing edit">Undo timing</button>
           </div>
-          </> : <p className={styles.selectionHint}>Double-click a bar to edit its timing.</p>}
         </div>
       )}
 
       <div ref={scrollerRef} className={styles.bodyScroller} data-testid="timeline-scroll-area"
         role="region" aria-label="Timeline tracks" tabIndex={0}
+        onScroll={(event) => {
+          if (!preferencesReady) return;
+          const { scrollTop, scrollLeft } = event.currentTarget;
+          setPreferences((current) => current.scrollTop === Math.round(scrollTop) && current.scrollLeft === Math.round(scrollLeft) ? current
+            : { ...current, scrollTop: Math.round(scrollTop), scrollLeft: Math.round(scrollLeft) });
+        }}
         onWheel={(event) => {
           // The transparent scrub range spans the rails and Safari otherwise consumes vertical
           // wheel input before the overflow container sees it. Preserve horizontal trackpad
@@ -775,7 +826,7 @@ export default function CinematicTimeline({
           event.currentTarget.scrollTop += event.deltaY;
           event.preventDefault();
         }}>
-      <div className={styles.body} style={{ width: `${zoom * 100}%` }}>
+      <div data-focus-size className={styles.body} style={{ width: `${zoom * 100}%` }}>
         <div className={`${styles.row} ${styles.cameraRow}`} data-testid="timeline-camera-row">
           <div className={styles.rowLabel}>
             <strong>Camera</strong>
@@ -847,7 +898,7 @@ export default function CinematicTimeline({
               </div>
             </div>
           ))}
-          {rows.length === 0 && (
+          {expanded && rows.length === 0 && (
             <div className={styles.emptyTracks} role="status">
               No tracks match this filter. Choose All or show hidden tracks.
             </div>
@@ -862,7 +913,8 @@ export default function CinematicTimeline({
           </div>
         )}
 
-        <div className={styles.playheadRail} data-testid="timeline-playhead-rail" aria-hidden="true">
+        <div className={styles.playheadRail} data-testid="timeline-playhead-rail" aria-hidden="true"
+          style={preferences.scrollLeft > 0 ? { clipPath: `inset(-8px 0 0 ${preferences.scrollLeft}px)` } : undefined}>
           <div className={styles.playhead} style={{ left: `${progress * 100}%` }}>
             <span />
           </div>
@@ -881,9 +933,9 @@ export default function CinematicTimeline({
       </div>
       {expanded && (
         <div className={styles.kindCollapseBar} aria-label="Collapse track groups"
-          style={{ padding: '7px 12px', display: 'flex', alignItems: 'center', gap: 8, overflowX: 'auto' }}>
+          style={{ padding: '10px 14px', display: 'flex', alignItems: 'center', gap: 10, overflowX: 'auto', flexShrink: 0 }}>
           {(['set', 'asset', 'motion', 'text', 'effect', 'interaction'] as Exclude<TrackFilter, 'all'>[]).map((kind) => (
-            <button type="button" className={styles.collapseButton} style={timelineToolStyle} key={kind} aria-pressed={collapsedKinds.has(kind)} onClick={() => {
+            <button type="button" className={styles.collapseButton} style={{ ...timelineToolStyle, padding: '7px 12px', fontSize: 10, minHeight: 32, flexShrink: 0 }} key={kind} aria-pressed={collapsedKinds.has(kind)} onClick={() => {
               setCollapsedKinds((current) => {
                 const next = new Set(current);
                 if (next.has(kind)) next.delete(kind);
@@ -894,6 +946,7 @@ export default function CinematicTimeline({
           ))}
         </div>
       )}
+      {!expanded && !selectedAsset && <p data-focus-size className={styles.selectionHint}>Select an object to see its timing, or open All tracks.</p>}
       {trackMenu && (() => {
         const row = allRows.find((candidate) => candidate.sourceTrackId === trackMenu.id);
         if (!row) return null;
@@ -913,6 +966,7 @@ export default function CinematicTimeline({
           </div>
         );
       })()}
+      </div>
     </section>
   );
 }

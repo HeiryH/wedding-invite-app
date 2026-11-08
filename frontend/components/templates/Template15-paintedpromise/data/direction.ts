@@ -22,7 +22,7 @@ export const PAINTED_PROMISE_DIRECTION: CinematicDirection = {
     }),
   ],
   interactions: [
-    interaction('programme-focus', 'Focus programme', 'programme-board', 'focus', { availabilityTrackId: 'programme-focus-availability', targetBeatId: 'programme-focus', returnMode: 'previous', lockScroll: false }),
+    interaction('programme-focus', 'Open programme', 'programme-board', 'programme', { returnMode: 'stay' }),
     interaction('rsvp', 'RSVP form', 'rsvp-letter', 'rsvp', { availabilityTrackId: 'rsvp-availability', resetTrackId: 'rsvp-reset-window', returnSetIds: ['table'], revealSetIds: ['table-wishes'] }),
     interaction('wish', 'Best Wishes form', 'wishes-book', 'wish', { availabilityTrackId: 'wishes-availability', resetTrackId: 'wishes-reset-window', returnSetIds: ['table'] }),
   ],

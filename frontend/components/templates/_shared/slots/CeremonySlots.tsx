@@ -5,6 +5,7 @@ import { calendarLinks } from '@/lib/templateUtils';
 import type { SlotProps } from '../types';
 import { subLayerStyle, subLayersOf } from './subLayerStyle';
 import styles from './slots.module.css';
+import { CouplePhoto } from '../CoupleGallery';
 
 /**
  * Each ceremony beat is split into a title layer + a body/content layer, same structure as RSVP
@@ -41,7 +42,7 @@ export function WalimahBodySlot({ t }: SlotProps) {
 
 export const CoupleTitleSlot = makeTitleSlot('ceremony.panel.couple_title', 'The Bride & Groom');
 
-export function CoupleNamesSlot({ wedding, t }: SlotProps) {
+export function CoupleNamesSlot({ wedding, t, featuredPortrait }: SlotProps) {
   const body = t('invite.body', '');
   const brideFirst = t('general.brideFirst', 'true') !== 'false';
   const first = brideFirst ? wedding.brideName : wedding.groomName;
@@ -49,6 +50,8 @@ export function CoupleNamesSlot({ wedding, t }: SlotProps) {
 
   return (
     <div className={styles.panel}>
+      {featuredPortrait && <CouplePhoto photo={featuredPortrait} fit={t('gallery.fit', 'cover')}
+        alt={`${first} and ${second}`} className={styles.featuredPortrait} />}
       <div className={styles.coupleRow}>
         <span className={styles.coupleName}>{first}</span>
         <span className={styles.coupleAmp}>&</span>

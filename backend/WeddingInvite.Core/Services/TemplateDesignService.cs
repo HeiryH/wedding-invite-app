@@ -12,6 +12,8 @@ namespace WeddingInvite.Core.Services
     {
         private readonly ITemplateRepository _templateRepo;
         private readonly ITemplateConfigDefaultRepository _defaultRepo;
+        private readonly ITemplateConfigService? _configs;
+        private readonly ITemplateShippedDesignStore? _shipped;
 
         private const int BundleVersion = 1;
         private const long MaxBundleBytes = 200L * 1024 * 1024;
@@ -23,6 +25,7 @@ namespace WeddingInvite.Core.Services
         // Stops at quotes/whitespace/closing brackets so a path inside a JSON string or a
         // CSS url(...) is captured cleanly.
         private static readonly Regex UploadRef = new(@"/uploads/[^\s""'()<>\\]+", RegexOptions.Compiled);
+        private static readonly Regex ShippedRef = new(@"/templates/[a-z0-9-]+/studio-assets/[a-f0-9]{64}\.[a-z0-9]+", RegexOptions.Compiled);
 
         private static readonly JsonSerializerOptions JsonOptions = new()
         {
@@ -31,10 +34,12 @@ namespace WeddingInvite.Core.Services
             DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
         };
 
-        public TemplateDesignService(ITemplateRepository templateRepo, ITemplateConfigDefaultRepository defaultRepo)
+        public TemplateDesignService(ITemplateRepository templateRepo, ITemplateConfigDefaultRepository defaultRepo, ITemplateConfigService? configs = null, ITemplateShippedDesignStore? shipped = null)
         {
             _templateRepo = templateRepo;
             _defaultRepo = defaultRepo;
+            _configs = configs;
+            _shipped = shipped;
         }
 
         // ── Bundle shape ────────────────────────────────────────────────────────────────────
@@ -80,16 +85,18 @@ namespace WeddingInvite.Core.Services
                     Description = t.Description,
                     Tier = t.Tier,
                     EventTypes = t.EventTypes,
-                    ThumbnailUrl = t.ThumbnailUrl,
+                    ThumbnailUrl = string.IsNullOrWhiteSpace(t.ThumbnailUrl) ? _shipped?.GetThumbnail(t.TemplateCode) ?? t.ThumbnailUrl : t.ThumbnailUrl,
                     IsAuthored = t.IsAuthored,
                     StagesJson = t.StagesJson,
-                    DefaultConfig = await _defaultRepo.GetByTemplateIdAsync(t.TemplateId),
+                    DefaultConfig = _configs == null ? await _defaultRepo.GetByTemplateIdAsync(t.TemplateId) : await _configs.GetDefaultAsync(t.TemplateId),
                 };
                 bundle.Templates.Add(entry);
 
                 CollectRefs(entry.ThumbnailUrl, assets);
                 CollectRefs(entry.StagesJson, assets);
                 foreach (var v in entry.DefaultConfig.Values) CollectRefs(v, assets);
+                foreach (var value in entry.DefaultConfig.Values.Append(entry.ThumbnailUrl))
+                    foreach (Match match in ShippedRef.Matches(value)) assets.Add(match.Value);
             }
 
             using var ms = new MemoryStream();
@@ -105,6 +112,14 @@ namespace WeddingInvite.Core.Services
                 // importer can rewrite each reference back to whatever it stored the file as.
                 foreach (var url in assets)
                 {
+                    if (ShippedRef.IsMatch(url))
+                    {
+                        var data = _shipped?.GetAsset(url) ?? throw new ArgumentException($"Cannot export missing shipped asset: {url}");
+                        var entry = zip.CreateEntry("assets" + url, CompressionLevel.Fastest);
+                        await using var output = entry.Open();
+                        await output.WriteAsync(data);
+                        continue;
+                    }
                     var disk = ToDiskPath(url);
                     if (disk == null || !File.Exists(disk)) continue;
                     zip.CreateEntryFromFile(disk, "assets" + url, CompressionLevel.Fastest);
@@ -134,7 +149,8 @@ namespace WeddingInvite.Core.Services
                 throw new ArgumentException($"Bundle version {bundle.Version} is newer than this server supports ({BundleVersion})");
 
             var assetEntries = zip.Entries
-                .Where(e => e.FullName.StartsWith("assets/uploads/", StringComparison.Ordinal) && e.Length > 0)
+                .Where(e => (e.FullName.StartsWith("assets/uploads/", StringComparison.Ordinal) ||
+                    (e.FullName.StartsWith("assets/", StringComparison.Ordinal) && ShippedRef.IsMatch(e.FullName["assets".Length..]))) && e.Length > 0)
                 .ToDictionary(e => e.FullName.Substring("assets".Length), e => e, StringComparer.Ordinal);
 
             var result = new TemplateDesignImportResult();
@@ -160,7 +176,7 @@ namespace WeddingInvite.Core.Services
                 string Rewrite(string? text)
                 {
                     if (string.IsNullOrEmpty(text)) return text ?? string.Empty;
-                    return UploadRef.Replace(text, m =>
+                    string Replace(Match m)
                     {
                         var url = m.Value;
                         if (rewritten.TryGetValue(url, out var already)) return already;
@@ -188,11 +204,30 @@ namespace WeddingInvite.Core.Services
                         var newUrl = $"/uploads/templates/{fileName}";
                         rewritten[url] = newUrl;
                         return newUrl;
-                    });
+                    }
+                    return ShippedRef.Replace(UploadRef.Replace(text, Replace), Replace);
                 }
 
                 // Starting design (whole-bag replace; an empty bag clears it — same as the admin UI).
-                var config = bt.DefaultConfig.ToDictionary(kv => kv.Key, kv => Rewrite(kv.Value), StringComparer.Ordinal);
+                var config = new Dictionary<string, string>(bt.DefaultConfig, StringComparer.Ordinal);
+                var projects = config.Keys.Select(Config.TemplateConfigPolicy.CinematicProjectBaseKey).Where(x => x != null).Distinct().ToList();
+                foreach (var project in projects)
+                {
+                    if (!config.TryGetValue(project!, out var raw)) throw new ArgumentException("Cinematic project projectManifest is missing.");
+                    using var projectManifest = JsonDocument.Parse(raw);
+                    var count = projectManifest.RootElement.GetProperty("chunks").GetInt32();
+                    if (count < 1 || count > 1500) throw new ArgumentException("Invalid cinematic project chunk count.");
+                    var parts = Enumerable.Range(0, count).Select(i => config.TryGetValue($"{project}.{i}", out var part) ? part : throw new ArgumentException("Cinematic project chunk is missing."));
+                    var document = string.Concat(parts);
+                    if (document.Length != projectManifest.RootElement.GetProperty("length").GetInt32()) throw new ArgumentException("Cinematic project length mismatch.");
+                    using var parsed = JsonDocument.Parse(document);
+                    document = Rewrite(document);
+                    foreach (var key in config.Keys.Where(k => k.StartsWith(project + ".", StringComparison.Ordinal)).ToList()) config.Remove(key);
+                    config[project!] = JsonSerializer.Serialize(new { version = projectManifest.RootElement.GetProperty("version").GetInt32(), chunks = 1, length = document.Length });
+                    config[$"{project}.0"] = document;
+                }
+                foreach (var key in config.Keys.Where(k => Config.TemplateConfigPolicy.CinematicProjectBaseKey(k) == null).ToList()) config[key] = Rewrite(config[key]);
+                config = TemplateConfigService.PrepareDefaultDesign(config);
                 await _defaultRepo.ReplaceAsync(template.TemplateId, config);
                 entry.DefaultKeyCount = config.Count;
 

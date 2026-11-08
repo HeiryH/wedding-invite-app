@@ -28,6 +28,9 @@ namespace WeddingInvite.Data
         public DbSet<PackageFeature> PackageFeatures { get; set; } = null!;
         public DbSet<EventTemplateConfig> TemplateConfigs { get; set; } = null!;
         public DbSet<TemplateConfigDefault> TemplateConfigDefaults { get; set; } = null!;
+        public DbSet<TemplateStudioDraft> TemplateStudioDrafts { get; set; } = null!;
+        public DbSet<TemplateStudioRevision> TemplateStudioRevisions { get; set; } = null!;
+        public DbSet<TemplateCaptureJob> TemplateCaptureJobs { get; set; } = null!;
         public DbSet<Table> Tables { get; set; } = null!;
         public DbSet<ItineraryItem> ItineraryItems { get; set; } = null!;
         public DbSet<PasswordResetToken> PasswordResetTokens { get; set; } = null!;
@@ -40,6 +43,27 @@ namespace WeddingInvite.Data
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
+            modelBuilder.Entity<TemplateCaptureJob>(entity =>
+            {
+                entity.HasKey(x => x.Id);
+                entity.Property(x => x.Version).IsConcurrencyToken();
+                entity.HasOne<Template>().WithMany().HasForeignKey(x => x.TemplateId).OnDelete(DeleteBehavior.Cascade);
+                entity.HasIndex(x => new { x.TemplateId, x.OwnerEmail }).IsUnique()
+                    .HasFilter("\"Status\" IN ('pending', 'processing', 'ready')");
+                entity.HasIndex(x => new { x.Status, x.ExpiresAt });
+            });
+            modelBuilder.Entity<TemplateStudioDraft>(entity =>
+            {
+                entity.HasKey(x => x.TemplateId);
+                entity.Property(x => x.Version).IsConcurrencyToken();
+                entity.HasOne<Template>().WithMany().HasForeignKey(x => x.TemplateId).OnDelete(DeleteBehavior.Cascade);
+            });
+            modelBuilder.Entity<TemplateStudioRevision>(entity =>
+            {
+                entity.HasKey(x => x.TemplateStudioRevisionId);
+                entity.HasIndex(x => new { x.TemplateId, x.Revision }).IsUnique();
+                entity.HasOne<Template>().WithMany().HasForeignKey(x => x.TemplateId).OnDelete(DeleteBehavior.Cascade);
+            });
 
             // Event configuration
             modelBuilder.Entity<Event>(entity =>

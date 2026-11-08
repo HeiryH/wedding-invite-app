@@ -8,7 +8,9 @@
 
 /** @type {import('next').NextConfig} */
 
-const BACKEND_URL = process.env.BACKEND_URL ?? 'http://localhost:5000';
+// macOS Control Center/AirPlay commonly owns port 5000, so local API development uses 5050.
+// Container deployments still supply BACKEND_URL=http://backend:5000 explicitly.
+const BACKEND_URL = process.env.BACKEND_URL ?? 'http://localhost:5050';
 
 const nextConfig = {
   output: 'standalone',

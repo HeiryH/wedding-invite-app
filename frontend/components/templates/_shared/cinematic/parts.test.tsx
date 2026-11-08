@@ -1,7 +1,7 @@
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { resolveCinematicWorld, serializeCinematicWorld, cinematicWorldKey } from './world';
-import { cinematicAncestors, cinematicDescendantIds, cinematicLayerTree } from './parts';
+import { cinematicAncestors, cinematicDescendantIds, cinematicLayerTree, cinematicEditorLayers } from './parts';
 import { CINEMATIC_ENGINES } from './registry';
 import { editCinematicSceneSets } from './sceneSetEditing';
 import { resolveCinematicProjectConfig } from './project';
@@ -21,6 +21,33 @@ const editor = { enabled: true, selectedLayer: 'memory-wall--frame-0', cinematic
 const scene = (layers = world(), tracks = engine.sequence.tracks, progress = .99) => resolveCinematicScene({ layers, tracks, progress, sceneSets: engine.sceneSets });
 
 describe('persisted cinematic children', () => {
+  it('persists a real text width independently of scale and keeps legacy natural sizing', () => {
+    const layers = world().map((layer) => layer.id === 'programme-board--title' ? { ...layer, textWidth: 42 } : layer);
+    const config = { [cinematicWorldKey('t15', 'mobile')]: serializeCinematicWorld(engine.world, 'mobile', layers) };
+    const restored = resolveCinematicWorld('t15', engine.world, 'mobile', config);
+    expect(restored.find((layer) => layer.id === 'programme-board--title')).toMatchObject({ textWidth: 42, w: 100 });
+    expect(resolveCinematicWorld('t15', engine.world, 'desktop', config).find((layer) => layer.id === 'programme-board--title')?.textWidth).toBeUndefined();
+    const view = render(<CinematicPart {...props} rootId="programme-board" part="title" element={<strong>Long programme heading</strong>}
+      entries={scene(restored, engine.sequence.tracks, .62).entries} decorations={{}} />);
+    expect(screen.getByText('Long programme heading')).toHaveStyle({ width: '42%', display: 'block', scale: '1 1', whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' });
+    view.rerender(<CinematicPart {...props} rootId="programme-board" part="title" element={<strong>Long programme heading</strong>}
+      entries={scene(world(), engine.sequence.tracks, .62).entries} decorations={{}} />);
+    expect(screen.getByText('Long programme heading').style.width).toBe('');
+  });
+  it('does not let invisible memory children intercept programme clicks', () => {
+    const entries = scene(world(), engine.sequence.tracks, .62).entries;
+    expect(entries.find((entry) => entry.layer.id === 'memory-wall')?.presentation.opacity).toBe(0);
+    const post = vi.spyOn(window.parent, 'postMessage').mockImplementation(() => {});
+    try {
+      render(<CinematicPart {...props} rootId="memory-wall" part="artwork" element={<img alt="Photo arch" />}
+        entries={entries} decorations={{}} editor={editor} />);
+      const arch = screen.getByAltText('Photo arch');
+      expect(arch).toHaveStyle({ pointerEvents: 'none', opacity: '1' });
+      expect(arch).not.toHaveAttribute('tabindex', '0');
+      fireEvent.click(arch);
+      expect(post).not.toHaveBeenCalled();
+    } finally { post.mockRestore(); }
+  });
   it('exposes all composite parts without changing existing placements or serializing no-op defaults', () => {
     const layers = world();
     expect(layers.find((layer) => layer.id === 'programme-board')).toEqual(engine.world.find((layer) => layer.id === 'programme-board'));
@@ -77,18 +104,18 @@ describe('persisted cinematic children', () => {
     expect(independent.find((track) => track.target.type === 'layer' && track.target.id === child.id)?.clip).toEqual(exact.clip);
   });
 
-  it('edits the actual DOM leaf and stops arrow nudges from reaching the parent', () => {
+  it('edits the frames as one unit and stops arrow nudges from reaching the parent', () => {
     const post = vi.spyOn(window.parent, 'postMessage').mockImplementation(() => {});
     const parentKey = vi.fn();
-    render(<div onKeyDown={parentKey}><CinematicPart {...props} rootId="memory-wall" part="frame-0" element={<figure>Photo</figure>}
-      entries={scene().entries} decorations={{}} editor={editor} slotProps={slots} /></div>);
-    const frame = screen.getByRole('button', { name: 'Edit Photo frame 1' });
-    expect(frame.tagName).toBe('FIGURE');
+    render(<div onKeyDown={parentKey}><CinematicPart {...props} rootId="memory-wall" part="frames" element={<div>Photos</div>}
+      entries={scene().entries} decorations={{}} editor={{ ...editor, selectedLayer: 'memory-wall--frames' }} slotProps={slots} /></div>);
+    const frame = screen.getByRole('button', { name: 'Edit Photo frames' });
+    expect(frame.tagName).toBe('DIV');
     fireEvent.keyDown(frame, { key: 'ArrowRight' });
-    expect(post).toHaveBeenCalledWith(expect.objectContaining({ type: 'PREVIEW_CINEMATIC_LAYER_EDIT', layerId: 'memory-wall--frame-0', patch: { x: 50.5 } }), window.location.origin);
+    expect(post).toHaveBeenCalledWith(expect.objectContaining({ type: 'PREVIEW_CINEMATIC_LAYER_EDIT', layerId: 'memory-wall--frames', patch: { x: 50.5 } }), window.location.origin);
     expect(parentKey).not.toHaveBeenCalled();
     fireEvent.click(frame);
-    expect(post).toHaveBeenCalledWith(expect.objectContaining({ type: 'PREVIEW_CINEMATIC_LAYER_SELECT', layerId: undefined }), window.location.origin);
+    expect(post).toHaveBeenCalledTimes(1); // Clicking the selected child does not deselect it or close its inspector.
     post.mockRestore();
   });
 
@@ -117,6 +144,37 @@ describe('persisted cinematic children', () => {
       <CinematicPart {...props} rootId="memory-wall" part="frame-1" element={<figure>Locked frame</figure>} entries={entries} decorations={{}} editor={editor} /></>);
     expect(container.querySelectorAll('figure')).toHaveLength(2);
     expect(screen.getByText('Hidden frame')).toHaveStyle({ visibility: 'hidden' });
-    expect(screen.getByText('Locked frame')).toHaveStyle({ cursor: 'not-allowed' });
+    expect(screen.queryByRole('button')).toBeNull();
+  });
+
+  it('keeps the visible editing tree constant with ten programme items and many photos', () => {
+    const layers = resolveCinematicWorld('t15', engine.world, 'mobile', {}, { frames: 20, programmeItems: 10 });
+    const visible = cinematicEditorLayers(layers);
+    expect(visible.filter((layer) => cinematicAncestors(layer, visible).at(-1)?.behavior === 'programme-board').map((layer) => layer.part).sort()).toEqual(['action', 'calendar', 'items', 'title', 'venue']);
+    expect(visible.filter((layer) => layer.part?.startsWith('frame-'))).toHaveLength(0);
+    expect(visible.find((layer) => layer.id === 'programme-board--items')?.parentId).toBe('programme-board');
+    expect(layers.filter((layer) => layer.part?.startsWith('frame-'))).toHaveLength(20);
+  });
+
+  it('does not create sample entry layers for an empty saved itinerary', () => {
+    const layers = resolveCinematicWorld('t15', engine.world, 'mobile', {}, { programmeItems: 0 });
+    expect(layers.filter((layer) => /^(row|time|label)-\d+$/.test(layer.part ?? ''))).toHaveLength(0);
+  });
+
+  it('preserves legacy geometry while group typography overrides individual styles non-destructively', () => {
+    const layers = world().map((layer) => layer.id === 'programme-board--time-0'
+      ? { ...layer, x: 72, fontSize: 5, color: '#ff0000' }
+      : layer.id === 'programme-board--items' ? { ...layer, fontSize: 2, color: '#123456', rowGap: .8, columnGap: .6 } : layer);
+    const entries = scene(layers).entries;
+    const { container } = render(<CinematicPart {...props} rootId="programme-board" part="items" element={<span>Schedule</span>} entries={entries} decorations={{}} />);
+    expect(screen.getByText('Schedule')).toHaveStyle({ fontSize: '2cqi', color: '#123456', '--programme-row-gap': '0.8em' });
+    const leaf = render(<CinematicPart {...props} rootId="programme-board" part="time-0" element={<b>10:30</b>} entries={entries} decorations={{}} editor={editor} />);
+    expect(screen.getByText('10:30').style.fontSize).toBe('');
+    expect(screen.getByText('10:30').style.translate).toContain('22%');
+    expect(leaf.container.querySelector('[role="button"]')).toBeNull();
+    const loaded = resolveCinematicWorld('t15', engine.world, 'mobile', { [cinematicWorldKey('t15', 'mobile')]: serializeCinematicWorld(engine.world, 'mobile', layers) });
+    expect(loaded.find((layer) => layer.id === 'programme-board--time-0')).toMatchObject({ x: 72, fontSize: 5, color: '#ff0000' });
+    expect(loaded.find((layer) => layer.part === 'items')).toMatchObject({ rowGap: .8, columnGap: .6 });
+    expect(container.querySelector('span')).toBeTruthy();
   });
 });

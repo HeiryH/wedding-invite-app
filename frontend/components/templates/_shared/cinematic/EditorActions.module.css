@@ -1,0 +1,14 @@
+.actions { position: relative; display: inline-block; flex-shrink: 0; }
+.actions summary { list-style: none; display: grid; place-items: center; width: 30px; height: 30px; padding: 0; border: 1px solid transparent; border-radius: 6px; background: transparent; color: var(--text-muted); cursor: pointer; }
+.actions summary::-webkit-details-marker { display: none; }
+.actions[open] summary, .actions summary:hover { background: var(--surface-sunken); color: var(--text-strong); border-color: var(--border-subtle); }
+.actions summary:focus-visible, .menu button:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+.menu { position: absolute; top: calc(100% + 6px); right: 0; z-index: 40; display: flex; flex-direction: column; gap: 6px; width: 248px; max-width: calc(100vw - 32px); max-height: min(520px, calc(100svh - 160px)); overflow-y: auto; padding: 9px; border: 1px solid var(--border-subtle); border-radius: 10px; background: var(--surface-card); box-shadow: var(--shadow-lg); color: var(--text-body); font: 12px/1.5 var(--font-ui); text-align: left; }
+.menu button { width: 100%; border: 1px solid var(--border-subtle); border-radius: 5px; padding: 7px 9px; text-align: left; background: var(--surface-card); color: var(--text-body); cursor: pointer; font: inherit; }
+.actions[data-align='start'] .menu { left: 0; right: auto; }
+.menu button:hover { background: var(--surface-sunken); }
+.menu button:disabled { opacity: .45; cursor: default; }
+.menu p { margin: 4px 0 8px; }
+.confirm { padding: 8px; border: 1px solid var(--danger-border, var(--border-default)); border-radius: 6px; }
+.confirm > div { display: flex; flex-wrap: wrap; gap: 6px; }
+.confirm > div button { flex: 1 1 90px; }

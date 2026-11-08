@@ -7,8 +7,14 @@ import type { FrameViewport } from '@/components/templates/_shared/types';
 import FrameViewportVars from '@/components/templates/_shared/FrameViewportVars';
 import ViewportProbe from '@/components/dev/ViewportProbe';
 import { animateScrollTo } from '@/components/templates/_shared/animateScrollTo';
+import { MasterPreviewContext, SeatingPreviewContext } from '@/components/templates/_shared/slots/preview';
+
+import { NavigationAdjustPreview } from '@/components/templates/_shared/nav/preview';
 
 interface PreviewPayload {
+  previewSeating?: boolean;
+  navigationAdjust?: 'available' | 'selected';
+  masterPreview?: boolean;
   wedding: Wedding;
   coupleMedia: Photo[];
   wishes: Wish[];
@@ -27,6 +33,7 @@ interface PreviewPayload {
     selectedStage?: string;
     selectedLayer?: string;
     cinematic?: {
+      effectPose?: import('@/components/templates/_shared/cinematic/direction').CinematicEffectPose;
       progress: number;
       beatId?: string;
       mode: 'scene' | 'camera-compose' | 'camera-beat';
@@ -63,6 +70,7 @@ export default function PreviewPage() {
   const pendingScrollRef = useRef<ScrollRequest | null>(null);
   const templateReady = useCallback(() => {
     loadedRef.current = true;
+    try { if (localStorage.getItem('preview_capture_v1') === '1') document.documentElement.dataset.captureReady = 'true'; } catch { /* Storage may be disabled in ordinary previews. */ }
     if (pendingScrollRef.current) {
       scrollPreview(pendingScrollRef.current);
       pendingScrollRef.current = null;
@@ -142,10 +150,17 @@ export default function PreviewPage() {
       );
     };
 
+    // Pointer events do not bubble out of an iframe. Notify preview tools so they
+    // can close their own menus, without dismissing the layer inspector.
+    const pointer = (event: PointerEvent) => window.parent.postMessage({ type: 'PREVIEW_POINTER_DOWN',
+      layerId: event.target instanceof Element ? event.target.closest<HTMLElement>('[data-cinematic-layer]')?.dataset.cinematicLayer : undefined,
+    }, window.location.origin);
+    window.addEventListener('pointerdown', pointer, true);
     window.addEventListener('message', handler);
     window.addEventListener('keydown', keys);
     return () => {
       window.removeEventListener('message', handler);
+      window.removeEventListener('pointerdown', pointer, true);
       window.removeEventListener('keydown', keys);
     };
   }, []);
@@ -176,35 +191,44 @@ export default function PreviewPage() {
           the pinned stage instead of the widened iframe. No-op when `frame` is absent. */}
       <FrameViewportVars frame={frame} />
       {probe && <ViewportProbe />}
-      <TemplateWrapper
-        onTemplateReady={templateReady}
-        wedding={payload.wedding}
-        wishes={payload.wishes}
-        photos={[]}
-        guests={[]}
-        photoBoothEnabled={payload.photoBoothEnabled}
-        coupleMedia={payload.coupleMedia}
-        customConfig={payload.customConfig}
-        itinerary={payload.itinerary}
-        seatingEnabled={payload.seatingEnabled}
-        tables={payload.tables}
-        editor={
-          payload.editor?.enabled
-            ? {
-                enabled: true,
-                breakpoint: payload.editor.breakpoint,
-                selectedStage: payload.editor.selectedStage,
-                selectedLayer: payload.editor.selectedLayer,
-                cinematic: payload.editor.cinematic,
-                frameW: payload.editor.frameW,
-                frameH: payload.editor.frameH,
-                frame,
+      <MasterPreviewContext.Provider value={payload.masterPreview === true}>
+        <SeatingPreviewContext.Provider value={payload.previewSeating ? {
+          dismiss: () => window.parent.postMessage({ type: 'PREVIEW_SEATING_DISMISS' }, window.location.origin),
+        } : null}>
+          <NavigationAdjustPreview.Provider value={payload.editor?.enabled ? payload.navigationAdjust : undefined}>
+            <TemplateWrapper
+              previewOnly
+              onTemplateReady={templateReady}
+              wedding={payload.wedding}
+              wishes={payload.wishes}
+              photos={[]}
+              guests={[]}
+              photoBoothEnabled={payload.photoBoothEnabled}
+              coupleMedia={payload.coupleMedia}
+              customConfig={payload.customConfig}
+              itinerary={payload.itinerary}
+              seatingEnabled={payload.seatingEnabled}
+              tables={payload.tables}
+              editor={
+                payload.editor?.enabled
+                  ? {
+                      enabled: true,
+                      breakpoint: payload.editor.breakpoint,
+                      selectedStage: payload.editor.selectedStage,
+                      selectedLayer: payload.editor.selectedLayer,
+                      cinematic: payload.editor.cinematic,
+                      frameW: payload.editor.frameW,
+                      frameH: payload.editor.frameH,
+                      frame,
+                    }
+                  : undefined
               }
-            : undefined
-        }
-        onRSVP={async () => {}}
-        onSubmitWish={async () => {}}
-      />
+              onRSVP={async () => {}}
+              onSubmitWish={async () => {}}
+            />
+          </NavigationAdjustPreview.Provider>
+        </SeatingPreviewContext.Provider>
+      </MasterPreviewContext.Provider>
     </>
   );
 }

@@ -38,7 +38,7 @@ namespace WeddingInvite.Core.Config
         // uploaded music. A blacklist, so any future *visual* key is captured by default.
         private static readonly HashSet<string> CoupleContentKeys = new(StringComparer.Ordinal)
         {
-            "invite.body", "walimah.body", "music.url",
+            "invite.body", "walimah.body", "music.url", "gallery.order",
             "people.primary.title", "people.primary.details",
             "people.secondary.title", "people.secondary.details",
             "people.honoree.title", "people.honoree.details",

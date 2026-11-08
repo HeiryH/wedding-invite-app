@@ -17,7 +17,7 @@ public class GuestServiceRsvpTests : IDisposable
 
     public GuestServiceRsvpTests()
     {
-        _sut = new GuestService(new GuestRepository(_db.Context), new EventRepository(_db.Context));
+        _sut = _db.CreateGuestService();
     }
 
     private int SeedEvent(int maxPax = 0, int maxCapacity = 0, bool isRsvpOpen = true, bool isPublic = true, int monthsAhead = 3)
@@ -52,6 +52,53 @@ public class GuestServiceRsvpTests : IDisposable
         var result = await _sut.CreateAsync(id, Rsvp(3));
         Assert.Equal(3, result.NumberOfAttendees);
         Assert.Equal(3, await new GuestRepository(_db.Fresh()).GetAttendingCountByEventIdAsync(id));
+    }
+
+    [Fact]
+    public async Task PublicRsvp_AllowsMissingSideOnlyWhenEffectiveSettingHidesIt()
+    {
+        var eventId = SeedEvent();
+        var request = Rsvp(1);
+        request.GuestSide = null;
+        await Assert.ThrowsAsync<ArgumentException>(() => _sut.CreateAsync(eventId, request, enforceRsvpOpen: true));
+
+        _db.Context.TemplateConfigDefaults.Add(new TemplateConfigDefault
+        {
+            TemplateId = 1,
+            ConfigKey = "rsvp.fields.family_side",
+            ConfigValue = "false",
+        });
+        await _db.Context.SaveChangesAsync();
+        Assert.Null((await _sut.CreateAsync(eventId, request, enforceRsvpOpen: true)).GuestSide);
+
+        _db.Context.TemplateConfigs.Add(new EventTemplateConfig
+        {
+            EventId = eventId,
+            ConfigKey = "rsvp.fields.family_side",
+            ConfigValue = "true",
+        });
+        await _db.Context.SaveChangesAsync();
+        await Assert.ThrowsAsync<ArgumentException>(() => _sut.CreateAsync(eventId, request, enforceRsvpOpen: true));
+    }
+
+    [Fact]
+    public async Task OrganizerSeatingMode_IgnoresGuestChoiceButAllowsOrganizerAssignment()
+    {
+        var eventId = SeedEvent();
+        var table = new Table { EventId = eventId, TableName = "Table 1", Capacity = 6 };
+        _db.Context.Tables.Add(table);
+        _db.Context.TemplateConfigDefaults.Add(new TemplateConfigDefault
+        {
+            TemplateId = 1,
+            ConfigKey = "seating.mode",
+            ConfigValue = "organizer",
+        });
+        await _db.Context.SaveChangesAsync();
+
+        var request = Rsvp(1);
+        request.TableId = table.TableId;
+        Assert.Null((await _sut.CreateAsync(eventId, request, enforceRsvpOpen: true)).TableId);
+        Assert.Equal(table.TableId, (await _sut.CreateAsync(eventId, request)).TableId);
     }
 
     [Fact]

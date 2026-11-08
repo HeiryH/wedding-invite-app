@@ -15,10 +15,26 @@ const context = {
 const entryFor = (id: string) => resolveCinematicScene({ layers: PAINTED_PROMISE_WORLD, sceneSets: PAINTED_PROMISE_SCENE_SETS, tracks: PAINTED_PROMISE_SEQUENCE.tracks, progress: .5 }).entries.find((entry) => entry.layer.id === id)!;
 
 describe('functional cinematic layers', () => {
+  it('uses an honest empty schedule and shows the venue and calendar entry point', () => {
+    render(renderCinematicFunction(entryFor('programme-board'), { ...context, slotProps: { ...context.slotProps, itinerary: [] } }).children);
+    expect(screen.getByText('The programme will be shared here soon.')).toBeVisible();
+    expect(screen.queryByText('Guest arrival')).toBeNull();
+    expect(screen.queryByText('Celebration feast')).toBeNull();
+    expect(screen.getByText('Glass Hall')).toBeVisible();
+    expect(screen.getByText('Save to calendar · View venue')).toBeVisible();
+  });
+  it('renders only the saved itinerary entries', () => {
+    render(renderCinematicFunction(entryFor('programme-board'), { ...context, slotProps: { ...context.slotProps,
+      itinerary: [{ itineraryItemId: 99, eventId: 15, label: 'Family dinner', detail: '19:00', sortOrder: 0 }] } }).children);
+    expect(screen.getByText('Family dinner')).toBeVisible();
+    expect(screen.getByText('19:00')).toBeVisible();
+    expect(screen.queryByText('Guest arrival')).toBeNull();
+    expect(screen.queryByText('The programme will be shared here soon.')).toBeNull();
+  });
   it('uses assigned functions rather than specific asset ids', () => {
     const entry = entryFor('programme-board');
     render(renderCinematicFunction({ ...entry, layer: { ...entry.layer, id: 'custom-board', title: 'Our programme' } }, context).children);
-    expect(screen.getByRole('button', { name: 'Focus the wedding programme' })).toHaveTextContent('Our programme');
+    expect(screen.getByRole('button', { name: 'View programme' })).toHaveTextContent('Our programme');
   });
   it('shows only approved, visible photos and uses the authored memory layout', () => {
     const slotProps = { ...context.slotProps, photos: [

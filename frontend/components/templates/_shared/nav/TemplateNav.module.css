@@ -7,13 +7,13 @@
   position: fixed;
   z-index: 40;
   display: flex;
-  gap: 0.15rem;
+  gap: var(--nav-gap, 0.15rem);
   padding: 0.3rem;
   overflow-x: auto;
   scrollbar-width: none;
   background: var(--nav-bg, rgba(20, 20, 20, 0.85));
-  border: 1px solid var(--nav-border, rgba(255, 255, 255, 0.2));
-  border-radius: var(--nav-radius, 999px);
+  border: var(--nav-edit-border-width, 1px) var(--nav-edit-border-style, solid) var(--nav-edit-border-color, var(--nav-border, rgba(255, 255, 255, 0.2)));
+  border-radius: var(--nav-edit-radius, var(--nav-radius, 999px));
   backdrop-filter: var(--nav-backdrop, blur(6px));
 }
 .nav::-webkit-scrollbar { display: none; }
@@ -38,32 +38,153 @@
   color: var(--nav-active-color, #111);
 }
 
-/* nav.size (templateConfigSchema.ts) scales the whole pill as one unit via transform — fine for a
-   small fixed-size, non-reflowing control. Only the two pill variants scale this way; the full-
-   width bar has nothing to "scale" as a unit without visually detaching from the screen edges, so
-   nav.size there only affects the (still-scaled) button text through --nav-text-scale. */
-.bottomPill {
+.top, .bottom {
   left: 50%;
-  bottom: 1rem;
   transform: translateX(-50%) scale(var(--nav-scale, 1));
-  max-width: calc(100cqi - 2rem);
+  max-width: calc(var(--fvw, 100vw) - 2rem);
 }
 
-.topPill {
-  left: 50%;
-  top: 1rem;
-  transform: translateX(-50%) scale(var(--nav-scale, 1));
-  max-width: calc(100cqi - 2rem);
+/* The browser viewport already starts below its top chrome in Studio and on the invite. */
+.top { top: max(var(--nav-edge-offset, .5rem), env(safe-area-inset-top)); }
+.bottom { bottom: max(var(--nav-edge-offset, 1rem), var(--fsab, env(safe-area-inset-bottom))); }
+
+.left, .right {
+  top: 50%;
+  flex-direction: column;
+  transform: translateY(-50%) scale(var(--nav-scale, 1));
+  max-height: calc(var(--fsvh, 100svh) - 2rem);
 }
 
-.bottomBar {
+.left { left: max(var(--nav-edge-offset, .6rem), var(--fsal, env(safe-area-inset-left))); }
+.right { right: max(var(--nav-edge-offset, .6rem), var(--fsar, env(safe-area-inset-right))); }
+
+.bar {
+  justify-content: center;
+  border-radius: var(--nav-edit-radius, 0px);
+  padding: 0.5rem 0.75rem;
+  transform: none;
+}
+
+.bar:is(.top, .bottom) {
   left: 0;
   right: 0;
-  bottom: 0;
   width: 100%;
-  justify-content: center;
+  max-width: none;
   flex-wrap: wrap;
-  border-radius: 0;
-  border-width: 1px 0 0;
-  padding: 0.5rem 0.75rem;
+}
+
+.bar.top { top: var(--nav-edge-offset, 0px); border-width: var(--nav-edit-border-width, 0 0 1px); }
+.bar.bottom { bottom: var(--nav-edge-offset, 0px); border-width: var(--nav-edit-border-width, 1px 0 0); }
+.bar:is(.left, .right) { top: 0; bottom: 0; max-height: none; }
+.bar.left { left: var(--nav-edge-offset, 0px); }
+.bar.right { right: var(--nav-edge-offset, 0px); }
+
+.bubbles {
+  --nav-active-bubble-scale: 1.24;
+  --nav-bubble-space: calc((var(--fvw, 100vw) - 2rem) / var(--nav-scale, 1) - .6rem);
+  --nav-bubble-gap: min(var(--nav-gap, .45rem), calc(var(--nav-bubble-space) / (2 * var(--nav-item-count))));
+  /* Reserve room for the larger active bubble as well as every gap on a single row. */
+  --nav-bubble-size: min(2.25rem, calc(
+    (var(--nav-bubble-space) - (var(--nav-item-count) - 1) * var(--nav-bubble-gap))
+    / (var(--nav-item-count) + var(--nav-active-bubble-scale) - 1)
+  ));
+  background: transparent;
+  border: none;
+  backdrop-filter: none;
+  align-items: center;
+  gap: var(--nav-bubble-gap);
+  overflow: visible;
+}
+
+.bubbles:is(.left, .right) {
+  --nav-bubble-space: calc((var(--fsvh, 100svh) - 2rem) / var(--nav-scale, 1) - .6rem);
+}
+.bubbles:is(.top, .bottom) {
+  flex-wrap: nowrap;
+  justify-content: center;
+}
+.bubbles .navBtn {
+  --nav-current-bubble-size: var(--nav-bubble-size);
+  display: grid;
+  place-items: center;
+  position: relative;
+  box-sizing: border-box;
+  flex: none;
+  width: var(--nav-current-bubble-size);
+  height: var(--nav-current-bubble-size);
+  padding: 0;
+  font: inherit;
+  border-radius: var(--nav-edit-radius, 50%);
+  border: min(var(--nav-edit-border-width, 1px), calc(var(--nav-current-bubble-size) / 4)) var(--nav-edit-border-style, solid) var(--nav-edit-border-color, var(--nav-border, #fff3));
+  background: var(--nav-bg, #222);
+  box-shadow: 0 2px 8px #0003;
+}
+
+.bubbles .navActive {
+  --nav-current-bubble-size: calc(var(--nav-bubble-size) * var(--nav-active-bubble-scale));
+  background: var(--nav-active-bg, white);
+}
+.bubbles .icon {
+  max-width: 75%;
+  max-height: 75%;
+  font-size: min(calc(1.125rem * var(--nav-text-scale, 1)), calc(var(--nav-current-bubble-size) * .65));
+}
+.bubbleLabel {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+
+.bubbles .navBtn:is(:hover, :focus-visible) .bubbleLabel {
+  width: auto;
+  height: auto;
+  clip-path: none;
+  background: var(--nav-bg, #222);
+  color: var(--nav-color, white);
+  padding: .25rem .45rem;
+  border-radius: .25rem;
+  font: 600 .75rem/1.3 system-ui, sans-serif;
+  text-transform: none;
+  letter-spacing: normal;
+}
+
+.top .bubbleLabel { top: calc(100% + .3rem); }
+.bottom .bubbleLabel { bottom: calc(100% + .3rem); }
+.left .bubbleLabel { left: calc(100% + .3rem); }
+.right .bubbleLabel { right: calc(100% + .3rem); }
+
+.pill { border-radius: var(--nav-edit-radius, var(--nav-radius, 999px)); }
+
+.labels {
+  background: transparent;
+  border: none;
+  backdrop-filter: none;
+  gap: var(--nav-gap, .4rem);
+}
+
+.labels .navBtn {
+  border-radius: var(--nav-edit-radius, 999px);
+  border: var(--nav-edit-border-width, 1px) var(--nav-edit-border-style, solid) var(--nav-edit-border-color, var(--nav-border, #fff3));
+  background: var(--nav-bg, #222);
+}
+
+.labels .navActive { background: var(--nav-active-bg, white); }
+
+.icon {
+  display: inline-grid;
+  place-items: center;
+  vertical-align: middle;
+  width: calc(1.125rem * var(--nav-text-scale, 1));
+  height: calc(1.125rem * var(--nav-text-scale, 1));
+  font: inherit;
+  font-size: calc(1.125rem * var(--nav-text-scale, 1));
+  line-height: 1;
+  object-fit: contain;
+}
+
+.nav[data-adjust-selected] {
+  outline: 2px dashed #c98a54;
+  outline-offset: -2px;
 }

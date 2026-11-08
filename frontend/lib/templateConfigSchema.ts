@@ -1,4 +1,6 @@
 import { TemplateConfigField, TemplateConfigBlock, TemplateConfigSection } from './api/types';
+import { NAV_ADJUST_KEYS } from '@/components/templates/_shared/nav/appearance';
+import { TEMPLATE16_FIELDS } from './template16Config';
 
 /**
  * The single source of truth for every per-wedding config key.
@@ -30,7 +32,88 @@ export const SECTION_BLOCK: Record<TemplateConfigSection, TemplateConfigBlock> =
   navigation: 'navigation',
 };
 
+const SEATING_MODE: TemplateConfigField = {
+  key: 'seating.mode', label: 'Table assignment', fieldType: 'select', defaultValue: 'guest',
+  maxLength: 9, richText: false, adminOnly: false, section: 'rsvp',
+  block: 'seating', group: 'Seating', chip: 'Seating', options: ['guest', 'organizer'],
+  optionLabels: { guest: 'Guests choose a table', organizer: 'Organizer assigns tables' },
+  templateIds: [1, 2, 3, 4, 5, 7, 10, 11, 12, 13, 14, 15, 16],
+};
+
+const NAV_SECTIONS = [
+  ['welcome', 'Cover'], ['walimah', 'Ceremony'], ['rsvp', 'RSVP'],
+  ['itinerary', 'Programme'], ['wishes', 'Wishes'], ['photobooth', 'Photo Booth'],
+] as const;
+
+function navItemFields(id: string, label: string, templateIds: number[]): TemplateConfigField[] {
+  return [
+    { key: `nav.label.${id}`, label, fieldType: 'text', defaultValue: '', maxLength: 24,
+      richText: false, adminOnly: false, section: 'navigation', group: 'Navigation Labels', chip: 'Labels', templateIds },
+    { key: `nav.icon.${id}`, label: `${label} icon`, fieldType: 'image', defaultValue: '', maxLength: 500,
+      richText: false, adminOnly: false, section: 'navigation', group: 'Navigation Icons', chip: 'Icons', templateIds },
+  ];
+}
+
+const SHARED_NAV_FIELDS: TemplateConfigField[] = [
+  { key: 'nav.items', label: 'Menu items', fieldType: 'hidden', defaultValue: '', maxLength: 120,
+    richText: false, adminOnly: false, section: 'navigation', group: 'Menu Items', chip: 'Items',
+    templateIds: [7, 10, 11, 12, 13, 14, 15, 16] },
+  { key: 'nav.layout', label: 'Legacy navigation layout', fieldType: 'hidden', defaultValue: 'hidden',
+    maxLength: 12, richText: false, adminOnly: false, section: 'navigation', group: 'Navigation Bar', chip: 'Display',
+    templateIds: [11, 12, 15, 16] },
+  { key: 'nav.style', label: 'Menu style', fieldType: 'select', defaultValue: 'pill', maxLength: 12,
+    options: ['pill', 'bar', 'bubbles', 'labels', 'hidden'],
+    optionLabels: { pill: 'Pill', bar: 'Full bar', bubbles: 'Floating bubbles', labels: 'Floating labels', hidden: 'Hidden' },
+    richText: false, adminOnly: false, section: 'navigation', group: 'Navigation Bar', chip: 'Display',
+    templateIds: [7, 10, 11, 12, 13, 14, 15, 16] },
+  { key: 'nav.position', label: 'Menu position', fieldType: 'select', defaultValue: 'bottom', maxLength: 6,
+    options: ['top', 'bottom', 'left', 'right'],
+    optionLabels: { top: 'Top', bottom: 'Bottom', left: 'Left side', right: 'Right side' },
+    richText: false, adminOnly: false, section: 'navigation', group: 'Navigation Bar', chip: 'Display',
+    templateIds: [7, 10, 11, 12, 13, 14, 15, 16] },
+  { key: 'nav.content', label: 'Menu item display', fieldType: 'select', defaultValue: 'labels', maxLength: 6,
+    options: ['labels', 'icons'], optionLabels: { labels: 'Labels', icons: 'Icons' },
+    richText: false, adminOnly: false, section: 'navigation', group: 'Navigation Bar', chip: 'Display',
+    templateIds: [7, 10, 11, 12, 13, 14, 15, 16] },
+  ...NAV_ADJUST_KEYS.map((key): TemplateConfigField => ({
+    key, label: key, fieldType: 'hidden', defaultValue: '', maxLength: 8,
+    richText: false, adminOnly: false, section: 'navigation',
+    templateIds: [7, 10, 11, 12, 13, 14, 15, 16],
+  })),
+  ...NAV_SECTIONS.flatMap(([id, label]) => navItemFields(id, label, [7, 10, 11, 12, 13, 14, 15, 16])),
+];
+
+const COUPLE_GALLERY_FIELDS: TemplateConfigField[] = [
+  { key: 'gallery.placement', label: 'Photo placement', fieldType: 'select', defaultValue: 'gallery', maxLength: 8,
+    options: ['scene', 'gallery', 'both'],
+    optionLabels: { scene: 'Portrait in the ceremony scene', gallery: 'Separate gallery', both: 'Ceremony portrait and separate gallery' },
+    hint: 'The first photo is featured in the ceremony scene.',
+    richText: false, adminOnly: false, section: 'photobooth', block: 'couple-gallery', group: 'Gallery', chip: 'Gallery',
+    templateIds: [7] },
+  { key: 'gallery.layout', label: 'Gallery layout', fieldType: 'select', defaultValue: 'carousel', maxLength: 8,
+    options: ['carousel', 'grid'], optionLabels: { carousel: 'Swipeable carousel', grid: 'Photo grid' },
+    richText: false, adminOnly: false, section: 'photobooth', block: 'couple-gallery', group: 'Gallery', chip: 'Gallery',
+    templateIds: [7] },
+  { key: 'gallery.layout', label: 'Gallery layout', fieldType: 'select', defaultValue: 'grid', maxLength: 8,
+    options: ['grid', 'carousel'], optionLabels: { carousel: 'Swipeable carousel', grid: 'Photo grid' },
+    richText: false, adminOnly: false, section: 'photobooth', block: 'couple-gallery', group: 'Gallery', chip: 'Gallery',
+    templateIds: [11, 12, 16] },
+  { key: 'gallery.title', label: 'Gallery title', fieldType: 'text', defaultValue: 'Our photos', maxLength: 60,
+    richText: false, adminOnly: false, section: 'photobooth', block: 'couple-gallery', group: 'Gallery', chip: 'Gallery',
+    templateIds: [7, 11, 12, 16] },
+  { key: 'gallery.fit', label: 'Photo fit', fieldType: 'select', defaultValue: 'cover', maxLength: 7,
+    options: ['cover', 'contain'], optionLabels: { cover: 'Fill the frame', contain: 'Show the full photo' },
+    richText: false, adminOnly: false, section: 'photobooth', block: 'couple-gallery', group: 'Gallery', chip: 'Gallery',
+    templateIds: [7, 11, 12, 16] },
+  { key: 'gallery.order', label: 'Photo order', fieldType: 'hidden', defaultValue: '', maxLength: 500,
+    richText: false, adminOnly: false, section: 'photobooth', block: 'couple-gallery', group: 'Gallery', chip: 'Gallery',
+    templateIds: [7, 11, 12, 16] },
+  ...navItemFields('couple-gallery', 'Couple Gallery', [7, 11, 12, 16]),
+];
+
 const COMMON_FIELDS: TemplateConfigField[] = [
+  ...SHARED_NAV_FIELDS,
+  ...COUPLE_GALLERY_FIELDS,
   // ── Cover / invitation ──────────────────────────────────────────────────────
   {
     key: 'invite.heading',
@@ -56,7 +139,7 @@ const COMMON_FIELDS: TemplateConfigField[] = [
     section: 'invitation',
     attachTo: 'invite.heading',
     presets: 'heading',
-    templateIds: [1, 2, 3, 4, 5, 6, 8, 9],
+    templateIds: [1, 2, 3, 4, 6, 8, 9],
   },
   {
     key: 'invite.heading.shadow',
@@ -179,7 +262,7 @@ const COMMON_FIELDS: TemplateConfigField[] = [
     fieldType: 'hidden',
     adminOnly: false,
     section: 'general',
-    templateIds: [1, 2, 3, 4, 6, 7, 8, 9, 10, 12, 13, 14],
+    templateIds: [1, 2, 3, 4, 6, 7, 8, 9, 10, 11, 12, 13, 14],
   },
 
   // ── Ceremony ────────────────────────────────────────────────────────────────
@@ -211,6 +294,18 @@ const COMMON_FIELDS: TemplateConfigField[] = [
     templateIds: [1, 2, 3, 4, 6, 8, 9],
   },
 
+  ...([
+    { key: 'rsvp.form_layout', section: 'rsvp' },
+    { key: 'wish.form_layout', section: 'wishes' },
+  ] as const).map((field): TemplateConfigField => ({
+    ...field, label: 'Form layout', fieldType: 'select', defaultValue: 'button', maxLength: 6,
+    richText: false, adminOnly: false, group: 'Form layout', chip: 'Layout',
+    options: ['button', 'inline'], optionLabels: { button: 'Button opens pop-up', inline: 'Show form on page' },
+    templateIds: [7, 10, 11, 12, 13, 14],
+  })),
+
+  SEATING_MODE,
+
   // ── RSVP ────────────────────────────────────────────────────────────────────
   {
     key: 'rsvp.title',
@@ -227,8 +322,8 @@ const COMMON_FIELDS: TemplateConfigField[] = [
     // a hardcoded "RSVP" heading in their own bespoke markup and never read this key at all (see
     // lib/__tests__/templateConfigSchema.scope.test.ts). T10's RSVP title is a plain text layer
     // (Adjust panel edits it directly, with full font/size/line-height control) instead of the
-    // shared slot, so it's excluded too — only T7 actually uses this field.
-    templateIds: [7, 12, 15],
+    // shared slot, so it's excluded too.
+    templateIds: [7, 11, 12, 15],
   },
   {
     key: 'rsvp.subtitle',
@@ -241,7 +336,7 @@ const COMMON_FIELDS: TemplateConfigField[] = [
     section: 'rsvp',
     group: 'RSVP',
     chip: 'RSVP',
-    templateIds: [1, 2, 3, 4, 5, 6, 7, 8, 9, 12, 15],
+    templateIds: [1, 2, 3, 4, 5, 6, 7, 8, 9, 11, 12, 15],
   },
 
   // RSVP form fields + the seating step. Same reasoning as the Wishes form block below: these
@@ -250,42 +345,39 @@ const COMMON_FIELDS: TemplateConfigField[] = [
   // the couple no matter what they typed. `rsvp.seating_prompt` already existed but was declared
   // only in TEMPLATE7_EXTRA_FIELDS (an array TEMPLATE_CONFIGS[10] never composes), so T10 couples
   // could never reach it either — moved here and rescoped alongside its new siblings.
-  { key: 'rsvp.name_placeholder', label: 'Name Placeholder', fieldType: 'text', defaultValue: 'Full name *', maxLength: 40, richText: false, adminOnly: false, section: 'rsvp', group: 'RSVP', chip: 'RSVP', templateIds: [7, 10, 12, 13] },
-  { key: 'rsvp.email_placeholder', label: 'Email Placeholder', fieldType: 'text', defaultValue: 'Email', maxLength: 30, richText: false, adminOnly: false, section: 'rsvp', group: 'RSVP', chip: 'RSVP', templateIds: [7, 10, 12, 13] },
-  { key: 'rsvp.phone_placeholder', label: 'Phone Placeholder', fieldType: 'text', defaultValue: 'Phone', maxLength: 30, richText: false, adminOnly: false, section: 'rsvp', group: 'RSVP', chip: 'RSVP', templateIds: [7, 10, 12, 13] },
-  { key: 'rsvp.bride_side_label', label: "Bride's Side Option", fieldType: 'text', defaultValue: "Bride's side", maxLength: 30, richText: false, adminOnly: false, section: 'rsvp', group: 'RSVP', chip: 'RSVP', templateIds: [7, 10, 12, 13] },
-  { key: 'rsvp.groom_side_label', label: "Groom's Side Option", fieldType: 'text', defaultValue: "Groom's side", maxLength: 30, richText: false, adminOnly: false, section: 'rsvp', group: 'RSVP', chip: 'RSVP', templateIds: [7, 10, 12, 13] },
-  { key: 'rsvp.attending_label', label: 'Attending Button', fieldType: 'text', defaultValue: 'Joyfully accept', maxLength: 30, richText: false, adminOnly: false, section: 'rsvp', group: 'RSVP', chip: 'RSVP', templateIds: [7, 10, 12, 13] },
-  { key: 'rsvp.declining_label', label: 'Declining Button', fieldType: 'text', defaultValue: 'Regretfully decline', maxLength: 30, richText: false, adminOnly: false, section: 'rsvp', group: 'RSVP', chip: 'RSVP', templateIds: [7, 10, 12, 13] },
-  { key: 'rsvp.song_placeholder', label: 'Song Request Placeholder', fieldType: 'text', defaultValue: 'Song request (optional)', maxLength: 40, richText: false, adminOnly: false, section: 'rsvp', group: 'RSVP', chip: 'RSVP', templateIds: [7, 10, 12, 13] },
-  { key: 'rsvp.submit_label', label: 'Send RSVP Button', fieldType: 'text', defaultValue: 'Send RSVP', maxLength: 30, richText: false, adminOnly: false, section: 'rsvp', group: 'RSVP', chip: 'RSVP', templateIds: [7, 10, 12, 13] },
-  { key: 'rsvp.continue_label', label: 'Continue to Seating Button', hint: 'Shown instead of Send RSVP when seating is enabled and the guest is attending.', fieldType: 'text', defaultValue: 'Continue', maxLength: 30, richText: false, adminOnly: false, section: 'rsvp', group: 'RSVP', chip: 'RSVP', templateIds: [7, 10, 12, 13] },
-  { key: 'rsvp.closed_message', label: 'RSVPs Closed Message', fieldType: 'text', defaultValue: 'RSVPs are closed — thank you for your interest.', maxLength: 120, richText: false, adminOnly: false, section: 'rsvp', group: 'RSVP', chip: 'RSVP', templateIds: [7, 10, 12, 13] },
-  { key: 'rsvp.done_message', label: 'RSVP Sent Message', fieldType: 'text', defaultValue: 'Thank you. We look forward to celebrating with you.', maxLength: 120, richText: false, adminOnly: false, section: 'rsvp', group: 'RSVP', chip: 'RSVP', templateIds: [7, 10, 12, 13] },
-  { key: 'rsvp.seating_prompt', label: 'Seating Prompt', fieldType: 'text', defaultValue: 'Choose your table', maxLength: 60, richText: false, adminOnly: false, section: 'rsvp', group: 'RSVP', chip: 'RSVP', templateIds: [7, 10, 12, 13] },
-  { key: 'rsvp.seating_back_label', label: 'Seating Back Button', fieldType: 'text', defaultValue: 'Back', maxLength: 20, richText: false, adminOnly: false, section: 'rsvp', group: 'RSVP', chip: 'RSVP', templateIds: [7, 10, 12, 13] },
-  { key: 'rsvp.seating_empty_message', label: 'No Tables Message', hint: 'Shown when the couple hasn’t set up any tables yet.', fieldType: 'text', defaultValue: 'No tables have been set up yet — your seat will be assigned by the couple.', maxLength: 160, richText: false, adminOnly: false, section: 'rsvp', group: 'RSVP', chip: 'RSVP', templateIds: [7, 10, 12, 13] },
-  { key: 'rsvp.seating_party_prompt', label: 'Party Size Prompt', hint: 'The guest’s party size and a period are appended automatically, e.g. "…party of 4."', fieldType: 'text', defaultValue: 'Showing tables that can seat your party of', maxLength: 80, richText: false, adminOnly: false, section: 'rsvp', group: 'RSVP', chip: 'RSVP', templateIds: [7, 10, 12, 13] },
-  { key: 'rsvp.seating_full_label', label: 'Table Full Label', fieldType: 'text', defaultValue: 'Full', maxLength: 20, richText: false, adminOnly: false, section: 'rsvp', group: 'RSVP', chip: 'RSVP', templateIds: [7, 10, 12, 13] },
-  { key: 'rsvp.seating_seats_left_label', label: 'Seats Left Label', hint: 'The number of open seats is prepended automatically, e.g. "3 seats left."', fieldType: 'text', defaultValue: 'seats left', maxLength: 20, richText: false, adminOnly: false, section: 'rsvp', group: 'RSVP', chip: 'RSVP', templateIds: [7, 10, 12, 13] },
-  { key: 'rsvp.name_placeholder', label: 'Name Placeholder', fieldType: 'text', defaultValue: 'Full name *', maxLength: 40, richText: false, adminOnly: false, section: 'rsvp', group: 'RSVP', chip: 'RSVP', templateIds: [7, 10, 12, 14, 15] },
-  { key: 'rsvp.email_placeholder', label: 'Email Placeholder', fieldType: 'text', defaultValue: 'Email', maxLength: 30, richText: false, adminOnly: false, section: 'rsvp', group: 'RSVP', chip: 'RSVP', templateIds: [7, 10, 12, 14, 15] },
-  { key: 'rsvp.phone_placeholder', label: 'Phone Placeholder', fieldType: 'text', defaultValue: 'Phone', maxLength: 30, richText: false, adminOnly: false, section: 'rsvp', group: 'RSVP', chip: 'RSVP', templateIds: [7, 10, 12, 14, 15] },
-  { key: 'rsvp.bride_side_label', label: "Bride's Side Option", fieldType: 'text', defaultValue: "Bride's side", maxLength: 30, richText: false, adminOnly: false, section: 'rsvp', group: 'RSVP', chip: 'RSVP', templateIds: [7, 10, 12, 14, 15] },
-  { key: 'rsvp.groom_side_label', label: "Groom's Side Option", fieldType: 'text', defaultValue: "Groom's side", maxLength: 30, richText: false, adminOnly: false, section: 'rsvp', group: 'RSVP', chip: 'RSVP', templateIds: [7, 10, 12, 14, 15] },
-  { key: 'rsvp.attending_label', label: 'Attending Button', fieldType: 'text', defaultValue: 'Joyfully accept', maxLength: 30, richText: false, adminOnly: false, section: 'rsvp', group: 'RSVP', chip: 'RSVP', templateIds: [7, 10, 12, 14, 15] },
-  { key: 'rsvp.declining_label', label: 'Declining Button', fieldType: 'text', defaultValue: 'Regretfully decline', maxLength: 30, richText: false, adminOnly: false, section: 'rsvp', group: 'RSVP', chip: 'RSVP', templateIds: [7, 10, 12, 14, 15] },
-  { key: 'rsvp.song_placeholder', label: 'Song Request Placeholder', fieldType: 'text', defaultValue: 'Song request (optional)', maxLength: 40, richText: false, adminOnly: false, section: 'rsvp', group: 'RSVP', chip: 'RSVP', templateIds: [7, 10, 12, 14, 15] },
-  { key: 'rsvp.submit_label', label: 'Send RSVP Button', fieldType: 'text', defaultValue: 'Send RSVP', maxLength: 30, richText: false, adminOnly: false, section: 'rsvp', group: 'RSVP', chip: 'RSVP', templateIds: [7, 10, 12, 14, 15] },
-  { key: 'rsvp.continue_label', label: 'Continue to Seating Button', hint: 'Shown instead of Send RSVP when seating is enabled and the guest is attending.', fieldType: 'text', defaultValue: 'Continue', maxLength: 30, richText: false, adminOnly: false, section: 'rsvp', group: 'RSVP', chip: 'RSVP', templateIds: [7, 10, 12, 14, 15] },
-  { key: 'rsvp.closed_message', label: 'RSVPs Closed Message', fieldType: 'text', defaultValue: 'RSVPs are closed — thank you for your interest.', maxLength: 120, richText: false, adminOnly: false, section: 'rsvp', group: 'RSVP', chip: 'RSVP', templateIds: [7, 10, 12, 14, 15] },
-  { key: 'rsvp.done_message', label: 'RSVP Sent Message', fieldType: 'text', defaultValue: 'Thank you. We look forward to celebrating with you.', maxLength: 120, richText: false, adminOnly: false, section: 'rsvp', group: 'RSVP', chip: 'RSVP', templateIds: [7, 10, 12, 14, 15] },
-  { key: 'rsvp.seating_prompt', label: 'Seating Prompt', fieldType: 'text', defaultValue: 'Choose your table', maxLength: 60, richText: false, adminOnly: false, section: 'rsvp', group: 'RSVP', chip: 'RSVP', templateIds: [7, 10, 12, 14, 15] },
-  { key: 'rsvp.seating_back_label', label: 'Seating Back Button', fieldType: 'text', defaultValue: 'Back', maxLength: 20, richText: false, adminOnly: false, section: 'rsvp', group: 'RSVP', chip: 'RSVP', templateIds: [7, 10, 12, 14, 15] },
-  { key: 'rsvp.seating_empty_message', label: 'No Tables Message', hint: 'Shown when the couple hasn’t set up any tables yet.', fieldType: 'text', defaultValue: 'No tables have been set up yet — your seat will be assigned by the couple.', maxLength: 160, richText: false, adminOnly: false, section: 'rsvp', group: 'RSVP', chip: 'RSVP', templateIds: [7, 10, 12, 14, 15] },
-  { key: 'rsvp.seating_party_prompt', label: 'Party Size Prompt', hint: 'The guest’s party size and a period are appended automatically, e.g. "…party of 4."', fieldType: 'text', defaultValue: 'Showing tables that can seat your party of', maxLength: 80, richText: false, adminOnly: false, section: 'rsvp', group: 'RSVP', chip: 'RSVP', templateIds: [7, 10, 12, 14, 15] },
-  { key: 'rsvp.seating_full_label', label: 'Table Full Label', fieldType: 'text', defaultValue: 'Full', maxLength: 20, richText: false, adminOnly: false, section: 'rsvp', group: 'RSVP', chip: 'RSVP', templateIds: [7, 10, 12, 14, 15] },
-  { key: 'rsvp.seating_seats_left_label', label: 'Seats Left Label', hint: 'The number of open seats is prepended automatically, e.g. "3 seats left."', fieldType: 'text', defaultValue: 'seats left', maxLength: 20, richText: false, adminOnly: false, section: 'rsvp', group: 'RSVP', chip: 'RSVP', templateIds: [7, 10, 12, 14, 15] },
+  { key: 'rsvp.name_placeholder', label: 'Name Placeholder', fieldType: 'text', defaultValue: 'Full name *', maxLength: 40, richText: false, adminOnly: false, section: 'rsvp', group: 'RSVP', chip: 'RSVP', templateIds: [7, 10, 11, 12, 13, 14, 15] },
+  { key: 'rsvp.email_placeholder', label: 'Email Placeholder', fieldType: 'text', defaultValue: 'Email', maxLength: 30, richText: false, adminOnly: false, section: 'rsvp', group: 'RSVP', chip: 'RSVP', templateIds: [7, 10, 11, 12, 13, 14, 15] },
+  { key: 'rsvp.phone_placeholder', label: 'Phone Placeholder', fieldType: 'text', defaultValue: 'Phone', maxLength: 30, richText: false, adminOnly: false, section: 'rsvp', group: 'RSVP', chip: 'RSVP', templateIds: [7, 10, 11, 12, 13, 14, 15] },
+  { key: 'rsvp.bride_side_label', label: "Bride's Side Option", fieldType: 'text', defaultValue: "Bride's side", maxLength: 30, richText: false, adminOnly: false, section: 'rsvp', group: 'RSVP', chip: 'RSVP', templateIds: [7, 10, 11, 12, 13, 14, 15] },
+  { key: 'rsvp.groom_side_label', label: "Groom's Side Option", fieldType: 'text', defaultValue: "Groom's side", maxLength: 30, richText: false, adminOnly: false, section: 'rsvp', group: 'RSVP', chip: 'RSVP', templateIds: [7, 10, 11, 12, 13, 14, 15] },
+  { key: 'rsvp.attending_label', label: 'Attending Button', fieldType: 'text', defaultValue: 'Joyfully accept', maxLength: 30, richText: false, adminOnly: false, section: 'rsvp', group: 'RSVP', chip: 'RSVP', templateIds: [7, 10, 11, 12, 13, 14, 15] },
+  { key: 'rsvp.declining_label', label: 'Declining Button', fieldType: 'text', defaultValue: 'Regretfully decline', maxLength: 30, richText: false, adminOnly: false, section: 'rsvp', group: 'RSVP', chip: 'RSVP', templateIds: [7, 10, 11, 12, 13, 14, 15] },
+  { key: 'rsvp.song_placeholder', label: 'Song Request Placeholder', fieldType: 'text', defaultValue: 'Song request (optional)', maxLength: 40, richText: false, adminOnly: false, section: 'rsvp', group: 'RSVP', chip: 'RSVP', templateIds: [7, 10, 11, 12, 13, 14, 15] },
+  { key: 'rsvp.submit_label', label: 'Send RSVP Button', fieldType: 'text', defaultValue: 'Send RSVP', maxLength: 30, richText: false, adminOnly: false, section: 'rsvp', group: 'RSVP', chip: 'RSVP', templateIds: [7, 10, 11, 12, 13, 14, 15] },
+  { key: 'rsvp.continue_label', label: 'Continue to Seating Button', hint: 'Shown instead of Send RSVP when seating is enabled and the guest is attending.', fieldType: 'text', defaultValue: 'Continue', maxLength: 30, richText: false, adminOnly: false, section: 'rsvp', block: 'seating', group: 'Seating', chip: 'Seating', templateIds: [7, 10, 11, 12, 13, 14, 15] },
+  { key: 'rsvp.closed_message', label: 'RSVPs Closed Message', fieldType: 'text', defaultValue: 'RSVPs are closed — thank you for your interest.', maxLength: 120, richText: false, adminOnly: false, section: 'rsvp', group: 'RSVP', chip: 'RSVP', templateIds: [7, 10, 11, 12, 13, 14, 15] },
+  { key: 'rsvp.done_message', label: 'RSVP Sent Message', fieldType: 'text', defaultValue: 'Thank you. We look forward to celebrating with you.', maxLength: 120, richText: false, adminOnly: false, section: 'rsvp', group: 'RSVP', chip: 'RSVP', templateIds: [7, 10, 11, 12, 13, 14, 15] },
+  { key: 'rsvp.seating_prompt', label: 'Seating Prompt', fieldType: 'text', defaultValue: 'Choose your table', maxLength: 60, richText: false, adminOnly: false, section: 'rsvp', block: 'seating', group: 'Seating', chip: 'Seating', guestEssential: true, templateIds: [7, 10, 11, 12, 13, 14, 15] },
+  { key: 'rsvp.seating_back_label', label: 'Seating Back Button', fieldType: 'text', defaultValue: 'Back', maxLength: 20, richText: false, adminOnly: false, section: 'rsvp', block: 'seating', group: 'Seating', chip: 'Seating', guestEssential: true, templateIds: [7, 10, 11, 12, 13, 14, 15] },
+  { key: 'rsvp.seating_empty_message', label: 'No Tables Message', hint: 'Shown when the couple hasn’t set up any tables yet.', fieldType: 'text', defaultValue: 'No tables have been set up yet — your seat will be assigned by the couple.', maxLength: 160, richText: false, adminOnly: false, section: 'rsvp', block: 'seating', group: 'Seating', chip: 'Seating', guestEssential: true, templateIds: [7, 10, 11, 12, 13, 14, 15] },
+  { key: 'rsvp.seating_party_prompt', label: 'Party Size Prompt', hint: 'The guest’s party size and a period are appended automatically, e.g. "…party of 4."', fieldType: 'text', defaultValue: 'Showing tables that can seat your party of', maxLength: 80, richText: false, adminOnly: false, section: 'rsvp', block: 'seating', group: 'Seating', chip: 'Seating', guestEssential: true, templateIds: [7, 10, 11, 12, 13, 14, 15] },
+  { key: 'rsvp.seating_full_label', label: 'Table Full Label', fieldType: 'text', defaultValue: 'Full', maxLength: 20, richText: false, adminOnly: false, section: 'rsvp', block: 'seating', group: 'Seating', chip: 'Seating', guestEssential: true, templateIds: [7, 10, 11, 12, 13, 14, 15] },
+  { key: 'rsvp.seating_seats_left_label', label: 'Seats Left Label', hint: 'The number of open seats is prepended automatically, e.g. "3 seats left."', fieldType: 'text', defaultValue: 'seats left', maxLength: 20, richText: false, adminOnly: false, section: 'rsvp', block: 'seating', group: 'Seating', chip: 'Seating', guestEssential: true, templateIds: [7, 10, 11, 12, 13, 14, 15] },
+
+  { key: 'sheet.rsvp.label', label: 'RSVP Button Text', fieldType: 'text', defaultValue: 'RSVP Now', maxLength: 30, richText: false, adminOnly: false, section: 'rsvp', group: 'RSVP', chip: 'RSVP', templateIds: [11, 12] },
+  { key: 'sheet.rsvp.image', label: 'RSVP Button Artwork', hint: 'Optional — replaces the button with your own image.', fieldType: 'image', defaultValue: '', maxLength: 500, richText: false, adminOnly: false, section: 'rsvp', group: 'RSVP', chip: 'RSVP', templateIds: [11, 12] },
+
+  ...[
+    { key: 'rsvp.fields.email', label: 'Show email' },
+    { key: 'rsvp.fields.phone', label: 'Show phone number' },
+    { key: 'rsvp.fields.party_size', label: 'Show party size', hint: 'When hidden, an RSVP is for one guest.' },
+    { key: 'rsvp.fields.family_side', label: 'Show family side', hint: 'Applies to wedding invitations.' },
+    { key: 'rsvp.fields.song_request', label: 'Show song request' },
+  ].map((field): TemplateConfigField => ({
+    ...field, fieldType: 'boolean', defaultValue: 'true', maxLength: 5,
+    richText: false, adminOnly: false, section: 'rsvp', group: 'Fields', chip: 'Fields',
+    templateIds: [7, 10, 11, 12, 13, 14, 15],
+  })),
 
   // ── Wishes ──────────────────────────────────────────────────────────────────
   {
@@ -312,26 +404,16 @@ const COMMON_FIELDS: TemplateConfigField[] = [
   // these controls, same as T7/T10 — TemplateConfigPolicy.LayoutKeyPattern's `ta?\d+` authored-id
   // handling is a separate mechanism (layout keys only), so authored templates simply aren't
   // listed here; add their numeric ids if that ever needs the same treatment.
-  { key: 'wish.form_title', label: 'Wish Form Title', fieldType: 'text', defaultValue: 'Leave a Wish', maxLength: 40, richText: false, adminOnly: false, section: 'wishes', group: 'Wishes & Guestbook', chip: 'Content', templateIds: [7, 10, 12, 13] },
-  { key: 'wish.message_placeholder', label: 'Message Placeholder', fieldType: 'text', defaultValue: 'Write your wish for the couple…', maxLength: 120, richText: false, adminOnly: false, section: 'wishes', group: 'Wishes & Guestbook', chip: 'Content', templateIds: [7, 10, 12, 13] },
-  { key: 'wish.name_placeholder', label: 'Name Placeholder', fieldType: 'text', defaultValue: 'Your name *', maxLength: 40, richText: false, adminOnly: false, section: 'wishes', group: 'Wishes & Guestbook', chip: 'Content', templateIds: [7, 10, 12, 13] },
-  { key: 'wish.submit_label', label: 'Send Wish Button', fieldType: 'text', defaultValue: 'Send Wish', maxLength: 30, richText: false, adminOnly: false, section: 'wishes', group: 'Wishes & Guestbook', chip: 'Content', templateIds: [7, 10, 12, 13] },
-  { key: 'wish.sent_message', label: 'Wish Sent Message', fieldType: 'text', defaultValue: 'Thank you — your wish was sent.', maxLength: 120, richText: false, adminOnly: false, section: 'wishes', group: 'Wishes & Guestbook', chip: 'Content', templateIds: [7, 10, 12, 13] },
-  { key: 'wish.photo_title', label: 'Photo Step Title', fieldType: 'text', defaultValue: 'Add a photo?', maxLength: 40, richText: false, adminOnly: false, section: 'wishes', group: 'Wishes & Guestbook', chip: 'Content', templateIds: [7, 10, 12, 13] },
-  { key: 'wish.photo_prompt', label: 'Photo Step Prompt', fieldType: 'text', defaultValue: 'Optional — share a snapshot to go with your wish.', maxLength: 120, richText: false, adminOnly: false, section: 'wishes', group: 'Wishes & Guestbook', chip: 'Content', templateIds: [7, 10, 12, 13] },
-  { key: 'wish.photo_choose_label', label: 'Choose Photo Button', fieldType: 'text', defaultValue: 'Choose a Photo', maxLength: 30, richText: false, adminOnly: false, section: 'wishes', group: 'Wishes & Guestbook', chip: 'Content', templateIds: [7, 10, 12, 13] },
-  { key: 'wish.photo_caption_placeholder', label: 'Photo Caption Placeholder', fieldType: 'text', defaultValue: 'Caption (optional)', maxLength: 60, richText: false, adminOnly: false, section: 'wishes', group: 'Wishes & Guestbook', chip: 'Content', templateIds: [7, 10, 12, 13] },
-  { key: 'wish.photo_skip_label', label: 'Skip Photo Button', fieldType: 'text', defaultValue: 'Skip', maxLength: 20, richText: false, adminOnly: false, section: 'wishes', group: 'Wishes & Guestbook', chip: 'Content', templateIds: [7, 10, 12, 13] },
-  { key: 'wish.form_title', label: 'Wish Form Title', fieldType: 'text', defaultValue: 'Leave a Wish', maxLength: 40, richText: false, adminOnly: false, section: 'wishes', group: 'Wishes & Guestbook', chip: 'Content', templateIds: [7, 10, 12, 14, 15] },
-  { key: 'wish.message_placeholder', label: 'Message Placeholder', fieldType: 'text', defaultValue: 'Write your wish for the couple…', maxLength: 120, richText: false, adminOnly: false, section: 'wishes', group: 'Wishes & Guestbook', chip: 'Content', templateIds: [7, 10, 12, 14, 15] },
-  { key: 'wish.name_placeholder', label: 'Name Placeholder', fieldType: 'text', defaultValue: 'Your name *', maxLength: 40, richText: false, adminOnly: false, section: 'wishes', group: 'Wishes & Guestbook', chip: 'Content', templateIds: [7, 10, 12, 14, 15] },
-  { key: 'wish.submit_label', label: 'Send Wish Button', fieldType: 'text', defaultValue: 'Send Wish', maxLength: 30, richText: false, adminOnly: false, section: 'wishes', group: 'Wishes & Guestbook', chip: 'Content', templateIds: [7, 10, 12, 14, 15] },
-  { key: 'wish.sent_message', label: 'Wish Sent Message', fieldType: 'text', defaultValue: 'Thank you — your wish was sent.', maxLength: 120, richText: false, adminOnly: false, section: 'wishes', group: 'Wishes & Guestbook', chip: 'Content', templateIds: [7, 10, 12, 14, 15] },
-  { key: 'wish.photo_title', label: 'Photo Step Title', fieldType: 'text', defaultValue: 'Add a photo?', maxLength: 40, richText: false, adminOnly: false, section: 'wishes', group: 'Wishes & Guestbook', chip: 'Content', templateIds: [7, 10, 12, 14, 15] },
-  { key: 'wish.photo_prompt', label: 'Photo Step Prompt', fieldType: 'text', defaultValue: 'Optional — share a snapshot to go with your wish.', maxLength: 120, richText: false, adminOnly: false, section: 'wishes', group: 'Wishes & Guestbook', chip: 'Content', templateIds: [7, 10, 12, 14, 15] },
-  { key: 'wish.photo_choose_label', label: 'Choose Photo Button', fieldType: 'text', defaultValue: 'Choose a Photo', maxLength: 30, richText: false, adminOnly: false, section: 'wishes', group: 'Wishes & Guestbook', chip: 'Content', templateIds: [7, 10, 12, 14, 15] },
-  { key: 'wish.photo_caption_placeholder', label: 'Photo Caption Placeholder', fieldType: 'text', defaultValue: 'Caption (optional)', maxLength: 60, richText: false, adminOnly: false, section: 'wishes', group: 'Wishes & Guestbook', chip: 'Content', templateIds: [7, 10, 12, 14, 15] },
-  { key: 'wish.photo_skip_label', label: 'Skip Photo Button', fieldType: 'text', defaultValue: 'Skip', maxLength: 20, richText: false, adminOnly: false, section: 'wishes', group: 'Wishes & Guestbook', chip: 'Content', templateIds: [7, 10, 12, 14, 15] },
+  { key: 'wish.form_title', label: 'Wish Form Title', fieldType: 'text', defaultValue: 'Leave a Wish', maxLength: 40, richText: false, adminOnly: false, section: 'wishes', group: 'Wishes & Guestbook', chip: 'Content', templateIds: [7, 10, 12, 13, 14, 15] },
+  { key: 'wish.message_placeholder', label: 'Message Placeholder', fieldType: 'text', defaultValue: 'Write your wish for the couple…', maxLength: 120, richText: false, adminOnly: false, section: 'wishes', group: 'Wishes & Guestbook', chip: 'Content', templateIds: [7, 10, 12, 13, 14, 15] },
+  { key: 'wish.name_placeholder', label: 'Name Placeholder', fieldType: 'text', defaultValue: 'Your name *', maxLength: 40, richText: false, adminOnly: false, section: 'wishes', group: 'Wishes & Guestbook', chip: 'Content', templateIds: [7, 10, 12, 13, 14, 15] },
+  { key: 'wish.submit_label', label: 'Send Wish Button', fieldType: 'text', defaultValue: 'Send Wish', maxLength: 30, richText: false, adminOnly: false, section: 'wishes', group: 'Wishes & Guestbook', chip: 'Content', templateIds: [7, 10, 12, 13, 14, 15] },
+  { key: 'wish.sent_message', label: 'Wish Sent Message', fieldType: 'text', defaultValue: 'Thank you — your wish was sent.', maxLength: 120, richText: false, adminOnly: false, section: 'wishes', group: 'Wishes & Guestbook', chip: 'Content', templateIds: [7, 10, 12, 13, 14, 15] },
+  { key: 'wish.photo_title', label: 'Photo Step Title', fieldType: 'text', defaultValue: 'Add a photo?', maxLength: 40, richText: false, adminOnly: false, section: 'wishes', group: 'Wishes & Guestbook', chip: 'Content', templateIds: [7, 10, 12, 13, 14, 15] },
+  { key: 'wish.photo_prompt', label: 'Photo Step Prompt', fieldType: 'text', defaultValue: 'Optional — share a snapshot to go with your wish.', maxLength: 120, richText: false, adminOnly: false, section: 'wishes', group: 'Wishes & Guestbook', chip: 'Content', templateIds: [7, 10, 12, 13, 14, 15] },
+  { key: 'wish.photo_choose_label', label: 'Choose Photo Button', fieldType: 'text', defaultValue: 'Choose a Photo', maxLength: 30, richText: false, adminOnly: false, section: 'wishes', group: 'Wishes & Guestbook', chip: 'Content', templateIds: [7, 10, 12, 13, 14, 15] },
+  { key: 'wish.photo_caption_placeholder', label: 'Photo Caption Placeholder', fieldType: 'text', defaultValue: 'Caption (optional)', maxLength: 60, richText: false, adminOnly: false, section: 'wishes', group: 'Wishes & Guestbook', chip: 'Content', templateIds: [7, 10, 12, 13, 14, 15] },
+  { key: 'wish.photo_skip_label', label: 'Skip Photo Button', fieldType: 'text', defaultValue: 'Skip', maxLength: 20, richText: false, adminOnly: false, section: 'wishes', group: 'Wishes & Guestbook', chip: 'Content', templateIds: [7, 10, 12, 13, 14, 15] },
 
   // ── Section backgrounds ─────────────────────────────────────────────────────
   {
@@ -489,7 +571,7 @@ const COMMON_FIELDS: TemplateConfigField[] = [
     section: 'music',
     group: 'Audio',
     chip: 'Audio',
-    templateIds: [5, 6, 7, 10, 13, 14],
+    templateIds: [5, 6, 7, 10, 11, 12, 13, 14, 15, 16],
   },
   {
     key: 'music.loop',
@@ -502,7 +584,7 @@ const COMMON_FIELDS: TemplateConfigField[] = [
     section: 'music',
     group: 'Audio',
     chip: 'Settings',
-    templateIds: [5, 6, 7, 10, 13, 14],
+    templateIds: [5, 6, 7, 10, 11, 12, 13, 14, 15, 16],
   },
 
   // ── Photo Booth ─────────────────────────────────────────────────────────────
@@ -656,6 +738,11 @@ const TEMPLATE6_EXTRA_FIELDS: TemplateConfigField[] = [
 ];
 
 const TEMPLATE5_EXTRA_FIELDS: TemplateConfigField[] = [
+  { key: 'section.order', label: 'Section Order', fieldType: 'hidden',
+    defaultValue: 'welcome,walimah,itinerary,rsvp,wishes,photobooth', maxLength: 100,
+    richText: false, adminOnly: false, section: 'general' },
+  { key: 'invite.heading.color', label: 'Heading Color', fieldType: 'hidden', defaultValue: '', maxLength: 20,
+    richText: false, adminOnly: false, section: 'invitation' },
   // Only ever switches T5's welcome-section arc-text presentation (Template5.tsx's `layout`
   // const) — nothing global. Filed under 'welcome', not 'details', and relabeled so it can't be
   // confused with the PRO Adjust dock's stage layout (a much bigger, unrelated thing).
@@ -665,34 +752,33 @@ const TEMPLATE5_EXTRA_FIELDS: TemplateConfigField[] = [
   { key: 'template.bgSize', label: 'Size', defaultValue: 'cover', maxLength: 10, richText: false, fieldType: 'select', options: ['cover', 'contain', 'auto'], optionLabels: { auto: 'Natural' }, adminOnly: false, section: 'styling', block: 'welcome', group: 'Page Background', chip: 'Background' },
   { key: 'template.bgPosition', label: 'Position', defaultValue: 'center', maxLength: 20, richText: false, fieldType: 'select', options: ['center', 'top center', 'bottom center', 'left center', 'right center'], optionLabels: { 'top center': 'Top', 'bottom center': 'Bottom', 'left center': 'Left', 'right center': 'Right' }, adminOnly: false, section: 'styling', block: 'welcome', group: 'Page Background', chip: 'Background' },
 
-  // ── Per-element colours & shadows. `attachTo` folds these into the card of the
-  //    field (or wedding-record input) they style, instead of a wall of pickers.
-  { key: 'names.bride.color',      label: 'Bride Name Color',       fieldType: 'color',  defaultValue: '',     maxLength: 20, richText: false, adminOnly: false, section: 'styling', block: 'details', attachTo: 'wedding.brideName',  presets: 'bride' },
-  { key: 'names.bride.shadow',     label: 'Bride Name Shadow',      fieldType: 'select', defaultValue: 'none', maxLength: 10, richText: false, adminOnly: false, section: 'styling', block: 'details', attachTo: 'wedding.brideName',  options: ['none', 'soft', 'strong', 'glow'] },
-  { key: 'names.groom.color',      label: 'Groom Name Color',       fieldType: 'color',  defaultValue: '',     maxLength: 20, richText: false, adminOnly: false, section: 'styling', block: 'details', attachTo: 'wedding.groomName',  presets: 'groom' },
-  { key: 'names.groom.shadow',     label: 'Groom Name Shadow',      fieldType: 'select', defaultValue: 'none', maxLength: 10, richText: false, adminOnly: false, section: 'styling', block: 'details', attachTo: 'wedding.groomName',  options: ['none', 'soft', 'strong', 'glow'] },
-  { key: 'names.ampersand.color',  label: 'Ampersand (&) Color',    fieldType: 'color',  defaultValue: '',     maxLength: 20, richText: false, adminOnly: false, section: 'styling', block: 'details', group: 'Wedding Details', chip: 'Details', presets: 'amp' },
-  { key: 'date.color',             label: 'Date Card Color',        fieldType: 'color',  defaultValue: '',     maxLength: 20, richText: false, adminOnly: false, section: 'ceremony', block: 'details', attachTo: 'wedding.weddingDate', presets: 'date' },
-  { key: 'venue.color',            label: 'Venue Card Color',       fieldType: 'color',  defaultValue: '',     maxLength: 20, richText: false, adminOnly: false, section: 'ceremony', block: 'details', attachTo: 'wedding.venue',      presets: 'venue' },
-  { key: 'footer.tagline.color',   label: 'Footer Tagline Color',   fieldType: 'color',  defaultValue: '',     maxLength: 20, richText: false, adminOnly: false, section: 'footer',   attachTo: 'footer.tagline',   presets: 'generic' },
+  // Keep the old keys as renderer fallbacks for designs saved before these controls moved to Adjust.
+  { key: 'names.bride.color',      label: 'Bride Name Color',       fieldType: 'hidden',  defaultValue: '',     maxLength: 20, richText: false, adminOnly: false, section: 'styling', block: 'details',  presets: 'bride' },
+  { key: 'names.bride.shadow',     label: 'Bride Name Shadow',      fieldType: 'hidden', defaultValue: 'none', maxLength: 10, richText: false, adminOnly: false, section: 'styling', block: 'details',  options: ['none', 'soft', 'strong', 'glow'] },
+  { key: 'names.groom.color',      label: 'Groom Name Color',       fieldType: 'hidden',  defaultValue: '',     maxLength: 20, richText: false, adminOnly: false, section: 'styling', block: 'details',  presets: 'groom' },
+  { key: 'names.groom.shadow',     label: 'Groom Name Shadow',      fieldType: 'hidden', defaultValue: 'none', maxLength: 10, richText: false, adminOnly: false, section: 'styling', block: 'details',  options: ['none', 'soft', 'strong', 'glow'] },
+  { key: 'names.ampersand.color',  label: 'Ampersand (&) Color',    fieldType: 'hidden',  defaultValue: '',     maxLength: 20, richText: false, adminOnly: false, section: 'styling', block: 'details', group: 'Wedding Details', chip: 'Details', presets: 'amp' },
+  { key: 'date.color',             label: 'Date Card Color',        fieldType: 'hidden',  defaultValue: '',     maxLength: 20, richText: false, adminOnly: false, section: 'ceremony', block: 'details', presets: 'date' },
+  { key: 'venue.color',            label: 'Venue Card Color',       fieldType: 'hidden',  defaultValue: '',     maxLength: 20, richText: false, adminOnly: false, section: 'ceremony', block: 'details',      presets: 'venue' },
+  { key: 'footer.tagline.color',   label: 'Footer Tagline Color',   fieldType: 'hidden',  defaultValue: '',     maxLength: 20, richText: false, adminOnly: false, section: 'footer' },
 
-  { key: 'countdown.label.color',  label: 'Countdown Label Color',  fieldType: 'color',  defaultValue: '',     maxLength: 20, richText: false, adminOnly: false, section: 'invitation', attachTo: 'invite.countdown_prefix', presets: 'date' },
-  { key: 'countdown.number.color', label: 'Number Color',           fieldType: 'color',  defaultValue: '',     maxLength: 20, richText: false, adminOnly: false, section: 'invitation', group: 'Countdown', chip: 'Style', presets: 'heading' },
+  { key: 'countdown.label.color',  label: 'Countdown Label Color',  fieldType: 'hidden',  defaultValue: '',     maxLength: 20, richText: false, adminOnly: false, section: 'invitation', presets: 'date' },
+  { key: 'countdown.number.color', label: 'Number Color',           fieldType: 'hidden',  defaultValue: '',     maxLength: 20, richText: false, adminOnly: false, section: 'invitation', group: 'Countdown', chip: 'Style', presets: 'heading' },
 
-  { key: 'ceremony.title.color',   label: 'Ceremony Title Color',   fieldType: 'color',  defaultValue: '',     maxLength: 20, richText: false, adminOnly: false, section: 'ceremony', attachTo: 'walimah.title', presets: 'heading' },
-  { key: 'ceremony.title.shadow',  label: 'Ceremony Title Shadow',  fieldType: 'select', defaultValue: 'none', maxLength: 10, richText: false, adminOnly: false, section: 'ceremony', attachTo: 'walimah.title', options: ['none', 'soft', 'strong', 'glow'] },
-  { key: 'walimah.body.color',     label: 'Body Text Color',        fieldType: 'color',  defaultValue: '',     maxLength: 20, richText: false, adminOnly: false, section: 'ceremony', group: 'Ceremony / Walimah', chip: 'Content', presets: 'body' },
-  { key: 'ceremony.names.color',   label: 'Color',                  fieldType: 'color',  defaultValue: '',     maxLength: 20, richText: false, adminOnly: false, section: 'ceremony', group: 'Couple Names in Card', chip: 'Style', presets: 'generic' },
-  { key: 'ceremony.names.shadow',  label: 'Shadow',                 fieldType: 'select', defaultValue: 'none', maxLength: 10, richText: false, adminOnly: false, section: 'ceremony', group: 'Couple Names in Card', chip: 'Style', options: ['none', 'soft', 'strong', 'glow'] },
+  { key: 'ceremony.title.color',   label: 'Ceremony Title Color',   fieldType: 'hidden',  defaultValue: '',     maxLength: 20, richText: false, adminOnly: false, section: 'ceremony', presets: 'heading' },
+  { key: 'ceremony.title.shadow',  label: 'Ceremony Title Shadow',  fieldType: 'hidden', defaultValue: 'none', maxLength: 10, richText: false, adminOnly: false, section: 'ceremony', options: ['none', 'soft', 'strong', 'glow'] },
+  { key: 'walimah.body.color',     label: 'Body Text Color',        fieldType: 'hidden',  defaultValue: '',     maxLength: 20, richText: false, adminOnly: false, section: 'ceremony', group: 'Ceremony / Walimah', chip: 'Content', presets: 'body' },
+  { key: 'ceremony.names.color',   label: 'Color',                  fieldType: 'hidden',  defaultValue: '',     maxLength: 20, richText: false, adminOnly: false, section: 'ceremony', group: 'Couple Names in Card', chip: 'Style', presets: 'generic' },
+  { key: 'ceremony.names.shadow',  label: 'Shadow',                 fieldType: 'hidden', defaultValue: 'none', maxLength: 10, richText: false, adminOnly: false, section: 'ceremony', group: 'Couple Names in Card', chip: 'Style', options: ['none', 'soft', 'strong', 'glow'] },
 
-  { key: 'itinerary.title.color',  label: 'Schedule Title Color',   fieldType: 'color',  defaultValue: '',     maxLength: 20, richText: false, adminOnly: false, section: 'ceremony', block: 'itinerary', attachTo: 'itinerary.title', presets: 'heading' },
-  { key: 'itinerary.item.color',   label: 'Item Text Color',        fieldType: 'color',  defaultValue: '',     maxLength: 20, richText: false, adminOnly: false, section: 'ceremony', block: 'itinerary', group: 'Schedule / Itinerary', chip: 'Schedule', presets: 'body' },
+  { key: 'itinerary.title.color',  label: 'Schedule Title Color',   fieldType: 'hidden',  defaultValue: '',     maxLength: 20, richText: false, adminOnly: false, section: 'ceremony', block: 'itinerary' },
+  { key: 'itinerary.item.color',   label: 'Item Text Color',        fieldType: 'hidden',  defaultValue: '',     maxLength: 20, richText: false, adminOnly: false, section: 'ceremony', block: 'itinerary' },
 
-  { key: 'rsvp.subtitle.color',    label: 'RSVP Subtitle Color',    fieldType: 'color',  defaultValue: '',     maxLength: 20, richText: false, adminOnly: false, section: 'rsvp',   attachTo: 'rsvp.subtitle', presets: 'body' },
-  { key: 'wish.prompt.color',      label: 'Wish Prompt Color',      fieldType: 'color',  defaultValue: '',     maxLength: 20, richText: false, adminOnly: false, section: 'wishes', attachTo: 'wish.prompt',   presets: 'body' },
+  { key: 'rsvp.subtitle.color',    label: 'RSVP Subtitle Color',    fieldType: 'hidden',  defaultValue: '',     maxLength: 20, richText: false, adminOnly: false, section: 'rsvp' },
+  { key: 'wish.prompt.color',      label: 'Wish Prompt Color',      fieldType: 'hidden',  defaultValue: '',     maxLength: 20, richText: false, adminOnly: false, section: 'wishes',   presets: 'body' },
 
-  { key: 'section.heading.color',  label: 'Color',                  fieldType: 'color',  defaultValue: '',     maxLength: 20, richText: false, adminOnly: false, section: 'styling', block: 'photobooth', group: 'Section Headings', chip: 'Content', presets: 'generic', hint: 'Applies to Wishes & Photo Booth headings' },
-  { key: 'section.heading.shadow', label: 'Shadow',                 fieldType: 'select', defaultValue: 'none', maxLength: 10, richText: false, adminOnly: false, section: 'styling', block: 'photobooth', group: 'Section Headings', chip: 'Content', options: ['none', 'soft', 'strong', 'glow'] },
+  { key: 'section.heading.color',  label: 'Color',                  fieldType: 'hidden',  defaultValue: '',     maxLength: 20, richText: false, adminOnly: false, section: 'styling', block: 'photobooth', group: 'Section Headings', chip: 'Content', presets: 'generic', hint: 'Applies to Wishes & Photo Booth headings' },
+  { key: 'section.heading.shadow', label: 'Shadow',                 fieldType: 'hidden', defaultValue: 'none', maxLength: 10, richText: false, adminOnly: false, section: 'styling', block: 'photobooth', group: 'Section Headings', chip: 'Content', options: ['none', 'soft', 'strong', 'glow'] },
 
   { key: 'nav.welcome',  label: 'Nav: Welcome',  fieldType: 'text', defaultValue: 'Welcome',  maxLength: 20, richText: false, adminOnly: true, section: 'navigation', group: 'Navigation Labels', chip: 'Display' },
   { key: 'nav.ceremony', label: 'Nav: Ceremony', fieldType: 'text', defaultValue: 'Ceremony', maxLength: 20, richText: false, adminOnly: true, section: 'navigation', group: 'Navigation Labels', chip: 'Display' },
@@ -738,10 +824,8 @@ const TEMPLATE7_EXTRA_FIELDS: TemplateConfigField[] = [
   // in the schema but no couple could ever see them. See lib/__tests__/templateConfigSchema.scope.test.ts.)
   { key: 'nav.size', label: 'Nav Bar Size', fieldType: 'select', defaultValue: 'default', maxLength: 10, richText: false, adminOnly: false, options: ['compact', 'default', 'large', 'xlarge'], section: 'navigation', group: 'Navigation Bar', chip: 'Display', templateIds: [7] },
   { key: 'nav.textSize', label: 'Nav Bar Text Size', fieldType: 'select', defaultValue: 'default', maxLength: 10, richText: false, adminOnly: false, options: ['compact', 'default', 'large', 'xlarge'], section: 'navigation', group: 'Navigation Bar', chip: 'Display', templateIds: [7] },
-  // T7's own nav-layout control — see nav.layout under TEMPLATE10_EXTRA_FIELDS for the shared
-  // documentation (this pair only exists twice, once per template, because TEMPLATE7_EXTRA_FIELDS
-  // and TEMPLATE10_EXTRA_FIELDS are never composed together).
-  { key: 'nav.layout', label: 'Nav Bar Layout', fieldType: 'select', defaultValue: 'bottom-pill', maxLength: 12, richText: false, adminOnly: false, options: ['bottom-pill', 'top-pill', 'bottom-bar', 'hidden'], optionLabels: { 'bottom-pill': 'Bottom (pill)', 'top-pill': 'Top (pill)', 'bottom-bar': 'Bottom (full bar)', hidden: 'Hidden' }, section: 'navigation', group: 'Navigation Bar', chip: 'Display', templateIds: [7] },
+  // Keep the old combined value available as the fallback for separately saved style and position.
+  { key: 'nav.layout', label: 'Legacy navigation layout', fieldType: 'hidden', defaultValue: 'bottom-pill', maxLength: 12, richText: false, adminOnly: false, section: 'navigation', group: 'Navigation Bar', templateIds: [7] },
 ];
 
 // ── Template 8 — Gilded Arch (PARTY) ────────────────────────────────────────
@@ -853,7 +937,7 @@ const TEMPLATE10_EXTRA_FIELDS: TemplateConfigField[] = [
   // TEMPLATE7_EXTRA_FIELDS and TEMPLATE10_EXTRA_FIELDS are never composed together.
   { key: 'nav.size', label: 'Nav Bar Size', fieldType: 'select', defaultValue: 'default', maxLength: 10, richText: false, adminOnly: false, options: ['compact', 'default', 'large', 'xlarge'], section: 'navigation', group: 'Navigation Bar', chip: 'Display', templateIds: [10] },
   { key: 'nav.textSize', label: 'Nav Bar Text Size', fieldType: 'select', defaultValue: 'default', maxLength: 10, richText: false, adminOnly: false, options: ['compact', 'default', 'large', 'xlarge'], section: 'navigation', group: 'Navigation Bar', chip: 'Display', templateIds: [10] },
-  { key: 'nav.layout', label: 'Nav Bar Layout', fieldType: 'select', defaultValue: 'bottom-pill', maxLength: 12, richText: false, adminOnly: false, options: ['bottom-pill', 'top-pill', 'bottom-bar', 'hidden'], optionLabels: { 'bottom-pill': 'Bottom (pill)', 'top-pill': 'Top (pill)', 'bottom-bar': 'Bottom (full bar)', hidden: 'Hidden' }, section: 'navigation', group: 'Navigation Bar', chip: 'Display', templateIds: [10] },
+  { key: 'nav.layout', label: 'Legacy navigation layout', fieldType: 'hidden', defaultValue: 'bottom-pill', maxLength: 12, richText: false, adminOnly: false, section: 'navigation', group: 'Navigation Bar', templateIds: [10] },
   // T10 shares the same useParallax engine T7 uses but never got the couple-facing control for
   // it (T7's scene.parallax is declared in TEMPLATE7_EXTRA_FIELDS, which this template never
   // composes) — added here so both Stage-family templates expose the same knob.
@@ -877,8 +961,6 @@ const TEMPLATE12_EXTRA_FIELDS: TemplateConfigField[] = [
     chip: 'Style',
     templateIds: [12],
   },
-  { key: 'sheet.rsvp.label', label: 'RSVP Button Text', fieldType: 'text', defaultValue: 'RSVP Now', maxLength: 30, richText: false, adminOnly: false, section: 'rsvp', group: 'RSVP', chip: 'RSVP', templateIds: [12] },
-  { key: 'sheet.rsvp.image', label: 'RSVP Button Artwork', hint: 'Optional — replaces the button with your own image.', fieldType: 'image', defaultValue: '', maxLength: 500, richText: false, adminOnly: false, section: 'rsvp', group: 'RSVP', chip: 'RSVP', templateIds: [12] },
   { key: 'sheet.wish.label', label: 'Wish Button Text', fieldType: 'text', defaultValue: 'Write a Wish', maxLength: 30, richText: false, adminOnly: false, section: 'wishes', group: 'Wishes & Guestbook', chip: 'Content', templateIds: [12] },
   { key: 'sheet.wish.image', label: 'Wish Button Artwork', hint: 'Optional — replaces the button with your own image.', fieldType: 'image', defaultValue: '', maxLength: 500, richText: false, adminOnly: false, section: 'wishes', group: 'Wishes & Guestbook', chip: 'Content', templateIds: [12] },
 ];
@@ -903,7 +985,7 @@ const TEMPLATE13_EXTRA_FIELDS: TemplateConfigField[] = [
   },
   { key: 'nav.size', label: 'Nav Bar Size', fieldType: 'select', defaultValue: 'default', maxLength: 10, richText: false, adminOnly: false, options: ['compact', 'default', 'large', 'xlarge'], section: 'navigation', group: 'Navigation Bar', chip: 'Display', templateIds: [13] },
   { key: 'nav.textSize', label: 'Nav Bar Text Size', fieldType: 'select', defaultValue: 'default', maxLength: 10, richText: false, adminOnly: false, options: ['compact', 'default', 'large', 'xlarge'], section: 'navigation', group: 'Navigation Bar', chip: 'Display', templateIds: [13] },
-  { key: 'nav.layout', label: 'Nav Bar Layout', fieldType: 'select', defaultValue: 'bottom-pill', maxLength: 12, richText: false, adminOnly: false, options: ['bottom-pill', 'top-pill', 'bottom-bar', 'hidden'], optionLabels: { 'bottom-pill': 'Bottom (pill)', 'top-pill': 'Top (pill)', 'bottom-bar': 'Bottom (full bar)', hidden: 'Hidden' }, section: 'navigation', group: 'Navigation Bar', chip: 'Display', templateIds: [13] },
+  { key: 'nav.layout', label: 'Legacy navigation layout', fieldType: 'hidden', defaultValue: 'bottom-pill', maxLength: 12, richText: false, adminOnly: false, section: 'navigation', group: 'Navigation Bar', templateIds: [13] },
   { key: 'scene.parallax', label: 'Parallax Depth', hint: 'How far the expedition scenery drifts as guests scroll.', fieldType: 'select', defaultValue: 'on', maxLength: 10, richText: false, adminOnly: false, options: ['on', 'subtle', 'off'], section: 'scene', group: 'Dino Doodle Scene', chip: 'Style', templateIds: [13] },
 ];
 
@@ -930,7 +1012,7 @@ const TEMPLATE14_EXTRA_FIELDS: TemplateConfigField[] = [
   },
   { key: 'nav.size', label: 'Nav Bar Size', fieldType: 'select', defaultValue: 'default', maxLength: 10, richText: false, adminOnly: false, options: ['compact', 'default', 'large', 'xlarge'], section: 'navigation', group: 'Navigation Bar', chip: 'Display', templateIds: [14] },
   { key: 'nav.textSize', label: 'Nav Bar Text Size', fieldType: 'select', defaultValue: 'default', maxLength: 10, richText: false, adminOnly: false, options: ['compact', 'default', 'large', 'xlarge'], section: 'navigation', group: 'Navigation Bar', chip: 'Display', templateIds: [14] },
-  { key: 'nav.layout', label: 'Nav Bar Layout', fieldType: 'select', defaultValue: 'bottom-pill', maxLength: 12, richText: false, adminOnly: false, options: ['bottom-pill', 'top-pill', 'bottom-bar', 'hidden'], optionLabels: { 'bottom-pill': 'Bottom (pill)', 'top-pill': 'Top (pill)', 'bottom-bar': 'Bottom (full bar)', hidden: 'Hidden' }, section: 'navigation', group: 'Navigation Bar', chip: 'Display', templateIds: [14] },
+  { key: 'nav.layout', label: 'Legacy navigation layout', fieldType: 'hidden', defaultValue: 'bottom-pill', maxLength: 12, richText: false, adminOnly: false, section: 'navigation', group: 'Navigation Bar', templateIds: [14] },
   { key: 'scene.parallax', label: 'Parallax Depth', hint: 'How far the scenery layers drift apart as you scroll.', fieldType: 'select', defaultValue: 'on', maxLength: 10, richText: false, adminOnly: false, options: ['on', 'subtle', 'off'], section: 'scene', group: 'Sandy Beach Scene', chip: 'Style', templateIds: [14] },
 ];
 
@@ -962,6 +1044,7 @@ const TEMPLATE_CONFIGS: Record<number, TemplateConfigField[]> = {
   13: [...COMMON_FIELDS, ...SECTION_TITLE_FIELDS, ...TEMPLATE13_EXTRA_FIELDS],
   14: [...COMMON_FIELDS, ...SECTION_TITLE_FIELDS, ...TEMPLATE14_EXTRA_FIELDS],
   15: [...COMMON_FIELDS, ...SECTION_TITLE_FIELDS, ...TEMPLATE15_EXTRA_FIELDS],
+  16: [...TEMPLATE16_FIELDS, SEATING_MODE, ...SHARED_NAV_FIELDS, ...COUPLE_GALLERY_FIELDS, ...COMMON_FIELDS.filter((field) => field.section === 'music')],
 };
 
 function fieldsFor(templateId: number): TemplateConfigField[] {
@@ -985,7 +1068,9 @@ export function getConfigFields(templateId: number, role: string, tier?: string)
 export function buildDefaultConfig(templateId: number): Record<string, string> {
   return Object.fromEntries(
     fieldsFor(templateId)
-      .filter((f) => f.fieldType !== 'layout') // launcher, not a stored key
+      // Form settings have renderer fallbacks. Keep unset keys out of the draft so
+      // unrelated saves still inherit future master settings.
+      .filter((f) => f.fieldType !== 'layout' && !f.key.startsWith('rsvp.fields.') && f.key !== 'rsvp.form_layout' && f.key !== 'wish.form_layout' && f.key !== 'seating.mode' && !['nav.items', 'nav.style', 'nav.position', 'nav.content'].includes(f.key) && !/^nav\.(label|icon)\./.test(f.key) && !NAV_ADJUST_KEYS.includes(f.key) && f.key !== 'gallery.order')
       .map((f) => [f.key, f.defaultValue]),
   );
 }
@@ -1015,5 +1100,5 @@ export function getGuestFields(templateId: number): TemplateConfigField[] {
       GUEST_CONTENT_CHIPS.has(f.chip) &&
       !f.attachTo
     );
-  });
+  }).map((field) => field.block === 'seating' ? { ...field, block: 'rsvp' } : field);
 }

@@ -17,6 +17,22 @@ function OpenSheet() {
 }
 
 describe('SheetHost', () => {
+  it('only opens an editor sheet for a selection in that sheet’s stage', () => {
+    const groups = { wish: [{ ...GROUPS.rsvp[0], id: 'form', sourceStageId: 'wishes' }] };
+    const host = (selectedStage: string) => (
+      <EngineProvider value={{ assetRoot: '', assetSizes: {}, slotRegistry: { test: () => <p>Wish form</p> } }}>
+        <SheetsProvider>
+          <SheetHost groups={groups} slotProps={{} as SlotProps}
+            editor={{ enabled: true, breakpoint: 'mobile', selectedStage, selectedLayer: 'form' }} />
+        </SheetsProvider>
+      </EngineProvider>
+    );
+    const { rerender } = render(host('rsvp'));
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    rerender(host('wishes'));
+    expect(screen.getByRole('dialog')).toHaveTextContent('Wish form');
+  });
+
   it('exposes a modal dialog and dismisses it with Escape', async () => {
     render(
       <EngineProvider value={{

@@ -5,6 +5,7 @@ import type { CinematicWorldLayer } from './world';
 import type { CinematicSequenceTrack, CinematicEasing } from './sequence';
 import { assetAnimationWindow, compileAssetAnimationTracks, NEUTRAL_ASSET_MOTION, normalizeAssetAnimations, type CinematicAssetAnimation } from './assetAnimations';
 import { nextSceneSetId } from './sceneSetEditing';
+import { EditorActions, ConfirmEditorAction } from './EditorActions';
 import styles from './CinematicAdjustPanel.module.css';
 
 const presets = {
@@ -55,7 +56,9 @@ export default function AssetAnimationEditor({ layer, tracks, layers, disabled, 
             <div className={styles.actionRow}>
               <button type="button" disabled={!track} onClick={() => track && onPreview(track)}>Preview move</button>
               <button type="button" disabled={!track || !onSelectTrack} onClick={() => track && onSelectTrack?.(track.id)}>Select on timeline</button>
-              <button type="button" onClick={() => onChange(animations.filter((animation) => animation.id !== item.id))}>Remove animation</button>
+              <EditorActions label={`Animation actions ${index + 1}`}><ConfirmEditorAction label="Remove animation"
+                description={`Remove only “${item.label}” from “${layer.label}”. Other animations and the layer remain.`}
+                onConfirm={() => onChange(animations.filter((animation) => animation.id !== item.id))} /></EditorActions>
             </div>
           </div>
         </details>;

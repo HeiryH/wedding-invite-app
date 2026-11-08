@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useContext, useState, useEffect } from 'react';
+import { SeatingPreviewContext } from './_shared/slots/preview';
 import { motion } from 'framer-motion';
 import { Wedding, Wish, Photo, SeatingTable, TemplateSlots, ItineraryItem } from '@/lib/api';
 import SeatingStep from './SeatingStep';
@@ -147,6 +148,7 @@ export default function Template3({
     numberOfAttendees: 1,
     songRequest: '',
   });
+  const seatingPreview = useContext(SeatingPreviewContext);
   const [rsvpStep, setRsvpStep] = useState<1 | 2>(1);
   const [selectedTableId, setSelectedTableId] = useState<number | null>(null);
   const [rsvpSubmitting, setRsvpSubmitting] = useState(false);
@@ -177,6 +179,7 @@ export default function Template3({
   const extra3 = getMedia(coupleMedia, TemplateSlots.EXTRA_3);
 
   const submitRSVP = async () => {
+    if (seatingPreview) return;
     setRsvpSubmitting(true);
     try {
       await onRSVP({ ...rsvpData, isAttending, tableId: selectedTableId });
@@ -259,7 +262,7 @@ export default function Template3({
 
       <div className="max-w-5xl mx-auto px-4 py-10 flex flex-col">
           {/* ===== WELCOME ===== */}
-            <motion.div
+            {sectionOrder.includes('welcome') && <motion.div
               id="welcome"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -361,7 +364,7 @@ export default function Template3({
                 </div>
               )}
 
-            </motion.div>
+            </motion.div>}
 
           {/* ===== WALIMAH ===== */}
           {sectionOrder.includes('walimah') && (
@@ -421,7 +424,7 @@ export default function Template3({
           )}
 
           {/* ===== RSVP ===== */}
-            <motion.div
+            {sectionOrder.includes('rsvp') && <motion.div
               id="rsvp"
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
@@ -448,7 +451,7 @@ export default function Template3({
                   <h3 className="text-2xl font-bold text-green-800 mb-2">Thank you!</h3>
                   <p className="text-green-600">Your RSVP has been received.</p>
                 </div>
-              ) : (
+              ) : !seatingPreview && (
                 <form onSubmit={handleRSVPSubmit} className="bg-white rounded-2xl shadow-sm border border-green-100 p-6 space-y-4">
                   {/* Attending toggle */}
                   <div className="flex gap-3">
@@ -538,14 +541,14 @@ export default function Template3({
                   </button>
                 </form>
               )}
-              {!rsvpSuccess && rsvpStep === 2 && (
+              {(seatingPreview || (!rsvpSuccess && rsvpStep === 2)) && (
                 <div className="bg-white rounded-2xl shadow-sm border border-green-100 p-6 mt-4">
                   <SeatingStep
                     tables={tables}
                     numberOfAttendees={rsvpData.numberOfAttendees}
                     selectedTableId={selectedTableId}
                     onSelect={setSelectedTableId}
-                    onBack={() => setRsvpStep(1)}
+                    onBack={() => { setRsvpStep(1); seatingPreview?.dismiss(); }}
                     onSubmit={submitRSVP}
                     submitting={rsvpSubmitting}
                     accentClass="bg-green-600 hover:bg-green-700"
@@ -553,10 +556,10 @@ export default function Template3({
                   />
                 </div>
               )}
-            </motion.div>
+            </motion.div>}
 
           {/* ===== WISHES ===== */}
-            <motion.div
+            {sectionOrder.includes('wishes') && <motion.div
               id="wishes"
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
@@ -614,7 +617,7 @@ export default function Template3({
                   <p className="text-center text-green-400 text-sm py-8">Be the first to leave a wish!</p>
                 )}
               </div>
-            </motion.div>
+            </motion.div>}
 
           {/* ===== PHOTOS ===== */}
           {sectionOrder.includes('photobooth') && photoBoothEnabled && (

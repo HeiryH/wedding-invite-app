@@ -1,0 +1,128 @@
+.page {
+  background: #fffbf2;
+  color: #030303;
+  font-family: var(--font-ae-eb-garamond), Georgia, serif;
+  font-size: 18px;
+  line-height: 1.5;
+  min-height: var(--fsvh, 100svh);
+  --slot-ink: #030303;
+  --slot-ink-soft: #030303;
+  --slot-ink-faint: #030303;
+  --slot-accent: #a00407;
+  --slot-rule: #030303;
+  --slot-panel-bg: transparent;
+  --slot-panel-shadow: none;
+}
+.paper { max-width: 1040px; margin-inline: auto; }
+.page section { position: relative; padding-block: 88px; scroll-margin-top: 24px; }
+.page section[hidden] { display: none; }
+.page p { margin: 0 0 24px; overflow-wrap: anywhere; }
+.page h1, .page h2 { font-family: var(--font-ae-cormorant), Georgia, serif; font-weight: 400; line-height: .98; letter-spacing: -.035em; overflow-wrap: anywhere; }
+.page h2 { font-size: clamp(42px, 6.8cqi, 68px); margin: 0 0 30px; }
+.page h1 { font-size: clamp(70px, 14cqi, 118px); margin: 26px 0 34px; text-transform: uppercase; }
+.page h1 span, .page h1 em { display: block; }
+.page h1 em { color: #a00407; font-weight: 400; font-size: .86em; line-height: .7; margin-block: 6px; }
+.page .welcome { padding-top: 0; }
+.ribbon { display: block; width: 100%; height: auto; pointer-events: none; }
+.hero { padding: 10px 8% 0; container-type: inline-size; }
+.eventTitle { font-style: italic; font-size: clamp(26px, 5.5cqi, 40px); line-height: 1.15; }
+.date, .venue { padding-left: 32px; position: relative; }
+.date::before { content: '▢'; position: absolute; left: 0; }
+.venue::before { content: '⌖'; position: absolute; left: 0; }
+.timer { margin-top: 44px; container-type: inline-size; --slot-font-display: var(--font-ae-cormorant), Georgia, serif; }
+.timer > div { gap: 0; justify-content: space-between !important; }
+.timer > div > div { border-right: 1px solid #030303; padding-inline: 12px; }
+.timer > div > div:first-child { padding-left: 0; }
+.timer > div > div:last-child { border: 0; padding-right: 0; }
+.timer span { color: #030303; }
+/* TimerSlot labels otherwise inherit a 0.42em size from its compact stage theme. */
+.timer > div > div > span:last-child { font-size: clamp(12px, 1.8cqi, 14px); letter-spacing: .08em; }
+.ceremony { display: grid; grid-template-columns: 24% 1fr; gap: 6%; padding-inline: 6%; align-items: center; }
+.medallion { width: 100%; max-height: 340px; }
+.ceremonyBody { min-width: 0; container-type: inline-size; }
+/* Without the optional medallion, facts use the full row, not the art column. */
+.ceremony:not(:has(.medallion)) .ceremonyBody { grid-column: 1 / -1; }
+.richText { margin-bottom: 32px; }
+.richText > div { background: transparent; border: 0; padding: 0; box-shadow: none; }
+.richText > div > div { font: inherit; color: inherit; text-align: left; }
+.red { color: #a00407; }
+.actions { display: flex; gap: 10px; flex-wrap: wrap; }
+.button, .outlineButton { display: inline-flex; align-items: center; justify-content: center; min-height: 48px; padding: 10px 20px; border: 1px solid #a00407; border-radius: 48% 46% 44% 47% / 40% 42% 45% 43%; background: #a00407; color: #fffbf2; text-align: center; cursor: pointer; text-decoration: none; font: inherit; line-height: 1.15; }
+.outlineButton { background: transparent; color: #a00407; border-radius: 28px; }
+.page button:disabled { opacity: .6; cursor: wait; }
+.page :is(a, button, input, textarea):focus-visible { outline: 3px solid #a00407; outline-offset: 4px; }
+.calendar { display: flex; flex-wrap: wrap; gap: 16px; width: 100%; }
+.calendar a { color: #a00407; padding-block: 12px; }
+.marginSection { padding-inline: 6%; }
+.content { margin-left: 18%; container-type: inline-size; }
+.trail { position: absolute; left: 3%; top: 90px; width: 13%; max-width: 90px; height: auto; max-height: 760px; pointer-events: none; }
+.flourish { display: block; width: min(280px, 85%); height: auto; color: #a00407; margin: -10px 0 24px; }
+.form { display: flex; flex-direction: column; gap: 18px; }
+.form label:not(.choice) { display: flex; flex-direction: column; gap: 5px; }
+.form input:not([type='radio']), .form textarea { background: transparent; color: inherit; font: inherit; line-height: 1.4; width: 100%; min-height: 46px; padding: 8px 12px; border: 1.3px solid #030303; border-radius: 12px 9px 11px 8px; }
+.form textarea { resize: vertical; }
+.form input[type='number'] { max-width: 140px; }
+.form fieldset { border: 0; padding: 0; margin: 0; display: flex; flex-wrap: wrap; column-gap: 24px; }
+.choice { display: flex; gap: 10px; align-items: center; min-height: 44px; cursor: pointer; }
+.choice input { width: 20px; height: 20px; accent-color: #a00407; }
+.tableGrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.tableGrid [aria-pressed='true'] { color: #fffbf2; background: #a00407; }
+.tableGrid .outlineButton { border-radius: 12px; }
+.form .button { width: 100%; margin-top: 8px; border-radius: 28px 32px 26px 30px; font-size: 24px; }
+.programme { list-style: none; padding: 0; margin: 55px 0 0; }
+.programme li { margin-bottom: 48px; font-size: 27px; line-height: 1.2; }
+.programme p { margin: 0; }
+.programme .red { font-size: 32px; margin-bottom: 8px; }
+.wishes { padding-inline: 8%; container-type: inline-size; }
+.messages { padding-block: 36px 0; }
+.messages blockquote { margin: 0 0 30px; white-space: pre-wrap; }
+.messages blockquote p { margin-bottom: 0; }
+.textButton { background: transparent; color: #a00407; border: 0; padding: 10px 0; min-height: 44px; font: inherit; text-decoration: underline; text-underline-offset: 5px; cursor: pointer; }
+.note { display: block; width: 100px; height: auto; margin: 20px 0 0 auto; }
+.flash { position: absolute; left: 2%; top: 64px; width: 9%; max-width: 50px; height: calc(100% - 128px); pointer-events: none; }
+.ribbon > svg, .medallion > svg, .trail > svg, .flourish > svg, .note > svg { display: block; width: 100%; height: auto; }
+.medallion > svg { max-height: 340px; }
+.trail > svg { max-height: 760px; }
+.flash > svg { display: block; width: 100%; height: 100%; }
+.overlay { position: absolute; inset: 0; overflow: hidden; pointer-events: none; z-index: 6; }
+.upload { position: relative; display: inline-block; margin-block: 8px 28px; }
+.upload:focus-within { outline: 3px solid #a00407; outline-offset: 4px; }
+.fileInput { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; }
+.galleryControls { display: flex; gap: 10px; margin-bottom: 28px; flex-wrap: wrap; }
+.galleryControls button, .lightbox button { background: transparent; color: #030303; border: 1px solid #030303; min-width: 44px; min-height: 44px; font: inherit; padding: 5px 12px; border-radius: 24px; cursor: pointer; }
+.galleryControls button[aria-pressed='true'] { color: #a00407; border-color: #a00407; text-decoration: underline; text-underline-offset: 4px; }
+.galleryGrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; }
+.galleryStack { max-width: 620px; }
+.page figure { margin: 0; min-width: 0; }
+.photoButton { border: 1.5px solid #030303; border-radius: 12px 16px 10px 15px; padding: 4px; width: 100%; background: transparent; cursor: pointer; }
+.photoButton img { width: 100%; height: auto; aspect-ratio: 4 / 3; object-fit: cover; border-radius: 8px; }
+.page figcaption { text-align: center; font-style: italic; overflow-wrap: anywhere; }
+.empty { padding-block: 24px; }
+.lightbox { background: #fffbf2; color: #030303; max-width: min(92%, 900px); max-height: var(--fsvh, 90svh); border: 1px solid #030303; border-radius: 12px; padding: 20px; }
+.lightbox::backdrop { background: rgb(3 3 3 / .75); }
+.lightbox img { display: block; max-width: 100%; max-height: var(--fsvh, 70svh); object-fit: contain; margin-top: 20px; }
+.srOnly { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+@media (min-width: 768px) {
+  .page { font-size: 22px; }
+  .page section { padding-block: 110px; }
+  .page .welcome { padding-top: 0; }
+  .hero { max-width: 800px; }
+  .content { max-width: 680px; margin-left: 24%; }
+  .ceremony { grid-template-columns: 22% 1fr; gap: 10%; }
+  .wishes { max-width: 800px; margin-inline: auto; }
+  .galleryGrid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+@media (max-width: 359px) {
+  .page { font-size: 16px; }
+  .page h2 { font-size: 39px; }
+  .ceremony { display: block; padding-inline: 8%; }
+  .medallion { height: 130px; width: 70px; margin-bottom: 24px; }
+  .medallion > svg { height: 100%; }
+  .content { margin-left: 14%; }
+  .programme li { font-size: 23px; }
+  .form fieldset { display: block; }
+  .timer > div > div { padding-inline: 6px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .page *, .page *::before, .page *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+}

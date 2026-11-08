@@ -1,0 +1,19 @@
+{
+  "spec_version": 1,
+  "slug": "sandy-beach",
+  "event_type": "WEDDING",
+  "implementation_family": "B",
+  "sections": ["welcome"],
+  "sectionPlan": {
+    "welcome": {
+      "background": "Pastel sunset beach seen straight down the shoreline: a low sun sitting on the sea horizon with its reflection running down wet sand, a single foamy sea-glass wave breaking at left, pink cumulus clouds in a powder-blue sky, and a broad empty stretch of pale dry sand filling the lower half",
+      "props": [
+        { "name": "driftwood wedding arch with frangipani garland", "kind": "scenery", "band": "shore", "size_in_anchor_units": 6.0 },
+        { "name": "pink frangipani blossom cluster", "kind": "prop", "band": "shore", "size_in_anchor_units": 0.6 },
+        { "name": "pair of smooth beach pebbles", "kind": "prop", "band": "shore", "size_in_anchor_units": 1.0 },
+        { "name": "dune grass tuft", "kind": "prop", "band": "shore", "size_in_anchor_units": 1.2 },
+        { "name": "pink cumulus cloud", "kind": "scenery", "band": "sky", "size_in_anchor_units": 3.0 }
+      ]
+    }
+  }
+}

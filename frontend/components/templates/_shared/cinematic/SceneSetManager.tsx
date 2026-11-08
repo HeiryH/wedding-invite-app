@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import type { CinematicSceneSet } from './sceneSets';
 import { nextSceneSetId, type SceneSetAction } from './sceneSetEditing';
 import type { CinematicSequenceTrack } from './sequence';
@@ -16,6 +16,8 @@ export default function SceneSetManager({ sets, layers, tracks, selectedId, onSe
   onAction: (action: SceneSetAction) => void;
 }) {
   const [creating, setCreating] = useState(false);
+  const [collapsed, setCollapsed] = useState(true);
+  const contentId = useId();
   const [name, setName] = useState('');
   const [space, setSpace] = useState<CinematicSceneSet['space']>('world');
   const [deleting, setDeleting] = useState<string>();
@@ -23,11 +25,15 @@ export default function SceneSetManager({ sets, layers, tracks, selectedId, onSe
   const active = sets.find((set) => set.id === selectedId);
   const ordered = [...sets].sort((a, b) => a.z - b.z);
   return (
-    <section className={styles.sceneSetsManager} aria-label="Scene set manager">
+    <section className={styles.sceneSetsManager} data-collapsed={collapsed} aria-label="Scene set manager">
       <div className={styles.sceneSetsHeading}>
-        <strong>Scene sets</strong>
-        <button type="button" onClick={() => setCreating(!creating)} aria-expanded={creating}>+ New set</button>
+        <button type="button" className={styles.sceneSetsToggle} aria-label={`${collapsed ? 'Expand' : 'Collapse'} scene sets`}
+          aria-expanded={!collapsed} aria-controls={contentId} onClick={() => setCollapsed(!collapsed)}>
+          <span aria-hidden="true">{collapsed ? '▸' : '▾'}</span><strong>Scene sets</strong><small>{sets.length}</small>
+        </button>
+        <button type="button" onClick={() => { setCollapsed(false); setCreating(!creating); }} aria-expanded={creating}>+ New set</button>
       </div>
+      <div id={contentId} hidden={collapsed}>
       <p className={styles.note}>Select a set to manage its space, timing and layers. Order is back to front within each space.</p>
       {creating && (
         <form className={styles.sceneSetForm} onSubmit={(event) => {
@@ -109,6 +115,7 @@ export default function SceneSetManager({ sets, layers, tracks, selectedId, onSe
           )}
         </section>
       )}
+      </div>
     </section>
   );
 }

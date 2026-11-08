@@ -54,20 +54,13 @@ export function useWishFlow(): WishFlowState {
   return useContext(WishFlowContext) ?? FALLBACK;
 }
 
-/**
- * Which step renders. Guests follow the real step machine; **the editor follows layer selection**
- * instead, so a couple can reach and style step 2 without filling in step 1. Lifted verbatim from
- * `RsvpFormSlot.tsx`'s `isActiveStep` — `selectedLayer` is the *layer id* from `stages.ts`, which
- * is why that layer is deliberately called `wishPhoto` rather than a generic `photo` (the
- * comparison isn't scoped by stage, so a common id could collide with another stage's layer).
- */
+/** Guests follow the form step. Adjust follows the selected photo layer. */
 export function isActiveWishStep(
   editing: boolean,
-  selectedLayer: string | undefined,
+  photoSelected: boolean,
   step: 'form' | 'photo',
   thisStep: 'form' | 'photo',
 ): boolean {
   if (!editing) return step === thisStep;
-  const photoSelected = selectedLayer === 'wishPhoto';
   return thisStep === 'form' ? !photoSelected : photoSelected;
 }

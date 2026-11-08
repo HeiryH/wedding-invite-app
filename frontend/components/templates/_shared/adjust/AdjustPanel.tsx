@@ -5,7 +5,7 @@ import type { AnimIdleOrigin, AnimIdleType, AnimOutType, AnimType, Breakpoint, L
 import { ANIM_OPTIONS, ANIM_OUT_OPTIONS, ANIM_IDLE_ORIGINS } from '../types';
 import { IDLE_ANCHORED, IDLE_DEFAULT_ORIGIN } from '../idle';
 import { WATER_DEFAULTS } from '../effects/WaterLayer';
-import { resolveStage, serializeStage, baseStage, layoutKey, type StageBg } from '../layout';
+import { resolveStage, serializeStage, baseStage, layoutKey, inlineFormSheet, isInlineFormLayer, appearsInFormLayout, type StageBg } from '../layout';
 import { SLOT_CATALOG_GROUPS, type SlotCatalogEntry } from '../slots/catalog';
 import { BINDING_TOKENS } from '../bindings';
 import { CURATED_FONTS } from '@/lib/fonts/registry';
@@ -175,11 +175,11 @@ function Slider({ label, value, min, max, step, onChange, title }: {
     <div className={styles.control}>
       <span title={title}>{label}</span>
       <input
-        type="range" min={min} max={max} step={step} value={value}
+        type="range" aria-label={label} min={min} max={max} step={step} value={value}
         onChange={(e) => onChange(Number(e.target.value))}
       />
       <input
-        className={styles.num} type="number" min={min} max={max} step={step} value={value}
+        className={styles.num} type="number" aria-label={label} min={min} max={max} step={step} value={value}
         onChange={(e) => onChange(Number(e.target.value))}
       />
     </div>
@@ -207,12 +207,11 @@ export default function AdjustPanel({
   const [popover, setPopover] = useState<'theme' | 'add' | null>(null);
   // Exactly one card is ever open. Opening a pop-over clears the layer selection (whose detail
   // card would otherwise still be behind it), and selecting a layer closes the pop-over.
-  const openPopover = (which: 'theme' | 'add') =>
-    setPopover((prev) => {
-      if (prev === which) return null;
-      onSelectLayer(undefined);
-      return which;
-    });
+  const openPopover = (which: 'theme' | 'add') => {
+    const next = popover === which ? null : which;
+    if (next) onSelectLayer(undefined);
+    setPopover(next);
+  };
   const selectLayer = (id: string | undefined) => {
     setPopover(null);
     onSelectLayer(id && id === selectedLayer ? undefined : id);
@@ -237,15 +236,17 @@ export default function AdjustPanel({
 
   // Front-most first, which is how you think about a stack of art.
   const ordered = useMemo(() => [...layers].sort((a, b) => b.z - a.z), [layers]);
-  const current = layers.find((l) => l.id === selectedLayer);
+  const inlineSheet = inlineFormSheet(keyPrefix, def.id, config);
+  const layerRows = useMemo(() => ordered.filter((layer) => appearsInFormLayout(layer, inlineSheet)), [ordered, inlineSheet]);
+  const current = layerRows.find((l) => l.id === selectedLayer);
 
   // ── layer tree (sub-layers) ─────────────────────────────────────────────────
   // A layer with a `parent` present in this stage renders indented under it. `parent` is a
   // shipped structural field (T5's countdown/ceremony groups), never part of a saved delta.
-  const idSet = useMemo(() => new Set(layers.map((l) => l.id)), [layers]);
+  const idSet = useMemo(() => new Set(layerRows.map((l) => l.id)), [layerRows]);
   const childrenOf = useMemo(() => {
     const m = new Map<string, Layer[]>();
-    for (const l of ordered) {
+    for (const l of layerRows) {
       if (l.parent && idSet.has(l.parent)) {
         const arr = m.get(l.parent) ?? [];
         arr.push(l);
@@ -253,8 +254,8 @@ export default function AdjustPanel({
       }
     }
     return m;
-  }, [ordered, idSet]);
-  const roots = ordered.filter((l) => !l.parent || !idSet.has(l.parent));
+  }, [layerRows, idSet]);
+  const roots = layerRows.filter((l) => !l.parent || !idSet.has(l.parent));
 
   const commit = useCallback(
     (nextLayers: Layer[], nextBg: StageBg = bgState) => {
@@ -523,8 +524,11 @@ export default function AdjustPanel({
   // its own size and position (see _shared/SheetHost.tsx). Its x/y/w/h survive as inert leftovers,
   // so every geometry control below would be a lie, and the overflow warning would fire off
   // numbers that no longer describe anything.
-  const isSheet = current?.presentation === 'sheet';
-  const slotVOverflow = isSlot && !isSheet && current && !current.chain
+  const isInlineForm = current && isInlineFormLayer(current, inlineSheet);
+  const isSheet = current?.presentation === 'sheet' && !isInlineForm;
+  const hasFormStyle = isSlot && (isSheet || isInlineForm);
+  const flowLayer = Boolean(inlineSheet && current && (isSlot || (current.kind === 'text' && ['title', 'prompt'].includes(current.id))));
+  const slotVOverflow = isSlot && !isSheet && !flowLayer && current && !current.chain
     ? (() => {
         const effH = current.h * current.s;
         const top = current.y - effH / 2;
@@ -548,7 +552,7 @@ export default function AdjustPanel({
   const canStyle = current?.kind === 'text' || current?.slot === 'sheetTrigger' || Boolean(current?.styleable);
   // Detail selection is sticky across rows, but sheet forms have Text/Container instead of the
   // generic Style/Animation pair. Falling back to Layout avoids landing in a hidden stale tab.
-  const activeDetailTab = isSheet
+  const activeDetailTab = hasFormStyle
     ? (detailTab === 'slotText' || detailTab === 'slotContainer' ? detailTab : 'layout')
     : (detailTab === 'slotText' || detailTab === 'slotContainer' ? 'layout' : detailTab);
 
@@ -556,7 +560,8 @@ export default function AdjustPanel({
     const n = l.label ?? (l.kind === 'slot' ? `▤ ${l.slot}` : l.id);
     // Marks a layer that renders in a pop-up rather than on the stage, so the list explains
     // itself even for authored templates that never set a label.
-    return l.presentation === 'sheet' ? `${n} ⇱` : n;
+    return isInlineFormLayer(l, inlineSheet) ? n.replace(' · in pop-up', '')
+      : l.presentation === 'sheet' ? `${n} ⇱` : n;
   };
 
   // ── a single layer row (optionally a sub-layer) ────────────────────────────
@@ -866,7 +871,7 @@ export default function AdjustPanel({
                 >
                   Layout
                 </button>
-                {isSheet ? (
+                {hasFormStyle ? (
                   <>
                     <button
                       className={`${styles.tab} ${activeDetailTab === 'slotText' ? styles.tabActive : ''}`}
@@ -951,7 +956,10 @@ export default function AdjustPanel({
                     below already produces the right subset (X/Y/Width/Height/Opacity/Depth, no
                     Scale, no slot-only controls) with no extra gating needed. */}
                 <>
-                  {isSheet && (
+                  {flowLayer && <p style={{ fontSize: 12, lineHeight: 1.5, color: 'var(--text-muted)' }}>
+                    This layer follows the page layout. Its height grows with its content.
+                  </p>}
+                  {isSheet && !flowLayer && (
                     <p style={{ fontSize: 12, lineHeight: 1.5, color: 'var(--text-muted)', margin: '4px 0 10px' }}>
                       Shown in a pop-up, which sets its own size and position. To change the order
                       steps appear in, drag this row in the list above.
@@ -959,7 +967,7 @@ export default function AdjustPanel({
                   )}
                   {/* Anchors nudge an existing element by an offset — X/Y here is a translate, not
                       an absolute position. 50 = no offset. */}
-                  {!isSheet && (
+                  {!isSheet && !flowLayer && (
                     <>
                       <Slider label={isAnchor ? 'Nudge X' : 'X'} value={current.x} min={-20} max={120} step={0.5} onChange={set('x')} />
                       <Slider label={isAnchor ? 'Nudge Y' : 'Y'} value={current.y} min={-20} max={120} step={0.5} onChange={set('y')} />
@@ -1004,10 +1012,10 @@ export default function AdjustPanel({
                     </>
                   )}
 
-                  {!isAnchor && !isSheet && (
+                  {!isAnchor && (!isSheet || flowLayer) && (
                     <>
                       <Slider label="Width" value={current.w} min={3} max={200} step={0.5} onChange={set('w')} />
-                      {!current.chain && (
+                      {!current.chain && !flowLayer && (
                         <Slider label="Height" value={current.h} min={3} max={200} step={0.5} onChange={set('h')} />
                       )}
                       {isImage && (
@@ -1060,7 +1068,7 @@ export default function AdjustPanel({
                       instead, for a couple who'd rather see everything at once than scroll a
                       small form. Not offered inside a sheet — the pop-up's own scroll container
                       (slots.module.css's `.sheetCard`) already handles overflow there. */}
-                  {isSlot && !isSheet && (
+                  {isSlot && !isSheet && !flowLayer && (
                     <div className={styles.btnRow}>
                       <button
                         className={`${styles.btn} ${current.overflowMode === 'visible' ? styles.btnGhost : ''}`}
@@ -1250,16 +1258,19 @@ export default function AdjustPanel({
               <>
                 <div className={styles.control} style={{ gridTemplateColumns: '72px 1fr' }}>
                   <span>Background</span>
-                  <input type="color" value={current.fill ?? '#fffaf2'} onChange={(e) => patchLayer(current.id, { fill: e.target.value })} />
+                  <input type="color" aria-label="Form background color"
+                    value={current.fill && /^#[0-9a-f]{6}$/i.test(current.fill) ? current.fill : '#fffaf2'}
+                    onChange={(e) => patchLayer(current.id, {
+                      fill: e.target.value,
+                      containerOpacity: current.containerOpacity ?? (current.fill === 'transparent' ? 0 : 100),
+                    })} />
                 </div>
-                <div className={styles.btnRow}>
-                  <button
-                    className={`${styles.btn} ${current.fill === undefined ? '' : styles.btnGhost}`}
-                    onClick={() => patchLayer(current.id, { fill: undefined })}
-                  >
-                    {current.fill === undefined ? '✓ Transparent' : 'Transparent'}
-                  </button>
-                </div>
+                <Slider label="Background opacity" value={current.containerOpacity ?? (current.fill === 'transparent' ? 0 : 100)}
+                  min={0} max={100} step={1}
+                  onChange={(containerOpacity) => patchLayer(current.id, {
+                    fill: current.fill && current.fill !== 'transparent' ? current.fill : '#fffaf2',
+                    containerOpacity: Math.max(0, Math.min(100, containerOpacity)),
+                  })} />
                 <div className={styles.label}>Border</div>
                 <Slider label="Width" value={current.borderWidth ?? 0} min={0} max={12} step={0.5} onChange={set('borderWidth')} />
                 <div className={styles.control} style={{ gridTemplateColumns: '54px 1fr' }}>
@@ -1276,7 +1287,7 @@ export default function AdjustPanel({
                 <div className={styles.btnRow}>
                   <button className={`${styles.btn} ${styles.btnGhost}`} onClick={() => patchLayer(current.id, {
                     fill: undefined, borderWidth: undefined, borderColor: undefined, radius: undefined,
-                    containerMinHeight: undefined, containerPadding: undefined,
+                    containerMinHeight: undefined, containerPadding: undefined, containerOpacity: undefined,
                   })}>
                     Reset container
                   </button>

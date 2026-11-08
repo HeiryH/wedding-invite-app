@@ -153,9 +153,8 @@ export default function WeddingInvitationPage() {
           .catch(() => {});
 
         // Fetch template config (customized text)
-        templateConfigService.getByWeddingId(eventData.eventId)
-          .then(setCustomConfig)
-          .catch(() => {});
+        const config = await templateConfigService.getByWeddingId(eventData.eventId).catch(() => ({}));
+        setCustomConfig(config);
 
         // Fetch itinerary (public endpoint)
         itineraryService.getByWeddingId(eventData.eventId)
@@ -302,7 +301,7 @@ export default function WeddingInvitationPage() {
           wishes={wishes}
           photos={photos}
           photoBoothEnabled={photoBoothEnabled}
-          seatingEnabled={seatingEnabled}
+          seatingEnabled={seatingEnabled && customConfig['seating.mode'] !== 'organizer'}
           tables={tables}
           coupleMedia={coupleMedia}
           customConfig={customConfig}

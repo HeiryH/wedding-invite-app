@@ -1,0 +1,67 @@
+{
+  "spec_version": 2,
+  "slug": "sandy-beach",
+  "source_reference": [
+    "/Users/helmyheiry/wedding-invite-app/docs/sandy-beach-probe/refs/reference-01.jpg"
+  ],
+  "medium_statement": "Loose pastel ink-and-wash storybook illustration of a pastel sunset beach: soft flat-to-gently-graded colour fields under a thin, slightly wobbly dark-brown ink line, with scattered white spatter dots for sea spray and sparkle.",
+  "line": "Thin, sketchy dark-brown ink outline that wobbles and occasionally breaks, drawn around clouds, foam, pebbles and petals; loose contour hatching only on pebbles and cloud bellies, never heavy or fully uniform.",
+  "fill": {
+    "mode": "wash",
+    "description": "Soft translucent pastel washes with gentle edge-to-edge gradients (sky, sea, wet sand) and a little pooling at cloud and foam edges; foam and sand highlights are left as near-white paper with sparse white spatter on top."
+  },
+  "texture": "Smooth matte paper surface with almost no grain; texture comes only from the wobbling ink line and scattered white spatter dots, not from pigment granulation.",
+  "palette": [
+    {
+      "hex": "#b7d1eb",
+      "role": "pale powder-blue upper sky"
+    },
+    {
+      "hex": "#f8bfb1",
+      "role": "peach-pink sunset glow and cloud undersides"
+    },
+    {
+      "hex": "#c1bfb9",
+      "role": "warm grey wet-sand and pebble shading"
+    },
+    {
+      "hex": "#e6e7e4",
+      "role": "near-white paper foam, dry sand and cloud highlights"
+    },
+    {
+      "hex": "#a58e80",
+      "role": "taupe pebble mid-tone and dune grass shadow"
+    },
+    {
+      "hex": "#d1a5a6",
+      "role": "dusty rose cloud shadow and frangipani petal"
+    },
+    {
+      "hex": "#98b1af",
+      "role": "sea-glass teal of the shallow wave"
+    },
+    {
+      "hex": "#8c6858",
+      "role": "dark brown ink line and pebble core"
+    }
+  ],
+  "background": {
+    "mode": "computed-key",
+    "hex": "#0000ff",
+    "asset_background_hex": "#0000ff",
+    "asset_background_min_delta_e": 133.5
+  },
+  "forbidden": [
+    "cast shadow",
+    "drop shadow",
+    "contact shadow",
+    "glossy 3D highlight",
+    "photographic realism",
+    "heavy uniform black outline",
+    "saturated neon colour",
+    "visible pigment granulation or canvas grain",
+    "crisp flat vector fill with no gradient",
+    "watermark, signature or artist name"
+  ],
+  "notes": "Pinterest sunset-beach reference (artist signature 'EKA SAKTY' visible top-left \u2014 never to be reproduced). Probe run for the ComfyUI/klein backend, WEDDING, Stage family (B), PRO."
+}

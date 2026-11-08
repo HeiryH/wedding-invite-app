@@ -79,10 +79,10 @@ export function NavSlot({ wishes }: SlotProps) {
  *  original: try unmuted, fall back to muted-until-first-gesture if the browser blocks it.
  *  Skips creating a real `Audio` element entirely while `editing` (the couple/author preview),
  *  matching how RSVP/wish slots no-op writes there — nobody wants surprise audio in an editor. */
-export function MusicSlot({ t, editing }: SlotProps) {
+export function MusicSlot({ t, editing, autoPlay = true }: Pick<SlotProps, 't' | 'editing'> & { autoPlay?: boolean }) {
   const url = t('music.url', '');
   const loop = t('music.loop', 'true') !== 'false';
-  const [isPlaying, setIsPlaying] = useState(true);
+  const [isPlaying, setIsPlaying] = useState(false);
   const [needsGesture, setNeedsGesture] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
@@ -99,7 +99,7 @@ export function MusicSlot({ t, editing }: SlotProps) {
     audio.addEventListener('play', onPlay);
     audio.addEventListener('pause', onPause);
 
-    audio.play().catch(() => {
+    if (autoPlay) audio.play().catch(() => {
       if (cancelled) return;
       audio.muted = true;
       audio.play()
@@ -124,9 +124,9 @@ export function MusicSlot({ t, editing }: SlotProps) {
       audio.pause();
       audio.src = '';
     };
-  }, [url, loop, editing]);
+  }, [url, loop, editing, autoPlay]);
 
-  if (!url) return null;
+  if (!url || editing) return null;
 
   const toggle = () => {
     const audio = audioRef.current;
@@ -136,7 +136,7 @@ export function MusicSlot({ t, editing }: SlotProps) {
   };
 
   return (
-    <button className={styles.musicBubble} onClick={toggle} title={isPlaying ? 'Mute music' : 'Play music'}>
+    <button className={styles.musicBubble} onClick={toggle} aria-label={isPlaying ? 'Pause music' : 'Play music'}>
       <span className={styles.musicIcon}>{isPlaying && !needsGesture ? '♪' : '♪̸'}</span>
     </button>
   );
