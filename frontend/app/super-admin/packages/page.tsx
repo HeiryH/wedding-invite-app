@@ -1,5 +1,7 @@
 'use client';
 
+import { apiErrorMessage } from '@/lib/api/errors';
+
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { packageService, featureService, Package, Feature, UpdatePackage } from '@/lib/api';
@@ -67,8 +69,8 @@ export default function PackagesPage() {
       await packageService.update(editingId, payload);
       setEditingId(null);
       await fetchData();
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to save package');
+    } catch (err: unknown) {
+      setError(apiErrorMessage(err) || 'Failed to save package');
     } finally {
       setSaving(false);
     }

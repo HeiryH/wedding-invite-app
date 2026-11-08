@@ -144,6 +144,10 @@ export interface CreateGuest {
   tableId?: number | null;
 }
 
+/** Admin DTOs default omitted party size/attendance to 1/true on the server. */
+export type AdminGuestInput = Omit<CreateGuest, 'numberOfAttendees' | 'isAttending'>
+  & Partial<Pick<CreateGuest, 'numberOfAttendees' | 'isAttending'>>;
+
 // ========== Wish Types ==========
 
 export interface Wish {

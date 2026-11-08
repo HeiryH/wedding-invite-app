@@ -1,5 +1,5 @@
 import { apiClient } from './client';
-import { Guest, CreateGuest } from './types';
+import { Guest, CreateGuest, AdminGuestInput } from './types';
 
 export const guestService = {
   // Get guest by ID
@@ -23,7 +23,7 @@ export const guestService = {
   },
 
   // Admin-side guest creation — authorized endpoint, bypasses the RSVP open/public gates
-  create: async (eventId: number, data: CreateGuest): Promise<Guest> => {
+  create: async (eventId: number, data: AdminGuestInput): Promise<Guest> => {
     const response = await apiClient.post<Guest>('/guest', { ...data, eventId });
     return response.data;
   },
@@ -35,7 +35,7 @@ export const guestService = {
   },
 
   // Update guest
-  update: async (id: number, data: CreateGuest): Promise<Guest> => {
+  update: async (id: number, data: AdminGuestInput): Promise<Guest> => {
     const response = await apiClient.put<Guest>(`/guest/${id}`, data);
     return response.data;
   },

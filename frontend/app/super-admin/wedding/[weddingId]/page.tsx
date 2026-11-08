@@ -1,5 +1,7 @@
 'use client';
 
+import { apiErrorMessage } from '@/lib/api/errors';
+
 import { useCallback, useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -119,9 +121,9 @@ export default function WeddingDetailPage() {
       setFeatures(featuresData);
       setOrganizerAdmin(organizerAdminData);
       setTables(tablesData);
-    } catch (err: any) {
+    } catch (err: unknown) {
       if (signal?.aborted) return;
-      setError(err.response?.data?.message || 'Failed to load wedding data');
+      setError(apiErrorMessage(err) || 'Failed to load wedding data');
     } finally {
       if (!signal?.aborted) setLoading(false);
     }
@@ -145,8 +147,8 @@ export default function WeddingDetailPage() {
       });
       setWedding(updated);
       setIsEditingWedding(false);
-    } catch (err: any) {
-      alert(err.response?.data?.message || 'Failed to update wedding');
+    } catch (err: unknown) {
+      alert(apiErrorMessage(err) || 'Failed to update wedding');
     }
   };
 
@@ -161,8 +163,8 @@ export default function WeddingDetailPage() {
       const updated = await eventService.setSlug(wedding.eventId, next);
       setWedding(updated);
       setIsEditingSlug(false);
-    } catch (err: any) {
-      alert(err.response?.data?.message || 'Failed to change the public URL');
+    } catch (err: unknown) {
+      alert(apiErrorMessage(err) || 'Failed to change the public URL');
     }
   };
 
@@ -190,8 +192,8 @@ export default function WeddingDetailPage() {
     try {
       await guestService.delete(guestId);
       setGuests((prev) => prev.filter((g) => g.guestId !== guestId));
-    } catch (err: any) {
-      alert(err.response?.data?.message || 'Failed to delete guest');
+    } catch (err: unknown) {
+      alert(apiErrorMessage(err) || 'Failed to delete guest');
     }
   };
 
@@ -200,8 +202,8 @@ export default function WeddingDetailPage() {
     try {
       await wishService.delete(wishId);
       setWishes((prev) => prev.filter((w) => w.wishId !== wishId));
-    } catch (err: any) {
-      alert(err.response?.data?.message || 'Failed to delete wish');
+    } catch (err: unknown) {
+      alert(apiErrorMessage(err) || 'Failed to delete wish');
     }
   };
 
@@ -251,8 +253,8 @@ export default function WeddingDetailPage() {
     try {
       const updated = await eventService.toggleRsvp(wedding.eventId, isRsvpOpen);
       setWedding(updated);
-    } catch (err: any) {
-      alert(err.response?.data?.message || 'Failed to update RSVP status');
+    } catch (err: unknown) {
+      alert(apiErrorMessage(err) || 'Failed to update RSVP status');
     }
   };
 
@@ -274,9 +276,9 @@ export default function WeddingDetailPage() {
         isEnabled: !currentStatus,
       });
       await fetchData();
-    } catch (err: any) {
+    } catch (err: unknown) {
       // Surfaces the tier-ceiling message, e.g. "'Photo Booth' isn't available on the FREE tier."
-      alert(err.response?.data?.message || 'Failed to toggle feature');
+      alert(apiErrorMessage(err) || 'Failed to toggle feature');
     }
   };
 
@@ -294,8 +296,8 @@ export default function WeddingDetailPage() {
       const updated = await eventService.updateTemplate(wedding.eventId, templateId);
       setWedding(updated);
       alert('Template updated successfully!');
-    } catch (err: any) {
-      alert(err.response?.data?.message || 'Failed to update template');
+    } catch (err: unknown) {
+      alert(apiErrorMessage(err) || 'Failed to update template');
     }
   };
 

@@ -1,5 +1,7 @@
 'use client';
 
+import { apiErrorMessage } from '@/lib/api/errors';
+
 import { useEffect, useMemo, useState } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import {
@@ -169,8 +171,8 @@ export default function WeddingInvitationPage() {
         itineraryService.getByWeddingId(eventData.eventId)
           .then(setItinerary)
           .catch(() => {});
-      } catch (err: any) {
-        setError(err.response?.data?.message || 'Failed to load wedding');
+      } catch (err: unknown) {
+        setError(apiErrorMessage(err) || 'Failed to load wedding');
       } finally {
         if (!redirected) setLoading(false);
       }

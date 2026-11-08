@@ -1,5 +1,7 @@
 'use client';
 
+import { apiErrorMessage } from '@/lib/api/errors';
+
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { motion } from 'framer-motion';
@@ -113,8 +115,8 @@ export default function AdminDashboard() {
       setWedding(updated);
       setIsEditingWedding(false);
     
-    } catch (err: any) {
-      alert(err.response?.data?.message || 'Failed to update wedding');
+    } catch (err: unknown) {
+      alert(apiErrorMessage(err) || 'Failed to update wedding');
     } finally {
       setLoading(false);
     }
@@ -127,8 +129,8 @@ export default function AdminDashboard() {
         try {
             await guestService.delete(guestId); // Calls the backend Delete endpoint
             setGuests((prev) => prev.filter((g) => g.guestId !== guestId));
-        } catch (err: any) {
-            alert(err.response?.data?.message || 'Failed to delete guest');
+        } catch (err: unknown) {
+            alert(apiErrorMessage(err) || 'Failed to delete guest');
         }
     };
 
@@ -139,8 +141,8 @@ export default function AdminDashboard() {
         try {
             await wishService.delete(wishId); // Calls the backend Delete endpoint
             setWishes((prev) => prev.filter((w) => w.wishId !== wishId));
-        } catch (err: any) {
-            alert(err.response?.data?.message || 'Failed to delete wish');
+        } catch (err: unknown) {
+            alert(apiErrorMessage(err) || 'Failed to delete wish');
         }
     };
 
@@ -267,11 +269,11 @@ export default function AdminDashboard() {
 
                     {/* Navigation tabs to switch between Overview, Guests, and Wishes sections */}
                     <div className="flex gap-4 mt-6 border-b border-gray-200">
-                        {['overview', 'guests', 'wishes'].map((tab) => (
+                        {(['overview', 'guests', 'wishes'] as const).map((tab) => (
 
                             <button
                                 key={tab}
-                                onClick={() => setActiveTab(tab as any)}
+                                onClick={() => setActiveTab(tab)}
                                 className={`px-4 py-2 font-medium transition-colors relative ${activeTab === tab
                                     ? 'text-rose-600 border-b-2 border-rose-600'
                                     : 'text-gray-600 hover:text-gray-800'
@@ -463,7 +465,7 @@ export default function AdminDashboard() {
                                 {/* Side Filter */}
                                 <select
                                     value={filterSide}
-                                    onChange={(e) => setFilterSide(e.target.value as any)}
+                                    onChange={(e) => setFilterSide(e.target.value as 'All' | 'Bride' | 'Groom')}
                                     className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-rose-400"
                                 >
                                     <option value="All">All Sides</option>
@@ -474,7 +476,7 @@ export default function AdminDashboard() {
                                 {/* Attending Filter */}
                                 <select
                                     value={filterAttending}
-                                    onChange={(e) => setFilterAttending(e.target.value as any)}
+                                    onChange={(e) => setFilterAttending(e.target.value as 'All' | 'Yes' | 'No')}
                                     className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-rose-400"
                                 >
                                     <option value="All">All Status</option>

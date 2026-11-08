@@ -1,5 +1,7 @@
 'use client';
 
+import { apiErrorMessage, apiErrorStatus } from '@/lib/api/errors';
+
 import { useEffect, useState } from 'react';
 import { authService, HostAdminUser } from '@/lib/api';
 import { Button } from '@/components/ui/Button';
@@ -46,12 +48,12 @@ export default function HostsPage() {
       setError(null);
       const data = await authService.getHostAdmins();
       setHosts(data);
-    } catch (err: any) {
+    } catch (err: unknown) {
       // 404 means endpoint not yet available (backend not restarted) — treat as empty
-      if (err?.response?.status === 404) {
+      if (apiErrorStatus(err) === 404) {
         setHosts([]);
       } else {
-        setError(err?.response?.data?.message || 'Failed to load hosts');
+        setError(apiErrorMessage(err) || 'Failed to load hosts');
       }
     } finally {
       setLoading(false);
@@ -68,8 +70,8 @@ export default function HostsPage() {
       setNewEmail('');
       setNewPassword('');
       await fetchHosts();
-    } catch (err: any) {
-      setCreateError(err.response?.data?.message || 'Failed to create host admin');
+    } catch (err: unknown) {
+      setCreateError(apiErrorMessage(err) || 'Failed to create host admin');
     } finally {
       setCreateLoading(false);
     }

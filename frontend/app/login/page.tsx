@@ -1,5 +1,7 @@
 'use client';
 
+import { apiErrorMessage } from '@/lib/api/errors';
+
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
@@ -40,8 +42,8 @@ export default function LoginPage() {
       } else {
         setError('Unknown user role');
       }
-    } catch (err: any) {
-      setError(err.response?.data?.message || err.message || 'Login failed. Please check your credentials.');
+    } catch (err: unknown) {
+      setError(apiErrorMessage(err) || (err instanceof Error ? err.message : '') || 'Login failed. Please check your credentials.');
     } finally {
       setLoading(false);
     }

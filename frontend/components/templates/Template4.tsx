@@ -14,7 +14,7 @@ import type { TemplateRsvpSubmission, PhotoUploadSubmission, TemplateWishSubmiss
 import { useContext, useState, useEffect, useRef } from 'react';
 import { useCountdownToDate as useCountdown } from './_shared/hooks/useCountdownToDate';
 import { SeatingPreviewContext } from './_shared/slots/preview';
-import { motion, useMotionValue, useTransform, animate, AnimatePresence } from 'framer-motion';
+import { motion, useMotionValue, useTransform, animate, AnimatePresence, type PanInfo } from 'framer-motion';
 import { Wedding, Wish, Photo, SeatingTable, TemplateSlots, ItineraryItem } from '@/lib/api';
 import SeatingStep from './SeatingStep';
 import { toHijriString, alignClass, headingStyle, headingAnimationProps, sectionBgStyle, resolveSectionOrder, type SectionCode } from '@/lib/templateUtils';
@@ -130,7 +130,7 @@ function CardStack({
   const overlayOpacity = useTransform(x, [-120, 0, 120], [0.25, 0, 0.25]);
   const overlayColor = useTransform(x, [-120, 0, 120], ['#000', '#000', '#000']);
 
-  const handleDragEnd = (_: any, info: any) => {
+  const handleDragEnd = (_: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
     const swipeThreshold = 80;
     const velocityThreshold = 400;
     if (
@@ -841,8 +841,8 @@ export default function Template4({
                           </button>
                         ))}
                       </div>
-                      {['guestName', 'email', 'phoneNumber'].map((field) => (
-                        <input key={field} type={field === 'email' ? 'email' : field === 'phoneNumber' ? 'tel' : 'text'} placeholder={field === 'guestName' ? 'Your name *' : field === 'email' ? 'Email' : 'Phone'} required={field === 'guestName'} value={(rsvpData as any)[field]} onChange={(e) => setRsvpData({ ...rsvpData, [field]: e.target.value })} className="w-full border border-[#E0DFD9] px-4 py-3 text-sm text-[#1C1C1A] placeholder-[#B0AFA8] focus:outline-none focus:border-[#1C1C1A] transition-colors" />
+                      {(['guestName', 'email', 'phoneNumber'] as const).map((field) => (
+                        <input key={field} type={field === 'email' ? 'email' : field === 'phoneNumber' ? 'tel' : 'text'} placeholder={field === 'guestName' ? 'Your name *' : field === 'email' ? 'Email' : 'Phone'} required={field === 'guestName'} value={rsvpData[field]} onChange={(e) => setRsvpData({ ...rsvpData, [field]: e.target.value })} className="w-full border border-[#E0DFD9] px-4 py-3 text-sm text-[#1C1C1A] placeholder-[#B0AFA8] focus:outline-none focus:border-[#1C1C1A] transition-colors" />
                       ))}
                       {isAttending && (
                         <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="space-y-3 overflow-hidden">

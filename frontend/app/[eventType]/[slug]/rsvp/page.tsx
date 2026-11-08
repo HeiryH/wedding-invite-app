@@ -1,5 +1,7 @@
 'use client';
 
+import { apiErrorMessage } from '@/lib/api/errors';
+
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -81,9 +83,9 @@ export default function RSVPPage() {
       setTimeout(() => {
         router.push(`/${urlEventType}/${coupleName}/wishes`);
       }, 2000);
-    } catch (err: any) {
+    } catch (err: unknown) {
       setSubmitError(
-        err.response?.data?.message || 'Failed to submit RSVP. Please try again.'
+        apiErrorMessage(err) || 'Failed to submit RSVP. Please try again.'
       );
     } finally {
       setIsSubmitting(false);

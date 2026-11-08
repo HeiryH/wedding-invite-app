@@ -1,5 +1,7 @@
 'use client';
 
+import { apiErrorMessage } from '@/lib/api/errors';
+
 import { useEffect, useMemo, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
@@ -16,6 +18,7 @@ import {
   Photo,
 } from '@/lib/api';
 import { urlSegmentForEventType } from '@/lib/eventTypes';
+import type { TemplateRsvpSubmission, TemplateWishSubmission, PhotoUploadSubmission } from '@/components/templates/guestContracts';
 import Template2 from '@/components/templates/Template2';
 
 export default function Template2Page() {
@@ -100,8 +103,8 @@ export default function Template2Page() {
           const photosData = await photoService.getVisibleByWeddingId(eventData.eventId);
           setPhotos(photosData);
         }
-      } catch (err: any) {
-        setError(err.response?.data?.message || 'Failed to load wedding');
+      } catch (err: unknown) {
+        setError(apiErrorMessage(err) || 'Failed to load wedding');
       } finally {
         if (!redirected) setLoading(false);
       }
@@ -110,7 +113,7 @@ export default function Template2Page() {
     fetchData();
   }, [urlEventType, slug, router]);
 
-  const handleRSVP = async (data: any) => {
+  const handleRSVP = async (data: TemplateRsvpSubmission) => {
     if (!event) return;
 
     await guestService.rsvp(event.eventId, {
@@ -133,7 +136,7 @@ export default function Template2Page() {
     setGuests(updatedGuests);
   };
 
-  const handleSubmitWish = async (data: any) => {
+  const handleSubmitWish = async (data: TemplateWishSubmission) => {
     if (!event) return;
 
     await wishService.create(event.eventId, {
@@ -146,7 +149,7 @@ export default function Template2Page() {
     setWishes(updatedWishes);
   };
 
-  const handleUploadPhoto = async (data: any) => {
+  const handleUploadPhoto = async (data: PhotoUploadSubmission) => {
     if (!event) return;
 
     await photoService.upload(

@@ -1,5 +1,7 @@
 'use client';
 
+import { apiErrorMessage } from '@/lib/api/errors';
+
 import { useState } from 'react';
 import { authService, OrganizerAdminUser } from '@/lib/api';
 import { getUser } from '@/lib/auth';
@@ -45,8 +47,8 @@ export default function AccessTab({ organizerAdmin, weddingId, onRefresh }: Acce
       setNewEmail('');
       setNewPassword('');
       onRefresh();
-    } catch (err: any) {
-      setCreateError(err.response?.data?.message || 'Failed to create account');
+    } catch (err: unknown) {
+      setCreateError(apiErrorMessage(err) || 'Failed to create account');
     } finally {
       setCreating(false);
     }

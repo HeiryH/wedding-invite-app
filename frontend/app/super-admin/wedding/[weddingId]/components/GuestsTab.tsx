@@ -52,14 +52,14 @@ export default function GuestsTab({
         </div>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           {showSide && (
-            <select value={filterSide} onChange={e => setFilterSide(e.target.value as any)}
+            <select value={filterSide} onChange={e => setFilterSide(e.target.value as 'All' | 'Bride' | 'Groom')}
               style={{ ...sel, width: 'auto', paddingRight: 28 }}>
               <option value="All">All sides</option>
               <option value="Bride">Bride's side</option>
               <option value="Groom">Groom's side</option>
             </select>
           )}
-          <select value={filterAttending} onChange={e => setFilterAttending(e.target.value as any)}
+          <select value={filterAttending} onChange={e => setFilterAttending(e.target.value as 'All' | 'Yes' | 'No')}
             style={{ ...sel, width: 'auto', paddingRight: 28 }}>
             <option value="All">All status</option>
             <option value="Yes">Attending</option>

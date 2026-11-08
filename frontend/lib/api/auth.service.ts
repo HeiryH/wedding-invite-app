@@ -1,3 +1,4 @@
+import { apiErrorStatus } from './errors';
 import { apiClient } from './client';
 
 export interface LoginRequest {
@@ -115,8 +116,8 @@ export const authService = {
     try {
       const response = await apiClient.get<UserDtoWire>(`/auth/organizer-admin/${weddingId}`);
       return toOrganizerAdminUser(response.data);
-    } catch (err: any) {
-      if (err.response?.status === 404) return null;
+    } catch (err: unknown) {
+      if (apiErrorStatus(err) === 404) return null;
       throw err;
     }
   },

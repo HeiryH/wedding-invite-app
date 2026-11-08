@@ -1,9 +1,11 @@
 'use client';
 
+import { apiErrorMessage } from '@/lib/api/errors';
+
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { wishService, CreateWish } from '@/lib/api';
+import { wishService, CreateWish, Wish } from '@/lib/api';
 import { useForm } from 'react-hook-form';
 import confetti from 'canvas-confetti';
 import { urlSegmentForEventType } from '@/lib/eventTypes';
@@ -23,7 +25,7 @@ export default function WishesPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitSuccess, setSubmitSuccess] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
-  const [wishes, setWishes] = useState<any[]>([]);
+  const [wishes, setWishes] = useState<Wish[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [wishLength, setWishLength] = useState(0);
 
@@ -109,9 +111,9 @@ const onSubmit = async (data: WishFormData) => {
     setTimeout(() => {
       setSubmitSuccess(false);
     }, 3000);
-  } catch (err: any) {
+  } catch (err: unknown) {
     setSubmitError(
-      err.response?.data?.message || 'Failed to submit wish. Please try again.'
+      apiErrorMessage(err) || 'Failed to submit wish. Please try again.'
     );
   } finally {
     setIsSubmitting(false);

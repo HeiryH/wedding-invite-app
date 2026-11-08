@@ -1,5 +1,7 @@
 'use client';
 
+import { apiErrorMessage } from '@/lib/api/errors';
+
 import { useEffect, useRef, useState, useCallback, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { templateService, Template, authService } from '@/lib/api';
@@ -236,8 +238,8 @@ function TryEditor() {
       }));
 
       router.push('/organizer-admin');
-    } catch (err: any) {
-      setSaveError(err?.response?.data?.message ?? 'Registration failed. Please try again.');
+    } catch (err: unknown) {
+      setSaveError(apiErrorMessage(err) ?? 'Registration failed. Please try again.');
     } finally {
       setSaving(false);
     }

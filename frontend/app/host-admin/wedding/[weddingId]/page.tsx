@@ -1,5 +1,7 @@
 'use client';
 
+import { apiErrorMessage } from '@/lib/api/errors';
+
 import { useCallback, useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import {
@@ -71,9 +73,9 @@ export default function HostWeddingDetailPage() {
       setTemplates(templatesData);
       setOrganizerAdmin(organizerAdminData);
       setTables(tablesData);
-    } catch (err: any) {
+    } catch (err: unknown) {
       if (signal?.aborted) return;
-      setError(err.response?.data?.message || 'Failed to load wedding data');
+      setError(apiErrorMessage(err) || 'Failed to load wedding data');
     } finally {
       if (!signal?.aborted) setLoading(false);
     }
@@ -104,13 +106,13 @@ export default function HostWeddingDetailPage() {
   const handleDeleteGuest = async (guestId: number) => {
     if (!confirm('Remove this guest?')) return;
     try { await guestService.delete(guestId); setGuests(prev => prev.filter(g => g.guestId !== guestId)); }
-    catch (err: any) { alert(err.response?.data?.message || 'Failed'); }
+    catch (err: unknown) { alert(apiErrorMessage(err) || 'Failed'); }
   };
 
   const handleDeleteWish = async (wishId: number) => {
     if (!confirm('Remove this wish?')) return;
     try { await wishService.delete(wishId); setWishes(prev => prev.filter(w => w.wishId !== wishId)); }
-    catch (err: any) { alert(err.response?.data?.message || 'Failed'); }
+    catch (err: unknown) { alert(apiErrorMessage(err) || 'Failed'); }
   };
 
   const handleApprovePhoto = async (photoId: number) => {
@@ -138,12 +140,12 @@ export default function HostWeddingDetailPage() {
   const handleToggleRsvp = async (isRsvpOpen: boolean) => {
     if (!wedding) return;
     try { const updated = await eventService.toggleRsvp(wedding.eventId, isRsvpOpen); setWedding(updated); }
-    catch (err: any) { alert(err.response?.data?.message || 'Failed'); }
+    catch (err: unknown) { alert(apiErrorMessage(err) || 'Failed'); }
   };
 
   const handleToggleFeature = async (featureId: number, featureCode: string, currentStatus: boolean) => {
     try { await eventFeatureService.toggleFeature(weddingId, { featureId, featureCode, isEnabled: !currentStatus }); await fetchData(); }
-    catch (err: any) { alert(err.response?.data?.message || 'Failed to update feature'); }
+    catch (err: unknown) { alert(apiErrorMessage(err) || 'Failed to update feature'); }
   };
 
   const handleChangeTemplate = async (templateId: number) => {
@@ -151,7 +153,7 @@ export default function HostWeddingDetailPage() {
     const template = templates.find(t => t.templateId === templateId);
     if (!confirm(`Change to "${template?.templateName}"?`)) return;
     try { const updated = await eventService.updateTemplate(wedding.eventId, templateId); setWedding(updated); }
-    catch (err: any) { alert(err.response?.data?.message || 'Failed'); }
+    catch (err: unknown) { alert(apiErrorMessage(err) || 'Failed'); }
   };
 
   const exportGuestsToCSV = () => {

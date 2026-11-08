@@ -1,5 +1,6 @@
 'use client';
 
+import type { AdminGuestInput } from '@/lib/api';
 import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { AnimatePresence, motion } from 'framer-motion';
@@ -34,7 +35,7 @@ import { tierRank } from '@/lib/tierRank';
 type ActiveTab = 'guests' | 'wishes' | 'photos' | 'seating';
 
 // ── Add / Edit Guest Modal ─────────────────────────────────────────────────────
-function GuestModal({ guest, eventType, onClose, onSave }: { guest: Guest | null; eventType: string; onClose: () => void; onSave: (data: Partial<Guest>) => Promise<void> }) {
+function GuestModal({ guest, eventType, onClose, onSave }: { guest: Guest | null; eventType: string; onClose: () => void; onSave: (data: AdminGuestInput) => Promise<void> }) {
   const showSide = eventType === 'WEDDING';
   const [form, setForm] = useState({
     guestName: guest?.guestName ?? '',
@@ -50,7 +51,7 @@ function GuestModal({ guest, eventType, onClose, onSave }: { guest: Guest | null
     if (!form.guestName.trim()) return;
     setSaving(true);
     try {
-      const payload: Partial<Guest> = {
+      const payload: AdminGuestInput = {
         guestName: form.guestName,
         email: form.email,
         phoneNumber: form.phoneNumber,
@@ -336,7 +337,7 @@ export default function OrganizerAdminDashboard() {
     if (!weddingId) return;
     setSaving(true);
     try {
-      const updated = await eventService.update(weddingId, { name1: editData.brideName, name2: editData.groomName, eventTitle: editData.eventTitle, eventDate: `${editData.weddingDate}T${editData.weddingTime || '00:00'}:00` as any, venue: editData.venue, venueAddress: editData.venueAddress, maxCapacity: editData.maxCapacity, showCapacityWarning: editData.showCapacityWarning });
+      const updated = await eventService.update(weddingId, { name1: editData.brideName, name2: editData.groomName, eventTitle: editData.eventTitle, eventDate: `${editData.weddingDate}T${editData.weddingTime || '00:00'}:00`, venue: editData.venue, venueAddress: editData.venueAddress, maxCapacity: editData.maxCapacity, showCapacityWarning: editData.showCapacityWarning });
       setWedding(updated); setIsEditing(false);
     } catch { alert('Failed to save.'); }
     finally { setSaving(false); }
@@ -344,10 +345,10 @@ export default function OrganizerAdminDashboard() {
 
   const handleDeleteGuest = async (id: number) => { if (!confirm('Remove this guest?')) return; await guestService.delete(id); setGuests(prev => prev.filter(g => g.guestId !== id)); };
 
-  const handleSaveGuest = async (data: Partial<Guest>) => {
+  const handleSaveGuest = async (data: AdminGuestInput) => {
     if (!weddingId) return;
-    if (editingGuest?.guestId) { const updated = await guestService.update(editingGuest.guestId, data as any); setGuests(prev => prev.map(g => g.guestId === editingGuest.guestId ? updated : g)); }
-    else { const created = await guestService.create(weddingId, data as any); setGuests(prev => [...prev, created]); }
+    if (editingGuest?.guestId) { const updated = await guestService.update(editingGuest.guestId, data); setGuests(prev => prev.map(g => g.guestId === editingGuest.guestId ? updated : g)); }
+    else { const created = await guestService.create(weddingId, data); setGuests(prev => [...prev, created]); }
   };
 
   const handleToggleRsvp = async (isRsvpOpen: boolean) => {

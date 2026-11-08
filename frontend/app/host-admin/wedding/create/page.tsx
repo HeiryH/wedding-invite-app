@@ -1,5 +1,7 @@
 'use client';
 
+import { apiErrorMessage } from '@/lib/api/errors';
+
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
@@ -85,8 +87,8 @@ export default function HostCreateWeddingPage() {
         templateId: formData.templateId,
       });
       router.push(`/host-admin/wedding/${wedding.eventId}`);
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to create event. Please try again.');
+    } catch (err: unknown) {
+      setError(apiErrorMessage(err) || 'Failed to create event. Please try again.');
     } finally {
       setLoading(false);
     }

@@ -264,10 +264,10 @@ export default function Template8({
     finally { setPhotoSubmitting(false); }
   };
 
-  const fontVars: React.CSSProperties = {
-    ['--t8-display' as any]: fraunces.style.fontFamily,
-    ['--t8-body' as any]: workSans.style.fontFamily,
-    ['--t8-script' as any]: caveat.style.fontFamily,
+  const fontVars: React.CSSProperties & Record<`--${string}`, string> = {
+    '--t8-display': fraunces.style.fontFamily,
+    '--t8-body': workSans.style.fontFamily,
+    '--t8-script': caveat.style.fontFamily,
   };
 
   return (

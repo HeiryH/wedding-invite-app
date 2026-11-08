@@ -1,5 +1,7 @@
 'use client';
 
+import { apiErrorMessage } from '@/lib/api/errors';
+
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { eventService, Event } from '@/lib/api';
@@ -55,8 +57,8 @@ export default function HostAdminDashboard() {
     try {
       setLoading(true);
       setWeddings(await eventService.getMine());
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to load events');
+    } catch (err: unknown) {
+      setError(apiErrorMessage(err) || 'Failed to load events');
     } finally {
       setLoading(false);
     }

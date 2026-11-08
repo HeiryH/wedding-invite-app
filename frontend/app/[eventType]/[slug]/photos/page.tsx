@@ -1,5 +1,7 @@
 'use client';
 
+import { apiErrorMessage } from '@/lib/api/errors';
+
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -59,8 +61,8 @@ export default function PhotoBoothPage() {
           const photosData = await photoService.getVisibleByWeddingId(weddingData.eventId);
           setPhotos(photosData);
         }
-      } catch (err: any) {
-        setError(err.response?.data?.message || 'Failed to load photo booth');
+      } catch (err: unknown) {
+        setError(apiErrorMessage(err) || 'Failed to load photo booth');
       } finally {
         if (!redirected) setLoading(false);
       }
@@ -133,8 +135,8 @@ export default function PhotoBoothPage() {
 
       // Hide success message after 3 seconds
       setTimeout(() => setUploadSuccess(false), 3000);
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to upload photo');
+    } catch (err: unknown) {
+      setError(apiErrorMessage(err) || 'Failed to upload photo');
     } finally {
       setUploading(false);
     }

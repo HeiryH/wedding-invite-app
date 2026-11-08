@@ -1,5 +1,7 @@
 'use client';
 
+import { apiErrorMessage } from '@/lib/api/errors';
+
 import { useCallback, useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
@@ -64,9 +66,9 @@ export default function EditWeddingPage() {
         templateId: weddingData.templateId,
         isActive: weddingData.isActive,
       });
-    } catch (err: any) {
+    } catch (err: unknown) {
       if (signal?.aborted) return;
-      setError(err.response?.data?.message || 'Failed to load wedding');
+      setError(apiErrorMessage(err) || 'Failed to load wedding');
     } finally {
       if (!signal?.aborted) setLoading(false);
     }
@@ -118,9 +120,9 @@ export default function EditWeddingPage() {
         setSuccess(false);
         router.push('/super-admin');
       }, 2000);
-    } catch (err: any) {
+    } catch (err: unknown) {
       setError(
-        err.response?.data?.message || 'Failed to update wedding. Please try again.'
+        apiErrorMessage(err) || 'Failed to update wedding. Please try again.'
       );
     } finally {
       setSaving(false);

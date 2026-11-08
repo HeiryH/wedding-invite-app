@@ -239,7 +239,7 @@ export default function Template9({
     finally { setPhotoSubmitting(false); }
   };
 
-  const bodyFont: React.CSSProperties = { ['--t9-body' as any]: sourceSerif.style.fontFamily };
+  const bodyFont: React.CSSProperties & Record<`--${string}`, string> = { '--t9-body': sourceSerif.style.fontFamily };
 
   return (
     <div style={{ ...bodyFont, background: C.bg, color: C.ink, fontFamily: 'var(--t9-body)', minHeight: '100vh', containerType: 'inline-size' }}>

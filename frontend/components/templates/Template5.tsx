@@ -1,4 +1,6 @@
 'use client';
+
+import { apiErrorMessage } from '@/lib/api/errors';
 import { useRsvpController } from '@/components/templates/_shared/guest/useRsvpController';
 import { useTimeouts } from '@/components/templates/_shared/hooks/useTimeouts';
 import { useWishPagination } from '@/components/templates/_shared/WishBatch';
@@ -15,7 +17,7 @@ import { Fragment, useContext, useState, useEffect, useMemo, useRef, type CSSPro
 import { useCountdownToDate as useCountdown } from './_shared/hooks/useCountdownToDate';
 import { SeatingPreviewContext } from './_shared/slots/preview';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Wedding, Wish, Photo, SeatingTable, ItineraryItem } from '@/lib/api';
+import { Wedding, Guest, Wish, Photo, SeatingTable, ItineraryItem } from '@/lib/api';
 import { calendarLinks, resolveSectionOrder, type SectionCode } from '@/lib/templateUtils';
 import SeatingStep from './SeatingStep';
 import type { Breakpoint, EditorHandle } from '@/components/templates/_shared/types';
@@ -34,7 +36,7 @@ interface Template5Props {
   onRSVP: (data: TemplateRsvpSubmission) => Promise<void>;
   onSubmitWish: (data: TemplateWishSubmission) => Promise<void>;
   onUploadPhoto?: (data: PhotoUploadSubmission) => Promise<void>;
-  guests?: any[];
+  guests?: Guest[];
   wishes: Wish[];
   photos: Photo[];
   photoBoothEnabled: boolean;
@@ -100,8 +102,8 @@ function RSVPModal({ wedding, onRSVP, onClose, seatingEnabled, tables, t, subtit
       if (!await submission.submit(() => onRSVP(normalizeRsvp({ ...rsvpData, isAttending, tableId: selectedTableId }, wedding, tables)), 'Could not send your RSVP. Please try again.')) return;
       setRsvpSuccess(true);
       schedule(() => { setRsvpSuccess(false); onClose(); }, 2000);
-    } catch (error: any) {
-      alert(error?.response?.data?.message || 'Failed to submit RSVP');
+    } catch (error: unknown) {
+      alert(apiErrorMessage(error) || 'Failed to submit RSVP');
     } finally {
       setRsvpSubmitting(false);
     }

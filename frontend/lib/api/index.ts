@@ -15,3 +15,4 @@ export * from './table.service';
 export * from './itinerary.service';
 export * from './audio.service';
 export * from './landing.service';
+export * from './errors';

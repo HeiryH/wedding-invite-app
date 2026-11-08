@@ -1,5 +1,7 @@
 'use client';
 
+import { apiErrorMessage } from '@/lib/api/errors';
+
 import { Suspense, useState } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
@@ -29,8 +31,8 @@ function ResetPasswordForm() {
       await authService.resetPasswordWithToken(token, password);
       setDone(true);
       setTimeout(() => router.push('/login'), 1800);
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'This reset link is invalid or has expired.');
+    } catch (err: unknown) {
+      setError(apiErrorMessage(err) || 'This reset link is invalid or has expired.');
     } finally {
       setLoading(false);
     }
