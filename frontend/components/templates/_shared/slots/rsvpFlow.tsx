@@ -1,6 +1,7 @@
 'use client';
+import { useRsvpController } from '@/components/templates/_shared/guest/useRsvpController';
 
-import { createContext, useContext, useState, type Dispatch, type ReactNode, type SetStateAction } from 'react';
+import { createContext, useContext, type Dispatch, type ReactNode, type SetStateAction } from 'react';
 
 /**
  * RSVP is split across independently-positionable layers (rsvpTitle / rsvpPrompt / rsvpForm /
@@ -50,11 +51,18 @@ interface RsvpFlowState {
 const RsvpFlowContext = createContext<RsvpFlowState | null>(null);
 
 export function RsvpFlowProvider({ children }: { children: ReactNode }) {
-  const [step, setStep] = useState<'form' | 'seating'>('form');
-  const [form, setForm] = useState<RsvpFormData>(DEFAULT_FORM);
-  const [selectedTableId, setSelectedTableId] = useState<number | null>(null);
-  const [submitting, setSubmitting] = useState(false);
-  const [done, setDone] = useState(false);
+  const {
+    screen: step,
+    setScreen: setStep,
+    form,
+    setForm,
+    selectedTableId,
+    setSelectedTableId,
+    submitting,
+    setSubmitting,
+    done,
+    setDone
+  } = useRsvpController(DEFAULT_FORM);
 
   return (
     <RsvpFlowContext.Provider value={{

@@ -1,4 +1,5 @@
 'use client';
+import { useTimeouts } from '@/components/templates/_shared/hooks/useTimeouts';
 import WishBatch from '@/components/templates/_shared/WishBatch';
 import { configValue } from '@/components/templates/configValue';
 import { useGuestSubmission } from '@/components/templates/_shared/guest/useGuestSubmission';
@@ -18,6 +19,7 @@ interface Props {
 }
 
 export default function WishesSection({ wishes, onSubmitWish, customConfig, overlayProps, a }: Props) {
+  const schedule = useTimeouts();
   const submission = useGuestSubmission();
   const t = (key: string, fallback: string) => configValue(customConfig, key, fallback);
   const [name, setName] = useState('');
@@ -34,7 +36,7 @@ export default function WishesSection({ wishes, onSubmitWish, customConfig, over
       setSubmitted(true);
       setName('');
       setMessage('');
-      setTimeout(() => setSubmitted(false), 3000);
+      schedule(() => setSubmitted(false), 3000);
     } finally {
       setSubmitting(false);
     }

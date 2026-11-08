@@ -1,7 +1,7 @@
 'use client';
+import { useTimeouts } from '@/components/templates/_shared/hooks/useTimeouts';
 import { configValue } from '@/components/templates/configValue';
 import type { TemplateRsvpSubmission, PhotoUploadSubmission } from '@/components/templates/guestContracts';
-
 
 import { useDialogBehavior } from '../_shared/hooks/useDialogBehavior';
 import TemplateNav, { type NavLayout } from '../_shared/nav/TemplateNav';
@@ -58,6 +58,7 @@ export default function Template15(props: Props) {
 
 function PaintedPromise({ wedding, onRSVP, onSubmitWish, onUploadPhoto, wishes, photos, photoBoothEnabled,
   seatingEnabled = false, tables = [], customConfig, itinerary = [], editor }: Props) {
+  const schedule = useTimeouts();
   const reduced = useReducedMotion();
   const breakpoint = useBreakpoint(editor?.enabled ? editor.breakpoint : undefined);
   const { rootRef, progress: rawProgress, seek: rawSeek } = useCinematicScroll<HTMLDivElement>(reduced);
@@ -104,7 +105,7 @@ function PaintedPromise({ wedding, onRSVP, onSubmitWish, onUploadPhoto, wishes, 
   const infoRef = useRef<HTMLElement>(null);
   useDialogBehavior(infoRef, Boolean(interaction.info), interaction.dismissInfo);
   const t = useCallback((key: string, fallback: string) => configValue(customConfig, key, fallback), [customConfig]);
-  const submitRsvp = async (data: TemplateRsvpSubmission) => { await onRSVP(data); window.setTimeout(interaction.close, 1100); };
+  const submitRsvp = async (data: TemplateRsvpSubmission) => { await onRSVP(data); schedule(interaction.close, 1100); };
   const slotProps: SlotProps = { wedding, t, wishes, photos, tables, itinerary, seatingEnabled, photoBoothEnabled,
     onRSVP: submitRsvp, onSubmitWish, onUploadPhoto, editing: false, config: customConfig, breakpoint };
   const decorations: Record<string, CinematicLayerDecoration> = {};

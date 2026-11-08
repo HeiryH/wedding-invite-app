@@ -2,6 +2,8 @@
 
 Branch: `fix/template-consistency`. Recovery checkpoint: `0d3a4fd`.
 
+Current status: Phases 1–7 completed within the agreed scope. T4 option A is implemented. See final validation below; repository-wide lint debt remains.
+
 ## Baseline — 2026-11-08
 
 - Frontend: 51 test files, 338 tests passed.
@@ -121,3 +123,38 @@ Validation: full suite passed at 63 files / 394 tests before the additional auto
 ## Additional saved-layout defect found during Phase 7
 
 The preservation regression exposed that serializeStage emitted `deleted: true`, but applyPatch's allowed-field list omitted `deleted`; shipped layers therefore reappeared after reload. The shared resolver now applies that flag. A round-trip test verifies deletion, untouched desktop geometry and reset restoration without rewriting the config bag. This respects already-saved deletion intent across all engine consumers.
+
+## Phase 7 — completed
+
+- T7/T10/T13/T14 share Stage composition wiring (layout, sheets, reveal and parallax). T7 retains its separate rail composition; T13 retains its visual slot overrides. No geometry or namespaces changed.
+- Nine Classic/flow overlay wrappers delegate to one implementation. T11/T12 retain shipped-prop/slot exclusions, T12's eager welcome images, and their distinct collision/flow wrappers. Shared overlay tests cover added decorations, tombstones, exclusions and breakpoint isolation.
+- RSVP state is now shared by T1–6/T16 and the shared/authored slot provider, in addition to the submission/validation controller. Numeric and named form steps retain their existing APIs; changing party size clears the selected table when the form party size changes. Reorder/Back retention tests still pass.
+- Guest feedback and post-submit actions use a shared deferred-action hook that cancels pending actions on unmount. Existing cinematic timeline/editor timing mechanisms remain intact.
+- A populated Classic Rose comparison exposed a missed multiline guestbook map; it now uses batching too, guarded by integration tests for T1–4/T6.
+- Measurements against checkpoint `0d3a4fd`: a 100-wish guestbook initially mounts 10 cards instead of 100; an authored composition with two countdowns uses one 1000ms interval instead of two; overlay source shrank from 495 lines to 131 including wrappers and shared implementation. See `template-consistency-measurements.json`. These counts are not claims about latency, bundle size, Core Web Vitals or server pagination.
+
+## Final validation and scope
+
+- Frontend: 66 test files, **404 tests passed**.
+- Backend: **206 tests passed**; no backend/schema changes in these fixes.
+- TypeScript: `npx tsc --noEmit` passed.
+- Production: `npm run build` passed. The initial transient Google-font resolver failure did not recur in final builds; no font-loader workaround was introduced into the app.
+- Browser: production build rendered all 16 templates plus an authored fixture at 390×844 and 1440×900 with no page errors. Public and preview ordering/navigation tests passed for T1–3/T6 with saved added overlays. T7 stack and row navigation passed. Public T3 RSVP/seating, T6 upload and authored rendering passed against a fully intercepted mock API (no real data writes).
+- Existing Adjust, Cinematic, inline/popup form projection, schema-scope, default/inheritance, loading/readiness and layout tests remain in the suite.
+- Global lint still reports **159 errors / 92 warnings**, compared with the initial 193 / 102. New shared utility/controller/overlay files pass targeted lint. Lint debt is not presented as fixed.
+- `git diff --check` passed. No saved settings, template design defaults or database rows were migrated. No deployment or merge into `ae-unified` was performed.
+- Excluded by the agreed scope: T8/T9 productionization/Adjust parity; forcing all designs into one geometry family; unrequested galleries injected into authored compositions. Minimal Noir follows approved option A.
+
+Recheck commands:
+
+```sh
+cd frontend
+npm test
+npx tsc --noEmit
+npm run build
+npm run lint
+# From repository root:
+dotnet test backend/WeddingInvite.Tests/WeddingInvite.Tests.csproj
+```
+
+Browser artifacts are local under `.einvite-run/consistency/production/`; comparison counts are committed in this directory. Interactive/API browser scripts used synthetic fixtures and mocked public endpoints and do not validate production persistence or real-device Safari behavior.

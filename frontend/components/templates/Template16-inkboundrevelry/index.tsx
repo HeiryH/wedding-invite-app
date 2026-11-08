@@ -1,4 +1,5 @@
 'use client';
+import { useRsvpController } from '@/components/templates/_shared/guest/useRsvpController';
 import { useWishPagination } from '@/components/templates/_shared/WishBatch';
 import { formatEventDate, formatEventTime } from '@/lib/eventDateFormat';
 import { configValue } from '@/components/templates/configValue';
@@ -116,14 +117,23 @@ function VenueActions({ wedding, t }: Pick<TemplateRenderProps, 'wedding'> & { t
 }
 
 function ReplyForm({ wedding, onRSVP, seatingEnabled = false, tables = [], editor, previewOnly, t }: TemplateRenderProps & { t: Copy }) {
+  const {
+    form,
+    setForm,
+    screen: step,
+    setScreen: setStep,
+    selectedTableId: tableId,
+    setSelectedTableId: setTableId,
+    submitting: busy,
+    setSubmitting: setBusy,
+    done,
+    setDone
+  } = useRsvpController({ guestName: '', email: '', phoneNumber: '', brideOrGroomSide: 'Bride' as 'Bride' | 'Groom', numberOfAttendees: 1, isAttending: true, songRequest: '' });
   const submission = useGuestSubmission();
-  const [form, setForm] = useState({ guestName: '', email: '', phoneNumber: '', brideOrGroomSide: 'Bride' as 'Bride' | 'Groom', numberOfAttendees: 1, isAttending: true, songRequest: '' });
-  const [step, setStep] = useState<'form' | 'seating'>('form');
+
   const seatingPreview = useContext(SeatingPreviewContext);
   const visibleStep = seatingPreview ? 'seating' : step;
-  const [tableId, setTableId] = useState<number | null>(null);
-  const [busy, setBusy] = useState(false);
-  const [done, setDone] = useState(false);
+
   const [error, setError] = useState('');
   const max = guestLimit(wedding);
   const submit = async (event: FormEvent) => {

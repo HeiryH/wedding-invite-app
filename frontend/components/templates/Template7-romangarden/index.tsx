@@ -1,8 +1,8 @@
 'use client';
+import { useStageComposition } from '../_shared/useStageComposition';
 import { useInvitationAudio } from '../_shared/hooks/useInvitationAudio';
 import { configValue } from '@/components/templates/configValue';
 import type { TemplateRsvpSubmission, PhotoUploadSubmission } from '@/components/templates/guestContracts';
-
 
 import { useMemo, useCallback } from 'react';
 import type { CSSProperties } from 'react';
@@ -15,13 +15,11 @@ import type { Breakpoint, EditorHandle, SlotProps, StageId } from './types';
 import { T7_ASSETS, T7_STAGES, STAGE_GROUPS } from './data/stages';
 import { T7_ASSET_SIZES } from './data/assetSizes';
 import { useStageLayout } from '@/components/templates/_shared/layout';
-import { useStageReveal } from '@/components/templates/_shared/hooks/useStageReveal';
-import { useParallax } from '@/components/templates/_shared/hooks/useParallax';
 import { useBreakpoint } from '@/components/templates/_shared/hooks/useBreakpoint';
 import { EngineProvider } from '@/components/templates/_shared/engine';
 import Stage from '@/components/templates/_shared/Stage';
 import HorizontalRail, { type RailPanel } from '@/components/templates/_shared/HorizontalRail';
-import { SLOT_REGISTRY, sheetLayerGroups, stageHasContent, visibleSlotLayers } from '@/components/templates/_shared/slots';
+import { SLOT_REGISTRY, stageHasContent, visibleSlotLayers } from '@/components/templates/_shared/slots';
 import { SlotFlowProviders } from '@/components/templates/_shared/slots/FlowProviders';
 import CoupleGallery, { orderedCoupleGallery } from '@/components/templates/_shared/CoupleGallery';
 import SheetHost from '@/components/templates/_shared/SheetHost';
@@ -120,8 +118,6 @@ export default function Template7({
   // lay out the mobile composition without resizing their window.
   const breakpoint: Breakpoint = useBreakpoint(editing ? editor!.breakpoint : undefined);
 
-
-
   const musicUrl = t('music.url', '');
   const musicLoop = t('music.loop', 'true') === 'true';
   const { isPlaying: musicPlaying, toggle: toggleMusic, enabled: musicEnabled } = useInvitationAudio(musicUrl, musicLoop, { disabled: editing });
@@ -203,17 +199,14 @@ export default function Template7({
   // The Adjust panel now lives in the parent customize page and writes straight into
   // `customConfig`, so the layout renders directly from it — no cross-iframe patch protocol, no
   // optimistic shadow. `editor` only carries which layer to outline while editing.
-  const stages = useStageLayout('t7', T7_STAGES, stageIds, breakpoint, customConfig);
+  const { stages, sheetGroups, rootRef, seen } = useStageComposition('t7', T7_STAGES, stageIds, breakpoint, customConfig, slotProps, reduced, parallaxMode);
   // Forms live in a bottom sheet rather than on the stage: a stage is an art composition (scenery
   // drawn around a specific element) while a form is variable-height content, so inline it has to
   // reserve a fixed box its absolutely-positioned neighbours can never reflow into. Collected
   // across every stage so one host can mount them all — see _shared/SheetHost.tsx.
-  const sheetGroups = useMemo(() => sheetLayerGroups(stages, slotProps), [stages, slotProps]);
   // The compiled-row shared art lives in its own stage (row-relative coordinates), resolved
   // independently so it isn't a scroll section. Only consumed when the ceremony renders as a row.
   const ceremonyRail = useStageLayout('t7', T7_STAGES, CEREMONY_RAIL_IDS, breakpoint, customConfig);
-  const { rootRef, seen } = useStageReveal(reduced, stageIds.join(','));
-  useParallax(rootRef, parallaxMode, reduced);
 
   // Re-group the flat resolved `stages` back into their sections, so a background-sharing group
   // (the ceremony `walimah` beats) can render as one horizontal rail instead of a vertical stack.
@@ -230,8 +223,6 @@ export default function Template7({
   }, [sections, stages]);
 
   const activeSection = useScrollSection({ rootRef, stageGroups: STAGE_GROUPS });
-
-
 
   const navTo = (code: string) => {
     const first = code === 'couple-gallery' ? code : STAGE_GROUPS[code]?.[0];

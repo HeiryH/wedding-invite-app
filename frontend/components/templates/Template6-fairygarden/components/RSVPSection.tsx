@@ -1,4 +1,5 @@
 'use client';
+import { useRsvpController } from '@/components/templates/_shared/guest/useRsvpController';
 import { configValue } from '@/components/templates/configValue';
 import { useDialogBehavior } from '../../_shared/hooks/useDialogBehavior';
 import { useGuestSubmission } from '@/components/templates/_shared/guest/useGuestSubmission';
@@ -25,18 +26,18 @@ interface Props {
 }
 
 export default function RSVPSection({ onRSVP, customConfig, wedding, seatingEnabled = false, tables = [], overlayProps, a }: Props) {
-  const submission = useGuestSubmission();
-  const paxLimit = guestLimit(wedding);
-  const t = (key: string, fallback: string) => configValue(customConfig, key, fallback);
-  const seatingPreview = useContext(SeatingPreviewContext);
-  const [step, setStep] = useState<'form' | 'seating'>('form');
-  const [selectedTableId, setSelectedTableId] = useState<number | null>(null);
-  const [open, setOpen] = useState(false);
-  const dialogRef = useRef<HTMLDivElement>(null);
-  useDialogBehavior(dialogRef, Boolean(open || seatingPreview), () => { setOpen(false); seatingPreview?.dismiss(); });
-  const [submitting, setSubmitting] = useState(false);
-  const [done, setDone] = useState(false);
-  const [form, setForm] = useState({
+  const {
+    screen: step,
+    setScreen: setStep,
+    selectedTableId,
+    setSelectedTableId,
+    submitting,
+    setSubmitting,
+    done,
+    setDone,
+    form,
+    setForm
+  } = useRsvpController({
     guestName: '',
     email: '',
     phoneNumber: '',
@@ -45,6 +46,14 @@ export default function RSVPSection({ onRSVP, customConfig, wedding, seatingEnab
     isAttending: true,
     songRequest: '',
   });
+  const submission = useGuestSubmission();
+  const paxLimit = guestLimit(wedding);
+  const t = (key: string, fallback: string) => configValue(customConfig, key, fallback);
+  const seatingPreview = useContext(SeatingPreviewContext);
+
+  const [open, setOpen] = useState(false);
+  const dialogRef = useRef<HTMLDivElement>(null);
+  useDialogBehavior(dialogRef, Boolean(open || seatingPreview), () => { setOpen(false); seatingPreview?.dismiss(); });
 
   const handleSubmit = async (e?: React.FormEvent) => {
     e?.preventDefault();

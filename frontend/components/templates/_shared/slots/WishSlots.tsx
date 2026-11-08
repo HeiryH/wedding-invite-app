@@ -1,4 +1,5 @@
 'use client';
+import { useTimeouts } from '@/components/templates/_shared/hooks/useTimeouts';
 import { useWishPagination } from '@/components/templates/_shared/WishBatch';
 import { useGuestSubmission } from '@/components/templates/_shared/guest/useGuestSubmission';
 
@@ -38,6 +39,7 @@ export function WishPromptSlot({ t }: SlotProps) {
  * work) is gone rather than ported.
  */
 export function WishFormSlot({ onSubmitWish, editing, editor, t, photoBoothEnabled, onUploadPhoto, stageLayers, layer }: SlotProps) {
+  const schedule = useTimeouts();
   const submission = useGuestSubmission();
   const { step, setStep, form, setForm, submitting, setSubmitting, sent, setSent } = useWishFlow();
   const { close } = useSheets();
@@ -61,7 +63,7 @@ export function WishFormSlot({ onSubmitWish, editing, editor, t, photoBoothEnabl
       if (photoBoothEnabled && onUploadPhoto) {
         setStep('photo');
       } else {
-        setTimeout(() => { setSent(false); if (layer?.presentation !== 'inline') close(); }, 1500);
+        schedule(() => { setSent(false); if (layer?.presentation !== 'inline') close(); }, 1500);
       }
     } catch {
       alert('Failed to submit your wish');

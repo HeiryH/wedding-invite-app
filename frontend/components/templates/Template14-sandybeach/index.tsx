@@ -1,8 +1,8 @@
 'use client';
+import { useStageComposition } from '../_shared/useStageComposition';
 import { useInvitationAudio } from '../_shared/hooks/useInvitationAudio';
 import { configValue } from '@/components/templates/configValue';
 import type { TemplateRsvpSubmission, PhotoUploadSubmission } from '@/components/templates/guestContracts';
-
 
 import { useMemo, useCallback } from 'react';
 import type { CSSProperties } from 'react';
@@ -15,13 +15,10 @@ import { useReducedMotion } from '@/lib/useReducedMotion';
 import type { Breakpoint, EditorHandle, SlotProps, StageId } from './types';
 import { T14_ASSETS, T14_STAGES, STAGE_GROUPS } from './data/stages';
 import { T14_ASSET_SIZES } from './data/assetSizes';
-import { useStageLayout } from '@/components/templates/_shared/layout';
-import { useStageReveal } from '@/components/templates/_shared/hooks/useStageReveal';
-import { useParallax } from '@/components/templates/_shared/hooks/useParallax';
 import { useBreakpoint } from '@/components/templates/_shared/hooks/useBreakpoint';
 import { EngineProvider } from '@/components/templates/_shared/engine';
 import Stage from '@/components/templates/_shared/Stage';
-import { SLOT_REGISTRY, sheetLayerGroups, stageHasContent, visibleSlotLayers } from '@/components/templates/_shared/slots';
+import { SLOT_REGISTRY, stageHasContent, visibleSlotLayers } from '@/components/templates/_shared/slots';
 import { SlotFlowProviders } from '@/components/templates/_shared/slots/FlowProviders';
 import SheetHost from '@/components/templates/_shared/SheetHost';
 import { fontVar } from '@/lib/fonts/registry';
@@ -115,8 +112,6 @@ export default function Template14({
   // lay out the mobile composition without resizing their window.
   const breakpoint: Breakpoint = useBreakpoint(editing ? editor!.breakpoint : undefined);
 
-
-
   const musicUrl = t('music.url', '');
   const musicLoop = t('music.loop', 'true') === 'true';
   const { isPlaying: musicPlaying, toggle: toggleMusic, enabled: musicEnabled } = useInvitationAudio(musicUrl, musicLoop, { disabled: editing });
@@ -187,20 +182,15 @@ export default function Template14({
   // The Adjust panel lives in the parent customize page and writes straight into `customConfig`,
   // so the layout renders directly from it — no cross-iframe patch protocol, no optimistic shadow.
   // `editor` only carries which layer to outline while editing.
-  const stages = useStageLayout('t14', T14_STAGES, stageIds, breakpoint, customConfig);
+  const { stages, sheetGroups, rootRef, seen } = useStageComposition('t14', T14_STAGES, stageIds, breakpoint, customConfig, slotProps, reduced, parallaxMode);
   // Forms live in a bottom sheet rather than on the stage: a stage is an art composition (scenery
   // drawn around a specific element) while a form is variable-height content, so inline it has to
   // reserve a fixed box its absolutely-positioned neighbours can never reflow into. Collected
   // across every stage so one host can mount them all — see _shared/SheetHost.tsx.
-  const sheetGroups = useMemo(() => sheetLayerGroups(stages, slotProps), [stages, slotProps]);
-  const { rootRef, seen } = useStageReveal(reduced, stageIds.join(','));
-  useParallax(rootRef, parallaxMode, reduced);
 
   const firstStageId = stages[0]?.def.id;
 
   const activeSection = useScrollSection({ rootRef, stageGroups: STAGE_GROUPS });
-
-
 
   const navTo = (code: string) => {
     const first = STAGE_GROUPS[code]?.[0];

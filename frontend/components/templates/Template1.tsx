@@ -1,4 +1,7 @@
 'use client';
+import { useRsvpController } from '@/components/templates/_shared/guest/useRsvpController';
+import { useTimeouts } from '@/components/templates/_shared/hooks/useTimeouts';
+import WishBatch from '@/components/templates/_shared/WishBatch';
 import { MusicSlot } from './_shared/slots/ChromeSlots';
 import { getImageUrl } from '@/lib/utils';
 import { formatEventDate, formatEventTime } from '@/lib/eventDateFormat';
@@ -9,7 +12,6 @@ import { useScrollSection } from './_shared/nav/useScrollSection';
 import { animateScrollIntoView } from './_shared/animateScrollTo';
 import OrderedSections from './_shared/OrderedSections';
 import type { TemplateRsvpSubmission, PhotoUploadSubmission, TemplateWishSubmission } from '@/components/templates/guestContracts';
-
 
 import { useContext, useState, useEffect } from 'react';
 import { SeatingPreviewContext } from './_shared/slots/preview';
@@ -55,6 +57,28 @@ export default function Template1({
   itinerary = [],
   editor,
 }: Template1Props) {
+  const {
+    step: rsvpStep,
+    setStep: setRsvpStep,
+    isAttending,
+    setIsAttending,
+    selectedTableId,
+    setSelectedTableId,
+    form: rsvpData,
+    setForm: setRsvpData,
+    submitting: rsvpSubmitting,
+    setSubmitting: setRsvpSubmitting,
+    done: rsvpSuccess,
+    setDone: setRsvpSuccess
+  } = useRsvpController({
+    guestName: '',
+    email: '',
+    phoneNumber: '',
+    brideOrGroomSide: 'Bride' as 'Bride' | 'Groom',
+    numberOfAttendees: 1,
+    songRequest: '',
+  });
+  const schedule = useTimeouts();
   const submission = useGuestSubmission();
   const t = (key: string, fallback: string) => configValue(customConfig, key, fallback);
   const showIslamicDate = customConfig?.['general.showIslamicDate'] === 'true';
@@ -86,7 +110,6 @@ export default function Template1({
     if (target) animateScrollIntoView(target);
   };
 
-
   // Every section is mounted at once now, so the Adjust panel's "select a stage" affordance
   // scrolls to it like the other continuous-scroll templates instead of switching a tab.
   useEffect(() => {
@@ -98,19 +121,6 @@ export default function Template1({
 
   // RSVP Form State
   const seatingPreview = useContext(SeatingPreviewContext);
-  const [rsvpStep, setRsvpStep] = useState<1 | 2>(1);
-  const [isAttending, setIsAttending] = useState(true);
-  const [selectedTableId, setSelectedTableId] = useState<number | null>(null);
-  const [rsvpData, setRsvpData] = useState({
-    guestName: '',
-    email: '',
-    phoneNumber: '',
-    brideOrGroomSide: 'Bride' as 'Bride' | 'Groom',
-    numberOfAttendees: 1,
-    songRequest: '',
-  });
-  const [rsvpSubmitting, setRsvpSubmitting] = useState(false);
-  const [rsvpSuccess, setRsvpSuccess] = useState(false);
 
   // Wish Form State
   const [wishData, setWishData] = useState({
@@ -155,7 +165,7 @@ export default function Template1({
         numberOfAttendees: 1,
         songRequest: '',
       });
-      setTimeout(() => {
+      schedule(() => {
         setRsvpSuccess(false);
         scrollToSection('wishes');
       }, 2000);
@@ -186,7 +196,7 @@ export default function Template1({
         numberOfAttendees: 1,
         songRequest: '',
       });
-      setTimeout(() => {
+      schedule(() => {
         setRsvpSuccess(false);
         scrollToSection('wishes');
       }, 2000);
@@ -205,7 +215,7 @@ export default function Template1({
       if (!await submission.submit(() => onSubmitWish(wishData), 'Could not send your wish. Please try again.')) return;
       setWishSuccess(true);
       setWishData({ guestName: '', message: '' });
-      setTimeout(() => setWishSuccess(false), 3000);
+      schedule(() => setWishSuccess(false), 3000);
     } catch (err) {
       alert('Failed to submit wish');
     } finally {
@@ -250,7 +260,7 @@ export default function Template1({
       setPhotoData({ guestName: '', caption: '' });
       setSelectedFile(null);
       setPreviewUrl(null);
-      setTimeout(() => setPhotoSuccess(false), 3000);
+      schedule(() => setPhotoSuccess(false), 3000);
     } catch (err) {
       alert('Failed to upload photo');
     } finally {
@@ -807,8 +817,7 @@ export default function Template1({
                     </div>
                   ) : (
                     <div className="space-y-4">
-                      {wishes
-                        .slice()
+                      <WishBatch wishes={wishes}>{(visibleWishes) => visibleWishes
                         .map((wish) => (
                           <div
                             key={wish.wishId}
@@ -824,7 +833,7 @@ export default function Template1({
                               {formatEventDate(new Date(wish.createdDate))}
                             </p>
                           </div>
-                        ))}
+                        ))}</WishBatch>
                     </div>
                   )}
                 </div>

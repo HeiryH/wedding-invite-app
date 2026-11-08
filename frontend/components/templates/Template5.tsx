@@ -1,4 +1,6 @@
 'use client';
+import { useRsvpController } from '@/components/templates/_shared/guest/useRsvpController';
+import { useTimeouts } from '@/components/templates/_shared/hooks/useTimeouts';
 import { useWishPagination } from '@/components/templates/_shared/WishBatch';
 import { getImageUrl } from '@/lib/utils';
 import { formatEventDate } from '@/lib/eventDateFormat';
@@ -8,7 +10,6 @@ import { useDialogBehavior } from './_shared/hooks/useDialogBehavior';
 import { useGuestSubmission } from '@/components/templates/_shared/guest/useGuestSubmission';
 import { guestLimit, normalizeRsvp, validatedPhoto } from '@/components/templates/_shared/guest/rules';
 import type { TemplateRsvpSubmission, PhotoUploadSubmission, TemplateWishSubmission } from '@/components/templates/guestContracts';
-
 
 import { Fragment, useContext, useState, useEffect, useMemo, useRef, type CSSProperties, type ReactNode } from 'react';
 import { useCountdownToDate as useCountdown } from './_shared/hooks/useCountdownToDate';
@@ -59,6 +60,28 @@ interface RSVPModalProps {
 }
 
 function RSVPModal({ wedding, onRSVP, onClose, seatingEnabled, tables, t, subtitleStyle }: RSVPModalProps) {
+  const {
+    step: rsvpStep,
+    setStep: setRsvpStep,
+    isAttending,
+    setIsAttending,
+    selectedTableId,
+    setSelectedTableId,
+    form: rsvpData,
+    setForm: setRsvpData,
+    submitting: rsvpSubmitting,
+    setSubmitting: setRsvpSubmitting,
+    done: rsvpSuccess,
+    setDone: setRsvpSuccess
+  } = useRsvpController({
+    guestName: '',
+    email: '',
+    phoneNumber: '',
+    brideOrGroomSide: 'Bride' as 'Bride' | 'Groom',
+    numberOfAttendees: 1,
+    songRequest: '',
+  });
+  const schedule = useTimeouts();
   const dialogRef = useRef<HTMLDivElement>(null);
   useDialogBehavior(dialogRef, true, onClose);
   const submission = useGuestSubmission();
@@ -69,19 +92,6 @@ function RSVPModal({ wedding, onRSVP, onClose, seatingEnabled, tables, t, subtit
     : null;
 
   const seatingPreview = useContext(SeatingPreviewContext);
-  const [rsvpStep, setRsvpStep] = useState<1 | 2>(1);
-  const [isAttending, setIsAttending] = useState(true);
-  const [selectedTableId, setSelectedTableId] = useState<number | null>(null);
-  const [rsvpData, setRsvpData] = useState({
-    guestName: '',
-    email: '',
-    phoneNumber: '',
-    brideOrGroomSide: 'Bride' as 'Bride' | 'Groom',
-    numberOfAttendees: 1,
-    songRequest: '',
-  });
-  const [rsvpSubmitting, setRsvpSubmitting] = useState(false);
-  const [rsvpSuccess, setRsvpSuccess] = useState(false);
 
   const submitRSVP = async () => {
     if (seatingPreview) return;
@@ -89,7 +99,7 @@ function RSVPModal({ wedding, onRSVP, onClose, seatingEnabled, tables, t, subtit
     try {
       if (!await submission.submit(() => onRSVP(normalizeRsvp({ ...rsvpData, isAttending, tableId: selectedTableId }, wedding, tables)), 'Could not send your RSVP. Please try again.')) return;
       setRsvpSuccess(true);
-      setTimeout(() => { setRsvpSuccess(false); onClose(); }, 2000);
+      schedule(() => { setRsvpSuccess(false); onClose(); }, 2000);
     } catch (error: any) {
       alert(error?.response?.data?.message || 'Failed to submit RSVP');
     } finally {
@@ -354,8 +364,6 @@ function MusicBubble({ url, loop }: { url: string; loop: boolean }) {
 
 // ── Countdown hook ────────────────────────────────────────────────────────────
 
-
-
 // ── Shadow preset → CSS ───────────────────────────────────────────────────────
 
 function shadowOf(preset: string): string {
@@ -382,6 +390,7 @@ export default function Template5({
   itinerary = [],
   editor,
 }: Template5Props) {
+  const schedule = useTimeouts();
   const submission = useGuestSubmission();
   const t = (key: string, fallback: string) => configValue(customConfig, key, fallback);
 
@@ -608,7 +617,7 @@ const NAV_EMOJIS: Record<string, string> = {
       setWishSuccess(true);
       setWishData({ guestName: '', message: '' });
       setWishExpanded(false);
-      setTimeout(() => setWishSuccess(false), 3000);
+      schedule(() => setWishSuccess(false), 3000);
     } catch { alert('Failed to submit wish'); }
     finally { setWishSubmitting(false); }
   };
@@ -640,7 +649,7 @@ const NAV_EMOJIS: Record<string, string> = {
       setSelectedFile(null);
       setPreviewUrl(null);
       setPhotoExpanded(false);
-      setTimeout(() => setPhotoSuccess(false), 3000);
+      schedule(() => setPhotoSuccess(false), 3000);
     } catch { alert('Failed to upload photo'); }
     finally { setPhotoSubmitting(false); }
   };
@@ -659,7 +668,6 @@ const NAV_EMOJIS: Record<string, string> = {
   const arcSagitta = arcR - Math.sqrt(arcR ** 2 - (arcChord / 2) ** 2);
   const vbTop = Math.min(150, Math.round(250 - arcSagitta - 25));
   const vbH = 250 - vbTop;
-
 
   const sections: Record<SectionCode, ReactNode> = {
     welcome: (<>
@@ -851,10 +859,10 @@ const NAV_EMOJIS: Record<string, string> = {
                 </filter>
               </defs>
 
-              <path 
-              id="path" 
+              <path
+              id="path"
               // d={arcPath}
-              d="M 54,250 A 206,206 0 0,1 446,250" 
+              d="M 54,250 A 206,206 0 0,1 446,250"
               fill="transparent" />
               {/* <path d={arcPath} fill="none" stroke="rgba(255,248,230,0.30)"
                 strokeWidth="54" strokeLinecap="round" filter="url(#arc-bloom)" />

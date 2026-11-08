@@ -1,11 +1,11 @@
 'use client';
+import { useTimeouts } from '@/components/templates/_shared/hooks/useTimeouts';
 import { getImageUrl } from '@/lib/utils';
 import { formatEventDate, formatEventTime } from '@/lib/eventDateFormat';
 import { configValue } from '@/components/templates/configValue';
 import { useGuestSubmission } from '@/components/templates/_shared/guest/useGuestSubmission';
 import { guestLimit, normalizeRsvp, validatedPhoto } from '@/components/templates/_shared/guest/rules';
 import type { TemplateRsvpSubmission, PhotoUploadSubmission, TemplateWishSubmission } from '@/components/templates/guestContracts';
-
 
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -163,6 +163,7 @@ export default function Template8({
   customConfig,
   itinerary = [],
 }: Template8Props) {
+  const schedule = useTimeouts();
   const submission = useGuestSubmission();
   const t = (key: string, fallback: string) => configValue(customConfig, key, fallback);
   const honoree = wedding.name1 || wedding.brideName || 'Guest of Honor';
@@ -214,7 +215,7 @@ export default function Template8({
       setRsvpStep(1);
       setSelectedTableId(null);
       setRsvpData({ guestName: '', email: '', phoneNumber: '', numberOfAttendees: 1, songRequest: '' });
-      setTimeout(() => { setRsvpSuccess(false); scrollTo('wishes'); }, 2000);
+      schedule(() => { setRsvpSuccess(false); scrollTo('wishes'); }, 2000);
     } catch { alert('Failed to submit RSVP'); }
     finally { setRsvpSubmitting(false); }
   };
@@ -232,7 +233,7 @@ export default function Template8({
       if (!await submission.submit(() => onSubmitWish(wishData), 'Could not send your wish. Please try again.')) return;
       setWishSuccess(true);
       setWishData({ guestName: '', message: '' });
-      setTimeout(() => setWishSuccess(false), 3000);
+      schedule(() => setWishSuccess(false), 3000);
     } catch { alert('Failed to submit wish'); }
     finally { setWishSubmitting(false); }
   };
@@ -258,7 +259,7 @@ export default function Template8({
       setPhotoData({ guestName: '', caption: '' });
       setSelectedFile(null);
       setPreviewUrl(null);
-      setTimeout(() => setPhotoSuccess(false), 3000);
+      schedule(() => setPhotoSuccess(false), 3000);
     } catch { alert('Failed to upload photo'); }
     finally { setPhotoSubmitting(false); }
   };

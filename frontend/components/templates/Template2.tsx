@@ -1,4 +1,6 @@
 'use client';
+import { useRsvpController } from '@/components/templates/_shared/guest/useRsvpController';
+import { useTimeouts } from '@/components/templates/_shared/hooks/useTimeouts';
 import { MusicSlot } from './_shared/slots/ChromeSlots';
 import WishBatch from '@/components/templates/_shared/WishBatch';
 import { getImageUrl } from '@/lib/utils';
@@ -10,7 +12,6 @@ import { useScrollSection } from './_shared/nav/useScrollSection';
 import { animateScrollIntoView } from './_shared/animateScrollTo';
 import OrderedSections from './_shared/OrderedSections';
 import type { TemplateRsvpSubmission, PhotoUploadSubmission, TemplateWishSubmission } from '@/components/templates/guestContracts';
-
 
 import { useContext, useState } from 'react';
 import { SeatingPreviewContext } from './_shared/slots/preview';
@@ -56,6 +57,28 @@ export default function Template2({
     itinerary = [],
     editor,
 }: Template2Props) {
+  const {
+    isAttending,
+    setIsAttending,
+    form: rsvpData,
+    setForm: setRsvpData,
+    step: rsvpStep,
+    setStep: setRsvpStep,
+    selectedTableId,
+    setSelectedTableId,
+    submitting: rsvpSubmitting,
+    setSubmitting: setRsvpSubmitting,
+    done: rsvpSuccess,
+    setDone: setRsvpSuccess
+  } = useRsvpController({
+        guestName: '',
+        email: '',
+        phoneNumber: '',
+        brideOrGroomSide: 'Bride' as 'Bride' | 'Groom',
+        numberOfAttendees: 1,
+        songRequest: '',
+    });
+  const schedule = useTimeouts();
   const submission = useGuestSubmission();
     const t = (key: string, fallback: string) => configValue(customConfig, key, fallback);
     const showIslamicDate = customConfig?.['general.showIslamicDate'] === 'true';
@@ -91,20 +114,8 @@ export default function Template2({
     const paxLimit = guestLimit(wedding);
 
     // RSVP Form State
-    const [isAttending, setIsAttending] = useState(true);
-    const [rsvpData, setRsvpData] = useState({
-        guestName: '',
-        email: '',
-        phoneNumber: '',
-        brideOrGroomSide: 'Bride' as 'Bride' | 'Groom',
-        numberOfAttendees: 1,
-        songRequest: '',
-    });
+
     const seatingPreview = useContext(SeatingPreviewContext);
-    const [rsvpStep, setRsvpStep] = useState<1 | 2>(1);
-    const [selectedTableId, setSelectedTableId] = useState<number | null>(null);
-    const [rsvpSubmitting, setRsvpSubmitting] = useState(false);
-    const [rsvpSuccess, setRsvpSuccess] = useState(false);
 
     // Wish Form State
     const [wishData, setWishData] = useState({
@@ -139,7 +150,7 @@ export default function Template2({
             setRsvpStep(1);
             setSelectedTableId(null);
             setRsvpData({ guestName: '', email: '', phoneNumber: '', brideOrGroomSide: 'Bride', numberOfAttendees: 1, songRequest: '' });
-            setTimeout(() => { setRsvpSuccess(false); scrollToSection('wishes'); }, 2000);
+            schedule(() => { setRsvpSuccess(false); scrollToSection('wishes'); }, 2000);
         } catch { alert('Failed to submit RSVP'); }
         finally { setRsvpSubmitting(false); }
     };
@@ -159,7 +170,7 @@ export default function Template2({
             if (!await submission.submit(() => onSubmitWish(wishData), 'Could not send your wish. Please try again.')) return;
             setWishSuccess(true);
             setWishData({ guestName: '', message: '' });
-            setTimeout(() => setWishSuccess(false), 3000);
+            schedule(() => setWishSuccess(false), 3000);
         } catch (err) {
             alert('Failed to submit wish');
         } finally {
@@ -204,7 +215,7 @@ export default function Template2({
             setPhotoData({ guestName: '', caption: '' });
             setSelectedFile(null);
             setPreviewUrl(null);
-            setTimeout(() => setPhotoSuccess(false), 3000);
+            schedule(() => setPhotoSuccess(false), 3000);
         } catch (err) {
             alert('Failed to upload photo');
         } finally {

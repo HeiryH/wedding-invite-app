@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import Template1 from './Template1';
 import Template2 from './Template2';
 import Template3 from './Template3';
+import Template4 from './Template4';
 import Template6 from './Template6';
 import type { TemplateRenderProps } from './templateTypes';
 
@@ -44,4 +45,14 @@ describe('resolved section order in document flow', () => {
     expect(within(container.querySelector('#rsvp')! as HTMLElement).getByPlaceholderText(/Your name/i)).toHaveValue('Nadia');
     expect(domOrder(container)).toEqual([...order].reverse());
   });
+  it.each([[1, Template1], [2, Template2], [3, Template3], [4, Template4], [6, Template6]] as const)('T%i batches a populated guestbook without losing cards', (id, Component) => {
+    const p = props(id);
+    p.wishes = Array.from({ length: 23 }, (_, index) => ({ wishId: index, eventId: 1, guestName: `Guest ${index}`, message: `Audit wish ${index}`, createdDate: '2026-11-08' }));
+    const { container } = render(<Component {...p} />);
+    const cards = () => [...container.querySelectorAll('p')].filter((node) => node.textContent?.includes('Audit wish '));
+    expect(cards()).toHaveLength(10);
+    const button = [...container.querySelectorAll('button')].find((node) => node.textContent?.includes('Load more (13 remaining)'))!;
+    fireEvent.click(button); expect(cards()).toHaveLength(20);
+  });
+
 });

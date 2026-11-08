@@ -1,0 +1,39 @@
+{
+  "checkpoint": "0d3a4fd",
+  "implementation_branch": "fix/template-consistency",
+  "method": "Synthetic standalone preview fixtures in Chromium, mobile 390x844, reduced motion. Guestbook has 100 wishes; authored stage has two countdown slots. Counts are DOM cards and active 1000ms intervals, not latency or network pagination.",
+  "results": [
+    {
+      "version": "checkpoint",
+      "test": "guestbook",
+      "wishCards": 100,
+      "oneSecondTimers": 0
+    },
+    {
+      "version": "checkpoint",
+      "test": "clocks",
+      "wishCards": 0,
+      "oneSecondTimers": 2
+    },
+    {
+      "version": "current",
+      "test": "guestbook",
+      "wishCards": 10,
+      "oneSecondTimers": 0
+    },
+    {
+      "version": "current",
+      "test": "clocks",
+      "wishCards": 0,
+      "oneSecondTimers": 1
+    }
+  ],
+  "overlay_source_lines": {
+    "checkpoint": 495,
+    "shared_implementation_and_wrappers": 131
+  },
+  "limitations": [
+    "No claim about production bundle size, Core Web Vitals, latency or server-side pagination.",
+    "Prototype T8/T9 productionization remains excluded."
+  ]
+}

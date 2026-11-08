@@ -1,4 +1,5 @@
 'use client';
+import { useRsvpController } from '@/components/templates/_shared/guest/useRsvpController';
 import { MusicSlot } from './_shared/slots/ChromeSlots';
 import WishBatch from '@/components/templates/_shared/WishBatch';
 import { getImageUrl } from '@/lib/utils';
@@ -10,7 +11,6 @@ import { useScrollSection } from './_shared/nav/useScrollSection';
 import { animateScrollIntoView } from './_shared/animateScrollTo';
 import OrderedSections from './_shared/OrderedSections';
 import type { TemplateRsvpSubmission, PhotoUploadSubmission, TemplateWishSubmission } from '@/components/templates/guestContracts';
-
 
 import { useContext, useState, useEffect } from 'react';
 import { SeatingPreviewContext } from './_shared/slots/preview';
@@ -92,6 +92,27 @@ export default function Template3({
   itinerary = [],
   editor,
 }: Template3Props) {
+  const {
+    isAttending,
+    setIsAttending,
+    form: rsvpData,
+    setForm: setRsvpData,
+    step: rsvpStep,
+    setStep: setRsvpStep,
+    selectedTableId,
+    setSelectedTableId,
+    submitting: rsvpSubmitting,
+    setSubmitting: setRsvpSubmitting,
+    done: rsvpSuccess,
+    setDone: setRsvpSuccess
+  } = useRsvpController({
+    guestName: '',
+    email: '',
+    phoneNumber: '',
+    brideOrGroomSide: 'Bride' as 'Bride' | 'Groom',
+    numberOfAttendees: 1,
+    songRequest: '',
+  });
   const submission = useGuestSubmission();
   const t = (key: string, fallback: string) => configValue(customConfig, key, fallback);
   const showIslamicDate = customConfig?.['general.showIslamicDate'] === 'true';
@@ -123,7 +144,6 @@ export default function Template3({
     if (target) animateScrollIntoView(target);
   };
 
-
   // Every section is mounted at once now, so the Adjust panel's "select a stage" affordance
   // scrolls to it like the other continuous-scroll templates instead of switching a tab.
   useEffect(() => {
@@ -134,20 +154,8 @@ export default function Template3({
   }, [editor?.selectedStage, editor?.enabled]);
 
   // RSVP Form State
-  const [isAttending, setIsAttending] = useState(true);
-  const [rsvpData, setRsvpData] = useState({
-    guestName: '',
-    email: '',
-    phoneNumber: '',
-    brideOrGroomSide: 'Bride' as 'Bride' | 'Groom',
-    numberOfAttendees: 1,
-    songRequest: '',
-  });
+
   const seatingPreview = useContext(SeatingPreviewContext);
-  const [rsvpStep, setRsvpStep] = useState<1 | 2>(1);
-  const [selectedTableId, setSelectedTableId] = useState<number | null>(null);
-  const [rsvpSubmitting, setRsvpSubmitting] = useState(false);
-  const [rsvpSuccess, setRsvpSuccess] = useState(false);
 
   // Wish Form State
   const [wishData, setWishData] = useState({ guestName: '', message: '' });

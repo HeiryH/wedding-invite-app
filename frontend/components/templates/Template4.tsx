@@ -1,4 +1,6 @@
 'use client';
+import { useRsvpController } from '@/components/templates/_shared/guest/useRsvpController';
+import { useTimeouts } from '@/components/templates/_shared/hooks/useTimeouts';
 import { MusicSlot } from './_shared/slots/ChromeSlots';
 import WishBatch from '@/components/templates/_shared/WishBatch';
 import { getImageUrl } from '@/lib/utils';
@@ -8,7 +10,6 @@ import { useDialogBehavior } from './_shared/hooks/useDialogBehavior';
 import { useGuestSubmission } from '@/components/templates/_shared/guest/useGuestSubmission';
 import { guestLimit, normalizeRsvp, validatedPhoto } from '@/components/templates/_shared/guest/rules';
 import type { TemplateRsvpSubmission, PhotoUploadSubmission, TemplateWishSubmission } from '@/components/templates/guestContracts';
-
 
 import { useContext, useState, useEffect, useRef } from 'react';
 import { useCountdownToDate as useCountdown } from './_shared/hooks/useCountdownToDate';
@@ -71,7 +72,6 @@ function TornEdge({ fromDark = false }: { fromDark?: boolean }) {
 }
 
 // Countdown hook (live)
-
 
 // ── Minimal SVG icons ──────────────────────────────────────
 const IcoChurch = () => (
@@ -358,6 +358,28 @@ export default function Template4({
   itinerary = [],
   editor,
 }: Template4Props) {
+  const {
+    isAttending,
+    setIsAttending,
+    form: rsvpData,
+    setForm: setRsvpData,
+    step: rsvpStep,
+    setStep: setRsvpStep,
+    selectedTableId,
+    setSelectedTableId,
+    submitting: rsvpSubmitting,
+    setSubmitting: setRsvpSubmitting,
+    done: rsvpSuccess,
+    setDone: setRsvpSuccess
+  } = useRsvpController({
+    guestName: '',
+    email: '',
+    phoneNumber: '',
+    brideOrGroomSide: 'Bride' as 'Bride' | 'Groom',
+    numberOfAttendees: 1,
+    songRequest: '',
+  });
+  const schedule = useTimeouts();
   const submission = useGuestSubmission();
   const t = (key: string, fallback: string) => configValue(customConfig, key, fallback);
   const showIslamicDate = customConfig?.['general.showIslamicDate'] === 'true';
@@ -463,20 +485,8 @@ export default function Template4({
   };
 
   // RSVP
-  const [isAttending, setIsAttending] = useState(true);
-  const [rsvpData, setRsvpData] = useState({
-    guestName: '',
-    email: '',
-    phoneNumber: '',
-    brideOrGroomSide: 'Bride' as 'Bride' | 'Groom',
-    numberOfAttendees: 1,
-    songRequest: '',
-  });
+
   const seatingPreview = useContext(SeatingPreviewContext);
-  const [rsvpStep, setRsvpStep] = useState<1 | 2>(1);
-  const [selectedTableId, setSelectedTableId] = useState<number | null>(null);
-  const [rsvpSubmitting, setRsvpSubmitting] = useState(false);
-  const [rsvpSuccess, setRsvpSuccess] = useState(false);
 
   const submitRSVP = async () => {
     if (seatingPreview) return;
@@ -487,7 +497,7 @@ export default function Template4({
       setRsvpStep(1);
       setSelectedTableId(null);
       setRsvpData({ guestName: '', email: '', phoneNumber: '', brideOrGroomSide: 'Bride', numberOfAttendees: 1, songRequest: '' });
-      setTimeout(() => { setRsvpSuccess(false); scrollTo('t4-wishes'); }, 2200);
+      schedule(() => { setRsvpSuccess(false); scrollTo('t4-wishes'); }, 2200);
     } catch { alert('Failed to submit RSVP'); }
     finally { setRsvpSubmitting(false); }
   };
@@ -510,7 +520,7 @@ export default function Template4({
       if (!await submission.submit(() => onSubmitWish(wishData), 'Could not send your wish. Please try again.')) return;
       setWishSuccess(true);
       setWishData({ guestName: '', message: '' });
-      setTimeout(() => setWishSuccess(false), 3000);
+      schedule(() => setWishSuccess(false), 3000);
     } finally { setWishSubmitting(false); }
   };
 
@@ -525,7 +535,7 @@ export default function Template4({
     try {
       if (!await submission.submit(() => onUploadPhoto!(validatedPhoto(data)), 'Could not send your photo. Please try again.')) return false;
       setPhotoSuccess(true);
-      setTimeout(() => { setPhotoSuccess(false); setShowUpload(false); }, 2000);
+      schedule(() => { setPhotoSuccess(false); setShowUpload(false); }, 2000);
       return true;
     } finally { setPhotoSubmitting(false); }
   };
