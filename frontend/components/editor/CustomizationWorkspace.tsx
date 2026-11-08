@@ -1,4 +1,5 @@
 'use client';
+import { sectionArrangement, moveIndependentSection } from '@/components/templates/sectionArrangement';
 
 import { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import { useRouter } from 'next/navigation';
@@ -2074,11 +2075,7 @@ export default function CustomizationWorkspace({ masterTemplateId }: { masterTem
   };
 
   const handleMoveBlock = (code: string, dir: 'up' | 'down') => {
-    const index = sectionOrder.indexOf(code);
-    const swap = dir === 'up' ? index - 1 : index + 1;
-    if (index < 0 || swap < 0 || swap >= sectionOrder.length) return;
-    const next = [...sectionOrder];
-    [next[index], next[swap]] = [next[swap], next[index]];
+    const next = moveIndependentSection(wedding?.templateId ?? 1, sectionOrder, code, dir);
     updateSectionOrder(next);
   };
 
@@ -2132,9 +2129,10 @@ export default function CustomizationWorkspace({ masterTemplateId }: { masterTem
 
   const showPortraitSlots = [3, 4].includes(wedding.templateId);
   const portraitSlots = wedding.templateId === 4 ? PORTRAIT_SLOTS_T4 : PORTRAIT_SLOTS_T3;
-  const canArrangeSections = schema.has('section.order');
+  const canArrangeSections = schema.has('section.order') && !wedding.templateStagesJson && sectionArrangement(wedding.templateId, sectionOrder).movable.length > 0;
   const availableBlocks = canArrangeSections ? SECTION_BLOCKS.filter((b) => !sectionOrder.includes(b.code)) : [];
-  const activeSectionIndex = canArrangeSections ? sectionOrder.indexOf(activeBlock) : -1;
+  const arrangement = sectionArrangement(wedding.templateId, sectionOrder);
+  const activeSectionIndex = canArrangeSections ? arrangement.movable.indexOf(activeBlock) : -1;
   const blockInfo = BLOCK_INFO[activeBlock] ?? BLOCK_INFO.details;
 
   // ── Schema-driven inspector ─────────────────────────────────────────────────
@@ -2612,7 +2610,7 @@ export default function CustomizationWorkspace({ masterTemplateId }: { masterTem
               mode={editorMode}
               onToggle={cycleEditorMode}
               activeBlock={activeBlock}
-              sectionOrder={sectionOrder}
+              sectionOrder={arrangement.displayed}
               onSelectBlock={selectBlock}
               hasMusic={schema.has('music.url')}
               hasNav={schema.has('nav.layout')}
@@ -2639,7 +2637,7 @@ export default function CustomizationWorkspace({ masterTemplateId }: { masterTem
                         aria-label="Move section up" title="Move section up" disabled={activeSectionIndex === 0}
                         onClick={() => handleMoveBlock(activeBlock, 'up')}><Icon name="chevron-up" size={16} /></Button>
                       <Button variant="ghost" tone="neutral" size="sm" style={{ width: 28, padding: 0 }}
-                        aria-label="Move section down" title="Move section down" disabled={activeSectionIndex === sectionOrder.length - 1}
+                        aria-label="Move section down" title="Move section down" disabled={activeSectionIndex === arrangement.movable.length - 1}
                         onClick={() => handleMoveBlock(activeBlock, 'down')}><Icon name="chevron-down" size={16} /></Button>
                       <Button variant="ghost" tone="danger" size="sm" style={{ width: 28, padding: 0 }}
                         aria-label="Remove section" title="Remove section"
@@ -2664,6 +2662,7 @@ export default function CustomizationWorkspace({ masterTemplateId }: { masterTem
                 </div>
                 <div style={{ color: 'var(--text-muted)', fontSize: 12.5, marginTop: 4, fontFamily: 'var(--font-ui)' }}>
                   {blockInfo.subtitle}
+                  {canArrangeSections && arrangement.note && <p style={{ marginTop: 8 }}>{arrangement.note}</p>}
                   {activeBlock === 'details' && availableBlocks.length > 0 && ' Use + to restore a section.'}
                 </div>
               </div>
@@ -2711,7 +2710,7 @@ export default function CustomizationWorkspace({ masterTemplateId }: { masterTem
           setManualZoom={setManualZoom}
           activeBlock={activeBlock}
           onSelectBlock={block => selectBlock(block as BlockId)}
-          sectionOrder={sectionOrder}
+          sectionOrder={arrangement.displayed}
           editorMode={editorMode}
           onShowEditor={() => setEditorMode('expanded')}
           wedding={wedding}

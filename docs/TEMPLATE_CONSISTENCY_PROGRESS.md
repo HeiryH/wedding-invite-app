@@ -80,3 +80,9 @@ Keep the existing physical containers, layouts and schedule presentation. Expose
 Create explicit ceremony and programme sections, choose one organizer-driven programme presentation, and update navigation/Details/Adjust mappings together. Existing invites with saved grouped layouts must retain a legacy render path until explicitly converted; new independent layouts require visual approval and a tested conversion strategy. Existing layout bags must never be silently rewritten or reinterpreted in a different coordinate box.
 
 No T4 structural changes have been made. Phases 4–7 have not started. T8/T9 productionization/Adjust parity remains a later, separate decision as required by repository guidance.
+
+## T4 gate resolved — option A approved
+
+The user selected preservation of Minimal Noir's grouped composition. The editor now projects its grouped cover/details/programme entries ahead of the independently reorderable RSVP/Wishes/Photo Booth entries. Movement swaps only independent entries in the original saved logical order; it never rewrites grouped layout data. Grouped entries do not offer misleading move/remove controls. Existing content and the decorative hardcoded schedule remain unchanged. Prototype/cinematic/fixed compositions do not gain unsupported reorder controls.
+
+Validation: two ordering-policy tests plus the four existing workspace tests passed; TypeScript passed before subsequent phase work. T8/T9 productionization remains excluded.
