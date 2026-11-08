@@ -1,4 +1,7 @@
 'use client';
+import { useScrollSection } from './_shared/nav/useScrollSection';
+import { animateScrollIntoView } from './_shared/animateScrollTo';
+import OrderedSections from './_shared/OrderedSections';
 import type { TemplateRsvpSubmission, PhotoUploadSubmission, TemplateWishSubmission } from '@/components/templates/guestContracts';
 
 
@@ -68,32 +71,14 @@ export default function Template1({
     wishes: t('nav.wishes', 'Wishes'),
     photobooth: t('nav.photos', 'Photos'),
   };
-  const [activeSection, setActiveSection] = useState<SectionCode>('welcome');
+  const activeSection = useScrollSection({ sectionIds: sectionOrder });
 
   // Single-page flow: nav scrolls to the section instead of switching tabs.
   const scrollToSection = (code: SectionCode) => {
-    setActiveSection(code);
-    document.getElementById(code)?.scrollIntoView({ behavior: 'smooth' });
+    const target = document.getElementById(code);
+    if (target) animateScrollIntoView(target);
   };
 
-  // Scroll spy: keep the nav's active-tab highlight in sync while scrolling.
-  useEffect(() => {
-    const handleScroll = () => {
-      const scrollPosition = window.scrollY + 200;
-      for (const code of sectionOrder) {
-        const element = document.getElementById(code);
-        if (element) {
-          const { offsetTop, offsetHeight } = element;
-          if (scrollPosition >= offsetTop && scrollPosition < offsetTop + offsetHeight) {
-            setActiveSection(code);
-            break;
-          }
-        }
-      }
-    };
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, [sectionOrder.join(',')]);
 
   // Every section is mounted at once now, so the Adjust panel's "select a stage" affordance
   // scrolls to it like the other continuous-scroll templates instead of switching a tab.
@@ -304,7 +289,7 @@ export default function Template1({
       </nav>
 
       {/* Content: single-page flow — every section renders at once, nav scrolls between them */}
-      <main className="max-w-4xl mx-auto px-4 py-12 flex flex-col">
+      <OrderedSections as="main" order={sectionOrder} className="max-w-4xl mx-auto px-4 py-12 flex flex-col">
           {/* Welcome Section */}
             {sectionOrder.includes('welcome') && <motion.div
               id="welcome"
@@ -964,7 +949,7 @@ export default function Template1({
           </div>
         </motion.div>
       )}
-  </main>
+  </OrderedSections>
   <footer className="text-center py-6 text-gray-400 text-xs">
     {t('footer.tagline', 'Made with love for our special day')}
   </footer>

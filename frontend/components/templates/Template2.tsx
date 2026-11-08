@@ -1,8 +1,11 @@
 'use client';
+import { useScrollSection } from './_shared/nav/useScrollSection';
+import { animateScrollIntoView } from './_shared/animateScrollTo';
+import OrderedSections from './_shared/OrderedSections';
 import type { TemplateRsvpSubmission, PhotoUploadSubmission, TemplateWishSubmission } from '@/components/templates/guestContracts';
 
 
-import { useContext, useState, useEffect } from 'react';
+import { useContext, useState } from 'react';
 import { SeatingPreviewContext } from './_shared/slots/preview';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Wedding, Guest, Wish, Photo, SeatingTable, ItineraryItem } from '@/lib/api';
@@ -72,7 +75,7 @@ export default function Template2({
         wishes: t('nav.wishes', 'Wishes'),
         photobooth: t('nav.photos', 'Photos'),
     };
-    const [activeSection, setActiveSection] = useState<SectionCode>('welcome');
+    const activeSection = useScrollSection({ sectionIds: sectionOrder });
     const [showNav, setShowNav] = useState(true);
 
     const weddingDate = new Date(wedding.weddingDate);
@@ -115,28 +118,9 @@ export default function Template2({
 
     // Scroll to section
     const scrollToSection = (code: SectionCode) => {
-        setActiveSection(code);
-        document.getElementById(code)?.scrollIntoView({ behavior: 'smooth' });
+        const target = document.getElementById(code);
+        if (target) animateScrollIntoView(target);
     };
-
-    // Handle scroll spy
-    useEffect(() => {
-        const handleScroll = () => {
-            const scrollPosition = window.scrollY + 200;
-            for (const code of sectionOrder) {
-                const element = document.getElementById(code);
-                if (element) {
-                    const { offsetTop, offsetHeight } = element;
-                    if (scrollPosition >= offsetTop && scrollPosition < offsetTop + offsetHeight) {
-                        setActiveSection(code);
-                        break;
-                    }
-                }
-            }
-        };
-        window.addEventListener('scroll', handleScroll);
-        return () => window.removeEventListener('scroll', handleScroll);
-    }, [sectionOrder.join(',')]);
 
     const submitRSVP = async () => {
       if (seatingPreview) return;
@@ -222,7 +206,7 @@ export default function Template2({
 
     return (
         <>
-        <div className="flex flex-col bg-gradient-to-br from-yellow-50 via-amber-50 to-orange-50">
+        <OrderedSections as="div" order={sectionOrder} className="flex flex-col bg-gradient-to-br from-yellow-50 via-amber-50 to-orange-50">
             {/* Floating Navigation */}
             <AnimatePresence>
                 {showNav && (
@@ -937,7 +921,7 @@ export default function Template2({
                     </motion.div>
                 </section>
             )}
-        </div>
+        </OrderedSections>
         <footer className="text-center py-6 text-amber-500 text-xs">
             {t('footer.tagline', 'Made with love for our special day')}
         </footer>

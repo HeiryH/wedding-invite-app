@@ -7,6 +7,10 @@
  * same nav click — this makes jumping section to section look and feel identical everywhere.
  */
 export function animateScrollTo(top: number, duration = 380) {
+  if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches || duration <= 0) {
+    window.scrollTo(0, top);
+    return;
+  }
   const startY = window.scrollY;
   const delta = top - startY;
   if (Math.abs(delta) < 1) return;

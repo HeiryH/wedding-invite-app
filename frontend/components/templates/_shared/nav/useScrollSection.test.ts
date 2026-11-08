@@ -15,6 +15,11 @@ describe('sectionAtScrollLine', () => {
     expect(sectionAtScrollLine(sections, 791, 'rsvp')).toBe('cover');
   });
 
+  it('uses screen positions even if source order differs', () => {
+    expect(sectionAtScrollLine([sections[2], sections[0], sections[1]], 1800, 'cover')).toBe('rsvp');
+    expect(sectionAtScrollLine([], 1800, 'cover')).toBe('');
+  });
+
   it('tracks long sections and jumps by their starts', () => {
     expect(sectionAtScrollLine(sections, 1800, 'cover')).toBe('rsvp');
     expect(sectionAtScrollLine(sections, 2500, 'cover')).toBe('programme');

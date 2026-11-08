@@ -1,6 +1,6 @@
 # Template consistency execution plan
 
-Status: in progress; Phases 1–2 completed. See TEMPLATE_CONSISTENCY_PROGRESS.md for evidence and remaining gates.
+Status: Phases 1–2 completed; independent Phase 3 repairs completed. Waiting for the T4 layout-compatibility decision in TEMPLATE_CONSISTENCY_PROGRESS.md. Phases 4–7 have not started.
 Date: 2026-11-08
 Recovery checkpoint: `0d3a4fd` on `ae-unified`.
 Implementation branch: `fix/template-consistency`.

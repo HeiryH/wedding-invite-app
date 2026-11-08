@@ -1,4 +1,7 @@
 'use client';
+import { useScrollSection } from './_shared/nav/useScrollSection';
+import { animateScrollIntoView } from './_shared/animateScrollTo';
+import OrderedSections from './_shared/OrderedSections';
 import type { TemplateRsvpSubmission, PhotoUploadSubmission, TemplateWishSubmission } from '@/components/templates/guestContracts';
 
 
@@ -104,32 +107,14 @@ export default function Template3({
     wishes: t('nav.wishes', 'Wishes'),
     photobooth: t('nav.photos', 'Photos'),
   };
-  const [activeSection, setActiveSection] = useState<SectionCode>('welcome');
+  const activeSection = useScrollSection({ sectionIds: sectionOrder });
 
   // Single-page flow: nav scrolls to the section instead of switching tabs.
   const scrollToSection = (code: SectionCode) => {
-    setActiveSection(code);
-    document.getElementById(code)?.scrollIntoView({ behavior: 'smooth' });
+    const target = document.getElementById(code);
+    if (target) animateScrollIntoView(target);
   };
 
-  // Scroll spy: keep the nav's active-tab highlight in sync while scrolling.
-  useEffect(() => {
-    const handleScroll = () => {
-      const scrollPosition = window.scrollY + 200;
-      for (const code of sectionOrder) {
-        const element = document.getElementById(code);
-        if (element) {
-          const { offsetTop, offsetHeight } = element;
-          if (scrollPosition >= offsetTop && scrollPosition < offsetTop + offsetHeight) {
-            setActiveSection(code);
-            break;
-          }
-        }
-      }
-    };
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, [sectionOrder.join(',')]);
 
   // Every section is mounted at once now, so the Adjust panel's "select a stage" affordance
   // scrolls to it like the other continuous-scroll templates instead of switching a tab.
@@ -265,7 +250,7 @@ export default function Template3({
         </div>
       </nav>
 
-      <div className="max-w-5xl mx-auto px-4 py-10 flex flex-col">
+      <OrderedSections as="div" order={sectionOrder} className="max-w-5xl mx-auto px-4 py-10 flex flex-col">
           {/* ===== WELCOME ===== */}
             {sectionOrder.includes('welcome') && <motion.div
               id="welcome"
@@ -699,7 +684,7 @@ export default function Template3({
               </div>
             </motion.div>
           )}
-      </div>
+      </OrderedSections>
 
       {/* Footer */}
       <div className="text-center py-8 text-green-400 text-xs">

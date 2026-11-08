@@ -1,7 +1,7 @@
 'use client';
 import type { TemplateRsvpSubmission, PhotoUploadSubmission } from '@/components/templates/guestContracts';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { Fragment, useState, useEffect, useCallback, useRef, type ReactNode } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Wedding,
@@ -11,6 +11,8 @@ import {
   SeatingTable,
   CreateWish,
 } from '@/lib/api';
+import { useScrollSection } from '../_shared/nav/useScrollSection';
+import { animateScrollIntoView } from '../_shared/animateScrollTo';
 import { resolveSectionOrder } from '@/lib/templateUtils';
 import type { Breakpoint, EditorHandle } from '@/components/templates/_shared/types';
 import { useBreakpoint } from '@/components/templates/_shared/hooks/useBreakpoint';
@@ -76,7 +78,6 @@ export default function Template6({
   const overlayProps = { breakpoint: overlayBreakpoint, config: customConfig, editor };
   const { a, tx, sx, ax } = useAnchors(customConfig, overlayBreakpoint, editor);
 
-  const [activeSection, setActiveSection] = useState('welcome');
   const [musicPlaying, setMusicPlaying] = useState(false);
   const [musicExpanded, setMusicExpanded] = useState(true);
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -89,6 +90,7 @@ export default function Template6({
   const hasWalimah = Boolean(t('walimah.body', ''));
   const hasItinerary = itinerary.length > 0;
   const sections = resolveSectionOrder(rawOrder, hasWalimah, hasItinerary, photoBoothEnabled);
+  const activeSection = useScrollSection({ sectionIds: sections });
 
   const navItems = sections.map((id) => ({
     id,
@@ -119,30 +121,55 @@ export default function Template6({
   // Clean up audio on unmount
   useEffect(() => () => { audioRef.current?.pause(); }, []);
 
-  // Track active section via IntersectionObserver
-  useEffect(() => {
-    const observers: IntersectionObserver[] = [];
-    sections.forEach((id) => {
-      const el = document.getElementById(id);
-      if (!el) return;
-      const obs = new IntersectionObserver(
-        ([entry]) => { if (entry.isIntersecting) setActiveSection(id); },
-        { threshold: 0.4 }
-      );
-      obs.observe(el);
-      observers.push(obs);
-    });
-    return () => observers.forEach((o) => o.disconnect());
-  }, [sections]);
-
   const scrollToSection = useCallback((id: string) => {
-    document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' });
+    const target = document.getElementById(id);
+    if (target) animateScrollIntoView(target);
   }, []);
 
   const scrollDown = useCallback(() => {
     const next = sections[1];
     if (next) scrollToSection(next);
   }, [sections, scrollToSection]);
+
+  const sectionContent: Record<string, ReactNode> = {
+    welcome: (
+      <WelcomeSection
+        wedding={wedding}
+        config={fairyConfig}
+        webgl={webgl}
+        reduced={reduced}
+        customConfig={customConfig}
+        showIslamicDate={showIslamicDate}
+        onScrollDown={scrollDown}
+        overlayProps={overlayProps}
+        a={a}
+        tx={tx}
+        sx={sx}
+        ax={ax}
+      />
+    ),
+    walimah: (
+      <CeremonySection customConfig={customConfig} overlayProps={overlayProps} a={a} />
+    ),
+    rsvp: (
+      <RSVPSection onRSVP={onRSVP} customConfig={customConfig} wedding={wedding} overlayProps={overlayProps} a={a} />
+    ),
+    itinerary: (
+      <ItinerarySection items={itinerary} overlayProps={overlayProps} a={a} />
+    ),
+    wishes: (
+      <WishesSection
+        wishes={wishes}
+        onSubmitWish={onSubmitWish}
+        customConfig={customConfig}
+        overlayProps={overlayProps}
+        a={a}
+      />
+    ),
+    photobooth: (
+      <PhotoBoothSection photos={photos} onUploadPhoto={onUploadPhoto} overlayProps={overlayProps} a={a} />
+    ),
+  };
 
   return (
     <div className={styles.wrapper}>
@@ -169,49 +196,8 @@ export default function Template6({
         )}
       </AnimatePresence>
 
-      {/* Sections */}
-      {sections.includes('welcome') && (
-        <WelcomeSection
-          wedding={wedding}
-          config={fairyConfig}
-          webgl={webgl}
-          reduced={reduced}
-          customConfig={customConfig}
-          showIslamicDate={showIslamicDate}
-          onScrollDown={scrollDown}
-          overlayProps={overlayProps}
-          a={a}
-          tx={tx}
-          sx={sx}
-          ax={ax}
-        />
-      )}
-
-      {sections.includes('walimah') && (
-        <CeremonySection customConfig={customConfig} overlayProps={overlayProps} a={a} />
-      )}
-
-      {sections.includes('rsvp') && (
-        <RSVPSection onRSVP={onRSVP} customConfig={customConfig} wedding={wedding} overlayProps={overlayProps} a={a} />
-      )}
-
-      {sections.includes('itinerary') && (
-        <ItinerarySection items={itinerary} overlayProps={overlayProps} a={a} />
-      )}
-
-      {sections.includes('wishes') && (
-        <WishesSection
-          wishes={wishes}
-          onSubmitWish={onSubmitWish}
-          customConfig={customConfig}
-          overlayProps={overlayProps}
-          a={a}
-        />
-      )}
-
-      {sections.includes('photobooth') && (
-        <PhotoBoothSection photos={photos} onUploadPhoto={onUploadPhoto} overlayProps={overlayProps} a={a} />
-      )}
+      {/* Sections follow the same resolved order as navigation and Adjust. */}
+      {sections.map((id) => <Fragment key={id}>{sectionContent[id]}</Fragment>)}
 
       {/* Footer */}
       <footer className={styles.footer}>

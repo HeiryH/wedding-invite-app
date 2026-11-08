@@ -1,13 +1,15 @@
 'use client';
 
+import { frameSvh } from '../frameViewport';
 import { useEffect, useState, type RefObject } from 'react';
 
 type SectionStart = { id: string; top: number };
 
 export function sectionAtScrollLine(sections: SectionStart[], line: number, current: string) {
-  let before = sections[0]?.id ?? '';
+  const ordered = [...sections].sort((a, b) => a.top - b.top);
+  let before = ordered[0]?.id ?? '';
   let after = before;
-  for (const section of sections) {
+  for (const section of ordered) {
     if (section.top <= line - 8) before = section.id;
     if (section.top <= line + 8) after = section.id;
   }
@@ -51,8 +53,8 @@ export function useScrollSection({
           targets.set(node, node.id);
         }
       }
-      const sections = [...targets].map(([node, id]) => ({ id, top: node.getBoundingClientRect().top }));
-      const line = window.innerHeight * 0.4;
+      const sections = [...targets].filter(([node]) => node.getClientRects().length > 0).map(([node, id]) => ({ id, top: node.getBoundingClientRect().top }));
+      const line = frameSvh() * 0.4;
       setActive((current) => sectionAtScrollLine(sections, line, current));
     };
 

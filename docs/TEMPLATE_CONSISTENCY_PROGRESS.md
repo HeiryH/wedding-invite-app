@@ -42,3 +42,41 @@ Verification:
 - All 16 templates and the authored fixture rendered on mobile/desktop without page errors: `.einvite-run/consistency/phase2/`.
 - Mock-API public browser flows passed for T3, T6 and custom authored rendering. No data persisted.
 - New contract/capability/public-test files pass targeted ESLint. Existing global lint/build baseline failures remain.
+
+## Phase 3 — completed independent work; T4 decision pending
+
+- T1–3 now render saved section order into DOM/focus order using a shared wrapper; existing IDs, CSS, anchors and saved geometry remain intact. Reordering keeps entered RSVP state.
+- T6 renders its existing section components from the resolved order, preserving exclusions/content/feature availability.
+- T1–3/T6 use the shared scroll tracker and scroll helper. Tracking sorts actual screen positions, excludes non-rendered targets and uses the pinned preview-frame height. Shared scrolling respects reduced motion.
+- Capabilities reflect these repairs; unsupported T4/T8/T9 behavior is not falsely declared repaired.
+
+Verification:
+- Full frontend suite: 57 files, 376 tests passed; TypeScript passed.
+- New regression tests cover order/exclusions/content availability for T1–3/T6, retained RSVP answers across reorder, tracking with mismatched source/screen order, and reduced-motion navigation.
+- All 16 templates and an authored fixture rendered on mobile/desktop with no page errors: `.einvite-run/consistency/phase3/`.
+- T1–3/T6 custom-order browser checks passed in both Adjust-style standalone preview and public routes at 390 and 1440 pixels. Saved added overlays remained visible and navigation reached its section. All public API requests were mocked; Next's development-only indicator was hidden in this interaction harness because it intercepted T6's menu clicks.
+- T7 stacked and horizontal-rail browser navigation checks passed.
+- New shared wrapper/scroll/test files pass targeted ESLint. Existing global lint/build baseline failures remain.
+
+## Human gate — T4 layout compatibility
+
+T4 is not six independent logical sections. Its current physical containers are:
+
+1. `hero`: cover and portrait.
+2. `t4-details`: countdown, invite body, configurable ceremony text, dynamic itinerary, ceremony facts and reception facts.
+3. `t4-schedule`: a separate hardcoded five-row schedule plus the second portrait.
+4. `t4-rsvp`, `t4-wishes`, `t4-photobooth`: independent reorderable sections.
+
+Existing Adjust data is stored against those physical containers. Splitting or relocating their contents changes the reference boxes of saved decorations and nudges. In addition, the hardcoded schedule is distinct from the organizer's saved itinerary; treating both as one section without a decision would silently choose which guests see.
+
+Choose the compatibility policy before changing T4:
+
+### A — Preserve the grouped design (recommended for this consistency pass)
+
+Keep the existing physical containers, layouts and schedule presentation. Expose ordering constraints truthfully: the grouped cover/details/schedule composition remains intact; only independent functional sections reorder. Align editor/navigation labels with actual blocks and keep stored logical order values untouched for future conversion. This resolves misleading controls but does not claim full independent ceremony/programme ordering for T4.
+
+### B — Make ceremony/programme independent
+
+Create explicit ceremony and programme sections, choose one organizer-driven programme presentation, and update navigation/Details/Adjust mappings together. Existing invites with saved grouped layouts must retain a legacy render path until explicitly converted; new independent layouts require visual approval and a tested conversion strategy. Existing layout bags must never be silently rewritten or reinterpreted in a different coordinate box.
+
+No T4 structural changes have been made. Phases 4–7 have not started. T8/T9 productionization/Adjust parity remains a later, separate decision as required by repository guidance.

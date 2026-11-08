@@ -24,12 +24,12 @@ const stage: TemplateCapabilities = {
 
 /** Describes current implementation, including known gaps; does not grant tier/feature access. */
 export const TEMPLATE_CAPABILITIES: Readonly<Record<number, Readonly<TemplateCapabilities>>> = {
-  1: { ...classic },
-  2: { ...classic },
-  3: { ...classic },
+  1: { ...classic, sectionOrder: 'dom' },
+  2: { ...classic, sectionOrder: 'dom' },
+  3: { ...classic, sectionOrder: 'dom' },
   4: { ...classic, sectionOrder: 'partial' },
   5: { ...classic, sectionOrder: 'dom', music: 'legacy' },
-  6: { ...classic, sectionOrder: 'fixed', seating: false, music: 'legacy' },
+  6: { ...classic, sectionOrder: 'dom', seating: false, music: 'legacy' },
   7: { ...stage, coupleGallery: true },
   8: { ...classic, editor: 'none', sectionOrder: 'fixed', prototype: true },
   9: { ...classic, editor: 'none', sectionOrder: 'fixed', prototype: true },
