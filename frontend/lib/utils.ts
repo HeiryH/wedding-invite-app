@@ -1,8 +1,7 @@
-export const getImageUrl = (photoUrl: string): string => {
-  // photoUrl comes like: /uploads/photos/abc.jpg
-  // We need: http://localhost:5050/uploads/photos/abc.jpg
-  const baseUrl = process.env.NEXT_PUBLIC_API_URL?.replace('/api', '') || '';
-  return `${baseUrl}${photoUrl}`;
+/** Resolve uploaded media without corrupting external/CDN, blob or static-asset URLs. */
+export const getImageUrl = (photoUrl: string, baseUrl = process.env.NEXT_PUBLIC_API_URL?.replace(/\/api\/?$/, '') || ''): string => {
+  if (/^(https?:|data:|blob:|\/\/)/i.test(photoUrl)) return photoUrl;
+  return photoUrl.startsWith('/uploads/') ? `${baseUrl.replace(/\/$/, '')}${photoUrl}` : photoUrl;
 };
 
 // Triggers a browser save for a Blob fetched from the server (e.g. a generated export zip).

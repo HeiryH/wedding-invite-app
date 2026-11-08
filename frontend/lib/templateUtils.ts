@@ -1,3 +1,4 @@
+import { getImageUrl } from './utils';
 import type { CSSProperties } from 'react';
 
 // ── Hijri (Islamic) date conversion ─────────────────────────────────────────
@@ -164,7 +165,7 @@ export function sectionBgStyle(
 ): CSSProperties {
   if (!url) return {};
   return {
-    backgroundImage: `url(${apiBase}${url})`,
+    backgroundImage: `url(${getImageUrl(url, apiBase)})`,
     backgroundSize: 'cover',
     backgroundPosition: 'center',
     backgroundRepeat: 'no-repeat',

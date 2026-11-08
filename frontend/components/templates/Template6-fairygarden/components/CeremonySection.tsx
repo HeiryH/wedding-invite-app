@@ -1,4 +1,5 @@
 'use client';
+import { configValue } from '@/components/templates/configValue';
 import { motion } from 'framer-motion';
 import type { CSSProperties } from 'react';
 import type { Breakpoint, EditorHandle } from '@/components/templates/_shared/types';
@@ -13,7 +14,7 @@ interface Props {
 }
 
 export default function CeremonySection({ customConfig, overlayProps, a }: Props) {
-  const t = (key: string, fallback: string) => customConfig?.[key] || fallback;
+  const t = (key: string, fallback: string) => configValue(customConfig, key, fallback);
   const body = t('walimah.body', '');
   const align = alignClass(t('walimah.body.align', 'center'));
 

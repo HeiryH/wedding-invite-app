@@ -1,4 +1,5 @@
 'use client';
+import { formatEventDate } from '@/lib/eventDateFormat';
 
 import { useEffect, useRef, useState } from 'react';
 import { calendarLinks } from '@/lib/templateUtils';
@@ -39,7 +40,7 @@ export default function ProgrammePopup({ slotProps: { wedding, itinerary = [], t
           <h2 id="programme-popup-title">{title || t('itinerary.title', 'Programme')}</h2>
           <button type="button" className={styles.close} aria-label="Close programme" onClick={dismiss}>×</button>
         </div>
-        {validDate && <p className={styles.date}>{date.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}</p>}
+        {validDate && <p className={styles.date}>{formatEventDate(date, 'en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}</p>}
         <div className={styles.content} tabIndex={0} role="region" aria-label="Programme board content">
           <div className={styles.schedule} role="region" aria-label="Programme itinerary">
             {itinerary.length ? <ol>{itinerary.map((item) => <li key={item.itineraryItemId}>

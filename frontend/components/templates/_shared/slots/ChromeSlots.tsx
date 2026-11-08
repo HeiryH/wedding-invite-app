@@ -1,4 +1,5 @@
 'use client';
+import { useInvitationAudio } from '../hooks/useInvitationAudio';
 
 import { useEffect, useRef, useState } from 'react';
 import type { SlotProps } from '../types';
@@ -82,58 +83,8 @@ export function NavSlot({ wishes }: SlotProps) {
 export function MusicSlot({ t, editing, autoPlay = true }: Pick<SlotProps, 't' | 'editing'> & { autoPlay?: boolean }) {
   const url = t('music.url', '');
   const loop = t('music.loop', 'true') !== 'false';
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [needsGesture, setNeedsGesture] = useState(false);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
-
-  useEffect(() => {
-    if (!url || editing) return;
-    let cancelled = false;
-    let unlock: (() => void) | null = null;
-    const audio = new Audio(url);
-    audio.loop = loop;
-    audioRef.current = audio;
-
-    const onPlay = () => setIsPlaying(true);
-    const onPause = () => setIsPlaying(false);
-    audio.addEventListener('play', onPlay);
-    audio.addEventListener('pause', onPause);
-
-    if (autoPlay) audio.play().catch(() => {
-      if (cancelled) return;
-      audio.muted = true;
-      audio.play()
-        .then(() => {
-          if (cancelled) return;
-          setNeedsGesture(true);
-          unlock = () => { if (!cancelled) { audio.muted = false; setNeedsGesture(false); } };
-          document.addEventListener('click', unlock, { once: true });
-          document.addEventListener('touchstart', unlock, { once: true });
-        })
-        .catch(() => { if (!cancelled) setIsPlaying(false); });
-    });
-
-    return () => {
-      cancelled = true;
-      if (unlock) {
-        document.removeEventListener('click', unlock);
-        document.removeEventListener('touchstart', unlock);
-      }
-      audio.removeEventListener('play', onPlay);
-      audio.removeEventListener('pause', onPause);
-      audio.pause();
-      audio.src = '';
-    };
-  }, [url, loop, editing, autoPlay]);
-
-  if (!url || editing) return null;
-
-  const toggle = () => {
-    const audio = audioRef.current;
-    if (!audio) return;
-    if (isPlaying) audio.pause();
-    else { audio.muted = false; audio.play().catch(() => {}); }
-  };
+  const { isPlaying, needsGesture, toggle, enabled } = useInvitationAudio(url, loop, { autoPlay, disabled: editing });
+  if (!url || !enabled) return null;
 
   return (
     <button className={styles.musicBubble} onClick={toggle} aria-label={isPlaying ? 'Pause music' : 'Play music'}>

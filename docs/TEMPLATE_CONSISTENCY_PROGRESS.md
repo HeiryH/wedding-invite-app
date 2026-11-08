@@ -106,3 +106,14 @@ Validation: TypeScript passed; full frontend suite passed at 59 files / 383 test
 - No template composition, saved config or form geometry changed.
 
 Validation: full frontend suite passed at 61 files / 387 tests; TypeScript and targeted new-file ESLint passed. New tests cover all execution modes plus keyboard/focus/scroll restoration. Existing shared-sheet tests pass. Mock public flow checks and mobile/desktop render checks for T3–T7/T15/T16 passed. Local evidence: `.einvite-run/consistency/phase5/` and `/tmp/consistency-phase5-*.log`.
+
+## Phase 6 — completed
+
+- All supported music controls share one audio lifecycle hook, preserving T5/authored autoplay fallback and click-to-play elsewhere. State follows playback events/rejections, replaced URLs/loop settings dispose old players, and every preview mode is silent. T1–4 now opt into the existing shared click-to-play Music control; empty/unconfigured invites remain unchanged. Prototype T8/T9 do not gain music controls.
+- Countdown implementations now use one external clock per cadence, with deterministic server snapshots, live target changes, explicit hide/zero expiration and T13's minute cadence retained.
+- Media URL handling preserves external/CDN/blob/data/static URLs instead of blindly prefixing the API origin. Date/time helpers retain each template's existing locale/options. Config lookup explicitly preserves the legacy fallback-vs-intentional-blank distinction (T16).
+- Supported guestbooks share 10-at-a-time DOM pagination while retaining their own cards and order. This is not network pagination. Prototype list presentation remains out of scope.
+- Existing Couple Gallery templates retain placement/ordering/fit controls. An explicit authored Couple Gallery slot consumes already-available couple media; it never injects a gallery into existing compositions or enables an unrelated guest Photo Booth feature. Existing upload/editor scopes remain explicit.
+- Calendar/map controls were checked against actual consumers: T5/T7/T16 retain their controls; templates without those actions do not gain dead controls.
+
+Validation: full suite passed at 63 files / 394 tests before the additional autoplay-cleanup regression; final focused audio/utility/cinematic checks passed. TypeScript and new utility-hook ESLint passed. All 16 templates plus authored fixture rendered at mobile/desktop without page errors: `.einvite-run/consistency/phase6/`. No saved settings or geometry migrated.

@@ -1,4 +1,7 @@
 'use client';
+import { getImageUrl } from '@/lib/utils';
+import { formatEventDate, formatEventTime } from '@/lib/eventDateFormat';
+import { configValue } from '@/components/templates/configValue';
 import { useGuestSubmission } from '@/components/templates/_shared/guest/useGuestSubmission';
 import { guestLimit, normalizeRsvp, validatedPhoto } from '@/components/templates/_shared/guest/rules';
 import type { TemplateRsvpSubmission, PhotoUploadSubmission, TemplateWishSubmission } from '@/components/templates/guestContracts';
@@ -138,7 +141,7 @@ export default function Template9({
   itinerary = [],
 }: Template9Props) {
   const submission = useGuestSubmission();
-  const t = (key: string, fallback: string) => customConfig?.[key] || fallback;
+  const t = (key: string, fallback: string) => configValue(customConfig, key, fallback);
   const title = wedding.eventTitle || wedding.displayName || 'A Celebration';
   const hStyle = headingStyle(customConfig);
   const hAnim = headingAnimationProps(customConfig);
@@ -295,10 +298,10 @@ export default function Template9({
 
           <p style={{ ...eyebrowStyle, marginBottom: 10 }}>Save the Date</p>
           <p style={{ fontFamily: 'var(--font-cormorant), serif', fontSize: 24, fontWeight: 600, margin: 0 }}>
-            {eventDate.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+            {formatEventDate(eventDate, 'en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
           </p>
           <p style={{ fontSize: 15, opacity: 0.7, margin: '6px 0 0' }}>
-            {eventDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })} &middot; {wedding.venue}
+            {formatEventTime(eventDate, 'en-US', { hour: '2-digit', minute: '2-digit' })} &middot; {wedding.venue}
           </p>
           {showIslamicDate && (
             <p style={{ fontSize: 12.5, opacity: 0.6, margin: '4px 0 0', color: C.gold }}>{toHijriString(eventDate)}</p>
@@ -443,7 +446,7 @@ export default function Template9({
                     <div key={wish.wishId} style={{ borderLeft: `2px solid ${C.gold}`, paddingLeft: 14 }}>
                       <p style={{ fontWeight: 600, margin: '0 0 3px', fontSize: 14.5 }}>{wish.guestName}</p>
                       <p style={{ fontSize: 14, opacity: 0.75, fontStyle: 'italic', margin: 0 }}>&quot;{wish.message}&quot;</p>
-                      <p style={{ fontSize: 11, opacity: 0.4, margin: '5px 0 0' }}>{new Date(wish.createdDate).toLocaleDateString()}</p>
+                      <p style={{ fontSize: 11, opacity: 0.4, margin: '5px 0 0' }}>{formatEventDate(new Date(wish.createdDate))}</p>
                     </div>
                   ))}
                 </div>
@@ -476,7 +479,7 @@ export default function Template9({
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: 10 }}>
                 {photos.map((photo) => (
                   <div key={photo.photoId} style={{ border: `1px solid ${C.gold}30` }}>
-                    <img src={`${API_BASE}${photo.photoUrl}`} alt={photo.caption} style={{ width: '100%', height: 120, objectFit: 'cover' }} />
+                    <img src={getImageUrl(photo.photoUrl, API_BASE)} alt={photo.caption} style={{ width: '100%', height: 120, objectFit: 'cover' }} />
                     <div style={{ padding: 8 }}>
                       <p style={{ fontSize: 11.5, fontWeight: 600, margin: 0 }}>{photo.guestName}</p>
                     </div>

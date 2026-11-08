@@ -24,10 +24,10 @@ const stage: TemplateCapabilities = {
 
 /** Describes current implementation, including known gaps; does not grant tier/feature access. */
 export const TEMPLATE_CAPABILITIES: Readonly<Record<number, Readonly<TemplateCapabilities>>> = {
-  1: { ...classic, sectionOrder: 'dom' },
-  2: { ...classic, sectionOrder: 'dom' },
-  3: { ...classic, sectionOrder: 'dom' },
-  4: { ...classic, sectionOrder: 'partial' },
+  1: { ...classic, sectionOrder: 'dom', music: 'shared' },
+  2: { ...classic, sectionOrder: 'dom', music: 'shared' },
+  3: { ...classic, sectionOrder: 'dom', music: 'shared' },
+  4: { ...classic, sectionOrder: 'partial', music: 'shared' },
   5: { ...classic, sectionOrder: 'dom', music: 'legacy' },
   6: { ...classic, sectionOrder: 'dom', seating: true, music: 'legacy' },
   7: { ...stage, coupleGallery: true },
@@ -51,9 +51,9 @@ export function getTemplateCapabilities(templateId: number, hasAuthoredStages = 
   return hasAuthoredStages ? authored : TEMPLATE_CAPABILITIES[templateId] ?? TEMPLATE_CAPABILITIES[1];
 }
 
-export function templatesWith(capability: 'seating' | 'configurableForms' | 'configurableRsvpFields' | 'sharedNavigation' | 'coupleGallery') {
+export function templatesWith(capability: 'seating' | 'configurableForms' | 'configurableRsvpFields' | 'sharedNavigation' | 'coupleGallery' | 'music') {
   // Prototype renderers support seating but do not expose the production Seating editor.
   return Object.entries(TEMPLATE_CAPABILITIES)
-    .filter(([, value]) => value[capability] && !value.prototype)
+    .filter(([, value]) => (capability === 'music' ? value.music !== 'none' : value[capability]) && !value.prototype)
     .map(([id]) => Number(id));
 }

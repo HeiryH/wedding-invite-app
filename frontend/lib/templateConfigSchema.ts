@@ -572,7 +572,7 @@ const COMMON_FIELDS: TemplateConfigField[] = [
     section: 'music',
     group: 'Audio',
     chip: 'Audio',
-    templateIds: [5, 6, 7, 10, 11, 12, 13, 14, 15, 16],
+    templateIds: templatesWith('music'),
   },
   {
     key: 'music.loop',
@@ -585,7 +585,7 @@ const COMMON_FIELDS: TemplateConfigField[] = [
     section: 'music',
     group: 'Audio',
     chip: 'Settings',
-    templateIds: [5, 6, 7, 10, 11, 12, 13, 14, 15, 16],
+    templateIds: templatesWith('music'),
   },
 
   // ── Photo Booth ─────────────────────────────────────────────────────────────

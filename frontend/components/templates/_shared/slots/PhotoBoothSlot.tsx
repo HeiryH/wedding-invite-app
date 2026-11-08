@@ -1,4 +1,5 @@
 'use client';
+import { getImageUrl } from '@/lib/utils';
 import { useDialogBehavior } from '../hooks/useDialogBehavior';
 import { validateGuestPhoto } from '../guest/rules';
 import { useGuestSubmission } from '@/components/templates/_shared/guest/useGuestSubmission';
@@ -40,7 +41,7 @@ function FramedPhoto({ photo, frame, className, style, sizes }: {
     <div className={`${styles.framed} ${className ?? ''}`} style={{ aspectRatio: f ? f.ar : 1, ...style }}>
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
-        src={`${API_BASE}${photo.photoUrl}`}
+        src={getImageUrl(photo.photoUrl, API_BASE)}
         alt={photo.caption || 'Guest photo'}
         className={styles.framedPhoto}
         sizes={sizes}
@@ -148,7 +149,7 @@ function PhotoBoothBody({ photos, onUploadPhoto, t, editing, upload }: SlotProps
                     : (
                       <div className={styles.stackPolaroid}>
                         {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src={`${API_BASE}${photos[(index + 2) % photos.length].photoUrl}`} className={styles.stackPhoto} alt="" draggable={false} />
+                        <img src={getImageUrl(photos[(index + 2) % photos.length].photoUrl, API_BASE)} className={styles.stackPhoto} alt="" draggable={false} />
                       </div>
                     )}
                 </div>
@@ -160,7 +161,7 @@ function PhotoBoothBody({ photos, onUploadPhoto, t, editing, upload }: SlotProps
                     : (
                       <div className={styles.stackPolaroid}>
                         {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src={`${API_BASE}${photos[(index + 1) % photos.length].photoUrl}`} className={styles.stackPhoto} alt="" draggable={false} />
+                        <img src={getImageUrl(photos[(index + 1) % photos.length].photoUrl, API_BASE)} className={styles.stackPhoto} alt="" draggable={false} />
                       </div>
                     )}
                 </div>
@@ -194,7 +195,7 @@ function PhotoBoothBody({ photos, onUploadPhoto, t, editing, upload }: SlotProps
                     <div className={styles.stackPolaroid}>
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
-                        src={`${API_BASE}${photos[index].photoUrl}`}
+                        src={getImageUrl(photos[index].photoUrl, API_BASE)}
                         alt={photos[index].caption ?? ''}
                         className={styles.stackPhoto}
                         draggable={false}
@@ -255,7 +256,7 @@ function PhotoBoothBody({ photos, onUploadPhoto, t, editing, upload }: SlotProps
                 />
               ) : (
                 /* eslint-disable-next-line @next/next/no-img-element */
-                <img src={`${API_BASE}${lightbox.photoUrl}`} alt={lightbox.caption ?? ''} className={styles.lightboxPhoto} />
+                <img src={getImageUrl(lightbox.photoUrl, API_BASE)} alt={lightbox.caption ?? ''} className={styles.lightboxPhoto} />
               )}
               {lightbox.caption && <p className={styles.lightboxCaption}>{lightbox.caption}</p>}
               <button className={styles.lightboxClose} onClick={() => setLightbox(null)}>×</button>

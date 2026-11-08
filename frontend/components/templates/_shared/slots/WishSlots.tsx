@@ -1,4 +1,5 @@
 'use client';
+import { useWishPagination } from '@/components/templates/_shared/WishBatch';
 import { useGuestSubmission } from '@/components/templates/_shared/guest/useGuestSubmission';
 
 import { useRef, useState } from 'react';
@@ -174,7 +175,7 @@ export function WishPhotoSlot({ onUploadPhoto, editing, editor, t, layer }: Slot
 /** Paginates 10-at-a-time (Template5.tsx's own convention) rather than dumping every wish onto
  *  the page at once — a "Load more" button reveals the next batch. */
 export function WishListSlot({ wishes }: SlotProps) {
-  const [shown, setShown] = useState(10);
+  const { limit: shown, loadMore: loadMoreWishes } = useWishPagination();
   return (
     <div className={styles.wishList}>
       {wishes.length === 0 ? (
@@ -188,7 +189,7 @@ export function WishListSlot({ wishes }: SlotProps) {
             </blockquote>
           ))}
           {wishes.length > shown && (
-            <button type="button" className={styles.linkBtn} onClick={() => setShown((n) => n + 10)}>
+            <button type="button" className={styles.linkBtn} onClick={loadMoreWishes}>
               Load more ({wishes.length - shown} remaining)
             </button>
           )}

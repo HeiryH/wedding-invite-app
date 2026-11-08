@@ -1,6 +1,9 @@
 'use client';
+import { formatEventDate } from '@/lib/eventDateFormat';
+import { configValue } from '@/components/templates/configValue';
+import { useCountdown } from '@/components/templates/_shared/hooks/useCountdown';
 
-import { useCallback, useEffect, useMemo, useState, type CSSProperties } from 'react';
+import { useCallback, useMemo, type CSSProperties } from 'react';
 import { Wedding, Wish, Photo, ItineraryItem, SeatingTable } from '@/lib/api';
 import { resolveSectionOrder, toHijriString, type SectionCode } from '@/lib/templateUtils';
 import CoupleGallery, { orderedCoupleGallery } from '@/components/templates/_shared/CoupleGallery';
@@ -28,25 +31,7 @@ import styles from './Template11-rosehorizon/Template11.module.css';
  *  contract as the Stage family's own `useCountdown` (_shared/slots/HeroSlots.tsx), duplicated
  *  locally rather than imported since that file lives in the Stage-family slot catalog and this
  *  is a plain Classic-template hook with no `SlotProps`/engine dependency. */
-function useCountdown(target: string) {
-  const [left, setLeft] = useState<{ days: number; hours: number; minutes: number; seconds: number } | null>(null);
-  useEffect(() => {
-    const tick = () => {
-      const diff = new Date(target).getTime() - Date.now();
-      if (diff <= 0) return setLeft(null);
-      setLeft({
-        days: Math.floor(diff / 86400000),
-        hours: Math.floor((diff / 3600000) % 24),
-        minutes: Math.floor((diff / 60000) % 60),
-        seconds: Math.floor((diff / 1000) % 60),
-      });
-    };
-    tick();
-    const id = setInterval(tick, 1000);
-    return () => clearInterval(id);
-  }, [target]);
-  return left;
-}
+
 
 interface Template11Props {
   wedding: Wedding;
@@ -111,7 +96,7 @@ export default function Template11({
   editor,
 }: Template11Props) {
   const t = useCallback(
-    (key: string, fallback: string) => customConfig?.[key] || fallback,
+    (key: string, fallback: string) => configValue(customConfig, key, fallback),
     [customConfig],
   );
   const sectionOrder = resolveSectionOrder(
@@ -202,7 +187,7 @@ export default function Template11({
     : ({} as CSSProperties); // 'none' ⇒ no override — each --slot-panel-* consumer's own fallback applies
 
   const weddingDate = new Date(wedding.weddingDate);
-  const dateLabel = weddingDate.toLocaleDateString('en-US', {
+  const dateLabel = formatEventDate(weddingDate, 'en-US', {
     weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
   });
   const showIslamicDate = customConfig?.['general.showIslamicDate'] === 'true';

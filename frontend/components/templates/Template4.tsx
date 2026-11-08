@@ -1,4 +1,9 @@
 'use client';
+import { MusicSlot } from './_shared/slots/ChromeSlots';
+import WishBatch from '@/components/templates/_shared/WishBatch';
+import { getImageUrl } from '@/lib/utils';
+import { formatEventDate } from '@/lib/eventDateFormat';
+import { configValue } from '@/components/templates/configValue';
 import { useDialogBehavior } from './_shared/hooks/useDialogBehavior';
 import { useGuestSubmission } from '@/components/templates/_shared/guest/useGuestSubmission';
 import { guestLimit, normalizeRsvp, validatedPhoto } from '@/components/templates/_shared/guest/rules';
@@ -46,7 +51,7 @@ interface StackCard {
 // ── Helpers ───────────────────────────────────────────────
 function getMedia(coupleMedia: Photo[] | undefined, slot: number): string | null {
   const m = coupleMedia?.find((p) => p.templateSlot === slot);
-  return m ? `${API_BASE}${m.photoUrl}` : null;
+  return m ? getImageUrl(m.photoUrl, API_BASE) : null;
 }
 
 // Torn paper SVG divider (cream coloured tear)
@@ -354,7 +359,7 @@ export default function Template4({
   editor,
 }: Template4Props) {
   const submission = useGuestSubmission();
-  const t = (key: string, fallback: string) => customConfig?.[key] || fallback;
+  const t = (key: string, fallback: string) => configValue(customConfig, key, fallback);
   const showIslamicDate = customConfig?.['general.showIslamicDate'] === 'true';
   const hStyle = headingStyle(customConfig);
   const hAnim = headingAnimationProps(customConfig);
@@ -419,7 +424,7 @@ export default function Template4({
       .map((src, i) => ({ id: `couple-extra-${i}`, src: src! })),
     ...photos.map((p) => ({
       id: `guest-${p.photoId}`,
-      src: `${API_BASE}${p.photoUrl}`,
+      src: getImageUrl(p.photoUrl, API_BASE),
       caption: p.caption || undefined,
       author: p.guestName || undefined,
     })),
@@ -434,7 +439,7 @@ export default function Template4({
         .map((src, i) => ({ id: `couple-extra-${i}`, src: src! })),
       ...photos.map((p) => ({
         id: `guest-${p.photoId}`,
-        src: `${API_BASE}${p.photoUrl}`,
+        src: getImageUrl(p.photoUrl, API_BASE),
         caption: p.caption || undefined,
         author: p.guestName || undefined,
       })),
@@ -528,9 +533,9 @@ export default function Template4({
   // Shared input style
   const inp = 'w-full border border-[#E0DFD9] bg-white/10 px-4 py-3 text-sm text-white placeholder-white/40 focus:outline-none focus:border-white/60 transition-colors';
 
-  const dayName = weddingDate.toLocaleDateString('en-US', { weekday: 'long' }).toUpperCase();
+  const dayName = formatEventDate(weddingDate, 'en-US', { weekday: 'long' }).toUpperCase();
   const dayNum = weddingDate.getDate();
-  const monthName = weddingDate.toLocaleDateString('en-US', { month: 'long' }).toUpperCase();
+  const monthName = formatEventDate(weddingDate, 'en-US', { month: 'long' }).toUpperCase();
 
   return (
     <div className="bg-[#F7F6F1]" style={{ fontFamily: "'Georgia', 'Times New Roman', serif" }}>
@@ -885,12 +890,12 @@ export default function Template4({
                   </div>
                   <div className="space-y-4 max-h-96 overflow-y-auto pr-1" style={{ scrollbarWidth: 'none' }}>
                     {wishes.length === 0 && <p className="text-[#6A6A64] text-sm text-center pt-10">Be the first to leave a wish.</p>}
-                    {wishes.map((wish) => (
+                    <WishBatch wishes={wishes}>{(visibleWishes) => visibleWishes.map((wish) => (
                       <motion.div key={wish.wishId} initial={{ opacity: 0, x: 12 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }} className="border border-white/10 p-5">
                         <p className="text-white/80 text-sm italic leading-relaxed">&ldquo;{wish.message}&rdquo;</p>
                         <p className="text-[#6A6A64] text-[10px] tracking-widest uppercase mt-3">— {wish.guestName}</p>
                       </motion.div>
-                    ))}
+                    ))}</WishBatch>
                   </div>
                 </div>
               </motion.div>
@@ -941,7 +946,7 @@ export default function Template4({
           {wedding.brideName} {tx('hero', 'connector', '&')} {wedding.groomName}
         </p>
         <p className="text-[10px] text-[#C8C7C0] mt-1">
-          {weddingDate.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
+          {formatEventDate(weddingDate, 'en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
         </p>
         <p className="text-[10px] text-[#C8C7C0] mt-3">{t('footer.tagline', 'Made with love')}</p>
       </div>
@@ -954,6 +959,7 @@ export default function Template4({
         submitting={photoSubmitting}
         success={photoSuccess}
       />
-    </div>
+    <MusicSlot t={t} editing={Boolean(editor?.enabled)} autoPlay={false} />
+</div>
   );
 }

@@ -1,4 +1,7 @@
 'use client';
+import { getImageUrl } from '@/lib/utils';
+import { formatEventDate, formatEventTime } from '@/lib/eventDateFormat';
+import { configValue } from '@/components/templates/configValue';
 import { useGuestSubmission } from '@/components/templates/_shared/guest/useGuestSubmission';
 import { guestLimit, normalizeRsvp, validatedPhoto } from '@/components/templates/_shared/guest/rules';
 import type { TemplateRsvpSubmission, PhotoUploadSubmission, TemplateWishSubmission } from '@/components/templates/guestContracts';
@@ -161,7 +164,7 @@ export default function Template8({
   itinerary = [],
 }: Template8Props) {
   const submission = useGuestSubmission();
-  const t = (key: string, fallback: string) => customConfig?.[key] || fallback;
+  const t = (key: string, fallback: string) => configValue(customConfig, key, fallback);
   const honoree = wedding.name1 || wedding.brideName || 'Guest of Honor';
   const age = t('party.age', '1');
   const hStyle = headingStyle(customConfig);
@@ -350,10 +353,10 @@ export default function Template8({
           <div style={{ display: 'inline-flex', flexDirection: 'column', gap: 6, background: '#fff', borderRadius: 20, padding: '22px 32px', boxShadow: '0 10px 30px rgba(43,33,26,0.08)', border: `1px solid ${C.gold}33` }}>
             <p style={{ margin: 0, fontSize: 12, letterSpacing: '0.12em', textTransform: 'uppercase', color: C.terracotta, fontWeight: 600 }}>Save the date</p>
             <p style={{ margin: 0, fontSize: 21, fontWeight: 700, fontFamily: 'var(--t8-display)' }}>
-              {weddingDate.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+              {formatEventDate(weddingDate, 'en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
             </p>
             <p style={{ margin: 0, fontSize: 15, opacity: 0.75 }}>
-              {weddingDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })} &middot; {wedding.venue}
+              {formatEventTime(weddingDate, 'en-US', { hour: '2-digit', minute: '2-digit' })} &middot; {wedding.venue}
             </p>
             {showIslamicDate && (
               <p style={{ margin: 0, fontSize: 12, color: C.gold, letterSpacing: '0.02em' }}>{toHijriString(weddingDate)}</p>
@@ -520,7 +523,7 @@ export default function Template8({
                     <div key={wish.wishId} style={{ background: `${C.blush}22`, borderLeft: `3px solid ${C.terracotta}`, borderRadius: 10, padding: 14 }}>
                       <p style={{ fontWeight: 700, margin: '0 0 4px' }}>{wish.guestName}</p>
                       <p style={{ fontSize: 14, opacity: 0.8, fontStyle: 'italic', margin: 0 }}>&quot;{wish.message}&quot;</p>
-                      <p style={{ fontSize: 11, opacity: 0.4, margin: '6px 0 0' }}>{new Date(wish.createdDate).toLocaleDateString()}</p>
+                      <p style={{ fontSize: 11, opacity: 0.4, margin: '6px 0 0' }}>{formatEventDate(new Date(wish.createdDate))}</p>
                     </div>
                   ))}
                 </div>
@@ -556,7 +559,7 @@ export default function Template8({
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: 14 }}>
                 {photos.map((photo) => (
                   <div key={photo.photoId} style={{ background: '#fff', borderRadius: 14, overflow: 'hidden', border: `1px solid ${C.gold}22` }}>
-                    <img src={`${API_BASE}${photo.photoUrl}`} alt={photo.caption} style={{ width: '100%', height: 130, objectFit: 'cover' }} />
+                    <img src={getImageUrl(photo.photoUrl, API_BASE)} alt={photo.caption} style={{ width: '100%', height: 130, objectFit: 'cover' }} />
                     <div style={{ padding: 10 }}>
                       <p style={{ fontSize: 12, fontWeight: 700, margin: 0 }}>{photo.guestName}</p>
                       {photo.caption && <p style={{ fontSize: 11, opacity: 0.6, fontStyle: 'italic', margin: '2px 0 0' }}>&quot;{photo.caption}&quot;</p>}

@@ -1,4 +1,5 @@
 'use client';
+import { formatEventDate, formatEventTime } from '@/lib/eventDateFormat';
 import { useDialogBehavior } from '../hooks/useDialogBehavior';
 
 import { useState, useRef } from 'react';
@@ -90,10 +91,10 @@ export function CeremonyDetailsSlot({ wedding, t }: SlotProps) {
       <div className={styles.detailRow}>
         <div className={styles.detailLabel}>{t('ceremony.when_label', 'When')}</div>
         <div className={styles.detailValue}>
-          {date.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+          {formatEventDate(date, 'en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
         </div>
         <div className={styles.detailValue}>
-          {date.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
+          {formatEventTime(date, 'en-GB', { hour: '2-digit', minute: '2-digit' })}
         </div>
       </div>
 

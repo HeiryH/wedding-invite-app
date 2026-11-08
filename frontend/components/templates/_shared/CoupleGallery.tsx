@@ -1,4 +1,5 @@
 'use client';
+import { getImageUrl } from '@/lib/utils';
 
 import { useRef, useState } from 'react';
 import type { Photo } from '@/lib/api';
@@ -13,10 +14,7 @@ export function orderedCoupleGallery(media: Photo[] = [], order?: string) {
     left.photoId - right.photoId);
 }
 
-export function couplePhotoUrl(path: string) {
-  const base = process.env.NEXT_PUBLIC_API_URL?.replace(/\/api\/?$/, '') ?? '';
-  return path.startsWith('/uploads/') ? base + path : path;
-}
+export const couplePhotoUrl = getImageUrl;
 
 export function CouplePhoto({ photo, fit, alt, className }: {
   photo: Photo;
@@ -31,7 +29,8 @@ export function CouplePhoto({ photo, fit, alt, className }: {
   );
 }
 
-export default function CoupleGallery({ photos, title, fit, layout }: {
+export default function CoupleGallery({ photos, title, fit, layout, id = 'couple-gallery' }: {
+  id?: string;
   photos: Photo[];
   title: string;
   fit?: string;
@@ -44,8 +43,8 @@ export default function CoupleGallery({ photos, title, fit, layout }: {
   const index = Math.min(active, photos.length - 1);
 
   return (
-    <section id="couple-gallery" data-stage="couple-gallery" className={styles.gallery} aria-labelledby="couple-gallery-title">
-      <h2 id="couple-gallery-title">{title}</h2>
+    <section id={id} data-stage={id} className={styles.gallery} aria-labelledby={`${id}-title`}>
+      <h2 id={`${id}-title`}>{title}</h2>
       <div ref={rail} className={carousel ? styles.carousel : styles.grid}
         onScroll={carousel ? (event) => {
           const element = event.currentTarget;

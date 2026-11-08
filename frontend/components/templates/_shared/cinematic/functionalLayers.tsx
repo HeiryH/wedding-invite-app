@@ -1,3 +1,5 @@
+import { getImageUrl } from '@/lib/utils';
+import { formatEventDate, formatEventTime } from '@/lib/eventDateFormat';
 import type { CSSProperties, ReactElement, ReactNode } from 'react';
 import { Fragment } from 'react';
 import { resolveBindings } from '../bindings';
@@ -93,7 +95,7 @@ const registry: Record<string, Renderer> = {
           return <Fragment key={`frame-${index}`}>{part(`frame-${index}`, <figure className={s.memoryFrame} style={{
             borderColor: `var(--frame-border-color, ${layout.frameColor})`, borderWidth: `var(--frame-border-width, ${layout.borderWidth}px)`,
             transform: `rotate(${index % 3 === 2 ? -layout.tilt * .8 : index % 2 ? layout.tilt : 0}deg)`,
-          }}>{photo ? <img src={`${apiBase}${photo.photoUrl}`} alt={photo.caption || 'Approved guest memory'} />
+          }}>{photo ? <img src={getImageUrl(photo.photoUrl, apiBase)} alt={photo.caption || 'Approved guest memory'} />
             : <span>{index === 0 ? t('photobooth.title', 'Our Memories') : layout.placeholder}</span>}</figure>)}</Fragment>;
         })}
       </div>)}
@@ -124,7 +126,7 @@ const registry: Record<string, Renderer> = {
       {key !== 'custom' && part('subtitle', <p>{isWalimah ? t('invite.heading', 'With the blessings of our families') : t(`people.${person}.title`, person === 'primary' ? 'The Groom' : person === 'honoree' ? 'Guest of Honour' : 'The Bride')}</p>)}
       {part('title', <h2 style={{ color: theme.secondaryInk, fontFamily: fontVar(layer.fontFamily) || fontVar(theme.displayFont) || 'var(--cinematic-display-font)', fontSize: layer.titleSize ? `${layer.titleSize}cqi` : `clamp(${isWalimah ? 3.2 : 2}rem, ${theme.titleSize * (isWalimah ? 1 : .66)}cqi, ${isWalimah ? 7 : 5}rem)` }}>{title}</h2>)}
       {part('body', <div dangerouslySetInnerHTML={{ __html: cinematicRichHtml(body) }} />)}
-      {isWalimah && <>{part('date', <time>{new Date(wedding.weddingDate).toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })} · {new Date(wedding.weddingDate).toLocaleTimeString('en-GB', { hour: 'numeric', minute: '2-digit' })}</time>)}
+      {isWalimah && <>{part('date', <time>{formatEventDate(new Date(wedding.weddingDate), 'en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })} · {formatEventTime(new Date(wedding.weddingDate), 'en-GB', { hour: 'numeric', minute: '2-digit' })}</time>)}
         {part('venue', <address>{wedding.venue}<br />{wedding.venueAddress}</address>)}</>}
     </section> };
   },

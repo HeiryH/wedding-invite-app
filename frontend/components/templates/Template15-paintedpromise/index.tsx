@@ -1,4 +1,5 @@
 'use client';
+import { configValue } from '@/components/templates/configValue';
 import type { TemplateRsvpSubmission, PhotoUploadSubmission } from '@/components/templates/guestContracts';
 
 
@@ -102,7 +103,7 @@ function PaintedPromise({ wedding, onRSVP, onSubmitWish, onUploadPhoto, wishes, 
   });
   const infoRef = useRef<HTMLElement>(null);
   useDialogBehavior(infoRef, Boolean(interaction.info), interaction.dismissInfo);
-  const t = useCallback((key: string, fallback: string) => customConfig?.[key] || fallback, [customConfig]);
+  const t = useCallback((key: string, fallback: string) => configValue(customConfig, key, fallback), [customConfig]);
   const submitRsvp = async (data: TemplateRsvpSubmission) => { await onRSVP(data); window.setTimeout(interaction.close, 1100); };
   const slotProps: SlotProps = { wedding, t, wishes, photos, tables, itinerary, seatingEnabled, photoBoothEnabled,
     onRSVP: submitRsvp, onSubmitWish, onUploadPhoto, editing: false, config: customConfig, breakpoint };

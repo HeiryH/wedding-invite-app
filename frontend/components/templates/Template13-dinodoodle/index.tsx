@@ -1,8 +1,10 @@
 'use client';
+import { useInvitationAudio } from '../_shared/hooks/useInvitationAudio';
+import { configValue } from '@/components/templates/configValue';
 import type { TemplateRsvpSubmission, PhotoUploadSubmission } from '@/components/templates/guestContracts';
 
 
-import { useState, useMemo, useRef, useCallback } from 'react';
+import { useMemo, useCallback } from 'react';
 import type { CSSProperties } from 'react';
 import {
   Wedding, Wish, Photo, ItineraryItem, SeatingTable, CreateWish,
@@ -111,7 +113,7 @@ export default function Template13({
   editor,
 }: Template13Props) {
   const t = useCallback(
-    (key: string, fallback: string) => customConfig?.[key] || fallback,
+    (key: string, fallback: string) => configValue(customConfig, key, fallback),
     [customConfig],
   );
 
@@ -122,11 +124,11 @@ export default function Template13({
   // lay out the mobile composition without resizing their window.
   const breakpoint: Breakpoint = useBreakpoint(editing ? editor!.breakpoint : undefined);
 
-  const [musicPlaying, setMusicPlaying] = useState(false);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
+
 
   const musicUrl = t('music.url', '');
   const musicLoop = t('music.loop', 'true') === 'true';
+  const { isPlaying: musicPlaying, toggle: toggleMusic, enabled: musicEnabled } = useInvitationAudio(musicUrl, musicLoop, { disabled: editing });
   const parallaxMode = t('scene.parallax', 'on');
   // The nav pill is position:fixed chrome — not a stage-bound layer, so it's tuned via plain
   // config rather than the Adjust dock. See nav.size/nav.textSize/nav.layout in
@@ -207,13 +209,7 @@ export default function Template13({
 
   const activeSection = useScrollSection({ rootRef, stageGroups: STAGE_GROUPS });
 
-  const toggleMusic = () => {
-    const audio = audioRef.current;
-    if (!audio) return;
-    if (musicPlaying) audio.pause();
-    else audio.play().catch(() => {});
-    setMusicPlaying(!musicPlaying);
-  };
+
 
   const navTo = (code: string) => {
     const first = STAGE_GROUPS[code]?.[0];
@@ -359,9 +355,8 @@ export default function Template13({
         vars={{ ...T13_NAV_VARS, '--nav-scale': navScale, '--nav-text-scale': navTextScale } as CSSProperties}
       />
 
-      {musicUrl && (
+      {musicUrl && musicEnabled && (
         <>
-          <audio ref={audioRef} src={musicUrl} loop={musicLoop} preload="none" />
           <button
             className={styles.musicBtn}
             onClick={toggleMusic}

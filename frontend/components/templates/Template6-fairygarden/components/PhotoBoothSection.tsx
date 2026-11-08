@@ -1,4 +1,5 @@
 'use client';
+import { getImageUrl } from '@/lib/utils';
 import { useGuestSubmission } from '@/components/templates/_shared/guest/useGuestSubmission';
 import type { PhotoUploadSubmission } from '@/components/templates/guestContracts';
 
@@ -77,7 +78,7 @@ export default function PhotoBoothSection({ photos, onUploadPhoto, overlayProps,
                 transition={{ delay: i * 0.06, duration: 0.5 }}
               >
                 <img
-                  src={`${API_BASE}${p.photoUrl}`}
+                  src={getImageUrl(p.photoUrl, API_BASE)}
                   alt={p.guestName ?? 'Guest photo'}
                   className={styles.photoImg}
                   loading="lazy"

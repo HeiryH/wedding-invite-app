@@ -7,6 +7,8 @@ import {
 } from './CeremonySlots';
 import { RsvpTitleSlot, RsvpPromptSlot, RsvpFormSlot, RsvpSeatingSlot } from './RsvpFormSlot';
 import { WishTitleSlot, WishPromptSlot, WishFormSlot, WishPhotoSlot, WishListSlot } from './WishSlots';
+import CoupleGallerySlot from './CoupleGallerySlot';
+import { orderedCoupleGallery } from '../CoupleGallery';
 import PhotoBoothSlot, { PhotoGallerySlot } from './PhotoBoothSlot';
 import SheetTriggerSlot from './SheetTriggerSlot';
 import { DEFAULT_SHEET } from './sheets';
@@ -38,6 +40,7 @@ export const SLOT_REGISTRY: Record<string, FC<SlotProps>> = {
   wishForm: WishFormSlot,
   wishPhoto: WishPhotoSlot,
   wishList: WishListSlot,
+  coupleGallery: CoupleGallerySlot,
   photoBooth: PhotoBoothSlot,
   photoGallery: PhotoGallerySlot,
   sheetTrigger: SheetTriggerSlot,
@@ -51,6 +54,7 @@ export const SLOT_REGISTRY: Record<string, FC<SlotProps>> = {
  * photo booth with the feature switched off would still occupy a full screen of scrolling.
  */
 export const SLOT_AVAILABLE: Record<string, (p: SlotProps) => boolean> = {
+  coupleGallery: (p) => orderedCoupleGallery(p.coupleMedia).length > 0,
   countdown: () => true,
   eventHero: () => true,
   timer: () => true,

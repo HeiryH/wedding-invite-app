@@ -1,6 +1,8 @@
 'use client';
+import { formatEventDate } from '@/lib/eventDateFormat';
+import { useCountdown } from '@/components/templates/_shared/hooks/useCountdown';
 
-import { useState, useEffect, useMemo, cloneElement } from 'react';
+import { useMemo, cloneElement } from 'react';
 import type { CSSProperties, ReactElement } from 'react';
 import { toHijriString } from '@/lib/templateUtils';
 import { resolveBindings } from '../bindings';
@@ -15,25 +17,7 @@ import { useEngine } from '../engine';
 import styles from './slots.module.css';
 
 /** Returns null once the date has passed, so the hero never shows a dead 00:00:00. */
-function useCountdown(target: string) {
-  const [left, setLeft] = useState<{ days: number; hours: number; minutes: number; seconds: number } | null>(null);
-  useEffect(() => {
-    const tick = () => {
-      const diff = new Date(target).getTime() - Date.now();
-      if (diff <= 0) return setLeft(null);
-      setLeft({
-        days: Math.floor(diff / 86400000),
-        hours: Math.floor((diff / 3600000) % 24),
-        minutes: Math.floor((diff / 60000) % 60),
-        seconds: Math.floor((diff / 1000) % 60),
-      });
-    };
-    tick();
-    const id = setInterval(tick, 1000);
-    return () => clearInterval(id);
-  }, [target]);
-  return left;
-}
+
 
 /**
  * Wraps a hero element as an adjustable sub-layer: the nudge (translate/scale) rides an outer
@@ -168,7 +152,7 @@ export function CountdownSlot({ wedding, t, stageLayers, layer, editor }: SlotPr
       <HeroPiece layer={sub['hero-date']} editor={editor} id="hero-date">
         <div className={styles.heroDate}>
           <p className={styles.weddingDate}>
-            {date.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}
+            {formatEventDate(date, 'en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}
           </p>
           {showHijri && <p className={styles.hijriDate}>{toHijriString(date)}</p>}
         </div>
@@ -305,7 +289,7 @@ export function HeroDateSlot({ wedding, t }: SlotProps) {
   return (
     <div className={styles.heroDate}>
       <p className={styles.weddingDate}>
-        {date.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}
+        {formatEventDate(date, 'en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}
       </p>
       {showHijri && <p className={styles.hijriDate}>{toHijriString(date)}</p>}
     </div>

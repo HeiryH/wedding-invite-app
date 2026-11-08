@@ -1,6 +1,8 @@
 'use client';
+import { formatEventDate } from '@/lib/eventDateFormat';
+import { useCountdown } from '@/components/templates/_shared/hooks/useCountdown';
 
-import { useCallback, useEffect, useMemo, useState, type CSSProperties } from 'react';
+import { useCallback, useMemo, type CSSProperties } from 'react';
 import type { Wedding, Wish, Photo, ItineraryItem, SeatingTable } from '@/lib/api';
 import { resolveSectionOrder, toHijriString, type SectionCode } from '@/lib/templateUtils';
 import CoupleGallery, { orderedCoupleGallery } from '@/components/templates/_shared/CoupleGallery';
@@ -24,25 +26,7 @@ import { useAnchors } from './Template12-dreamywoodland/useAnchors';
 import { T12_STAGES } from './Template12-dreamywoodland/data/dreamyWoodlandStages';
 import styles from './Template12-dreamywoodland/Template12.module.css';
 
-function useCountdown(target: string) {
-  const [left, setLeft] = useState<{ days: number; hours: number; minutes: number; seconds: number } | null>(null);
-  useEffect(() => {
-    const tick = () => {
-      const diff = new Date(target).getTime() - Date.now();
-      if (diff <= 0) return setLeft(null);
-      setLeft({
-        days: Math.floor(diff / 86400000),
-        hours: Math.floor((diff / 3600000) % 24),
-        minutes: Math.floor((diff / 60000) % 60),
-        seconds: Math.floor((diff / 1000) % 60),
-      });
-    };
-    tick();
-    const id = setInterval(tick, 1000);
-    return () => clearInterval(id);
-  }, [target]);
-  return left;
-}
+
 
 interface Template12Props {
   wedding: Wedding;
@@ -93,7 +77,7 @@ export default function Template12({
   const pageBgSrc = customConfig?.['t12.layout.pageBg.src']
     || '/templates/dreamy-woodland/backgrounds-v2/flow-clouds-v3.webp';
   const date = new Date(wedding.weddingDate);
-  const dateLabel = date.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+  const dateLabel = formatEventDate(date, 'en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
   const countdown = useCountdown(wedding.weddingDate);
   const showIslamicDate = customConfig?.['general.showIslamicDate'] === 'true';
 

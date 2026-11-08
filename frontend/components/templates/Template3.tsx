@@ -1,4 +1,9 @@
 'use client';
+import { MusicSlot } from './_shared/slots/ChromeSlots';
+import WishBatch from '@/components/templates/_shared/WishBatch';
+import { getImageUrl } from '@/lib/utils';
+import { formatEventDate } from '@/lib/eventDateFormat';
+import { configValue } from '@/components/templates/configValue';
 import { useGuestSubmission } from '@/components/templates/_shared/guest/useGuestSubmission';
 import { guestLimit, normalizeRsvp, validatedPhoto } from '@/components/templates/_shared/guest/rules';
 import { useScrollSection } from './_shared/nav/useScrollSection';
@@ -39,7 +44,7 @@ interface Template3Props {
 
 function getMedia(coupleMedia: Photo[] | undefined, slot: number): string | null {
   const m = coupleMedia?.find((m) => m.templateSlot === slot);
-  return m ? `${API_BASE}${m.photoUrl}` : null;
+  return m ? getImageUrl(m.photoUrl, API_BASE) : null;
 }
 
 function PortraitSlot({ src, label }: { src: string | null; label: string }) {
@@ -88,7 +93,7 @@ export default function Template3({
   editor,
 }: Template3Props) {
   const submission = useGuestSubmission();
-  const t = (key: string, fallback: string) => customConfig?.[key] || fallback;
+  const t = (key: string, fallback: string) => configValue(customConfig, key, fallback);
   const showIslamicDate = customConfig?.['general.showIslamicDate'] === 'true';
   const hStyle = headingStyle(customConfig);
   const hAnim = headingAnimationProps(customConfig);
@@ -310,7 +315,7 @@ export default function Template3({
 
                 <div className="inline-block border border-green-300 rounded-2xl px-8 py-4 bg-white shadow-sm" style={a('welcome', 'dateCard')}>
                   <p className="text-green-700 font-medium text-lg">
-                    {weddingDate.toLocaleDateString('en-US', {
+                    {formatEventDate(weddingDate, 'en-US', {
                       weekday: 'long',
                       year: 'numeric',
                       month: 'long',
@@ -600,12 +605,12 @@ export default function Template3({
               )}
 
               <div className="space-y-4">
-                {wishes.map((wish) => (
+                <WishBatch wishes={wishes}>{(visibleWishes) => visibleWishes.map((wish) => (
                   <div key={wish.wishId} className="bg-white rounded-2xl border border-green-100 shadow-sm p-5">
                     <p className="text-green-800 italic mb-3">&ldquo;{wish.message}&rdquo;</p>
                     <p className="text-green-500 text-sm">— {wish.guestName}</p>
                   </div>
-                ))}
+                ))}</WishBatch>
                 {wishes.length === 0 && (
                   <p className="text-center text-green-400 text-sm py-8">Be the first to leave a wish!</p>
                 )}
@@ -672,7 +677,7 @@ export default function Template3({
                 {photos.map((photo) => (
                   <div key={photo.photoId} className="overflow-hidden rounded-xl shadow-sm">
                     <img
-                      src={`${API_BASE}${photo.photoUrl}`}
+                      src={getImageUrl(photo.photoUrl, API_BASE)}
                       alt={photo.caption || 'Wedding photo'}
                       className="w-full aspect-square object-cover"
                     />
@@ -692,10 +697,11 @@ export default function Template3({
       {/* Footer */}
       <div className="text-center py-8 text-green-400 text-xs">
         🌿 {wedding.brideName} &amp; {wedding.groomName} &bull;{' '}
-        {weddingDate.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
+        {formatEventDate(weddingDate, 'en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
         <br />
         {t('footer.tagline', 'Made with love for our special day')}
       </div>
-    </div>
+    <MusicSlot t={t} editing={Boolean(editor?.enabled)} autoPlay={false} />
+</div>
   );
 }

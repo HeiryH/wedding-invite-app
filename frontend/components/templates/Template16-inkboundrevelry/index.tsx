@@ -1,4 +1,7 @@
 'use client';
+import { useWishPagination } from '@/components/templates/_shared/WishBatch';
+import { formatEventDate, formatEventTime } from '@/lib/eventDateFormat';
+import { configValue } from '@/components/templates/configValue';
 import { useGuestSubmission } from '@/components/templates/_shared/guest/useGuestSubmission';
 import { guestLimit, normalizeRsvp, seatsAvailable, tableCanFit } from '@/components/templates/_shared/guest/rules';
 
@@ -24,13 +27,13 @@ type Copy = (key: string, fallback: string) => string;
 
 export default function Template16(props: TemplateRenderProps) {
   const { wedding, coupleMedia, customConfig = {}, itinerary = [], photoBoothEnabled, seatingEnabled = false, tables = [], editor } = props;
-  const t: Copy = (key, fallback) => customConfig[key] ?? fallback;
+  const t: Copy = (key, fallback) => configValue(customConfig, key, fallback, 'preserve');
   const breakpoint = useBreakpoint(editor?.breakpoint);
   const { a, sx } = useAnchorsFor(T16_STAGES, 't16', customConfig, breakpoint, editor);
   const anchored = (stageId: string, layerId: string) => ({ ...a(stageId, layerId), ...sx(stageId, layerId) });
   const overlayProps = { breakpoint, config: customConfig, editor };
   const date = new Date(wedding.weddingDate);
-  const dateText = date.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+  const dateText = formatEventDate(date, 'en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
   const brideFirst = t('general.brideFirst', 'true') !== 'false';
   const first = brideFirst ? wedding.brideName : wedding.groomName;
   const second = brideFirst ? wedding.groomName : wedding.brideName;
@@ -58,7 +61,7 @@ export default function Template16(props: TemplateRenderProps) {
         {t('walimah.body', '') && <div className={styles.medallion} style={a('walimah', 'medallion')}><Medallion /></div>}
         <div className={styles.ceremonyBody} style={a('walimah', 'content')}>
           {t('walimah.body', '') && <><h2 style={anchored('walimah', 'title')}>{t('walimah.title', 'Walimatul Urus')}</h2><div className={styles.richText} style={a('walimah', 'body')}><WalimahBodySlot {...slotProps} /></div></>}
-          <p className={styles.red} style={anchored('walimah', 'date')}>{date.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })} · {date.toLocaleTimeString('en-GB', { hour: 'numeric', minute: '2-digit' })}</p>
+          <p className={styles.red} style={anchored('walimah', 'date')}>{formatEventDate(date, 'en-GB', { day: 'numeric', month: 'long', year: 'numeric' })} · {formatEventTime(date, 'en-GB', { hour: 'numeric', minute: '2-digit' })}</p>
           {wedding.venue && <p style={anchored('walimah', 'venue')}>{wedding.venue}<br />{wedding.venueAddress}</p>}
           <div style={a('walimah', 'actions')}><VenueActions wedding={wedding} t={t} /></div>
         </div>
@@ -162,7 +165,7 @@ function ReplyForm({ wedding, onRSVP, seatingEnabled = false, tables = [], edito
 function Guestbook({ onSubmitWish, wishes, editor, previewOnly, t }: TemplateRenderProps & { t: Copy }) {
   const submission = useGuestSubmission();
   const [form, setForm] = useState({ guestName: '', message: '' });
-  const [shown, setShown] = useState(10);
+  const { limit: shown, loadMore: loadMoreWishes } = useWishPagination();
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState('');
   const [error, setError] = useState('');
@@ -182,7 +185,7 @@ function Guestbook({ onSubmitWish, wishes, editor, previewOnly, t }: TemplateRen
   </form><div className={styles.messages}>
     {!wishes.length && <p>No wishes yet — be the first to write one.</p>}
     {wishes.slice(0, shown).map((wish) => <blockquote key={wish.wishId}><p className={styles.red}><i>{wish.guestName}</i> —</p><p>{wish.message}</p></blockquote>)}
-    {wishes.length > shown && <button type="button" className={styles.textButton} onClick={() => setShown(shown + 10)}>Load more ({wishes.length - shown} remaining)</button>}
+    {wishes.length > shown && <button type="button" className={styles.textButton} onClick={loadMoreWishes}>Load more ({wishes.length - shown} remaining)</button>}
   </div></>;
 }
 

@@ -1,4 +1,9 @@
 'use client';
+import { MusicSlot } from './_shared/slots/ChromeSlots';
+import WishBatch from '@/components/templates/_shared/WishBatch';
+import { getImageUrl } from '@/lib/utils';
+import { formatEventDate, formatEventTime } from '@/lib/eventDateFormat';
+import { configValue } from '@/components/templates/configValue';
 import { useGuestSubmission } from '@/components/templates/_shared/guest/useGuestSubmission';
 import { guestLimit, normalizeRsvp, validatedPhoto } from '@/components/templates/_shared/guest/rules';
 import { useScrollSection } from './_shared/nav/useScrollSection';
@@ -52,7 +57,7 @@ export default function Template2({
     editor,
 }: Template2Props) {
   const submission = useGuestSubmission();
-    const t = (key: string, fallback: string) => customConfig?.[key] || fallback;
+    const t = (key: string, fallback: string) => configValue(customConfig, key, fallback);
     const showIslamicDate = customConfig?.['general.showIslamicDate'] === 'true';
     const hStyle = headingStyle(customConfig);
     const hAnim = headingAnimationProps(customConfig);
@@ -333,7 +338,7 @@ export default function Template2({
                                 Save the Date
                             </p>
                             <p className="text-3xl font-bold text-gray-800 mb-2">
-                                {weddingDate.toLocaleDateString('en-US', {
+                                {formatEventDate(weddingDate, 'en-US', {
                                     weekday: 'long',
                                     year: 'numeric',
                                     month: 'long',
@@ -341,7 +346,7 @@ export default function Template2({
                                 })}
                             </p>
                             <p className="text-xl text-gray-600">
-                                {weddingDate.toLocaleTimeString('en-US', {
+                                {formatEventTime(weddingDate, 'en-US', {
                                     hour: '2-digit',
                                     minute: '2-digit',
                                 })}
@@ -779,7 +784,7 @@ export default function Template2({
                                 </div>
                             ) : (
                                 <div className="space-y-4">
-                                    {wishes.slice().map((wish, index) => (
+                                    <WishBatch wishes={wishes}>{(visibleWishes) => visibleWishes.map((wish, index) => (
                                         <div
                                             key={wish.wishId}
                                             className="bg-gradient-to-br from-yellow-50 to-amber-50 rounded-xl p-4 border-l-4 border-amber-400"
@@ -791,10 +796,10 @@ export default function Template2({
                                                 "{wish.message}"
                                             </p>
                                             <p className="text-xs text-gray-400 mt-2">
-                                                {new Date(wish.createdDate).toLocaleDateString()}
+                                                {formatEventDate(new Date(wish.createdDate))}
                                             </p>
                                         </div>
-                                    ))}
+                                    ))}</WishBatch>
                                 </div>
                             )}
                         </div>
@@ -905,7 +910,7 @@ export default function Template2({
                                             className="bg-white rounded-xl overflow-hidden shadow-md hover:shadow-xl transition-shadow"
                                         >
                                             <img
-                                                src={`${API_BASE}${photo.photoUrl}`}
+                                                src={getImageUrl(photo.photoUrl, API_BASE)}
                                                 alt={photo.caption}
                                                 className="w-full h-48 object-cover" />
                                             <div className="p-3">
@@ -928,6 +933,7 @@ export default function Template2({
         <footer className="text-center py-6 text-amber-500 text-xs">
             {t('footer.tagline', 'Made with love for our special day')}
         </footer>
-        </>
+        <MusicSlot t={t} editing={Boolean(editor?.enabled)} autoPlay={false} />
+</>
     );
 }

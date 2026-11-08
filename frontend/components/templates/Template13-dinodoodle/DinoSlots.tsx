@@ -1,6 +1,7 @@
 'use client';
+import { useCountdown } from '@/components/templates/_shared/hooks/useCountdown';
 
-import { cloneElement, useEffect, useMemo, useState } from 'react';
+import { cloneElement, useMemo } from 'react';
 import type { CSSProperties, ReactElement } from 'react';
 import { resolveBindings } from '@/components/templates/_shared/bindings';
 import type { EditorHandle, Layer, SlotProps } from './types';
@@ -17,24 +18,7 @@ import { WishListSlot } from '@/components/templates/_shared/slots/WishSlots';
 import PhotoBoothSlot from '@/components/templates/_shared/slots/PhotoBoothSlot';
 import styles from './DinoSlots.module.css';
 
-function useCountdown(target: string) {
-  const [left, setLeft] = useState<{ days: number; hours: number; minutes: number } | null>(null);
-  useEffect(() => {
-    const tick = () => {
-      const diff = new Date(target).getTime() - Date.now();
-      if (diff <= 0) return setLeft(null);
-      setLeft({
-        days: Math.floor(diff / 86400000),
-        hours: Math.floor((diff / 3600000) % 24),
-        minutes: Math.floor((diff / 60000) % 60),
-      });
-    };
-    tick();
-    const timer = window.setInterval(tick, 60000);
-    return () => window.clearInterval(timer);
-  }, [target]);
-  return left;
-}
+
 
 function Piece({ layer, editor, id, children }: {
   layer?: Layer;
@@ -127,7 +111,7 @@ export function DinoHeroSlot(props: SlotProps) {
   const { wedding, stageLayers, layer, editor } = props;
   const sub = usePieces(stageLayers, layer?.id ?? 'hero');
   const units = usePieces(stageLayers, 'hero-timer');
-  const left = useCountdown(wedding.weddingDate);
+  const left = useCountdown(wedding.weddingDate, { cadence: 60000 });
   return (
     <div className={`${styles.composite} ${styles.hero}`}>
       <Piece layer={sub['hero-eyebrow']} editor={editor} id="hero-eyebrow"><p className={styles.eyebrow}>{bound(props, sub, 'hero-eyebrow', 'Welcome to the Expedition')}</p></Piece>

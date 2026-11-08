@@ -1,4 +1,9 @@
 'use client';
+import { useWishPagination } from '@/components/templates/_shared/WishBatch';
+import { getImageUrl } from '@/lib/utils';
+import { formatEventDate } from '@/lib/eventDateFormat';
+import { useInvitationAudio } from './_shared/hooks/useInvitationAudio';
+import { configValue } from '@/components/templates/configValue';
 import { useDialogBehavior } from './_shared/hooks/useDialogBehavior';
 import { useGuestSubmission } from '@/components/templates/_shared/guest/useGuestSubmission';
 import { guestLimit, normalizeRsvp, validatedPhoto } from '@/components/templates/_shared/guest/rules';
@@ -280,80 +285,13 @@ function RSVPModal({ wedding, onRSVP, onClose, seatingEnabled, tables, t, subtit
 // ── Music Bubble ──────────────────────────────────────────────────────────────
 
 function MusicBubble({ url, loop }: { url: string; loop: boolean }) {
-  const [isPlaying, setIsPlaying] = useState(true);
-  const [needsGesture, setNeedsGesture] = useState(false);
+  const { isPlaying, needsGesture, toggle, enabled } = useInvitationAudio(url, loop, { autoPlay: true, unlockOnScroll: true });
   const [expanded, setExpanded] = useState(true);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
-  const collapseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
   useEffect(() => {
-    let cancelled = false;
-    let unlock: (() => void) | null = null;
-
-    const audio = new Audio(url);
-    audio.loop = loop;
-    audioRef.current = audio;
-
-    const startCollapseTimer = () => {
-      if (collapseTimerRef.current) clearTimeout(collapseTimerRef.current);
-      collapseTimerRef.current = setTimeout(() => setExpanded(false), 3500);
-    };
-
-    const onPlay  = () => { setIsPlaying(true);  setExpanded(true);  startCollapseTimer(); };
-    const onPause = () => { setIsPlaying(false); setExpanded(false); if (collapseTimerRef.current) clearTimeout(collapseTimerRef.current); };
-    const onEnded = () => { setIsPlaying(false); setExpanded(false); if (collapseTimerRef.current) clearTimeout(collapseTimerRef.current); };
-
-    audio.addEventListener('play',  onPlay);
-    audio.addEventListener('pause', onPause);
-    audio.addEventListener('ended', onEnded);
-
-    // Phase 1: try to play with sound — works if browser allows it
-    audio.play().catch(() => {
-      if (cancelled) return;
-      // Phase 2: unmuted blocked — play muted (always allowed) and unlock on first user gesture
-      audio.muted = true;
-      audio.play()
-        .then(() => {
-          if (cancelled) return;
-          setNeedsGesture(true);
-          unlock = () => {
-            if (!cancelled) { audio.muted = false; setNeedsGesture(false); }
-          };
-          document.addEventListener('click',      unlock, { once: true });
-          document.addEventListener('touchstart', unlock, { once: true });
-          document.addEventListener('scroll',     unlock, { once: true, passive: true } as EventListenerOptions);
-        })
-        .catch(() => { if (!cancelled) setIsPlaying(false); });
-    });
-
-    startCollapseTimer();
-
-    return () => {
-      cancelled = true;
-      if (unlock) {
-        document.removeEventListener('click',      unlock);
-        document.removeEventListener('touchstart', unlock);
-        document.removeEventListener('scroll',     unlock);
-      }
-      if (collapseTimerRef.current) clearTimeout(collapseTimerRef.current);
-      audio.removeEventListener('play',  onPlay);
-      audio.removeEventListener('pause', onPause);
-      audio.removeEventListener('ended', onEnded);
-      audio.pause();
-      audio.src = '';
-    };
-  }, [url, loop]);
-
-  const toggle = () => {
-    const audio = audioRef.current;
-    if (!audio) return;
-    if (isPlaying) {
-      audio.pause();
-    } else {
-      audio.muted = false;
-      audio.play().catch(() => {});
-    }
-  };
+    const timer = setTimeout(() => setExpanded(false), 3500);
+    return () => clearTimeout(timer);
+  }, [isPlaying]);
+  if (!enabled) return null;
 
   return (
     <motion.div
@@ -374,7 +312,7 @@ function MusicBubble({ url, loop }: { url: string; loop: boolean }) {
           >
             {needsGesture ? (
               <span className={styles.musicNowPlayingText}>Tap for sound</span>
-            ) : (
+            ) : isPlaying ? (
               <>
                 <div className={styles.musicWave}>
                   <span className={styles.musicBar} />
@@ -384,7 +322,7 @@ function MusicBubble({ url, loop }: { url: string; loop: boolean }) {
                 </div>
                 <span className={styles.musicNowPlayingText}>Now Playing</span>
               </>
-            )}
+            ) : <span className={styles.musicNowPlayingText}>Music off</span>}
           </motion.div>
         )}
       </AnimatePresence>
@@ -445,7 +383,7 @@ export default function Template5({
   editor,
 }: Template5Props) {
   const submission = useGuestSubmission();
-  const t = (key: string, fallback: string) => customConfig?.[key] || fallback;
+  const t = (key: string, fallback: string) => configValue(customConfig, key, fallback);
 
   // Decorative-overlay breakpoint: pinned by the Adjust panel while editing, else responsive.
   const overlayBreakpoint: Breakpoint = useBreakpoint(editor?.enabled ? editor.breakpoint : undefined);
@@ -460,7 +398,7 @@ export default function Template5({
   const formatOrdinalDate = (date: Date): string => {
     const d = date.getDate();
     const suffix = d % 100 >= 11 && d % 100 <= 13 ? 'th' : (['th', 'st', 'nd', 'rd'][d % 10] ?? 'th');
-    return `${d}${suffix} ${date.toLocaleDateString('en-GB', { month: 'long' })} ${date.getFullYear()}`;
+    return `${d}${suffix} ${formatEventDate(date, 'en-GB', { month: 'long' })} ${date.getFullYear()}`;
   };
 
   const toHijriMalay = (date: Date): string => {
@@ -486,7 +424,7 @@ export default function Template5({
   const [wishSubmitting, setWishSubmitting] = useState(false);
   const [wishSuccess, setWishSuccess] = useState(false);
   const [wishExpanded, setWishExpanded] = useState(false);
-  const [displayedWishes, setDisplayedWishes] = useState(10);
+  const { limit: displayedWishes, loadMore: loadMoreWishes } = useWishPagination();
   const [photoExpanded, setPhotoExpanded] = useState(false);
 
   const [photoData, setPhotoData] = useState({ guestName: '', caption: '' });
@@ -782,7 +720,7 @@ const NAV_EMOJIS: Record<string, string> = {
               transition={{ delay: 0.7, duration: 0.8 }}
               className={styles.minimalDate}
             >
-              {weddingDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}
+              {formatEventDate(weddingDate, 'en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}
             </motion.p>
             <div className={styles.scrollCue}>
               <span>scroll</span>
@@ -878,7 +816,7 @@ const NAV_EMOJIS: Record<string, string> = {
               <text fill="rgba(255,255,255,0.9)" filter="url(#date-text-shadow-o)"
                 style={{ fontFamily: 'PlayfairDisplay, serif', fontSize: '1.75em', letterSpacing: '0.25em' }}>
                 <textPath href="#dateCurve-o" startOffset="50%" textAnchor="middle">
-                  {weddingDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}
+                  {formatEventDate(weddingDate, 'en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}
                 </textPath>
               </text>
             </motion.svg>
@@ -1007,7 +945,7 @@ const NAV_EMOJIS: Record<string, string> = {
                 style={{ fontFamily: 'PlayfairDisplay, serif', fontSize: '2em', letterSpacing: '0.25em' }}
               >
                 <textPath href="#dateCurve" startOffset="50%" textAnchor="middle">
-                  {weddingDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}
+                  {formatEventDate(weddingDate, 'en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}
                 </textPath>
               </text>
             </motion.svg>
@@ -1083,7 +1021,7 @@ const NAV_EMOJIS: Record<string, string> = {
             <p className={styles.dateText} style={{ color: dateColor || undefined, ...sx('ceremony', 'date') }}>
               <span {...ax('ceremony', 'date')}>{formatOrdinalDate(weddingDate)}</span>
             </p>
-            <p className={styles.dayText} style={{ color: dateColor || undefined, ...sx('ceremony', 'date') }}>{weddingDate.toLocaleDateString('en-GB', { weekday: 'long' })}</p>
+            <p className={styles.dayText} style={{ color: dateColor || undefined, ...sx('ceremony', 'date') }}>{formatEventDate(weddingDate, 'en-GB', { weekday: 'long' })}</p>
             {t('general.showIslamicDate', 'false') === 'true' && (
               <p className={styles.hijriText} style={{ color: dateColor || undefined, ...sx('ceremony', 'date') }}>{toHijriMalay(weddingDate)}</p>
             )}
@@ -1354,7 +1292,7 @@ const NAV_EMOJIS: Record<string, string> = {
               {wishes.length > displayedWishes && (
                 <button
                   className={styles.wishLoadMore}
-                  onClick={() => setDisplayedWishes(n => n + 10)}
+                  onClick={loadMoreWishes}
                 >
                   Load more ({wishes.length - displayedWishes} remaining)
                 </button>
@@ -1476,7 +1414,7 @@ const NAV_EMOJIS: Record<string, string> = {
                       <div className={styles.stackGhost2}>
                         <div className={styles.stackPolaroid}>
                           <img
-                            src={`${API_BASE}${photos[(ghostIndex + 2) % photos.length].photoUrl}`}
+                            src={getImageUrl(photos[(ghostIndex + 2) % photos.length].photoUrl, API_BASE)}
                             className={styles.stackPhoto} alt="" draggable={false}
                           />
                         </div>
@@ -1486,7 +1424,7 @@ const NAV_EMOJIS: Record<string, string> = {
                       <div className={styles.stackGhost1}>
                         <div className={styles.stackPolaroid}>
                           <img
-                            src={`${API_BASE}${photos[(ghostIndex + 1) % photos.length].photoUrl}`}
+                            src={getImageUrl(photos[(ghostIndex + 1) % photos.length].photoUrl, API_BASE)}
                             className={styles.stackPhoto} alt="" draggable={false}
                           />
                         </div>
@@ -1518,7 +1456,7 @@ const NAV_EMOJIS: Record<string, string> = {
                         <div className={styles.stackPolaroid}>
                           <div className={styles.polaroidTape} />
                           <img
-                            src={`${API_BASE}${photos[stackIndex].photoUrl}`}
+                            src={getImageUrl(photos[stackIndex].photoUrl, API_BASE)}
                             alt={photos[stackIndex].caption ?? ''}
                             className={styles.stackPhoto}
                             draggable={false}
@@ -1560,7 +1498,7 @@ const NAV_EMOJIS: Record<string, string> = {
                       <div key={photo.photoId} className={styles.polaroid}
                         onClick={() => setLightboxPhoto(photo)}>
                         <div className={styles.polaroidTape} />
-                        <img src={`${API_BASE}${photo.photoUrl}`} alt={photo.caption ?? ''}
+                        <img src={getImageUrl(photo.photoUrl, API_BASE)} alt={photo.caption ?? ''}
                           loading="lazy" decoding="async" className={styles.polaroidPhoto} />
                         {photo.caption && (
                           <span className={styles.polaroidCaption}>{photo.caption}</span>
@@ -1642,7 +1580,7 @@ const NAV_EMOJIS: Record<string, string> = {
           >
             <div className={styles.lightboxCard} onClick={(e) => e.stopPropagation()}>
               <img
-                src={`${API_BASE}${lightboxPhoto.photoUrl}`}
+                src={getImageUrl(lightboxPhoto.photoUrl, API_BASE)}
                 alt={lightboxPhoto.caption ?? ''}
                 className={styles.lightboxPhoto}
               />

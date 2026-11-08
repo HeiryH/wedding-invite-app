@@ -1,4 +1,6 @@
 'use client';
+import { useInvitationAudio } from '../_shared/hooks/useInvitationAudio';
+import { configValue } from '@/components/templates/configValue';
 import type { TemplateRsvpSubmission, PhotoUploadSubmission } from '@/components/templates/guestContracts';
 
 import { Fragment, useState, useEffect, useCallback, useRef, type ReactNode } from 'react';
@@ -71,7 +73,7 @@ export default function Template6({
   itinerary = [],
   editor,
 }: Template6Props) {
-  const t = (key: string, fallback: string) => customConfig?.[key] || fallback;
+  const t = (key: string, fallback: string) => configValue(customConfig, key, fallback);
   const webgl = useWebGLSupport();
   const reduced = useReducedMotion();
   const fairyConfig = useFairyConfig(customConfig);
@@ -80,11 +82,12 @@ export default function Template6({
   const overlayProps = { breakpoint: overlayBreakpoint, config: customConfig, editor };
   const { a, tx, sx, ax } = useAnchors(customConfig, overlayBreakpoint, editor);
 
-  const [musicPlaying, setMusicPlaying] = useState(false);
   const [musicExpanded, setMusicExpanded] = useState(true);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const collapseTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => { if (collapseTimer.current) clearTimeout(collapseTimer.current); }, []);
   const musicUrl = t('music.url', '');
   const musicLoop = t('music.loop', 'true') === 'true';
+  const { isPlaying: musicPlaying, toggle: toggleMusic, enabled: musicEnabled } = useInvitationAudio(musicUrl, musicLoop, { disabled: Boolean(editor?.enabled) });
   const showIslamicDate = t('general.showIslamicDate', 'false') === 'true';
 
   // Determine which sections to show
@@ -105,23 +108,6 @@ export default function Template6({
     const timer = setTimeout(() => setMusicExpanded(false), 4000);
     return () => clearTimeout(timer);
   }, [musicUrl]);
-
-  // Music playback
-  useEffect(() => {
-    if (!musicUrl) return;
-    if (!audioRef.current) {
-      audioRef.current = new Audio(musicUrl);
-      audioRef.current.loop = musicLoop;
-    }
-    if (musicPlaying) {
-      audioRef.current.play().catch(() => {});
-    } else {
-      audioRef.current.pause();
-    }
-  }, [musicPlaying, musicUrl, musicLoop]);
-
-  // Clean up audio on unmount
-  useEffect(() => () => { audioRef.current?.pause(); }, []);
 
   const scrollToSection = useCallback((id: string) => {
     const target = document.getElementById(id);
@@ -177,13 +163,14 @@ export default function Template6({
     <div className={styles.wrapper}>
       {/* Music toggle */}
       <AnimatePresence>
-        {musicUrl && (
+        {musicUrl && musicEnabled && (
           <motion.button
             className={styles.musicBubble}
             onClick={() => {
-              setMusicPlaying((p) => !p);
+              void toggleMusic();
               setMusicExpanded(true);
-              setTimeout(() => setMusicExpanded(false), 4000);
+              if (collapseTimer.current) clearTimeout(collapseTimer.current);
+              collapseTimer.current = setTimeout(() => setMusicExpanded(false), 4000);
             }}
             initial={{ opacity: 0, scale: 0.8 }}
             animate={{ opacity: 1, scale: 1 }}

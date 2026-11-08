@@ -1,4 +1,5 @@
 'use client';
+import { configValue } from '@/components/templates/configValue';
 
 import GuestRuntime from './_shared/guest/GuestRuntime';
 import { Suspense, useMemo } from 'react';
@@ -51,7 +52,7 @@ function TemplateContents({
   if (authoredStages) {
     const slotProps: SlotProps = {
       wedding,
-      t: (key: string, fallback: string) => customConfig?.[key] || fallback,
+      t: (key: string, fallback: string) => configValue(customConfig, key, fallback),
       wishes,
       photos,
       coupleMedia,

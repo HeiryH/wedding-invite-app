@@ -68,6 +68,8 @@ export const SLOT_CATALOG: SlotCatalogEntry[] = [
   { id: 'wishPhoto', label: 'Wish Photo Step (in sheet)', group: 'Wishes',
     defaultLayer: { ...base, y: 52, w: 78, h: 30, depth: 0.2, presentation: 'sheet', sheetId: 'wish' } },
 
+  { id: 'coupleGallery', label: 'Couple Gallery (existing couple photos)', group: 'Media',
+    defaultLayer: { ...base, y: 46, w: 86, h: 70, depth: 0 } },
   { id: 'photoBooth', label: 'Photo Booth (gallery + upload)', group: 'Media',
     defaultLayer: { ...base, y: 46, w: 76, h: 46, depth: 0.15 } },
   { id: 'photoGallery', label: 'Photo Gallery (view only)', group: 'Media',

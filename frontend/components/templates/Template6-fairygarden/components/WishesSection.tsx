@@ -1,4 +1,6 @@
 'use client';
+import WishBatch from '@/components/templates/_shared/WishBatch';
+import { configValue } from '@/components/templates/configValue';
 import { useGuestSubmission } from '@/components/templates/_shared/guest/useGuestSubmission';
 import { useState, type CSSProperties } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -17,7 +19,7 @@ interface Props {
 
 export default function WishesSection({ wishes, onSubmitWish, customConfig, overlayProps, a }: Props) {
   const submission = useGuestSubmission();
-  const t = (key: string, fallback: string) => customConfig?.[key] || fallback;
+  const t = (key: string, fallback: string) => configValue(customConfig, key, fallback);
   const [name, setName] = useState('');
   const [message, setMessage] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -99,7 +101,7 @@ export default function WishesSection({ wishes, onSubmitWish, customConfig, over
 
         {wishes.length > 0 && (
           <div className={styles.wishGrid}>
-            {wishes.map((w, i) => (
+            <WishBatch wishes={wishes}>{(visibleWishes) => visibleWishes.map((w, i) => (
               <motion.div
                 key={w.wishId}
                 className={styles.wishCard}
@@ -111,7 +113,7 @@ export default function WishesSection({ wishes, onSubmitWish, customConfig, over
                 <p className={styles.wishMessage}>"{w.message}"</p>
                 <span className={styles.wishAuthor}>— {w.guestName}</span>
               </motion.div>
-            ))}
+            ))}</WishBatch>
           </div>
         )}
       </motion.div>

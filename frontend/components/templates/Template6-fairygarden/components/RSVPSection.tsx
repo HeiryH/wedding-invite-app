@@ -1,4 +1,5 @@
 'use client';
+import { configValue } from '@/components/templates/configValue';
 import { useDialogBehavior } from '../../_shared/hooks/useDialogBehavior';
 import { useGuestSubmission } from '@/components/templates/_shared/guest/useGuestSubmission';
 import { guestLimit, normalizeRsvp } from '@/components/templates/_shared/guest/rules';
@@ -26,7 +27,7 @@ interface Props {
 export default function RSVPSection({ onRSVP, customConfig, wedding, seatingEnabled = false, tables = [], overlayProps, a }: Props) {
   const submission = useGuestSubmission();
   const paxLimit = guestLimit(wedding);
-  const t = (key: string, fallback: string) => customConfig?.[key] || fallback;
+  const t = (key: string, fallback: string) => configValue(customConfig, key, fallback);
   const seatingPreview = useContext(SeatingPreviewContext);
   const [step, setStep] = useState<'form' | 'seating'>('form');
   const [selectedTableId, setSelectedTableId] = useState<number | null>(null);

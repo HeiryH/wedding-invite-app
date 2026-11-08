@@ -1,4 +1,6 @@
 'use client';
+import { formatEventDate } from '@/lib/eventDateFormat';
+import { configValue } from '@/components/templates/configValue';
 import { Suspense, lazy, type CSSProperties } from 'react';
 import { motion } from 'framer-motion';
 import { Wedding } from '@/lib/api';
@@ -41,11 +43,11 @@ export default function WelcomeSection({
   sx,
   ax,
 }: Props) {
-  const t = (key: string, fallback: string) => customConfig?.[key] || fallback;
+  const t = (key: string, fallback: string) => configValue(customConfig, key, fallback);
   const sceneOff = config.quality === 'off' || webgl === 'none';
   const weddingDate = new Date(wedding.weddingDate);
 
-  const dateStr = weddingDate.toLocaleDateString('en-MY', {
+  const dateStr = formatEventDate(weddingDate, 'en-MY', {
     weekday: 'long',
     day: 'numeric',
     month: 'long',

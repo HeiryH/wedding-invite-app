@@ -34,10 +34,10 @@ const SHARED_LIB_FILES = ['templateUtils.ts'];
  *  Adjust panel, so their scope includes it; the flow-only Classic templates (T1-T4/T6/T8/T9)
  *  don't need it — their config reads live entirely in their own file/folder. */
 const TEMPLATE_ROOTS: Record<number, string[]> = {
-  1: ['Template1.tsx', 'Template1-classicrose'],
-  2: ['Template2.tsx', 'Template2-goldenelegance'],
-  3: ['Template3.tsx', 'Template3-gardenromance'],
-  4: ['Template4.tsx', 'Template4-minimalnoir'],
+  1: ['Template1.tsx', 'Template1-classicrose', '_shared/slots/ChromeSlots.tsx'],
+  2: ['Template2.tsx', 'Template2-goldenelegance', '_shared/slots/ChromeSlots.tsx'],
+  3: ['Template3.tsx', 'Template3-gardenromance', '_shared/slots/ChromeSlots.tsx'],
+  4: ['Template4.tsx', 'Template4-minimalnoir', '_shared/slots/ChromeSlots.tsx'],
   5: ['Template5.tsx', 'Template5-dreamingfloral', '_shared'],
   6: ['Template6.tsx', 'Template6-fairygarden'],
   7: ['Template7.tsx', 'Template7-romangarden', '_shared'],
