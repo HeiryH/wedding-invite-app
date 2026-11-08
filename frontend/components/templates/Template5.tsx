@@ -1,6 +1,7 @@
 'use client';
 
 import { Fragment, useContext, useState, useEffect, useMemo, useRef, type CSSProperties, type ReactNode } from 'react';
+import { useCountdownToDate as useCountdown } from './_shared/hooks/useCountdownToDate';
 import { SeatingPreviewContext } from './_shared/slots/preview';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Wedding, Wish, Photo, SeatingTable, ItineraryItem } from '@/lib/api';
@@ -408,24 +409,7 @@ function MusicBubble({ url, loop }: { url: string; loop: boolean }) {
 
 // ── Countdown hook ────────────────────────────────────────────────────────────
 
-function useCountdown(target: Date) {
-  const calc = () => {
-    const d = target.getTime() - Date.now();
-    if (d <= 0) return { days: 0, hours: 0, minutes: 0, seconds: 0 };
-    return {
-      days: Math.floor(d / 86400000),
-      hours: Math.floor((d % 86400000) / 3600000),
-      minutes: Math.floor((d % 3600000) / 60000),
-      seconds: Math.floor((d % 60000) / 1000),
-    };
-  };
-  const [ct, setCt] = useState(calc);
-  useEffect(() => {
-    const id = setInterval(() => setCt(calc()), 1000);
-    return () => clearInterval(id);
-  }, []);
-  return ct;
-}
+
 
 // ── Shadow preset → CSS ───────────────────────────────────────────────────────
 

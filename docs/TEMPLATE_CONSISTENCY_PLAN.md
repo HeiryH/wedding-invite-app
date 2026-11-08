@@ -1,6 +1,6 @@
 # Template consistency execution plan
 
-Status: planned; no fixes implemented.
+Status: in progress; Phase 1 completed. See TEMPLATE_CONSISTENCY_PROGRESS.md for evidence and remaining gates.
 Date: 2026-11-08
 Recovery checkpoint: `0d3a4fd` on `ae-unified`.
 Implementation branch: `fix/template-consistency`.

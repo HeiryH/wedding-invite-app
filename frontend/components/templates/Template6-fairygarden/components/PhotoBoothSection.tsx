@@ -2,6 +2,7 @@
 import { useRef, type CSSProperties } from 'react';
 import { motion } from 'framer-motion';
 import { Photo } from '@/lib/api';
+import { uploadPhotoFile } from '@/components/templates/_shared/slots/PhotoBoothSlot';
 import type { Breakpoint, EditorHandle } from '@/components/templates/_shared/types';
 import SectionOverlay from '../SectionOverlay';
 import styles from '../Template6.module.css';
@@ -21,10 +22,7 @@ export default function PhotoBoothSection({ photos, onUploadPhoto, overlayProps,
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !onUploadPhoto) return;
-    const fd = new FormData();
-    fd.append('file', file);
-    fd.append('guestName', 'Guest');
-    await onUploadPhoto(fd);
+    await uploadPhotoFile(onUploadPhoto, file);
     e.target.value = '';
   };
 

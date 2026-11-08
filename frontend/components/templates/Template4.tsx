@@ -1,6 +1,7 @@
 'use client';
 
 import { useContext, useState, useEffect, useRef } from 'react';
+import { useCountdownToDate as useCountdown } from './_shared/hooks/useCountdownToDate';
 import { SeatingPreviewContext } from './_shared/slots/preview';
 import { motion, useMotionValue, useTransform, animate, AnimatePresence } from 'framer-motion';
 import { Wedding, Wish, Photo, SeatingTable, TemplateSlots, ItineraryItem } from '@/lib/api';
@@ -60,24 +61,7 @@ function TornEdge({ fromDark = false }: { fromDark?: boolean }) {
 }
 
 // Countdown hook (live)
-function useCountdown(target: Date) {
-  const calc = () => {
-    const d = target.getTime() - Date.now();
-    if (d <= 0) return { days: 0, hours: 0, minutes: 0, seconds: 0 };
-    return {
-      days: Math.floor(d / 86400000),
-      hours: Math.floor((d % 86400000) / 3600000),
-      minutes: Math.floor((d % 3600000) / 60000),
-      seconds: Math.floor((d % 60000) / 1000),
-    };
-  };
-  const [t, setT] = useState(calc);
-  useEffect(() => {
-    const id = setInterval(() => setT(calc()), 1000);
-    return () => clearInterval(id);
-  }, []);
-  return t;
-}
+
 
 // ── Minimal SVG icons ──────────────────────────────────────
 const IcoChurch = () => (
@@ -254,6 +238,9 @@ function UploadSheet({
   const [name, setName] = useState('');
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
+  useEffect(() => () => {
+    if (preview) URL.revokeObjectURL(preview);
+  }, [preview]);
 
   const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0];

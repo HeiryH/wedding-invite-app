@@ -163,6 +163,9 @@ export default function Template3({
   const [photoData, setPhotoData] = useState({ guestName: '', caption: '' });
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  useEffect(() => () => {
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
+  }, [previewUrl]);
   const [photoSubmitting, setPhotoSubmitting] = useState(false);
   const [photoSuccess, setPhotoSuccess] = useState(false);
 
@@ -439,19 +442,19 @@ export default function Template3({
                 <p className="text-green-600 text-center mb-8">{t('rsvp.subtitle', 'Will you be joining us?')}</p>
               </div>
 
-              {wedding.isRsvpOpen === false ? (
+              {wedding.isRsvpOpen === false && !seatingPreview ? (
                 <div className="bg-gray-50 border border-gray-200 rounded-2xl p-8 text-center">
                   <div className="text-5xl mb-4">🔒</div>
                   <h3 className="text-2xl font-bold text-gray-700 mb-2">RSVPs are closed</h3>
                   <p className="text-gray-500">Thank you for your interest — we&apos;re no longer accepting responses.</p>
                 </div>
-              ) : rsvpSuccess ? (
+              ) : rsvpSuccess && !seatingPreview ? (
                 <div className="bg-green-50 border border-green-200 rounded-2xl p-8 text-center">
                   <div className="text-5xl mb-4">🌿</div>
                   <h3 className="text-2xl font-bold text-green-800 mb-2">Thank you!</h3>
                   <p className="text-green-600">Your RSVP has been received.</p>
                 </div>
-              ) : !seatingPreview && (
+              ) : !seatingPreview && rsvpStep === 1 && (
                 <form onSubmit={handleRSVPSubmit} className="bg-white rounded-2xl shadow-sm border border-green-100 p-6 space-y-4">
                   {/* Attending toggle */}
                   <div className="flex gap-3">
