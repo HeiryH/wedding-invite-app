@@ -6,10 +6,12 @@ import { CookieConsent } from "@/components/CookieConsent";
 import { MotionProvider } from "@/components/MotionProvider";
 import { CURATED_FONT_VARIABLES } from "@/lib/fonts/curated";
 
+// Variable faces preserve every used weight and avoid Google's extensionless static-file
+// responses, which older next/font loaders cannot resolve reliably during a clean build.
 const cormorant = Cormorant_Garamond({
   variable: "--font-cormorant",
   subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
+  weight: 'variable',
   style: ["normal", "italic"],
   display: "swap",
 });
@@ -17,14 +19,14 @@ const cormorant = Cormorant_Garamond({
 const hanken = Hanken_Grotesk({
   variable: "--font-hanken",
   subsets: ["latin"],
-  weight: ["400", "500", "600", "700", "800"],
+  weight: 'variable',
   display: "swap",
 });
 
 const jetbrains = JetBrains_Mono({
   variable: "--font-jetbrains",
   subsets: ["latin"],
-  weight: ["400", "500", "600"],
+  weight: "variable",
   display: "swap",
 });
 
@@ -32,7 +34,7 @@ const jetbrains = JetBrains_Mono({
 const playfair = Playfair_Display({
   variable: "--font-playfair",
   subsets: ["latin"],
-  weight: ["400", "500", "600", "700", "900"],
+  weight: 'variable',
   style: ["normal", "italic"],
   display: "swap",
 });
@@ -47,7 +49,7 @@ const greatVibes = Great_Vibes({
 const fredoka = Fredoka({
   variable: "--font-fredoka",
   subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
+  weight: 'variable',
   display: "swap",
 });
 

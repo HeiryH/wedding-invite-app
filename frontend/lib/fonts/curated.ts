@@ -37,31 +37,31 @@ import type { CuratedFontKey } from './registry';
  * production down with `upstream sent too big header` — see docs/FIX_QUEUE.md Issue 4. Adding a new
  * curated font should default to `preload: false` unless it becomes a new template's own default.
  */
-const playfair = Playfair_Display({ subsets: ['latin'], weight: ['400', '500', '600', '700'], variable: '--font-ae-playfair', display: 'swap', preload: false });
+const playfair = Playfair_Display({ subsets: ['latin'], weight: 'variable', variable: '--font-ae-playfair', display: 'swap', preload: false });
 // Cormorant is the one curated face that also ships its true italic: Template 14 (Sandy Beach) sets
 // its names/headings in Cormorant italic, and without the italic files the browser synthesises a
 // slanted roman. Four extra preloaded files (latin subset) — still well inside the header budget
 // docs/FIX_QUEUE.md Issue 4 set (12 → 16 files, vs the 34 that broke production).
-const cormorant = Cormorant_Garamond({ subsets: ['latin'], weight: ['400', '500', '600', '700'], style: ['normal', 'italic'], variable: '--font-ae-cormorant', display: 'swap', preload: true });
+const cormorant = Cormorant_Garamond({ subsets: ['latin'], weight: 'variable', style: ['normal', 'italic'], variable: '--font-ae-cormorant', display: 'swap', preload: true });
 const greatVibes = Great_Vibes({ subsets: ['latin'], weight: ['400'], variable: '--font-ae-great-vibes', display: 'swap', preload: false });
-const dancingScript = Dancing_Script({ subsets: ['latin'], weight: ['400', '500', '600', '700'], variable: '--font-ae-dancing-script', display: 'swap', preload: false });
+const dancingScript = Dancing_Script({ subsets: ['latin'], weight: 'variable', variable: '--font-ae-dancing-script', display: 'swap', preload: false });
 const sacramento = Sacramento({ subsets: ['latin'], weight: ['400'], variable: '--font-ae-sacramento', display: 'swap', preload: false });
 const parisienne = Parisienne({ subsets: ['latin'], weight: ['400'], variable: '--font-ae-parisienne', display: 'swap', preload: false });
-const ebGaramond = EB_Garamond({ subsets: ['latin'], weight: ['400', '500', '600', '700'], variable: '--font-ae-eb-garamond', display: 'swap', preload: true });
-const cinzel = Cinzel({ subsets: ['latin'], weight: ['400', '500', '600', '700'], variable: '--font-ae-cinzel', display: 'swap', preload: true });
+const ebGaramond = EB_Garamond({ subsets: ['latin'], weight: 'variable', variable: '--font-ae-eb-garamond', display: 'swap', preload: true });
+const cinzel = Cinzel({ subsets: ['latin'], weight: 'variable', variable: '--font-ae-cinzel', display: 'swap', preload: true });
 const marcellus = Marcellus({ subsets: ['latin'], weight: ['400'], variable: '--font-ae-marcellus', display: 'swap', preload: false });
-const josefinSans = Josefin_Sans({ subsets: ['latin'], weight: ['400', '500', '600', '700'], variable: '--font-ae-josefin-sans', display: 'swap', preload: false });
-const quicksand = Quicksand({ subsets: ['latin'], weight: ['400', '500', '600', '700'], variable: '--font-ae-quicksand', display: 'swap', preload: false });
+const josefinSans = Josefin_Sans({ subsets: ['latin'], weight: 'variable', variable: '--font-ae-josefin-sans', display: 'swap', preload: false });
+const quicksand = Quicksand({ subsets: ['latin'], weight: 'variable', variable: '--font-ae-quicksand', display: 'swap', preload: false });
 const poppins = Poppins({ subsets: ['latin'], weight: ['400', '500', '600', '700'], variable: '--font-ae-poppins', display: 'swap', preload: false });
-const raleway = Raleway({ subsets: ['latin'], weight: ['400', '500', '600', '700'], variable: '--font-ae-raleway', display: 'swap', preload: false });
-const libreBaskerville = Libre_Baskerville({ subsets: ['latin'], weight: ['400', '700'], variable: '--font-ae-libre-baskerville', display: 'swap', preload: false });
+const raleway = Raleway({ subsets: ['latin'], weight: 'variable', variable: '--font-ae-raleway', display: 'swap', preload: false });
+const libreBaskerville = Libre_Baskerville({ subsets: ['latin'], weight: 'variable', variable: '--font-ae-libre-baskerville', display: 'swap', preload: false });
 const crimsonText = Crimson_Text({ subsets: ['latin'], weight: ['400', '600', '700'], variable: '--font-ae-crimson-text', display: 'swap', preload: false });
 const italiana = Italiana({ subsets: ['latin'], weight: ['400'], variable: '--font-ae-italiana', display: 'swap', preload: false });
-const bodoniModa = Bodoni_Moda({ subsets: ['latin'], weight: ['400', '500', '600', '700'], variable: '--font-ae-bodoni-moda', display: 'swap', preload: false });
+const bodoniModa = Bodoni_Moda({ subsets: ['latin'], weight: 'variable', variable: '--font-ae-bodoni-moda', display: 'swap', preload: false });
 // Chunky, hand-drawn-feeling rounded faces for Template 10 (Sunny Safari) — the registry was
 // entirely wedding-elegant serifs/scripts before this, nothing close to a crayon-marker headline.
-const baloo2 = Baloo_2({ subsets: ['latin'], weight: ['400', '500', '600', '700', '800'], variable: '--font-ae-baloo-2', display: 'swap', preload: true });
-const nunito = Nunito({ subsets: ['latin'], weight: ['400', '500', '600', '700', '800'], variable: '--font-ae-nunito', display: 'swap', preload: true });
+const baloo2 = Baloo_2({ subsets: ['latin'], weight: 'variable', variable: '--font-ae-baloo-2', display: 'swap', preload: true });
+const nunito = Nunito({ subsets: ['latin'], weight: 'variable', variable: '--font-ae-nunito', display: 'swap', preload: true });
 
 /**
  * Every `CuratedFontKey` (registry.ts) mapped to its loader — the `Record<CuratedFontKey, ...>`

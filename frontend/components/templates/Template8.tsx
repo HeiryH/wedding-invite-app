@@ -22,9 +22,9 @@ import { toHijriString, alignClass, headingStyle, headingAnimationProps, section
 // preload: false — T8 is a prototype (see CLAUDE.md), not worth preloading on every visitor who
 // happens to land on this page; also keeps it off the invite route's font preload header (see
 // lib/fonts/curated.ts's doc comment for the incident that made this the default going forward).
-const fraunces = Fraunces({ subsets: ['latin'], weight: ['600', '700', '900'], style: ['normal'], display: 'swap', preload: false });
-const workSans = Work_Sans({ subsets: ['latin'], weight: ['400', '500', '600'], display: 'swap', preload: false });
-const caveat = Caveat({ subsets: ['latin'], weight: ['500', '600'], display: 'swap', preload: false });
+const fraunces = Fraunces({ subsets: ['latin'], weight: 'variable', style: ['normal'], display: 'swap', preload: false });
+const workSans = Work_Sans({ subsets: ['latin'], weight: 'variable', display: 'swap', preload: false });
+const caveat = Caveat({ subsets: ['latin'], weight: 'variable', display: 'swap', preload: false });
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL?.replace('/api', '') ?? '';
 
