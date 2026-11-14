@@ -36,7 +36,7 @@ export default function HostAdminLayout({ children }: { children: React.ReactNod
     return (
       <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--surface-app)' }}>
         <div style={{ textAlign: 'center' }}>
-          <div style={{ width: 48, height: 48, border: '3px solid var(--brand)', borderTopColor: 'transparent', borderRadius: '50%', margin: '0 auto 16px', animation: 'spin 0.8s linear infinite' }} />
+          <div style={{ width: 48, height: 48, border: '3px solid var(--gold-700)', borderTopColor: 'transparent', borderRadius: '50%', margin: '0 auto 16px', animation: 'spin 0.8s linear infinite' }} />
           <p style={{ color: 'var(--text-muted)', fontSize: 14, fontFamily: 'var(--font-ui)' }}>Checking authentication…</p>
         </div>
         <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>

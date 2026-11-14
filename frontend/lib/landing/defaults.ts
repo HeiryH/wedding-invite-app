@@ -3,8 +3,21 @@
 // super-admin editor (to prefill fields instead of showing them empty).
 export const LANDING_CONTENT_DEFAULTS: Record<string, string> = {
   'hero.tagline': 'Weddings · Parties · Ceremonies',
-  'features.title': 'Features',
-  'features.subtitle': 'Everything to send a beautiful invite.',
+  'hero.heading': 'Beautiful digital invitations, made simple.',
+  'hero.body': 'Choose a design, share your link, and collect RSVPs — all in one place.',
+  'explore.title': 'Explore Invitation Designs',
+  'explore.subtitle': 'Thoughtful templates for every kind of celebration.',
+  'explore.templates': 'auto',
+  'steps.title': 'From invite to RSVP in four simple steps.',
+  'steps.subtitle': '',
+  'steps.design.title': 'Choose a design',
+  'steps.design.body': 'Pick from a curated collection for weddings, parties, and more.',
+  'steps.details.title': 'Fill in your invite details',
+  'steps.details.body': 'Add the names, date, time, and venue to make the invitation yours.',
+  'steps.share.title': 'Share your link',
+  'steps.share.body': 'Send your invitation in seconds via chat, email, or social media.',
+  'steps.reply.title': 'See replies roll in',
+  'steps.reply.body': 'Track RSVPs and guest details in a simple, organized list.',
   'pricing.title': 'Pricing',
   'pricing.subtitle': 'One simple price per tier. Pick the designs you love.',
   'stories.title': 'Stories',
@@ -30,12 +43,7 @@ export interface LandingDefaultItem {
   highlighted?: boolean;
 }
 
-export const DEFAULT_FEATURE_ITEMS: LandingDefaultItem[] = [
-  { title: 'Designer templates', body: '120+ hand-crafted invites for weddings, parties & ceremonies — no design skills needed.', meta: '#8fd8f2' },
-  { title: 'Instant RSVP', body: 'Guests tap to reply. You watch responses roll in, live.', meta: '#f2b7ab' },
-  { title: 'Live guest list', body: "Track who's coming, dietary notes and plus-ones in one place.", meta: '#8fe6b0' },
-  { title: 'Share anywhere', body: 'One link works on WhatsApp, Instagram, SMS or email.', meta: '#e9c98a' },
-];
+export const INVITE_STEPS = ['design', 'details', 'share', 'reply'] as const;
 
 // `meta` on a pricing item is the tier code (BASIC/PREMIUM/PRO) — the landing page uses it to
 // build the "View templates" link into the picker filtered to that tier. It falls back to

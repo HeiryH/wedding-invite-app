@@ -48,12 +48,12 @@ export default function PhotosTab({
       </div>
 
       {/* Photo Filters */}
-      <div className="bg-white rounded-xl shadow-md p-4 mb-6">
+      <div className="bg-[var(--surface-card)] rounded-xl shadow-md p-4 mb-6">
         <div className="flex gap-2">
           <button
             onClick={() => setPhotoFilter('all')}
             className={`px-4 py-2 rounded-lg font-medium transition-all ${
-              photoFilter === 'all' ? 'bg-rose-500 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              photoFilter === 'all' ? 'bg-[var(--brand)] text-[var(--brand-on)]' : 'bg-[var(--surface-sunken)] text-[var(--text-body)] hover:bg-[var(--brand-subtle-2)]'
             }`}
           >
             All ({stats.totalPhotos})
@@ -61,7 +61,7 @@ export default function PhotosTab({
           <button
             onClick={() => setPhotoFilter('pending')}
             className={`relative px-4 py-2 rounded-lg font-medium transition-all ${
-              photoFilter === 'pending' ? 'bg-yellow-500 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              photoFilter === 'pending' ? 'bg-yellow-500 text-white' : 'bg-[var(--surface-sunken)] text-[var(--text-body)] hover:bg-[var(--brand-subtle-2)]'
             }`}
           >
             Pending ({stats.pendingPhotos})
@@ -72,7 +72,7 @@ export default function PhotosTab({
           <button
             onClick={() => setPhotoFilter('approved')}
             className={`px-4 py-2 rounded-lg font-medium transition-all ${
-              photoFilter === 'approved' ? 'bg-green-500 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              photoFilter === 'approved' ? 'bg-green-500 text-white' : 'bg-[var(--surface-sunken)] text-[var(--text-body)] hover:bg-[var(--brand-subtle-2)]'
             }`}
           >
             Approved ({stats.approvedPhotos})
@@ -80,7 +80,7 @@ export default function PhotosTab({
           <button
             onClick={() => setPhotoFilter('featured')}
             className={`px-4 py-2 rounded-lg font-medium transition-all ${
-              photoFilter === 'featured' ? 'bg-purple-500 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              photoFilter === 'featured' ? 'bg-[var(--brand)] text-[var(--brand-on)]' : 'bg-[var(--surface-sunken)] text-[var(--text-body)] hover:bg-[var(--brand-subtle-2)]'
             }`}
           >
             Featured ({stats.featuredPhotos})
@@ -90,8 +90,8 @@ export default function PhotosTab({
 
       {/* Photo Grid */}
       {photos.length === 0 ? (
-        <div className="bg-white rounded-xl shadow-md p-12 text-center">
-          <p className="text-gray-500 text-lg">No photos in this category</p>
+        <div className="bg-[var(--surface-card)] rounded-xl shadow-md p-12 text-center">
+          <p className="text-[var(--text-muted)] text-lg">No photos in this category</p>
         </div>
       ) : (
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
@@ -103,12 +103,12 @@ export default function PhotosTab({
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.8 }}
                 transition={{ delay: index * 0.05 }}
-                className="bg-white rounded-xl overflow-hidden shadow-md hover:shadow-xl transition-shadow relative group"
+                className="bg-[var(--surface-card)] rounded-xl overflow-hidden shadow-md hover:shadow-xl transition-shadow relative group"
               >
                 {/* Featured Badge */}
                 {photo.isFeatured && (
                   <div className="absolute top-2 left-2 z-10">
-                    <span className="bg-gradient-to-r from-purple-500 to-pink-500 text-white text-xs px-2 py-1 rounded-full font-semibold">
+                    <span className="bg-[var(--brand-subtle)] text-[var(--brand)] text-xs px-2 py-1 rounded-full font-semibold">
                       ⭐ Featured
                     </span>
                   </div>
@@ -160,8 +160,8 @@ export default function PhotosTab({
                           onClick={() => onSetFeatured(photo.photoId, !photo.isFeatured)}
                           className={`px-4 py-2 rounded-lg transition-colors text-sm font-medium ${
                             photo.isFeatured
-                              ? 'bg-purple-500 text-white hover:bg-purple-600'
-                              : 'bg-white text-purple-600 hover:bg-purple-50'
+                              ? 'bg-[var(--brand)] text-[var(--brand-on)] hover:bg-[var(--brand-hover)]'
+                              : 'bg-[var(--surface-card)] text-[var(--brand)] hover:bg-[var(--brand-subtle)]'
                           }`}
                         >
                           {photo.isFeatured ? '⭐ Unfeature' : '⭐ Feature'}
@@ -180,11 +180,11 @@ export default function PhotosTab({
 
                 {/* Photo Info */}
                 <div className="p-3">
-                  <p className="font-semibold text-sm text-gray-800 truncate">{photo.guestName}</p>
+                  <p className="font-semibold text-sm text-[var(--text-strong)] truncate">{photo.guestName}</p>
                   {photo.caption && (
-                    <p className="text-xs text-gray-600 italic truncate">&quot;{photo.caption}&quot;</p>
+                    <p className="text-xs text-[var(--text-muted)] italic truncate">&quot;{photo.caption}&quot;</p>
                   )}
-                  <p className="text-xs text-gray-400 mt-1">
+                  <p className="text-xs text-[var(--text-subtle)] mt-1">
                     {new Date(photo.createdDate).toLocaleDateString()}
                   </p>
                 </div>

@@ -596,3 +596,9 @@
 @media (prefers-reduced-motion: reduce) {
   .scrollCue span { animation: none; }
 }
+
+/* Keep the stock frame at its set width in older layouts with a fixed-height box.
+   Its extended poles can continue below that box into the foreground vases. */
+.wrapper :global(#rsvp [data-layer="frame"] img[src$="/rsvp/frame.webp?v=2"]) {
+  height: auto;
+}

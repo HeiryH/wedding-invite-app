@@ -68,7 +68,7 @@ import {
   type CinematicSequenceTrack,
 } from '@/components/templates/_shared/cinematic/sequence';
 import { sampleCamera, type CameraState } from '@/components/templates/_shared/cinematic/useCinematicScroll';
-import { resolveStage, serializeStage, layoutKey } from '@/components/templates/_shared/layout';
+import { resolveStage, serializeStage, layoutKey, patchStageLayer, stageArtScale } from '@/components/templates/_shared/layout';
 import type { Layer as LayerModel, Breakpoint, StageDef } from '@/components/templates/_shared/types';
 import { Button } from '@/components/ui/Button';
 import { Switch } from '@/components/ui/Switch';
@@ -105,6 +105,24 @@ const SAMPLE_GALLERY: Photo[] = [
   contentType: 'image/webp',
   uploadedBy: 'COUPLE',
   templateSlot: TemplateSlots.COUPLE_GALLERY,
+  isApproved: true,
+  isVisible: true,
+  isFeatured: false,
+  createdDate: '',
+}));
+
+const ROMAN_GARDEN_SAMPLE_PHOTOS: Photo[] = [
+  ['photobooth', 'Sample wedding guest photo'],
+  ['garden-toast', 'Wedding guests laughing at the reception'],
+  ['garden-guests', 'Wedding guests by the garden arch'],
+].map(([name, caption], index) => ({
+  photoId: -103 - index,
+  eventId: 0,
+  photoUrl: `/samples/roman-garden/${name}.webp`,
+  caption,
+  fileSize: 0,
+  contentType: 'image/webp',
+  uploadedBy: 'GUEST',
   isApproved: true,
   isVisible: true,
   isFeatured: false,
@@ -1545,13 +1563,14 @@ export default function CustomizationWorkspace({ masterTemplateId }: { masterTem
     const def = layout.stages[stageId];
     if (!def) return;
     const breakpoint: Breakpoint = previewBreakpoint;
-    const { layers, bgFit, bgPosition, bgScale, bgSrc } = resolveStage(layout.keyPrefix, def, breakpoint, draftConfig);
-    const nextLayers = layers.map((l) => (l.id === layerId ? { ...l, ...patch } : l));
+    const { layers, groups, bgFit, bgPosition, bgScale, bgSrc } = resolveStage(layout.keyPrefix, def, breakpoint, draftConfig);
+    const { layers: nextLayers, groups: nextGroups } = patchStageLayer(layers, groups, layerId, patch,
+      stageArtScale(def, breakpoint, { w: frame.w, h: frame.svh }));
     handleLayoutChange(
       layoutKey(layout.keyPrefix, breakpoint, def.id),
-      serializeStage(def, breakpoint, nextLayers, { bgFit, bgPosition, bgScale, bgSrc }),
+      serializeStage(def, breakpoint, nextLayers, { bgFit, bgPosition, bgScale, bgSrc }, nextGroups),
     );
-  }, [layout, previewBreakpoint, draftConfig, handleLayoutChange]);
+  }, [layout, previewBreakpoint, draftConfig, handleLayoutChange, frame.w, frame.svh]);
 
   // Opening the dock collapses the left inspector to its icon rail so the centred preview keeps room.
   const toggleAdjust = useCallback(() => {
@@ -1612,6 +1631,7 @@ export default function CustomizationWorkspace({ masterTemplateId }: { masterTem
       masterPreview: master,
       navigationAdjust: adjusting && hasNavigationAdjust ? (navigationSelected ? 'selected' : 'available') : undefined,
       coupleMedia: showSampleGallery ? [...coupleMedia, ...SAMPLE_GALLERY] : coupleMedia,
+      photos: master && wedding.templateId === 7 ? ROMAN_GARDEN_SAMPLE_PHOTOS : undefined,
       wishes: SAMPLE_WISHES, photoBoothEnabled,
       previewSeating: previewSeating && (master || eventSeating.enabled) && draftConfig['seating.mode'] !== 'organizer',
       seatingEnabled: (master ? sampleSeating || previewSeating : eventSeating.enabled) && draftConfig['seating.mode'] !== 'organizer',
@@ -1759,6 +1779,24 @@ export default function CustomizationWorkspace({ masterTemplateId }: { masterTem
     }, 500);
     return () => clearTimeout(t);
   }, [draftConfig, weddingDraft, sectionOrder, loading]);
+
+  // Group commands are discrete edits, so even rapid create/rename/move commands each get an
+  // undo step. Capture the current draft first in case the debounced recorder is still pending.
+  const handleGroupLayoutChange = (key: string, value: string) => {
+    if ((draftConfig[key] ?? '') === value) return;
+    const nextConfig = { ...draftConfig };
+    if (value === '') delete nextConfig[key];
+    else nextConfig[key] = value;
+    const before: EditSnapshot = { draftConfig, weddingDraft, sectionOrder };
+    const after: EditSnapshot = { ...before, draftConfig: nextConfig };
+    setHistory((previous) => {
+      const stack = previous.stack.slice(0, previous.index + 1);
+      if (JSON.stringify(stack.at(-1)) !== JSON.stringify(before)) stack.push(before);
+      const next = [...stack, after].slice(-100);
+      return { stack: next, index: next.length - 1 };
+    });
+    setDraftConfig(nextConfig);
+  };
 
   // Reads `history` from the closure (this render's value) rather than a functional updater —
   // both handlers only ever run from a discrete user action (a click or a keydown), never from a
@@ -2839,6 +2877,10 @@ export default function CustomizationWorkspace({ masterTemplateId }: { masterTem
                 breakpoint={previewBreakpoint}
                 config={draftConfig}
                 onLayoutChange={handleLayoutChange}
+                onGroupLayoutChange={handleGroupLayoutChange}
+                groupMotion
+                classicGroups={!layout.reveal}
+                groupFrame={{ w: frame.w, h: frame.svh }}
                 selectedStage={activeStage}
                 selectedLayer={selectedLayer}
                 onSelectStage={(id) => {

@@ -322,6 +322,17 @@ namespace WeddingInvite.API.Controllers
                     IsActive      = true,
                     IsPublic      = false,
                     CreatedDate   = DateTime.UtcNow,
+                    Tables        = dto.Tables?.Select((table, index) => new Table
+                    {
+                        TableName = table.TableName.Trim(),
+                        Capacity = table.Capacity,
+                        SortOrder = index,
+                    }).ToList() ?? Enumerable.Range(0, dto.TableCount).Select(index => new Table
+                    {
+                        TableName = $"Table {index + 1}",
+                        Capacity = 8,
+                        SortOrder = index,
+                    }).ToList(),
                 };
                 var createdEvent = await _eventRepo.CreateAsync(evt);
 

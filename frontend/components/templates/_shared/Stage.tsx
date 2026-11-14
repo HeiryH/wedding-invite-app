@@ -1,14 +1,17 @@
 'use client';
 
-import type { Layer as LayerModel, ObjectFit, SlotProps, StageDef } from './types';
+import type { Layer as LayerModel, LayerGroup, ObjectFit, SlotProps, StageDef } from './types';
 import { useEngine } from './engine';
 import { useReducedMotion } from '@/lib/useReducedMotion';
 import Layer from './Layer';
+import GroupedLayers from './GroupedLayers';
+import { isStageCanvasLayer as inCanvas } from './layout';
 import styles from './Stage.module.css';
 
 interface Props {
   def: StageDef;
   layers: LayerModel[];
+  groups?: LayerGroup[];
   bgFit: ObjectFit;
   bgPosition?: string;
   bgScale?: number;
@@ -37,7 +40,7 @@ interface Props {
 }
 
 export default function Stage({
-  def, layers, bgFit, bgPosition, bgScale, bgSrc, seen, slotProps, eager, editing, stageActive,
+  def, layers, groups, bgFit, bgPosition, bgScale, bgSrc, seen, slotProps, eager, editing, stageActive,
   selectedLayer, suppressId, transparent,
 }: Props) {
   const { assetRoot, assetSizes } = useEngine();
@@ -57,8 +60,6 @@ export default function Stage({
   // shape. Scenery = the decorative kinds; real content (slots) stays outside and keeps adapting
   // to the actual screen — except a slot explicitly flagged `canvasAnchor`, which is composed
   // against the art and has to crop with it.
-  const inCanvas = (l: LayerModel) =>
-    l.canvasAnchor || l.kind === 'img' || l.kind === 'shape' || l.kind === 'text' || l.kind === 'video' || l.kind === 'water';
   // A stage that declares `canvas.mobile` but not `canvas.desktop` falls back to the mobile
   // aspect rather than getting no desktop canvas at all — the drift bug this whole mechanism
   // exists to prevent otherwise silently comes back for any template whose author didn't think
@@ -113,6 +114,12 @@ export default function Stage({
   const slotLayers = def.flow
     ? visible.filter(flows).sort((a, b) => a.order - b.order)
     : [];
+
+  const sharedCanvasGroups = new Set(canvasDef ? groups?.filter((group) =>
+    canvasLayers.some((layer) => group.memberIds.includes(layer.id)) &&
+    looseLayers.some((layer) => group.memberIds.includes(layer.id))).map((group) => group.id) : []);
+  const groupsOnPlane = (onPlane: (layer: LayerModel) => boolean) =>
+    groups?.filter((group) => layers.every((layer) => !group.memberIds.includes(layer.id) || onPlane(layer)));
 
   return (
     <section
@@ -171,18 +178,7 @@ export default function Stage({
       {def.flow ? (
         <>
           <div className={styles.flowOverlay}>
-            {decorative.map((l) => (
-              <Layer
-                key={l.id}
-                layer={l}
-                slotProps={slotProps}
-                eager={eager}
-                selected={stageActive && selectedLayer === l.id}
-                editing={editing}
-                stageActive={stageActive}
-                stageId={def.id}
-              />
-            ))}
+            <GroupedLayers layers={decorative} groups={groupsOnPlane((layer) => !flows(layer))} stageId={def.id} selectedLayer={stageActive ? selectedLayer : undefined} renderLayer={renderLayer} />
           </div>
           <div className={styles.flowStack}>
             {slotLayers.map((l) => (
@@ -208,10 +204,10 @@ export default function Stage({
               data-canvas
               style={{ ['--sl-ar' as string]: canvasDef.w / canvasDef.h, zIndex: canvasZ }}
             >
-              {canvasLayers.map(renderLayer)}
+              <GroupedLayers layers={canvasLayers} groups={groups} sharedCanvasGroups={sharedCanvasGroups} secondaryCanvas stageId={def.id} selectedLayer={stageActive ? selectedLayer : undefined} renderLayer={renderLayer} />
             </div>
           )}
-          {looseLayers.map(renderLayer)}
+          <GroupedLayers layers={looseLayers} groups={groups} sharedCanvasGroups={sharedCanvasGroups} stageId={def.id} selectedLayer={stageActive ? selectedLayer : undefined} renderLayer={renderLayer} />
         </>
       )}
     </section>

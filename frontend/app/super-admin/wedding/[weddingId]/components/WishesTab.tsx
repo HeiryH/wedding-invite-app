@@ -19,14 +19,14 @@ export default function WishesTab({ wishes, onDelete, onExport }: WishesTabProps
         </p>
         <button
           onClick={onExport}
-          style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 14px', background: 'white', color: 'var(--ink-2)', border: '1px solid var(--line-2)', borderRadius: 10, fontSize: 13, fontWeight: 500, cursor: 'pointer' }}
+          style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 14px', background: 'var(--surface-card)', color: 'var(--ink-2)', border: '1px solid var(--line-2)', borderRadius: 10, fontSize: 13, fontWeight: 500, cursor: 'pointer' }}
         >
           <Icon name="copy" size={14} /> Export CSV
         </button>
       </div>
 
       {wishes.length === 0 ? (
-        <div style={{ padding: '40px 16px', textAlign: 'center', color: 'var(--muted)', fontSize: 13, border: '1px dashed var(--line-2)', borderRadius: 12, background: 'var(--floral)' }}>
+        <div style={{ padding: '40px 16px', textAlign: 'center', color: 'var(--muted)', fontSize: 13, border: '1px dashed var(--line-2)', borderRadius: 12, background: 'var(--surface-sunken)' }}>
           No wishes yet
         </div>
       ) : (
@@ -38,16 +38,13 @@ export default function WishesTab({ wishes, onDelete, onExport }: WishesTabProps
                 key={wish.wishId}
                 style={{
                   position: 'relative', padding: '14px 16px',
-                  background: 'var(--lavender)', borderRadius: 12,
-                  borderLeft: '3px solid var(--lavender-deep)',
-                  border: '1px solid var(--lavender-deep)',
+                  background: 'var(--surface-card)', borderRadius: 'var(--radius-lg)',
+                  border: '1px solid var(--border-subtle)', boxShadow: 'var(--card-shadow)',
                 }}
-                className="group"
               >
                 <button
                   onClick={() => onDelete(wish.wishId)}
-                  style={{ position: 'absolute', top: 10, right: 10, width: 26, height: 26, borderRadius: 8, background: 'rgba(255,255,255,.6)', border: '1px solid rgba(255,255,255,.8)', display: 'grid', placeItems: 'center', cursor: 'pointer', opacity: 0, transition: 'opacity .15s ease', color: 'var(--danger)' }}
-                  className="group-hover:opacity-100"
+                  style={{ position: 'absolute', top: 10, right: 10, width: 26, height: 26, borderRadius: 8, background: 'rgba(255,255,255,.6)', border: '1px solid rgba(255,255,255,.8)', display: 'grid', placeItems: 'center', cursor: 'pointer', color: 'var(--danger)' }}
                   title="Delete wish"
                 >
                   <Icon name="trash" size={13} />

@@ -1,0 +1,11 @@
+@keyframes setFloat {
+  50% { translate: 0 calc(-1 * var(--fvh, 100vh) / 80); }
+}
+@keyframes setSway {
+  25% { translate: calc(-1 * var(--fvw, 100vw) / 100) 0; }
+  75% { translate: calc(var(--fvw, 100vw) / 100) 0; }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .float { animation: setFloat 4s ease-in-out infinite; }
+  .sway { animation: setSway 5s ease-in-out infinite; }
+}

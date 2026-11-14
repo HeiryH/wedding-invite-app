@@ -6,8 +6,7 @@ import { getUser, logout } from '@/lib/auth';
 import { authService } from '@/lib/api';
 import AdminShell from '@/components/admin/AdminShell';
 
-// The mobile tab bar carries only what you switch between constantly; seven icons made it a wall.
-// Everything else moves to the avatar menu (and still shows in the desktop rail) — see AdminShell.
+// The desktop rail and mobile tab bar show primary destinations. Secondary tools live in the menus.
 const NAV_ITEMS = [
   { id: 'dashboard', label: 'Events',  icon: 'home',        href: '/super-admin' },
   { id: 'themes',    label: 'Themes',  icon: 'palette',     href: '/super-admin/themes' },
@@ -46,9 +45,9 @@ export default function SuperAdminLayout({ children }: { children: React.ReactNo
 
   if (isLoading || !isAuthenticated) {
     return (
-      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--floral)' }}>
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--sand-50)' }}>
         <div style={{ textAlign: 'center' }}>
-          <div style={{ width: 48, height: 48, borderWidth: '3px', borderStyle: 'solid', borderColor: 'transparent var(--lavender-grey-ink) var(--lavender-grey-ink) var(--lavender-grey-ink)', borderRadius: '50%', margin: '0 auto 16px', animation: 'spin 0.8s linear infinite' }} />
+          <div style={{ width: 48, height: 48, borderWidth: '3px', borderStyle: 'solid', borderColor: 'transparent var(--gold-700) var(--gold-700) var(--gold-700)', borderRadius: '50%', margin: '0 auto 16px', animation: 'spin 0.8s linear infinite' }} />
           <p style={{ color: 'var(--muted)', fontSize: 14 }}>Checking authentication…</p>
         </div>
         <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>

@@ -604,7 +604,7 @@ namespace WeddingInvite.Data
                     .HasMaxLength(100);
 
                 entity.HasOne(e => e.Event)
-                    .WithMany()
+                    .WithMany(e => e.Tables)
                     .HasForeignKey(e => e.EventId)
                     .OnDelete(DeleteBehavior.Cascade);
             });

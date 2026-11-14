@@ -41,7 +41,21 @@ namespace WeddingInvite.Core.DTOs
         // Optional guest-personalised content carried through from the public
         // Personalise draft, so the new account is populated with their work.
         public Dictionary<string, string>? Config { get; set; }
+        [System.ComponentModel.DataAnnotations.Range(0, 100)]
+        public int TableCount { get; set; }
+        [System.ComponentModel.DataAnnotations.MaxLength(100)]
+        public List<SelfRegisterTableDto>? Tables { get; set; }
         public List<SelfRegisterItineraryDto>? Itinerary { get; set; }
+    }
+
+    public class SelfRegisterTableDto
+    {
+        [System.ComponentModel.DataAnnotations.Required]
+        [System.ComponentModel.DataAnnotations.MaxLength(100)]
+        public string TableName { get; set; } = string.Empty;
+
+        [System.ComponentModel.DataAnnotations.Range(1, 1000)]
+        public int Capacity { get; set; }
     }
 
     public class SelfRegisterItineraryDto

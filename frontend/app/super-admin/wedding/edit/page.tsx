@@ -125,10 +125,10 @@ export default function EditWeddingPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="min-h-screen flex items-center justify-center bg-[var(--surface-sunken)]">
         <div className="text-center">
-          <div className="w-16 h-16 border-4 border-rose-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-          <p className="text-gray-600">Loading wedding...</p>
+          <div className="w-16 h-16 border-4 border-[var(--brand)] border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-[var(--text-muted)]">Loading wedding...</p>
         </div>
       </div>
     );
@@ -136,12 +136,12 @@ export default function EditWeddingPage() {
 
   if (error && !wedding) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="min-h-screen flex items-center justify-center bg-[var(--surface-sunken)]">
         <div className="text-center">
           <p className="text-2xl text-red-500 mb-4">😢 {error}</p>
           <button
             onClick={() => router.push('/super-admin')}
-            className="text-rose-600 hover:underline"
+            className="text-[var(--text-link)] hover:underline"
           >
             ← Back to Dashboard
           </button>
@@ -153,18 +153,18 @@ export default function EditWeddingPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
       {/* Header */}
-      <div className="bg-white border-b border-gray-200 shadow-sm">
+      <div className="bg-[var(--surface-card)] border-b border-[var(--border-subtle)] shadow-sm">
         <div className="max-w-4xl mx-auto px-4 py-6">
           <div className="flex justify-between items-center">
             <div>
-              <h1 className="text-3xl font-bold text-gray-800">Edit Wedding</h1>
-              <p className="text-gray-600 mt-1">
+              <h1 className="text-3xl font-bold text-[var(--text-strong)]">Edit Wedding</h1>
+              <p className="text-[var(--text-muted)] mt-1">
                 {wedding?.displayName}
               </p>
             </div>
             <button
               onClick={() => router.push('/super-admin')}
-              className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
+              className="px-4 py-2 bg-[var(--brand-subtle-2)] text-[var(--text-body)] rounded-lg hover:bg-gray-300 transition-colors"
             >
               ← Back
             </button>
@@ -197,16 +197,16 @@ export default function EditWeddingPage() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           onSubmit={handleSubmit}
-          className="bg-white rounded-xl shadow-md p-8"
+          className="bg-[var(--surface-card)] rounded-xl shadow-md p-8"
         >
           {/* Couple Names */}
           <div className="mb-8">
-            <h2 className="text-xl font-semibold text-gray-800 mb-4">
+            <h2 className="text-xl font-semibold text-[var(--text-strong)] mb-4">
               👰🤵 Couple Information
             </h2>
             <div className="grid md:grid-cols-2 gap-6">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-[var(--text-body)] mb-2">
                   Bride&apos;s Name *
                 </label>
                 <input
@@ -215,13 +215,13 @@ export default function EditWeddingPage() {
                   onChange={(e) =>
                     setFormData({ ...formData, brideName: e.target.value })
                   }
-                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg text-gray-900 focus:border-rose-400 focus:outline-none"
+                  className="w-full px-4 py-3 border-2 border-[var(--border-subtle)] rounded-lg text-[var(--text-strong)] focus:border-[var(--brand)] focus:outline-none"
                   required
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-[var(--text-body)] mb-2">
                   Groom&apos;s Name *
                 </label>
                 <input
@@ -230,19 +230,19 @@ export default function EditWeddingPage() {
                   onChange={(e) =>
                     setFormData({ ...formData, groomName: e.target.value })
                   }
-                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg text-gray-900 focus:border-rose-400 focus:outline-none"
+                  className="w-full px-4 py-3 border-2 border-[var(--border-subtle)] rounded-lg text-[var(--text-strong)] focus:border-[var(--brand)] focus:outline-none"
                   required
                 />
               </div>
             </div>
 
             {/* Current URL */}
-            <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-              <p className="text-sm text-gray-600 mb-1">📝 Current URL:</p>
-              <p className="text-lg font-semibold text-blue-600">
+            <div className="mt-4 p-4 bg-[var(--brand-subtle)] border border-[var(--brand-border)] rounded-lg">
+              <p className="text-sm text-[var(--text-muted)] mb-1">📝 Current URL:</p>
+              <p className="text-lg font-semibold text-[var(--brand)]">
                 /{urlSegmentForEventType(wedding?.eventType)}/{wedding?.slug}
               </p>
-              <p className="text-xs text-gray-500 mt-1">
+              <p className="text-xs text-[var(--text-muted)] mt-1">
                 (URL slug cannot be changed after creation)
               </p>
             </div>
@@ -250,12 +250,12 @@ export default function EditWeddingPage() {
 
           {/* Wedding Details */}
           <div className="mb-8">
-            <h2 className="text-xl font-semibold text-gray-800 mb-4">
+            <h2 className="text-xl font-semibold text-[var(--text-strong)] mb-4">
               📅 Wedding Details
             </h2>
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-[var(--text-body)] mb-2">
                   Wedding Date & Time *
                 </label>
                 <input
@@ -264,13 +264,13 @@ export default function EditWeddingPage() {
                   onChange={(e) =>
                     setFormData({ ...formData, weddingDate: e.target.value })
                   }
-                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg text-gray-900 focus:border-rose-400 focus:outline-none"
+                  className="w-full px-4 py-3 border-2 border-[var(--border-subtle)] rounded-lg text-[var(--text-strong)] focus:border-[var(--brand)] focus:outline-none"
                   required
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-[var(--text-body)] mb-2">
                   Venue Name *
                 </label>
                 <input
@@ -279,13 +279,13 @@ export default function EditWeddingPage() {
                   onChange={(e) =>
                     setFormData({ ...formData, venue: e.target.value })
                   }
-                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg text-gray-900 focus:border-rose-400 focus:outline-none"
+                  className="w-full px-4 py-3 border-2 border-[var(--border-subtle)] rounded-lg text-[var(--text-strong)] focus:border-[var(--brand)] focus:outline-none"
                   required
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-[var(--text-body)] mb-2">
                   Venue Address *
                 </label>
                 <textarea
@@ -294,7 +294,7 @@ export default function EditWeddingPage() {
                     setFormData({ ...formData, venueAddress: e.target.value })
                   }
                   rows={3}
-                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg text-gray-900 focus:border-rose-400 focus:outline-none resize-none"
+                  className="w-full px-4 py-3 border-2 border-[var(--border-subtle)] rounded-lg text-[var(--text-strong)] focus:border-[var(--brand)] focus:outline-none resize-none"
                   required
                 />
               </div>
@@ -303,7 +303,7 @@ export default function EditWeddingPage() {
 
           {/* Template Selection */}
           <div className="mb-8">
-            <h2 className="text-xl font-semibold text-gray-800 mb-4">
+            <h2 className="text-xl font-semibold text-[var(--text-strong)] mb-4">
               🎨 Template
             </h2>
             <div className="grid md:grid-cols-2 gap-4">
@@ -322,10 +322,10 @@ export default function EditWeddingPage() {
                     }
                     className="sr-only peer"
                   />
-                  <div className="relative p-6 border-2 border-gray-200 rounded-xl peer-checked:border-rose-500 peer-checked:bg-rose-50 hover:border-gray-300 transition-all">
+                  <div className="relative p-6 border-2 border-[var(--border-subtle)] rounded-xl peer-checked:border-[var(--brand)] peer-checked:bg-[var(--brand-subtle)] hover:border-[var(--border-default)] transition-all">
                     {formData.templateId === template.templateId && (
                       <div className="absolute top-4 right-4">
-                        <span className="bg-rose-500 text-white text-xs px-3 py-1 rounded-full font-semibold">
+                        <span className="bg-[var(--brand)] text-[var(--brand-on)] text-xs px-3 py-1 rounded-full font-semibold">
                           ✓ Selected
                         </span>
                       </div>
@@ -333,22 +333,22 @@ export default function EditWeddingPage() {
 
                     {template.isPremium && (
                       <div className="absolute top-4 left-4">
-                        <span className="bg-gradient-to-r from-purple-500 to-pink-500 text-white text-xs px-3 py-1 rounded-full font-semibold">
+                        <span className="bg-[var(--brand-subtle)] text-[var(--brand)] text-xs px-3 py-1 rounded-full font-semibold">
                           ⭐ PREMIUM
                         </span>
                       </div>
                     )}
 
                     <div className="mt-8">
-                      <h3 className="text-xl font-bold text-gray-800 mb-2">
+                      <h3 className="text-xl font-bold text-[var(--text-strong)] mb-2">
                         {template.templateName}
                       </h3>
-                      <p className="text-sm text-gray-600 mb-4">
+                      <p className="text-sm text-[var(--text-muted)] mb-4">
                         {template.description}
                       </p>
 
                       <div className="flex gap-2 items-center">
-                        <span className="text-xs text-gray-500">Colors:</span>
+                        <span className="text-xs text-[var(--text-muted)]">Colors:</span>
                         <div
                           className="w-8 h-8 rounded-full border-2 border-white shadow-md"
                           style={{ backgroundColor: template.primaryColor }}
@@ -366,11 +366,11 @@ export default function EditWeddingPage() {
           </div>
 
           {/* Submit Buttons */}
-          <div className="flex gap-4 justify-end pt-6 border-t border-gray-200">
+          <div className="flex gap-4 justify-end pt-6 border-t border-[var(--border-subtle)]">
             <button
               type="button"
               onClick={() => router.push('/super-admin')}
-              className="px-6 py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors font-semibold"
+              className="px-6 py-3 bg-[var(--brand-subtle-2)] text-[var(--text-body)] rounded-lg hover:bg-gray-300 transition-colors font-semibold"
             >
               Cancel
             </button>
@@ -379,7 +379,7 @@ export default function EditWeddingPage() {
               disabled={saving}
               className={`px-8 py-3 rounded-lg font-semibold text-white transition-all ${saving
                 ? 'bg-gray-400 cursor-not-allowed'
-                : 'bg-gradient-to-r from-rose-500 to-pink-500 hover:shadow-lg'
+                : 'bg-[var(--brand)] hover:bg-[var(--brand-hover)] hover:shadow-lg'
                 }`}
             >
               {saving ? (

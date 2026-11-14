@@ -1,3 +1,4 @@
+import type { Breakpoint } from '../types';
 import type { CinematicEngine } from './registry';
 import { cinematicSceneSetsKey, resolveCinematicSceneSets, serializeCinematicSceneSets, type CinematicSceneSet } from './sceneSets';
 import { resolveCinematicProjectConfig, updateCinematicProjectValue } from './project';
@@ -8,12 +9,13 @@ import { resolveCinematicDirection, saveCinematicDirection } from './direction';
 import { cinematicDescendantIds } from './parts';
 
 export type SceneSetAction =
-  | { type: 'create'; id: string; label: string; space: CinematicSceneSet['space'] }
-  | { type: 'patch'; id: string; patch: Partial<Pick<CinematicSceneSet, 'label' | 'space' | 'locked' | 'hidden' | 'opacity'>> }
+  | { type: 'create'; id: string; label: string; space: CinematicSceneSet['space']; memberIds?: string[] }
+  | { type: 'patch'; id: string; patch: Partial<Pick<CinematicSceneSet, 'label' | 'space' | 'locked' | 'hidden' | 'opacity' | 'enter' | 'exit' | 'loop'>> }
   | { type: 'duplicate'; id: string; copyId: string }
   | { type: 'reorder'; id: string; direction: -1 | 1 }
   | { type: 'delete'; id: string; moveTo?: string }
   | { type: 'move-layer'; layerId: string; setId: string }
+  | { type: 'move-set'; id: string; breakpoint: Breakpoint; dx: number; dy: number }
   | { type: 'timing'; id: string; trackId?: string };
 
 export function nextSceneSetId(label: string, ids: string[]): string {
@@ -46,11 +48,32 @@ export function editCinematicSceneSets(
   let tracks = sequence.tracks;
   if (action.type === 'create') {
     if (sets.some((set) => set.id === action.id) || !action.label.trim()) return config;
+    const requested = [...new Set(action.memberIds ?? [])];
+    const members = [...worlds.mobile, ...worlds.desktop].filter((layer) => requested.includes(layer.id));
+    if (requested.some((id) => !members.some((layer) => layer.id === id)) ||
+      members.some((layer) => layer.parentId || layer.locked || layer.space !== action.space ||
+        sets.find((set) => set.id === layer.group)?.locked)) return config;
+    const source = members[0] && members.every((layer) => layer.group === members[0].group)
+      ? sets.find((set) => set.id === members[0].group) : undefined;
+    const inheritedTrack = source?.timingTrackId ?? tracks.find((track) =>
+      track.target.type === 'group' && track.target.id === source?.id)?.id;
     sets = [...sets, {
-      id: action.id, label: action.label.trim(), space: action.space,
+      id: action.id, label: action.label.trim(), space: action.space, composeTiming: true,
+      ...(inheritedTrack ? { timingTrackId: inheritedTrack } : {}),
       z: Math.max(0, ...sets.map((set) => set.z)) + 10,
       hidden: false, locked: false, system: false, opacity: 1,
     }];
+    for (const bp of ['mobile', 'desktop'] as const) {
+      const moved = new Set(requested.flatMap((id) => [...cinematicDescendantIds(id, worlds[bp])]));
+      worlds[bp] = worlds[bp].map((layer) => moved.has(layer.id) ? { ...layer, group: action.id } : layer);
+    }
+  } else if (action.type === 'move-set') {
+    if (!Number.isFinite(action.dx) || !Number.isFinite(action.dy)) return config;
+    const world = worlds[action.breakpoint];
+    const members = world.filter((layer) => layer.group === action.id && !layer.parentId);
+    if (!members.length || members.some((layer) => layer.locked) || (!action.dx && !action.dy)) return config;
+    worlds[action.breakpoint] = world.map((layer) => members.includes(layer)
+      ? { ...layer, x: layer.x + action.dx, y: layer.y + action.dy } : layer);
   } else if (action.type === 'patch') {
     sets = sets.map((set) => set.id === action.id ? { ...set, ...action.patch } : set);
     if (action.patch.space) {
@@ -83,7 +106,7 @@ export function editCinematicSceneSets(
     if (!destination || destination.locked) return config;
     for (const bp of ['mobile', 'desktop'] as const) {
       const layer = worlds[bp].find((candidate) => candidate.id === action.layerId);
-      if (layer?.parentId) return config;
+      if (layer?.parentId || layer?.locked) return config;
       if (sets.find((set) => set.id === layer?.group)?.locked) return config;
       const moved = cinematicDescendantIds(action.layerId, worlds[bp]);
       worlds[bp] = worlds[bp].map((layer) => moved.has(layer.id)
@@ -180,7 +203,7 @@ export function editCinematicSceneSets(
     const source = action.trackId ? tracks.find((track) => track.id === action.trackId) : undefined;
     const current = tracks.find((track) => track.target.type === 'group' && track.target.id === action.id);
     if (action.trackId && !source) return config;
-    if (source?.id === current?.id) return config;
+    if (source && source.id === current?.id) return config;
     const trackId = current?.id ?? nextSceneSetId(`${action.id}-timing`, tracks.map((track) => track.id));
     // A source may not already depend on this group's track (that would create a timing cycle).
     let ancestor = source;

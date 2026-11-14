@@ -392,7 +392,7 @@ export default function WeddingDetailPage() {
     return (
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '60vh' }}>
         <div style={{ textAlign: 'center' }}>
-          <div style={{ width: 48, height: 48, border: '3px solid var(--lavender-grey-ink)', borderTopColor: 'transparent', borderRadius: '50%', margin: '0 auto 14px', animation: 'spin 0.8s linear infinite' }} />
+          <div style={{ width: 48, height: 48, border: '3px solid var(--brand)', borderTopColor: 'transparent', borderRadius: '50%', margin: '0 auto 14px', animation: 'spin 0.8s linear infinite' }} />
           <p style={{ color: 'var(--muted)', fontSize: 14 }}>Loading wedding…</p>
           <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
         </div>
@@ -404,7 +404,7 @@ export default function WeddingDetailPage() {
     return (
       <div style={{ textAlign: 'center', padding: '60px 20px' }}>
         <p style={{ color: 'var(--danger)', marginBottom: 12 }}>{error || 'Wedding not found'}</p>
-        <button onClick={() => router.push('/super-admin')} style={{ color: 'var(--lavender-grey-ink)', cursor: 'pointer', background: 'none', border: 'none', textDecoration: 'underline' }}>
+        <button onClick={() => router.push('/super-admin')} style={{ color: 'var(--brand)', cursor: 'pointer', background: 'none', border: 'none', textDecoration: 'underline' }}>
           ← Back to dashboard
         </button>
       </div>
@@ -416,9 +416,9 @@ export default function WeddingDetailPage() {
   const weddingTimeStr = new Date(wedding.eventDate).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
   const weddingStatus = !wedding.isActive ? 'Draft' : daysToGo > 0 ? 'Upcoming' : 'Live';
   const statusStyle: React.CSSProperties = weddingStatus === 'Upcoming'
-    ? { background: 'var(--lavender)', color: 'var(--lavender-grey-ink)' }
+    ? { background: 'var(--brand-subtle)', color: 'var(--brand)' }
     : weddingStatus === 'Live' ? { background: '#e5f1ea', color: 'var(--success)' }
-    : { background: 'var(--floral-deep)', color: 'var(--muted)' };
+    : { background: 'var(--surface-sunken)', color: 'var(--muted)' };
 
   const inpEdit: React.CSSProperties = { padding: '8px 12px', border: '1px solid rgba(255,255,255,.5)', borderRadius: 10, background: 'rgba(255,255,255,.85)', color: 'var(--ink)', fontSize: 14, outline: 'none' };
 
@@ -426,33 +426,33 @@ export default function WeddingDetailPage() {
     <div>
       {/* ── Back link (mobile) ───────────────────────────────────────────── */}
       <button onClick={() => router.push('/super-admin')} className="lg:hidden"
-        style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13, color: 'var(--lavender-grey-deep)', marginBottom: 14, padding: '6px 10px 6px 6px', borderRadius: 999, background: 'white', border: '1px solid var(--line-2)', cursor: 'pointer' }}>
+        style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13, color: 'var(--text-muted)', marginBottom: 14, padding: '6px 10px 6px 6px', borderRadius: 999, background: 'var(--surface-card)', border: '1px solid var(--line-2)', cursor: 'pointer' }}>
         <Icon name="nav-arrow-left" size={16} /> All events
       </button>
 
       {/* ── Detail Hero ──────────────────────────────────────────────────── */}
-      <div style={{ background: 'linear-gradient(150deg, var(--veil) 0%, var(--lavender) 100%)', borderRadius: 'var(--radius-lg)', padding: '22px 22px 26px', position: 'relative', overflow: 'hidden', border: '1px solid var(--veil-deep)', marginBottom: 18 }}>
+      <div style={{ background: 'var(--surface-card)', borderRadius: 'var(--radius-lg)', padding: '22px 22px 26px', position: 'relative', overflow: 'hidden', border: '1px solid var(--border-subtle)', boxShadow: 'var(--card-shadow)', marginBottom: 18 }}>
         <div style={{ position: 'absolute', right: -50, top: -50, width: 220, height: 220, borderRadius: '50%', background: 'radial-gradient(circle, rgba(255,255,255,.6), transparent 70%)', pointerEvents: 'none' }} />
 
         {isEditingWedding ? (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10, maxWidth: 560, position: 'relative', zIndex: 1 }}>
             <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
               <input value={editWeddingData.brideName} onChange={e => setEditWeddingData({ ...editWeddingData, brideName: e.target.value })} placeholder="Bride's Name" style={{ ...inpEdit, flex: 1, fontSize: 16 }} />
-              <span style={{ color: 'var(--lavender-grey-deep)', fontFamily: 'var(--serif)', fontStyle: 'italic', fontSize: 20 }}>&amp;</span>
+              <span style={{ color: 'var(--text-muted)', fontFamily: 'var(--serif)', fontStyle: 'italic', fontSize: 20 }}>&amp;</span>
               <input value={editWeddingData.groomName} onChange={e => setEditWeddingData({ ...editWeddingData, groomName: e.target.value })} placeholder="Groom's Name" style={{ ...inpEdit, flex: 1, fontSize: 16 }} />
             </div>
             <input type="date" value={editWeddingData.weddingDate} onChange={e => setEditWeddingData({ ...editWeddingData, weddingDate: e.target.value })} style={inpEdit} />
             <input value={editWeddingData.venue} onChange={e => setEditWeddingData({ ...editWeddingData, venue: e.target.value })} placeholder="Venue" style={{ ...inpEdit, width: '100%', boxSizing: 'border-box' }} />
             <input value={editWeddingData.venueAddress} onChange={e => setEditWeddingData({ ...editWeddingData, venueAddress: e.target.value })} placeholder="Venue Address" style={{ ...inpEdit, width: '100%', boxSizing: 'border-box' }} />
             <div style={{ display: 'flex', gap: 8 }}>
-              <button onClick={handleUpdateWedding} style={{ padding: '9px 18px', background: 'var(--lavender-grey-ink)', color: 'var(--floral)', border: 'none', borderRadius: 10, fontSize: 13.5, fontWeight: 500, cursor: 'pointer' }}>Save</button>
+              <button onClick={handleUpdateWedding} style={{ padding: '9px 18px', background: 'var(--brand)', color: 'var(--brand-on)', border: 'none', borderRadius: 10, fontSize: 13.5, fontWeight: 500, cursor: 'pointer' }}>Save</button>
               <button onClick={() => setIsEditingWedding(false)} style={{ padding: '9px 18px', background: 'rgba(255,255,255,.5)', border: '1px solid rgba(255,255,255,.6)', borderRadius: 10, fontSize: 13.5, fontWeight: 500, cursor: 'pointer', color: 'var(--ink)' }}>Cancel</button>
             </div>
           </div>
         ) : (
           <div style={{ position: 'relative', zIndex: 1 }}>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 14 }}>
-              <span style={{ display: 'inline-flex', alignItems: 'baseline', gap: 6, background: 'rgba(255,255,255,.7)', border: '1px solid rgba(255,255,255,.9)', padding: '6px 10px', borderRadius: 999, fontSize: 11, letterSpacing: '0.06em', textTransform: 'uppercase' as const, color: 'var(--lavender-grey-ink)' }}>
+              <span style={{ display: 'inline-flex', alignItems: 'baseline', gap: 6, background: 'rgba(255,255,255,.7)', border: '1px solid rgba(255,255,255,.9)', padding: '6px 10px', borderRadius: 999, fontSize: 11, letterSpacing: '0.06em', textTransform: 'uppercase' as const, color: 'var(--brand)' }}>
                 <b style={{ fontFamily: 'var(--serif)', fontSize: 16, letterSpacing: '-0.01em', textTransform: 'none' as const, fontWeight: 400 }}>{Math.max(0, daysToGo)}</b> days to go
               </span>
               <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '4px 9px', borderRadius: 999, fontSize: 10.5, letterSpacing: '0.06em', textTransform: 'uppercase' as const, fontWeight: 500, ...statusStyle }}>
@@ -463,24 +463,24 @@ export default function WeddingDetailPage() {
               {wedding.displayName}
             </h2>
             <div style={{ marginTop: 14, color: 'var(--ink-2)', fontSize: 13.5, display: 'flex', flexWrap: 'wrap', gap: '6px 16px' }}>
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}><Icon name="calendar" size={14} style={{ color: 'var(--lavender-grey-deep)' }} /> {weddingDateStr}</span>
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}><Icon name="clock" size={14} style={{ color: 'var(--lavender-grey-deep)' }} /> {weddingTimeStr}</span>
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}><Icon name="map-pin" size={14} style={{ color: 'var(--lavender-grey-deep)' }} /> {wedding.venue}{wedding.venueAddress ? ` · ${wedding.venueAddress}` : ''}</span>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}><Icon name="calendar" size={14} style={{ color: 'var(--text-muted)' }} /> {weddingDateStr}</span>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}><Icon name="clock" size={14} style={{ color: 'var(--text-muted)' }} /> {weddingTimeStr}</span>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}><Icon name="map-pin" size={14} style={{ color: 'var(--text-muted)' }} /> {wedding.venue}{wedding.venueAddress ? ` · ${wedding.venueAddress}` : ''}</span>
             </div>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 18 }}>
-              <button onClick={() => window.open(`/${urlSegmentForEventType(wedding.eventType)}/${wedding.slug}`, '_blank')} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '9px 14px', background: 'var(--lavender-grey-ink)', color: 'var(--floral)', border: 'none', borderRadius: 12, fontSize: 13.5, fontWeight: 500, cursor: 'pointer' }}>
+              <button onClick={() => window.open(`/${urlSegmentForEventType(wedding.eventType)}/${wedding.slug}`, '_blank')} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '9px 14px', background: 'var(--brand)', color: 'var(--brand-on)', border: 'none', borderRadius: 12, fontSize: 13.5, fontWeight: 500, cursor: 'pointer' }}>
                 <Icon name="eye" size={15} /> View invitation
               </button>
-              <button onClick={() => navigator.clipboard?.writeText(`${window.location.origin}/${urlSegmentForEventType(wedding.eventType)}/${wedding.slug}`)} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '9px 14px', background: 'rgba(255,255,255,.7)', border: '1px solid rgba(255,255,255,.9)', borderRadius: 12, fontSize: 13.5, fontWeight: 500, color: 'var(--lavender-grey-ink)', cursor: 'pointer' }}>
+              <button onClick={() => navigator.clipboard?.writeText(`${window.location.origin}/${urlSegmentForEventType(wedding.eventType)}/${wedding.slug}`)} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '9px 14px', background: 'rgba(255,255,255,.7)', border: '1px solid rgba(255,255,255,.9)', borderRadius: 12, fontSize: 13.5, fontWeight: 500, color: 'var(--brand)', cursor: 'pointer' }}>
                 <Icon name="share-android" size={15} /> Share link
               </button>
-              <button onClick={() => setIsEditingWedding(true)} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '9px 14px', background: 'rgba(255,255,255,.7)', border: '1px solid rgba(255,255,255,.9)', borderRadius: 12, fontSize: 13.5, fontWeight: 500, color: 'var(--lavender-grey-ink)', cursor: 'pointer' }}>
+              <button onClick={() => setIsEditingWedding(true)} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '9px 14px', background: 'rgba(255,255,255,.7)', border: '1px solid rgba(255,255,255,.9)', borderRadius: 12, fontSize: 13.5, fontWeight: 500, color: 'var(--brand)', cursor: 'pointer' }}>
                 <Icon name="settings" size={15} /> Edit details
               </button>
-              <button onClick={() => { setSlugDraft(wedding.slug); setIsEditingSlug(true); }} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '9px 14px', background: 'rgba(255,255,255,.7)', border: '1px solid rgba(255,255,255,.9)', borderRadius: 12, fontSize: 13.5, fontWeight: 500, color: 'var(--lavender-grey-ink)', cursor: 'pointer' }}>
+              <button onClick={() => { setSlugDraft(wedding.slug); setIsEditingSlug(true); }} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '9px 14px', background: 'rgba(255,255,255,.7)', border: '1px solid rgba(255,255,255,.9)', borderRadius: 12, fontSize: 13.5, fontWeight: 500, color: 'var(--brand)', cursor: 'pointer' }}>
                 <Icon name="link" size={15} /> Change public URL
               </button>
-              <button onClick={handleExport} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '9px 14px', background: 'rgba(255,255,255,.7)', border: '1px solid rgba(255,255,255,.9)', borderRadius: 12, fontSize: 13.5, fontWeight: 500, color: 'var(--lavender-grey-ink)', cursor: 'pointer' }}>
+              <button onClick={handleExport} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '9px 14px', background: 'rgba(255,255,255,.7)', border: '1px solid rgba(255,255,255,.9)', borderRadius: 12, fontSize: 13.5, fontWeight: 500, color: 'var(--brand)', cursor: 'pointer' }}>
                 <Icon name="download" size={15} /> Export data
               </button>
             </div>
@@ -508,7 +508,7 @@ export default function WeddingDetailPage() {
                   <button
                     onClick={handleUpdateSlug}
                     disabled={slugStatus === 'taken' || slugStatus === 'invalid'}
-                    style={{ padding: '9px 18px', background: (slugStatus === 'taken' || slugStatus === 'invalid') ? 'var(--muted)' : 'var(--lavender-grey-ink)', color: 'var(--floral)', border: 'none', borderRadius: 10, fontSize: 13.5, fontWeight: 500, cursor: (slugStatus === 'taken' || slugStatus === 'invalid') ? 'not-allowed' : 'pointer' }}
+                    style={{ padding: '9px 18px', background: (slugStatus === 'taken' || slugStatus === 'invalid') ? 'var(--muted)' : 'var(--brand)', color: 'var(--brand-on)', border: 'none', borderRadius: 10, fontSize: 13.5, fontWeight: 500, cursor: (slugStatus === 'taken' || slugStatus === 'invalid') ? 'not-allowed' : 'pointer' }}
                   >Save</button>
                   <button onClick={() => setIsEditingSlug(false)} style={{ padding: '9px 18px', background: 'rgba(255,255,255,.5)', border: '1px solid rgba(255,255,255,.6)', borderRadius: 10, fontSize: 13.5, fontWeight: 500, cursor: 'pointer', color: 'var(--ink)' }}>Cancel</button>
                 </div>
@@ -522,7 +522,7 @@ export default function WeddingDetailPage() {
       <div style={{ display: 'flex', gap: 4, borderBottom: '1px solid var(--line)', overflowX: 'auto', scrollbarWidth: 'none', marginBottom: 22 }}>
         {availableTabs.map((tab) => (
           <button key={tab.key} onClick={() => setActiveTab(tab.key)}
-            style={{ padding: '12px 14px', fontSize: 13.5, color: activeTab === tab.key ? 'var(--ink)' : 'var(--muted)', marginBottom: -1, whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center', gap: 6, fontWeight: 500, background: 'none', border: 'none', borderBottomWidth: 2, borderBottomStyle: 'solid', borderBottomColor: activeTab === tab.key ? 'var(--lavender-grey-ink)' : 'transparent', cursor: 'pointer', transition: 'color .15s ease' }}>
+            style={{ padding: '12px 14px', fontSize: 13.5, color: activeTab === tab.key ? 'var(--ink)' : 'var(--muted)', marginBottom: -1, whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center', gap: 6, fontWeight: 500, background: 'none', border: 'none', borderBottomWidth: 2, borderBottomStyle: 'solid', borderBottomColor: activeTab === tab.key ? 'var(--brand)' : 'transparent', cursor: 'pointer', transition: 'color .15s ease' }}>
             {tab.label}
             {tab.key === 'photos' && stats.pendingPhotos > 0 && (
               <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 18, height: 18, fontSize: 10, fontWeight: 700, background: 'var(--danger)', color: 'white', borderRadius: '50%' }}>

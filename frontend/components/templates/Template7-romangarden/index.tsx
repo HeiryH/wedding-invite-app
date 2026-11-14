@@ -296,6 +296,7 @@ export default function Template7({
           const panels: RailPanel[] = content.map((r) => ({
             def: r.def,
             layers: visibleLayers(r).filter((l) => l.kind === 'slot'),
+            groups: r.groups,
             bgFit: r.bgFit,
           }));
           const rail = ceremonyRail[0];
@@ -304,6 +305,7 @@ export default function Template7({
               key={code}
               panels={panels}
               sharedLayers={rail?.layers ?? []}
+              sharedGroups={rail?.groups}
               sharedStageId="ceremony-rail"
               bg={rail?.def.bg ?? content[0].def.bg}
               bgFit={rail?.bgFit}
@@ -324,6 +326,7 @@ export default function Template7({
             key={r.def.id}
             def={r.def}
             layers={visibleLayers(r)}
+            groups={r.groups}
             bgFit={r.bgFit}
             bgPosition={r.bgPosition}
             bgScale={r.bgScale}

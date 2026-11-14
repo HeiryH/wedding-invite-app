@@ -2,118 +2,13 @@
 import { formatEventDate } from '@/lib/eventDateFormat';
 import { useCountdown } from '@/components/templates/_shared/hooks/useCountdown';
 
-import { useMemo, cloneElement } from 'react';
-import type { CSSProperties, ReactElement } from 'react';
+import { useMemo } from 'react';
 import { toHijriString } from '@/lib/templateUtils';
 import { resolveBindings } from '../bindings';
-import type { EditorHandle, Layer, SlotProps } from '../types';
-import { staggerDelay } from '../reveal';
-import { subLayerStyle, subLayersOf } from './subLayerStyle';
-import { CurvedPiece, curvedTextOf } from './CurvedPiece';
-import { Backdrop, backdropSrcOf } from '../backdrop';
-import { idleInlineStyle } from '../idle';
-import { usePieceDrag } from './usePieceDrag';
-import { useEngine } from '../engine';
+import type { SlotProps } from '../types';
+import { subLayersOf } from './subLayerStyle';
+import { SlotPiece } from './SlotPiece';
 import styles from './slots.module.css';
-
-/** Returns null once the date has passed, so the hero never shows a dead 00:00:00. */
-
-
-/**
- * Wraps a hero element as an adjustable sub-layer: the nudge (translate/scale) rides an outer
- * wrapper while the reveal animation (`data-sl-anim` + reveal.css, triggered by the enclosing
- * stage's `data-seen`) rides the element itself — two elements so the two transforms never fight.
- */
-function HeroPiece({ layer, editor, id, children }: {
-  layer?: Layer;
-  editor?: EditorHandle;
-  id: string;
-  children: ReactElement;
-}) {
-  const { assetRoot } = useEngine();
-  // Double-click to reach this piece inside its group; drag it once it's selected (usePieceDrag).
-  const drag = usePieceDrag(layer, id, editor);
-  if (layer?.hidden) return null;
-
-  const dx = (layer?.x ?? 50) - 50;
-  const dy = (layer?.y ?? 50) - 50;
-  const s = layer?.s ?? 1;
-  const nudge = dx || dy || s !== 1 ? `translate(${dx}%, ${dy}%) scale(${s})` : undefined;
-  const anim = layer?.anim || 'rise';
-  const animOut = layer?.animOut && layer.animOut !== 'none' ? layer.animOut : undefined;
-  // "While on screen" — its own element, between the entrance and the exit, so the three
-  // transforms can't fight (the same split Layer.tsx uses for ordinary layers).
-  const animIdle = layer?.animIdle && layer.animIdle !== 'none' ? layer.animIdle : undefined;
-  const idleStyle = animIdle
-    ? idleInlineStyle(animIdle, { speed: layer?.animIdleSpeed, intensity: layer?.animIdleIntensity, origin: layer?.animIdleOrigin })
-    : undefined;
-  const withIdle = (node: ReactElement) => (animIdle
-    ? <div data-sl-idle={animIdle} style={idleStyle}>{node}</div>
-    : node);
-  const selected =
-    Boolean(editor?.enabled) && editor?.selectedStage === 'welcome' && editor?.selectedLayer === id;
-
-  // Shape (arc/circle) from the Style tab, when this piece's child is one plain string.
-  const curveText = curvedTextOf(layer, children);
-  const childStyle = (children.props as { style?: CSSProperties }).style ?? {};
-  // A backdrop means the ENTRANCE belongs on the wrapper that holds both the art and the words —
-  // otherwise the plate pops in at full opacity while only the text rises.
-  const hasBackdrop = Boolean(layer && backdropSrcOf(layer, assetRoot));
-  const animAttrs = {
-    'data-sl-anim': anim,
-    'data-scroll-fade': anim === 'scroll-fade' ? true : undefined,
-  } as const;
-  const animVars = {
-    '--sl-opacity': layer?.opacity ?? 1,
-    '--sl-delay': staggerDelay(layer?.order ?? 0),
-    ...(layer?.animDur ? { '--sl-dur': `${layer.animDur}s` } : {}),
-  } as CSSProperties;
-  const inner = curveText !== undefined
-    ? <CurvedPiece layer={layer!} text={curveText} anim={anim} assetRoot={assetRoot} />
-    : cloneElement(children as ReactElement<Record<string, unknown>>, {
-      ...(hasBackdrop ? {} : animAttrs),
-      style: {
-        ...childStyle,
-        // Style-tab fields (color/font/size/spacing/border/shadow) — present only when the
-        // sub-layer is flagged `styleable` (all of these are), so this is a no-op until the
-        // couple actually touches the Style tab.
-        ...subLayerStyle(layer, assetRoot),
-        ...(hasBackdrop ? {} : animVars),
-      } as CSSProperties,
-    });
-
-  // Backdrop art (a ribbon/plate) rides the text itself — see backdrop.tsx. Skipped for a curved
-  // piece, which paints its own inside CurvedPiece.
-  const backed = curveText !== undefined
-    ? inner
-    : <Backdrop layer={layer} assetRoot={assetRoot} {...(hasBackdrop ? animAttrs : {})} style={hasBackdrop ? animVars : undefined}>{inner}</Backdrop>;
-
-  // nudge wrapper · optional exit wrapper (scroll-scrubbed via --sl-out) · entrance inner — three
-  // elements so nudge/exit/entrance transforms never collide.
-  return (
-    <div
-      {...drag.handlers}
-      style={{
-        transform: nudge,
-        // An explicit per-piece box (Layer.boxW/boxH) — auto unless the couple sets one. Centred,
-        // so narrowing a line to make it wrap doesn't shove it to one side.
-        ...(layer?.boxW !== undefined ? { width: `${layer.boxW}%`, marginInline: 'auto' } : null),
-        ...(layer?.boxH !== undefined ? { height: `${layer.boxH}em`, flexShrink: 0 } : null),
-        // `anywhere` rather than `break-word`: it also lets the box shrink to the broken width,
-        // which is what a narrowed piece is asking for.
-        ...(layer?.boxBreakWord ? { overflowWrap: 'anywhere' as const } : null),
-        ...(selected ? { outline: '2px dashed #C98A54', outlineOffset: '3px' } : {}),
-        ...(drag.handlers.style ?? {}),
-      }}
-    >
-      {animOut ? (
-        <div data-scroll-exit data-sl-out={animOut}>{withIdle(backed)}</div>
-      ) : (
-        withIdle(backed)
-      )}
-    </div>
-  );
-}
 
 export function CountdownSlot({ wedding, t, stageLayers, layer, editor }: SlotProps) {
   const left = useCountdown(wedding.weddingDate);
@@ -138,28 +33,28 @@ export function CountdownSlot({ wedding, t, stageLayers, layer, editor }: SlotPr
   return (
     <div className={styles.heroInner}>
       <h1 className={styles.coupleNames}>
-        <HeroPiece layer={sub[firstId]} editor={editor} id={firstId}>
+        <SlotPiece stageId="welcome" layer={sub[firstId]} editor={editor} id={firstId}>
           <span>{first}</span>
-        </HeroPiece>
+        </SlotPiece>
         <span className={styles.amp}>and</span>
-        <HeroPiece layer={sub[secondId]} editor={editor} id={secondId}>
+        <SlotPiece stageId="welcome" layer={sub[secondId]} editor={editor} id={secondId}>
           <span>{second}</span>
-        </HeroPiece>
+        </SlotPiece>
       </h1>
 
       <div className={styles.fleuron}>❦</div>
 
-      <HeroPiece layer={sub['hero-date']} editor={editor} id="hero-date">
+      <SlotPiece stageId="welcome" layer={sub['hero-date']} editor={editor} id="hero-date">
         <div className={styles.heroDate}>
           <p className={styles.weddingDate}>
             {formatEventDate(date, 'en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}
           </p>
           {showHijri && <p className={styles.hijriDate}>{toHijriString(date)}</p>}
         </div>
-      </HeroPiece>
+      </SlotPiece>
 
       {left && (
-        <HeroPiece layer={sub['hero-timer']} editor={editor} id="hero-timer">
+        <SlotPiece stageId="welcome" layer={sub['hero-timer']} editor={editor} id="hero-timer">
           <div className={styles.countdown}>
             {/* Each unit is a sub-layer of `hero-timer` — nudge/restyle/back/hide one at a time
                 while the group still moves them together. A template opts in by declaring
@@ -170,15 +65,15 @@ export function CountdownSlot({ wedding, t, stageLayers, layer, editor }: SlotPr
               ['hero-timer-min', 'Min', left.minutes],
               ['hero-timer-sec', 'Sec', left.seconds],
             ] as const).map(([pid, label, val]) => (
-              <HeroPiece key={pid} layer={units[pid]} editor={editor} id={pid}>
+              <SlotPiece stageId="welcome" key={pid} layer={units[pid]} editor={editor} id={pid}>
                 <div className={styles.countUnit}>
                   <span className={styles.countNum}>{String(val).padStart(2, '0')}</span>
                   <span className={styles.countLabel}>{units[pid]?.text ?? label}</span>
                 </div>
-              </HeroPiece>
+              </SlotPiece>
             ))}
           </div>
-        </HeroPiece>
+        </SlotPiece>
       )}
     </div>
   );
@@ -186,7 +81,7 @@ export function CountdownSlot({ wedding, t, stageLayers, layer, editor }: SlotPr
 
 /**
  * T10's welcome hero — the same "one slot, several individually adjustable/styleable sub-layers"
- * structure as `CountdownSlot` above (nudge + Style tab per piece via `HeroPiece`, a live countdown
+ * structure as `CountdownSlot` above (nudge + Style tab per piece via `SlotPiece`, a live countdown
  * timer), just with this template's own content shape: an eyebrow line, an event title, one or two
  * names, date and venue, rather than T7's bride/groom framing. This is the standard STAGE hero
  * structure going forward — a new Stage template's welcome hero should follow this shape (or
@@ -211,23 +106,23 @@ export function EventHeroSlot(props: SlotProps) {
 
   return (
     <div className={styles.eventHero}>
-      <HeroPiece layer={sub['hero-eyebrow']} editor={editor} id="hero-eyebrow">
+      <SlotPiece stageId="welcome" layer={sub['hero-eyebrow']} editor={editor} id="hero-eyebrow">
         <p className={styles.heroEyebrow}>{text('hero-eyebrow', "You're invited to")}</p>
-      </HeroPiece>
-      <HeroPiece layer={sub['hero-title']} editor={editor} id="hero-title">
+      </SlotPiece>
+      <SlotPiece stageId="welcome" layer={sub['hero-title']} editor={editor} id="hero-title">
         <p className={styles.heroTitle}>{text('hero-title', '{{eventTitle}}')}</p>
-      </HeroPiece>
-      <HeroPiece layer={sub['hero-names']} editor={editor} id="hero-names">
+      </SlotPiece>
+      <SlotPiece stageId="welcome" layer={sub['hero-names']} editor={editor} id="hero-names">
         <p className={styles.heroNames}>{text('hero-names', '{{name1}} & {{name2}}')}</p>
-      </HeroPiece>
-      <HeroPiece layer={sub['hero-date']} editor={editor} id="hero-date">
+      </SlotPiece>
+      <SlotPiece stageId="welcome" layer={sub['hero-date']} editor={editor} id="hero-date">
         <p className={styles.heroDateLine}>{text('hero-date', '{{date:long}}')}</p>
-      </HeroPiece>
-      <HeroPiece layer={sub['hero-venue']} editor={editor} id="hero-venue">
+      </SlotPiece>
+      <SlotPiece stageId="welcome" layer={sub['hero-venue']} editor={editor} id="hero-venue">
         <p className={styles.heroVenueLine}>{text('hero-venue', '{{venue}}')}</p>
-      </HeroPiece>
+      </SlotPiece>
       {left && (
-        <HeroPiece layer={sub['hero-timer']} editor={editor} id="hero-timer">
+        <SlotPiece stageId="welcome" layer={sub['hero-timer']} editor={editor} id="hero-timer">
           <div className={styles.countdown}>
             {/* Each unit is a sub-layer of `hero-timer` — nudge/restyle/back/hide one at a time
                 while the group still moves them together. A template opts in by declaring
@@ -238,15 +133,15 @@ export function EventHeroSlot(props: SlotProps) {
               ['hero-timer-min', 'Min', left.minutes],
               ['hero-timer-sec', 'Sec', left.seconds],
             ] as const).map(([pid, label, val]) => (
-              <HeroPiece key={pid} layer={units[pid]} editor={editor} id={pid}>
+              <SlotPiece stageId="welcome" key={pid} layer={units[pid]} editor={editor} id={pid}>
                 <div className={styles.countUnit}>
                   <span className={styles.countNum}>{String(val).padStart(2, '0')}</span>
                   <span className={styles.countLabel}>{units[pid]?.text ?? label}</span>
                 </div>
-              </HeroPiece>
+              </SlotPiece>
             ))}
           </div>
-        </HeroPiece>
+        </SlotPiece>
       )}
     </div>
   );

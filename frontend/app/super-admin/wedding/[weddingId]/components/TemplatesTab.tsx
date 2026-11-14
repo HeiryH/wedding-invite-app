@@ -7,9 +7,9 @@ import { tierRank, tierLabel } from '@/lib/tierRank';
 
 type Tier = 'BASIC' | 'PREMIUM' | 'PRO';
 const tierBadge: Record<Tier, { bg: string; text: string; label: string }> = {
-  BASIC:    { bg: 'bg-gray-100',   text: 'text-gray-600',  label: 'Basic' },
+  BASIC:    { bg: 'bg-[var(--surface-sunken)]',   text: 'text-[var(--text-muted)]',  label: 'Basic' },
   PREMIUM: { bg: 'bg-yellow-100', text: 'text-yellow-700', label: 'Premium' },
-  PRO:     { bg: 'bg-indigo-100', text: 'text-indigo-700', label: 'Pro' },
+  PRO:     { bg: 'bg-[var(--brand-subtle-2)]', text: 'text-[var(--brand)]', label: 'Pro' },
 };
 
 interface TemplatesTabProps {
@@ -37,12 +37,12 @@ export default function TemplatesTab({
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4 }}
     >
-      <div className="bg-white rounded-xl shadow-md p-6">
+      <div className="bg-[var(--surface-card)] rounded-xl shadow-md p-6">
         <div className="mb-6">
-          <h3 className="text-lg font-semibold text-gray-800 mb-2">
+          <h3 className="text-lg font-semibold text-[var(--text-strong)] mb-2">
             Template Selection
           </h3>
-          <p className="text-gray-600 text-sm">
+          <p className="text-[var(--text-muted)] text-sm">
             Currently using:{' '}
             <span className="font-semibold">
               {currentTemplate?.templateName || `Template ${currentTemplateId}`}
@@ -51,7 +51,7 @@ export default function TemplatesTab({
         </div>
 
         {templates.length === 0 ? (
-          <div className="text-center py-12 text-gray-500">
+          <div className="text-center py-12 text-[var(--text-muted)]">
             <p className="text-lg">No templates available</p>
             <p className="text-sm mt-2">Templates need to be seeded in the database</p>
           </div>
@@ -66,12 +66,13 @@ export default function TemplatesTab({
                 return (
                 <div
                   key={template.templateId}
-                  className={`relative rounded-xl border-2 overflow-hidden transition-all ${
+                  style={{ boxShadow: 'var(--card-shadow)' }}
+                  className={`relative rounded-xl overflow-hidden ${
                     currentTemplateId === template.templateId
-                      ? 'border-rose-500 shadow-lg ring-2 ring-rose-200'
+                      ? 'outline-2 outline-[var(--brand)]'
                       : locked
-                      ? 'border-gray-200 opacity-70'
-                      : 'border-gray-200 hover:border-gray-300 hover:shadow-md'
+                      ? 'opacity-70'
+                      : ''
                   }`}
                 >
                   {/* Tier Badge */}
@@ -84,7 +85,7 @@ export default function TemplatesTab({
                   {/* Active Badge */}
                   {currentTemplateId === template.templateId && (
                     <div className="absolute top-3 right-3 z-10">
-                      <span className="bg-rose-500 text-white text-xs px-3 py-1 rounded-full font-semibold shadow-md">
+                      <span className="bg-[var(--brand)] text-[var(--brand-on)] text-xs px-3 py-1 rounded-full font-semibold shadow-md">
                         ✓ Active
                       </span>
                     </div>
@@ -95,10 +96,10 @@ export default function TemplatesTab({
 
                   {/* Template Info */}
                   <div className="p-4">
-                    <h4 className="font-semibold text-gray-800 text-lg mb-1">
+                    <h4 className="font-semibold text-[var(--text-strong)] text-lg mb-1">
                       {template.templateName}
                     </h4>
-                    <p className="text-sm text-gray-600 mb-4 line-clamp-2">
+                    <p className="text-sm text-[var(--text-muted)] mb-4 line-clamp-2">
                       {template.description}
                     </p>
 
@@ -106,7 +107,7 @@ export default function TemplatesTab({
                     <div className="space-y-2">
                       <button
                         onClick={() => onPreviewTemplate(template.templateId)}
-                        className="w-full px-4 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition-colors font-medium text-sm"
+                        className="w-full px-4 py-2 bg-[var(--brand)] text-[var(--brand-on)] rounded-lg hover:bg-[var(--brand-hover)] transition-colors font-medium text-sm"
                       >
                         👁️ Preview
                       </button>
@@ -114,7 +115,7 @@ export default function TemplatesTab({
                       {currentTemplateId !== template.templateId && locked && (
                         <div
                           title={`This wedding is on the ${tierLabel[weddingTier?.toUpperCase() ?? 'BASIC'] ?? weddingTier} tier — upgrade to ${tb.label} to use this template.`}
-                          className="w-full px-4 py-2 bg-gray-100 text-gray-400 rounded-lg text-center font-medium text-sm cursor-not-allowed"
+                          className="w-full px-4 py-2 bg-[var(--surface-sunken)] text-[var(--text-subtle)] rounded-lg text-center font-medium text-sm cursor-not-allowed"
                         >
                           🔒 Requires {tb.label} tier
                         </div>
@@ -123,14 +124,14 @@ export default function TemplatesTab({
                       {currentTemplateId !== template.templateId && !locked && (
                         <button
                           onClick={() => onChangeTemplate(template.templateId)}
-                          className="w-full px-4 py-2 bg-rose-500 text-white rounded-lg hover:bg-rose-600 transition-colors font-medium text-sm"
+                          className="w-full px-4 py-2 bg-[var(--brand)] text-[var(--brand-on)] rounded-lg hover:bg-[var(--brand-hover)] transition-colors font-medium text-sm"
                         >
                           Use This Template
                         </button>
                       )}
 
                       {currentTemplateId === template.templateId && (
-                        <div className="w-full px-4 py-2 bg-gray-100 text-gray-500 rounded-lg text-center font-medium text-sm">
+                        <div className="w-full px-4 py-2 bg-[var(--surface-sunken)] text-[var(--text-muted)] rounded-lg text-center font-medium text-sm">
                           Currently Active
                         </div>
                       )}
@@ -143,8 +144,8 @@ export default function TemplatesTab({
         )}
 
         {/* Info Box */}
-        <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
-          <p className="text-sm text-blue-800">
+        <div className="mt-6 p-4 bg-[var(--brand-subtle)] rounded-lg border border-[var(--brand-border)]">
+          <p className="text-sm text-[var(--text-body)]">
             💡 <strong>Tip:</strong> Click &quot;Preview&quot; to see how the template looks with your wedding data before applying it.
             Changes take effect immediately on the public invitation.
           </p>

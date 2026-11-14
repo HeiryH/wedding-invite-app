@@ -5,7 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { templateService, Template, Wedding, Wish, ItineraryItem } from '@/lib/api';
 import AdjustPanel from '@/components/templates/_shared/adjust/AdjustPanel';
-import { resolveStage, serializeStage, layoutKey } from '@/components/templates/_shared/layout';
+import { resolveStage, serializeStage, layoutKey, patchStageLayer } from '@/components/templates/_shared/layout';
 import { flattenTemplate } from '@/components/templates/_shared/authoring/flatten';
 import { SLOT_CATALOG } from '@/components/templates/_shared/slots/catalog';
 import type { Layer as LayerModel, Breakpoint, StageDef } from '@/components/templates/_shared/types';
@@ -195,16 +195,16 @@ export default function AuthoringEditorPage() {
     });
   }, []);
 
-  const patchLayerFromCanvas = useCallback((layerId: string, patch: Partial<LayerModel>) => {
-    const def = skeleton[activeStage];
+  const patchLayerFromCanvas = useCallback((stageId: string, layerId: string, patch: Partial<LayerModel>) => {
+    const def = skeleton[stageId];
     if (!def) return;
-    const { layers, bgFit, bgPosition, bgScale, bgSrc } = resolveStage('author', def, breakpoint, draftConfig);
-    const nextLayers = layers.map((l) => (l.id === layerId ? { ...l, ...patch } : l));
+    const { layers, groups, bgFit, bgPosition, bgScale, bgSrc } = resolveStage('author', def, breakpoint, draftConfig);
+    const { layers: nextLayers, groups: nextGroups } = patchStageLayer(layers, groups, layerId, patch);
     handleLayoutChange(
       layoutKey('author', breakpoint, def.id),
-      serializeStage(def, breakpoint, nextLayers, { bgFit, bgPosition, bgScale, bgSrc }),
+      serializeStage(def, breakpoint, nextLayers, { bgFit, bgPosition, bgScale, bgSrc }, nextGroups),
     );
-  }, [skeleton, activeStage, breakpoint, draftConfig, handleLayoutChange]);
+  }, [skeleton, breakpoint, draftConfig, handleLayoutChange]);
 
   const handleUploadImage = useCallback(async (file: File): Promise<string> => {
     return templateService.uploadAsset(templateId, file);
@@ -247,15 +247,17 @@ export default function AuthoringEditorPage() {
         iframeRef.current?.contentWindow?.postMessage({ type: 'PREVIEW_UPDATE', payload: payloadRef.current }, window.location.origin);
       }
       if (event.data?.type === 'PREVIEW_LAYER_SELECT') {
+        const stageId = event.data.stageId as string | undefined;
+        if (stageId && skeleton[stageId]) setActiveStage(stageId);
         setSelectedLayer(event.data.layerId as string);
       }
       if (event.data?.type === 'PREVIEW_LAYER_EDIT') {
-        patchLayerFromCanvas(event.data.layerId as string, event.data.patch as Partial<LayerModel>);
+        patchLayerFromCanvas(event.data.stageId ?? activeStage, event.data.layerId as string, event.data.patch as Partial<LayerModel>);
       }
     };
     window.addEventListener('message', handler);
     return () => window.removeEventListener('message', handler);
-  }, [patchLayerFromCanvas]);
+  }, [patchLayerFromCanvas, activeStage, skeleton]);
 
   // ── save: flatten the skeleton+deltas into one self-contained blob and persist ─────────────
   const handleSave = async () => {
@@ -449,6 +451,7 @@ export default function AuthoringEditorPage() {
               breakpoint={breakpoint}
               config={draftConfig}
               onLayoutChange={handleLayoutChange}
+              groupMotion
               selectedStage={activeStage}
               selectedLayer={selectedLayer}
               onSelectStage={selectStage}

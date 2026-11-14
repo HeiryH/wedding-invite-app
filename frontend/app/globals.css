@@ -363,7 +363,7 @@ body {
 }
 
 /* Hero edit inputs (on gradient dark background) */
-.hero-inp::placeholder { color: rgba(255,255,255,.6); }
+.hero-inp::placeholder { color: var(--text-subtle); }
 
 /* ════════════════════════════════════════════════════════════════
    The Invit_e — marketing / landing theme (public pages only).

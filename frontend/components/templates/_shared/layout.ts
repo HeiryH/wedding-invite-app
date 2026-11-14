@@ -1,6 +1,7 @@
 import { TEMPLATE_CAPABILITIES } from '../templateCapabilities';
 import { useMemo } from 'react';
-import type { Breakpoint, Layer, ObjectFit, StageDef, StageId, StageLayout } from './types';
+import { ANIM_OPTIONS, ANIM_OUT_OPTIONS, ANIM_IDLE_OPTIONS } from './types';
+import type { Breakpoint, Layer, LayerGroup, ObjectFit, StageDef, StageId, StageLayout } from './types';
 
 /**
  * The config key one stage's layout is persisted under. `prefix` namespaces it per template
@@ -69,6 +70,40 @@ function applyPatch(base: Layer, patch: Partial<Layer>): Layer {
   return out;
 }
 
+export const isStageCanvasLayer = (layer: Layer) =>
+  Boolean(layer.canvasAnchor) || ['img', 'shape', 'text', 'video', 'water'].includes(layer.kind);
+
+export function canGroupLayer(layer: Layer): boolean {
+  return !layer.parent && layer.kind !== 'anchor' && layer.presentation !== 'sheet';
+}
+
+function resolveGroups(groups: LayerGroup[] | undefined, layers: Layer[]): LayerGroup[] {
+  if (!Array.isArray(groups)) return [];
+  const layerIds = new Set(layers.map((layer) => layer.id));
+  const eligibleIds = new Set(layers.filter(canGroupLayer).map((layer) => layer.id));
+  const groupIds = new Set<string>();
+  const assignedIds = new Set<string>();
+  const result: LayerGroup[] = [];
+  for (const group of groups) {
+    if (!group || typeof group.id !== 'string' || !group.id.trim() ||
+      layerIds.has(group.id) || groupIds.has(group.id) ||
+      typeof group.label !== 'string' || !group.label.trim() || !Array.isArray(group.memberIds)) continue;
+    const memberIds = [...new Set(group.memberIds)].filter((id) => eligibleIds.has(id) && !assignedIds.has(id));
+    if (!memberIds.length) continue;
+    result.push({
+      id: group.id, label: group.label, memberIds,
+      ...(Number.isFinite(group.x) && group.x ? { x: group.x } : {}),
+      ...(Number.isFinite(group.y) && group.y ? { y: group.y } : {}),
+      ...(group.anim && ANIM_OPTIONS.includes(group.anim) ? { anim: group.anim } : {}),
+      ...(group.animOut && ANIM_OUT_OPTIONS.includes(group.animOut) ? { animOut: group.animOut } : {}),
+      ...(group.animIdle && ANIM_IDLE_OPTIONS.includes(group.animIdle) ? { animIdle: group.animIdle } : {}),
+    });
+    groupIds.add(group.id);
+    memberIds.forEach((id) => assignedIds.add(id));
+  }
+  return result;
+}
+
 /**
  * Resolves one stage: shipped defaults → desktop overrides (desktop only) → the couple's
  * persisted delta for this breakpoint.
@@ -82,7 +117,7 @@ export function resolveStage(
   def: StageDef,
   breakpoint: Breakpoint,
   config: Record<string, string> | undefined,
-): { layers: Layer[] } & StageBg {
+): { layers: Layer[]; groups: LayerGroup[] } & StageBg {
   // 1. defaults, plus the desktop overrides when we're wide
   let layers = def.layers.map((l) => {
     const dOverride = breakpoint === 'desktop' ? def.desktop?.[l.id] : undefined;
@@ -103,7 +138,8 @@ export function resolveStage(
     if (saved.bgSrc !== undefined) bgSrc = saved.bgSrc;
 
     const byId = new Map(layers.map((l) => [l.id, l]));
-    for (const patch of saved.layers ?? []) {
+    for (const patch of Array.isArray(saved.layers) ? saved.layers : []) {
+      if (!patch || typeof patch.id !== 'string') continue;
       const existing = byId.get(patch.id);
       if (existing) {
         byId.set(patch.id, applyPatch(existing, patch));
@@ -119,7 +155,7 @@ export function resolveStage(
     layers = [...byId.values()].filter((l) => !l.deleted);
   }
 
-  return { layers: layers.sort((a, b) => a.z - b.z), bgFit, bgPosition, bgScale, bgSrc };
+  return { layers: layers.sort((a, b) => a.z - b.z), groups: resolveGroups(saved?.groups ?? def.groups?.[breakpoint], layers), bgFit, bgPosition, bgScale, bgSrc };
 }
 
 /** The stage exactly as it ships, with no couple overrides — what a delta is measured against. */
@@ -140,6 +176,7 @@ export function serializeStage(
   breakpoint: Breakpoint,
   layers: Layer[],
   bg: StageBg,
+  groups?: LayerGroup[],
 ): string {
   const base = baseStage(def, breakpoint);
   const baseById = new Map(base.layers.map((l) => [l.id, l]));
@@ -176,6 +213,8 @@ export function serializeStage(
   }
 
   if (deltas.length) out.layers = deltas;
+  const validGroups = resolveGroups(groups ?? base.groups, layers.filter((layer) => !layer.deleted));
+  if (JSON.stringify(validGroups) !== JSON.stringify(base.groups)) out.groups = validGroups;
   return Object.keys(out).length ? JSON.stringify(out) : '';
 }
 
@@ -227,4 +266,46 @@ export function useStageLayout(
       }),
     [prefix, stages, stageIds, breakpoint, config],
   );
+}
+
+/** Ratio between the cover-fitted art canvas and the visible stage at the active viewport. */
+export function stageArtScale(def: StageDef, bp: Breakpoint, frame?: { w: number; h: number }) {
+  const canvas = def.canvas?.[bp] ?? (bp === 'desktop' ? def.canvas?.mobile : undefined);
+  if (!canvas || def.flow || !frame?.w || !frame.h) return undefined;
+  const ratio = (canvas.w / canvas.h) / (frame.w / frame.h);
+  return { x: Math.max(1, ratio), y: Math.max(1, 1 / ratio) };
+}
+
+/** Apply an absolute group offset by moving each member by the same delta. */
+export function moveLayerGroup(layers: Layer[], group: LayerGroup, x: number, y: number, artScale = { x: 1, y: 1 }) {
+  const members = layers.filter((layer) => group.memberIds.includes(layer.id));
+  const mixed = members.some(isStageCanvasLayer) && members.some((layer) => !isStageCanvasLayer(layer));
+  const dx = x - (group.x ?? 0);
+  const dy = y - (group.y ?? 0);
+  return layers.map((layer) => group.memberIds.includes(layer.id)
+    ? { ...layer, x: layer.x + dx / (mixed && isStageCanvasLayer(layer) ? artScale.x : 1),
+      y: layer.y + dy / (mixed && isStageCanvasLayer(layer) ? artScale.y : 1) }
+    : layer);
+}
+
+/** Apply a canvas edit to a regular layer or to an entire group. */
+export function patchStageLayer(layers: Layer[], groups: LayerGroup[], id: string, patch: Partial<Layer>, artScale?: { x: number; y: number }) {
+  const group = groups.find((item) => item.id === id);
+  if (!group) {
+    return { layers: layers.map((layer) => layer.id === id ? { ...layer, ...patch } : layer), groups };
+  }
+
+  const x = typeof patch.x === 'number' && Number.isFinite(patch.x) ? patch.x : group.x ?? 0;
+  const y = typeof patch.y === 'number' && Number.isFinite(patch.y) ? patch.y : group.y ?? 0;
+  return {
+    layers: moveLayerGroup(layers, group, x, y, artScale),
+    groups: groups.map((item) => item === group ? { ...item, x, y } : item),
+  };
+}
+
+/** Preserve a linked box's ratio within the editor's width and height limits. */
+export function resizeLinkedBox(w: number, h: number, nextWidth: number): Pick<Layer, 'w' | 'h'> {
+  const ratio = h / w;
+  const width = Math.min(200, 200 / ratio, Math.max(3, 3 / ratio, nextWidth));
+  return { w: width, h: width * ratio };
 }

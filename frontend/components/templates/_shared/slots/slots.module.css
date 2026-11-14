@@ -910,6 +910,18 @@
   gap: 0.7rem;
   margin-top: 0.8rem;
 }
+.responsiveGallery {
+  container-type: inline-size;
+}
+.responsiveGallery .gallery {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.responsiveGallery .stackContainer {
+  height: calc(11rem + 33cqi);
+}
+.responsiveGallery :is(.stackPolaroid, .stackFramedCard, .stackFramed) {
+  width: min(75cqi, calc(7rem + 25cqi));
+}
 .photoFrame {
   position: relative;
   margin: 0;

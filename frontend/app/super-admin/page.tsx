@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation';
 import { eventService, Event } from '@/lib/api';
 import { downloadBlob } from '@/lib/utils';
 import WeddingCard from '@/components/admin/WeddingCard';
+import { useEventThumbnails } from '@/components/admin/useEventThumbnails';
 import { urlSegmentForEventType, EVENT_TYPES, EventTypeKey } from '@/lib/eventTypes';
 import { tierLabel } from '@/lib/tierRank';
 import { Icon } from '@/components/ui/Icon';
@@ -14,7 +15,8 @@ import { StatCard } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { EmptyState } from '@/components/ui/EmptyState';
 
-type Filter = 'all' | 'upcoming' | 'active' | 'inactive';
+import { EventStatusTabs, type EventStatusFilter } from '@/components/admin/EventStatusTabs';
+import styles from '@/components/admin/EventsDashboard.module.css';
 type TierFilter = 'ALL' | 'BASIC' | 'PREMIUM' | 'PRO';
 const TIER_FILTERS: TierFilter[] = ['BASIC', 'PREMIUM', 'PRO'];
 
@@ -82,10 +84,11 @@ function GroupHeader({ label, count }: { label: string; count: number }) {
 
 export default function SuperAdminDashboard() {
   const router = useRouter();
+  const thumbnails = useEventThumbnails();
   const [weddings, setWeddings] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [filter, setFilter] = useState<Filter>('all');
+  const [filter, setFilter] = useState<EventStatusFilter>('all');
   const [eventTypeFilter, setEventTypeFilter] = useState<'ALL' | EventTypeKey>('ALL');
   const [tierFilter, setTierFilter] = useState<TierFilter>('ALL');
   const [searchTerm, setSearchTerm] = useState('');
@@ -202,23 +205,18 @@ export default function SuperAdminDashboard() {
 
   return (
     <div>
-      {/* Page header */}
-      <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 16, marginBottom: 24 }}>
+      <div className={styles.header}>
         <div>
-          <h1 style={{ margin: 0, fontFamily: 'var(--font-display)', fontSize: 'clamp(28px, 5vw, 40px)', fontWeight: 400, letterSpacing: 'var(--tracking-tight)', lineHeight: 1, color: 'var(--text-strong)' }}>
-            All <em style={{ fontStyle: 'italic', color: 'var(--text-muted)' }}>events</em>
-          </h1>
-          <p style={{ margin: '6px 0 0', color: 'var(--text-subtle)', fontSize: 'var(--text-sm)', fontFamily: 'var(--font-ui)' }}>
-            Manage every invitation in one place.
-          </p>
+          <h1>Events</h1>
+          <p>Manage your invitations.</p>
         </div>
-        {/* No "New event" button here — AdminShell's floating Create FAB owns that action on
-            every breakpoint now, and two of them side by side just competed. */}
+        <Button size="sm" iconLeft={<Icon name="plus" size={15} />} onClick={() => router.push('/super-admin/wedding/create')}>
+          New event
+        </Button>
       </div>
 
-      {/* Stat cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 10, marginBottom: 20 }} className="sm:grid-cols-4">
-        <StatCard label="Total events" value={counts.all} icon={<Icon name="heart" size={16} />} tone="brand" trend={{ dir: 'up', label: '+2 this month' }} />
+      <div className={styles.metrics}>
+        <StatCard label="Total events" value={counts.all} icon={<Icon name="heart" size={16} />} tone="brand" />
         <StatCard label="Live now" value={counts.active} icon={<Icon name="radio" size={16} />} tone="success" />
         <StatCard label="Upcoming" value={counts.upcoming} icon={<Icon name="calendar" size={16} />} tone="gold" />
         <StatCard label="Total RSVPs" value={totalRsvps} icon={<Icon name="users" size={16} />} tone="neutral" />
@@ -231,6 +229,7 @@ export default function SuperAdminDashboard() {
             <Icon name="search" size={16} />
           </div>
           <input
+            aria-label="Search events"
             placeholder="Search name, slug or venue…"
             value={searchTerm}
             onChange={e => setSearchTerm(e.target.value)}
@@ -250,19 +249,10 @@ export default function SuperAdminDashboard() {
         </div>
       </div>
 
+      <EventStatusTabs value={filter} onChange={setFilter} counts={counts} />
+
       {/* Filters */}
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, marginBottom: 16 }}>
-        <FilterSelect
-          label="Status"
-          value={filter}
-          onChange={setFilter}
-          options={[
-            { value: 'all', label: 'All events', count: counts.all },
-            { value: 'upcoming', label: 'Upcoming', count: counts.upcoming },
-            { value: 'active', label: 'Live', count: counts.active },
-            { value: 'inactive', label: 'Drafts', count: counts.inactive },
-          ]}
-        />
         <FilterSelect
           label="Event type"
           value={eventTypeFilter}
@@ -315,11 +305,12 @@ export default function SuperAdminDashboard() {
                   </span>
                 </div>
               )}
-              <div style={{ display: 'grid', gap: 12 }} className="md:grid-cols-2 xl:grid-cols-3">
+              <div className={styles.events}>
                 {group.weddings.map(w => (
                   <WeddingCard
                     key={w.eventId}
                     wedding={w}
+                    thumbnailUrl={thumbnails[w.templateId]}
                     onManage={id => router.push(`/super-admin/wedding/${id}`)}
                     onPreview={(slug, eventType) => window.open(`/${urlSegmentForEventType(eventType)}/${slug}`, '_blank')}
                     onToggleActive={handleToggleActive}

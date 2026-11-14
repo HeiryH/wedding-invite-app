@@ -1,11 +1,12 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import type { AnimIdleOrigin, AnimIdleType, AnimOutType, AnimType, Breakpoint, Layer, ObjectFit, StageDef, StageId } from '../types';
+import type { AnimIdleOrigin, AnimIdleType, AnimOutType, AnimType, Breakpoint, Layer, LayerGroup, ObjectFit, StageDef, StageId } from '../types';
 import { ANIM_OPTIONS, ANIM_OUT_OPTIONS, ANIM_IDLE_ORIGINS } from '../types';
 import { IDLE_ANCHORED, IDLE_DEFAULT_ORIGIN } from '../idle';
 import { WATER_DEFAULTS } from '../effects/WaterLayer';
-import { resolveStage, serializeStage, baseStage, layoutKey, inlineFormSheet, isInlineFormLayer, appearsInFormLayout, type StageBg } from '../layout';
+import { resolveStage, serializeStage, baseStage, layoutKey, inlineFormSheet, isInlineFormLayer, appearsInFormLayout, canGroupLayer, isStageCanvasLayer, stageArtScale, moveLayerGroup, resizeLinkedBox, type StageBg } from '../layout';
+import { classicGroupPlane } from '../classicGroupPlane';
 import { SLOT_CATALOG_GROUPS, type SlotCatalogEntry } from '../slots/catalog';
 import { BINDING_TOKENS } from '../bindings';
 import { CURATED_FONTS } from '@/lib/fonts/registry';
@@ -126,6 +127,10 @@ interface Props {
   config: Record<string, string>;
   /** '' deletes the key, restoring the stage's shipped defaults. */
   onLayoutChange: (key: string, value: string) => void;
+  onGroupLayoutChange?: (key: string, value: string) => void;
+  groupMotion?: boolean;
+  classicGroups?: boolean;
+  groupFrame?: { w: number; h: number };
   selectedStage: StageId;
   selectedLayer?: string;
   onSelectStage: (id: StageId) => void;
@@ -187,7 +192,7 @@ function Slider({ label, value, min, max, step, onChange, title }: {
 }
 
 export default function AdjustPanel({
-  stages, keyPrefix, assetRoot, stageIds, breakpoint, config, onLayoutChange,
+  stages, keyPrefix, assetRoot, stageIds, breakpoint, config, onLayoutChange, onGroupLayoutChange = onLayoutChange, groupMotion = false, classicGroups = false, groupFrame,
   selectedStage, selectedLayer, onSelectStage, onSelectLayer, onClose,
   onUploadImage, slotCatalog,
   slotTheme, slotThemeAccentDefault, pageBackground, cardControl,
@@ -202,6 +207,8 @@ export default function AdjustPanel({
   const [note, setNote] = useState('');
   const [dragId, setDragId] = useState<string | null>(null);
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
+  const [groupSelection, setGroupSelection] = useState<{ scope: string; ids: string[] }>();
+  const [renameGroupId, setRenameGroupId] = useState<string>();
   // Which floating card sits to the left of the dock. Theme (gear) and Add (+) are explicit
   // pop-overs; when neither is open, selecting a layer/background shows the detail card instead.
   const [popover, setPopover] = useState<'theme' | 'add' | null>(null);
@@ -225,7 +232,7 @@ export default function AdjustPanel({
   const slotIdCounter = useRef(0);
 
   const def = stages[selectedStage];
-  const { layers, bgFit, bgPosition, bgScale, bgSrc } = useMemo(
+  const { layers, groups, bgFit, bgPosition, bgScale, bgSrc } = useMemo(
     () => resolveStage(keyPrefix, def, breakpoint, config),
     [keyPrefix, def, breakpoint, config],
   );
@@ -256,15 +263,21 @@ export default function AdjustPanel({
     return m;
   }, [layerRows, idSet]);
   const roots = layerRows.filter((l) => !l.parent || !idSet.has(l.parent));
+  const groupScope = layoutKey(keyPrefix, breakpoint, def.id);
+  const groupByMember = new Map(groups.flatMap((group) => group.memberIds.map((id) => [id, group] as const)));
+  const pickingGroup = groupSelection?.scope === groupScope;
+  const pickedIds = new Set(pickingGroup ? groupSelection.ids : []);
+  const selectedGroup = current && groupByMember.get(current.id);
+  const activeGroup = groupMotion ? groups.find((group) => group.id === selectedLayer) : undefined;
 
   const commit = useCallback(
     (nextLayers: Layer[], nextBg: StageBg = bgState) => {
       onLayoutChange(
         layoutKey(keyPrefix, breakpoint, def.id),
-        serializeStage(def, breakpoint, nextLayers, nextBg),
+        serializeStage(def, breakpoint, nextLayers, nextBg, groups),
       );
     },
-    [keyPrefix, def, breakpoint, bgState, onLayoutChange],
+    [keyPrefix, def, breakpoint, bgState, groups, onLayoutChange],
   );
 
   const patchLayer = useCallback(
@@ -277,6 +290,73 @@ export default function AdjustPanel({
 
   const set = (field: keyof Layer) => (v: number) =>
     current && patchLayer(current.id, { [field]: v } as Partial<Layer>);
+
+  const saveGroups = (nextGroups: LayerGroup[]) =>
+    onGroupLayoutChange(groupScope, serializeStage(def, breakpoint, layers, bgState, nextGroups));
+  const updateActiveGroup = (group: LayerGroup, patch: Partial<LayerGroup>) => {
+    const nextGroups = groups.map((item) => item.id === group.id ? { ...item, ...patch } : item);
+    if (patch.x === undefined && patch.y === undefined) {
+      saveGroups(nextGroups);
+      return;
+    }
+    const nextLayers = moveLayerGroup(layers, group, patch.x ?? group.x ?? 0, patch.y ?? group.y ?? 0,
+      inlineSheet || classicGroups ? undefined : stageArtScale(def, breakpoint, groupFrame));
+    onLayoutChange(groupScope, serializeStage(def, breakpoint, nextLayers, bgState, nextGroups));
+  };
+  const hasCanvas = Boolean(def.canvas?.[breakpoint] ?? (breakpoint === 'desktop' ? def.canvas?.mobile : undefined));
+  const planeOf = (layer: Layer) => {
+    if (!groupMotion) return 'stage';
+    if (classicGroups) return classicGroupPlane(keyPrefix, def.id, layer);
+    if (inlineSheet || def.flow) {
+      return layer.kind === 'slot' || (inlineSheet && layer.kind === 'text' && ['title', 'prompt'].includes(layer.id))
+        ? undefined : 'overlay';
+    }
+    return hasCanvas && isStageCanvasLayer(layer) ? 'art' : 'stage';
+  };
+  const groupable = (layer: Layer) => canGroupLayer(layer) && planeOf(layer) !== undefined;
+  const groupIssue = (ids: string[]) => {
+    const selected = new Set(ids);
+    const planes = new Set(layers.filter((layer) => selected.has(layer.id)).map(planeOf));
+    if (planes.has(undefined) || (classicGroups && planes.size > 1)) {
+      return 'Select layers from the same part of this section.';
+    }
+    // Each rendering plane keeps its own stacking order.
+    for (const plane of planes) {
+      const stack = layers.filter((layer) => appearsInFormLayout(layer, inlineSheet) &&
+        canGroupLayer(layer) && planeOf(layer) === plane);
+      const positions = stack.flatMap((layer, index) => selected.has(layer.id) ? [index] : []);
+      if (positions[positions.length - 1] - positions[0] !== positions.length - 1) {
+        return 'Another layer sits between your selections. Include it or reorder the layers first.';
+      }
+    }
+  };
+  const canJoin = (ids: string[]) => !groupIssue(ids);
+  const pickedLayers = roots.filter((layer) => pickedIds.has(layer.id) && groupable(layer) && !groupByMember.has(layer.id));
+  const selectionIssue = pickedLayers.length < 2
+    ? 'Select at least two layers.'
+    : groupIssue(pickedLayers.map((layer) => layer.id));
+  const createGroup = () => {
+    const memberIds = pickedLayers.map((layer) => layer.id);
+    if (memberIds.length < 2 || !canJoin(memberIds)) return;
+    const id = `group-${crypto.randomUUID()}`;
+    saveGroups([...groups, { id, label: 'Layer group', memberIds }]);
+    setGroupSelection(undefined);
+    setRenameGroupId(id);
+  };
+  const canMoveInto = (layer: Layer, group: LayerGroup) =>
+    groupable(layer) && !layer.locked && groupByMember.get(layer.id)?.id !== group.id &&
+    canJoin([...group.memberIds, layer.id]);
+  const moveIntoGroup = (layer: Layer, group: LayerGroup) => {
+    if (!canMoveInto(layer, group)) return;
+    saveGroups(groups.map((item) => item.id === group.id
+      ? { ...item, memberIds: [...item.memberIds, layer.id] }
+      : { ...item, memberIds: item.memberIds.filter((id) => id !== layer.id) }));
+  };
+  const moveOutOfGroup = (layerId: string) => {
+    if (!groupByMember.has(layerId)) return;
+    saveGroups(groups.map((group) => ({ ...group, memberIds: group.memberIds.filter((id) => id !== layerId) })));
+  };
+  const draggedLayer = layers.find((layer) => layer.id === dragId);
 
   // ── z-stack reorder (drag) ──────────────────────────────────────────────────
   // Only art participates in z-stacking; anchors are transforms on real DOM, so we leave their z
@@ -365,7 +445,7 @@ export default function AdjustPanel({
     const other: Breakpoint = breakpoint === 'mobile' ? 'desktop' : 'mobile';
     // Re-serialize against the OTHER breakpoint's defaults — the same absolute geometry is a
     // different delta over there, and writing this breakpoint's delta verbatim would be wrong.
-    onLayoutChange(layoutKey(keyPrefix, other, def.id), serializeStage(def, other, layers, bgState));
+    onLayoutChange(layoutKey(keyPrefix, other, def.id), serializeStage(def, other, layers, bgState, groups));
     flash(`Copied to ${other}`);
   };
 
@@ -528,7 +608,7 @@ export default function AdjustPanel({
   const isSheet = current?.presentation === 'sheet' && !isInlineForm;
   const hasFormStyle = isSlot && (isSheet || isInlineForm);
   const flowLayer = Boolean(inlineSheet && current && (isSlot || (current.kind === 'text' && ['title', 'prompt'].includes(current.id))));
-  const slotVOverflow = isSlot && !isSheet && !flowLayer && current && !current.chain
+  const slotVOverflow = isSlot && !isSheet && !flowLayer && current && (!current.chain || current.lockBoxRatio)
     ? (() => {
         const effH = current.h * current.s;
         const top = current.y - effH / 2;
@@ -565,7 +645,7 @@ export default function AdjustPanel({
   };
 
   // ── a single layer row (optionally a sub-layer) ────────────────────────────
-  const renderRow = (l: Layer, indent: boolean) => {
+  const renderRow = (l: Layer, depth: number) => {
     const kids = childrenOf.get(l.id);
     const hasKids = !!kids?.length;
     const isOpen = !collapsed.has(l.id) || l.id === selectedParent;
@@ -576,14 +656,29 @@ export default function AdjustPanel({
       <div key={l.id}>
         <div
           className={`${styles.row} ${l.id === selectedLayer ? styles.rowActive : ''} ${dragId === l.id ? styles.rowDragging : ''} ${l.locked ? styles.rowLocked : ''}`}
-          style={indent ? { marginLeft: 16 } : undefined}
+          style={depth ? { marginLeft: depth * 16 } : undefined}
           data-layer-row={l.id}
           draggable={draggable}
-          onDragStart={draggable ? () => setDragId(l.id) : undefined}
+          onDragStart={draggable ? (event) => {
+            event.dataTransfer.setData('text/plain', l.id);
+            event.dataTransfer.effectAllowed = 'move';
+            setDragId(l.id);
+          } : undefined}
           onDragEnd={draggable ? () => setDragId(null) : undefined}
           onDragOver={draggable && dragId ? (e) => e.preventDefault() : undefined}
           onDrop={draggable && dragId ? (e) => { e.preventDefault(); reorder(dragId, l.id); setDragId(null); } : undefined}
         >
+          {pickingGroup && groupable(l) && !groupByMember.has(l.id) && (
+            <input
+              type="checkbox"
+              aria-label={`Select ${nameOf(l)} for grouping`}
+              checked={pickedIds.has(l.id)}
+              onChange={(e) => setGroupSelection({
+                scope: groupScope,
+                ids: e.target.checked ? [...pickedIds, l.id] : [...pickedIds].filter((id) => id !== l.id),
+              })}
+            />
+          )}
           {hasKids ? (
             <button className={styles.caret} onClick={() => toggleCollapse(l.id)} title={isOpen ? 'Collapse' : 'Expand'}>
               {isOpen ? '▾' : '▸'}
@@ -615,7 +710,56 @@ export default function AdjustPanel({
             <Icon name={l.hidden ? 'eye-off' : 'eye'} size={14} />
           </button>
         </div>
-        {hasKids && isOpen && kids!.map((c) => renderRow(c, true))}
+        {hasKids && isOpen && kids!.map((c) => renderRow(c, depth + 1))}
+      </div>
+    );
+  };
+
+  const renderGroup = (group: LayerGroup) => {
+    const members = roots.filter((layer) => groupByMember.get(layer.id)?.id === group.id);
+    const isOpen = !collapsed.has(group.id) || selectedGroup?.id === group.id;
+    const canDrop = draggedLayer && canMoveInto(draggedLayer, group);
+    return (
+      <div key={group.id}>
+        <div className={`${styles.row} ${activeGroup?.id === group.id ? styles.rowActive : ''} ${canDrop ? styles.groupDrop : ''}`}
+          aria-label={`Group ${group.label}`}
+          onDragOver={canDrop ? (event) => { event.preventDefault(); event.dataTransfer.dropEffect = 'move'; } : undefined}
+          onDrop={canDrop ? (event) => {
+            event.preventDefault();
+            moveIntoGroup(draggedLayer, group);
+            setDragId(null);
+          } : undefined}>
+          <button
+            className={styles.caret}
+            aria-label={`${isOpen ? 'Collapse' : 'Expand'} ${group.label}`}
+            aria-expanded={isOpen}
+            onClick={() => {
+              if (selectedGroup?.id === group.id) onSelectLayer(undefined);
+              if (!isOpen || !collapsed.has(group.id)) toggleCollapse(group.id);
+            }}
+          >{isOpen ? '▾' : '▸'}</button>
+          {groupMotion
+            ? <button className={styles.name} onClick={() => selectLayer(group.id)}>{group.label}</button>
+            : <span className={styles.name}>{group.label}</span>}
+          <button className={styles.iconBtn} aria-label={`Rename ${group.label}`} onClick={() => setRenameGroupId(group.id)}>
+            Rename
+          </button>
+          <button className={styles.btn} onClick={() => saveGroups(groups.filter((item) => item.id !== group.id))}>Ungroup</button>
+        </div>
+        {renameGroupId === group.id && (
+          <form className={styles.btnRow} onSubmit={(e) => {
+            e.preventDefault();
+            const label = String(new FormData(e.currentTarget).get('label') ?? '').trim();
+            if (!label) return;
+            if (label !== group.label) saveGroups(groups.map((item) => item.id === group.id ? { ...item, label } : item));
+            setRenameGroupId(undefined);
+          }}>
+            <input className={styles.select} name="label" aria-label="Group name" defaultValue={group.label} required maxLength={64} />
+            <button className={styles.btn} type="submit">Rename</button>
+            <button className={styles.btn} type="button" onClick={() => setRenameGroupId(undefined)}>Cancel</button>
+          </form>
+        )}
+        {isOpen && members.map((layer) => renderRow(layer, 1))}
       </div>
     );
   };
@@ -624,6 +768,7 @@ export default function AdjustPanel({
   const cardTitle = popover === 'theme' ? 'Theme & style'
     : popover === 'add' ? 'Add to stage'
     : bgSelected && def.bg ? 'Background'
+    : activeGroup ? activeGroup.label
     : current ? (current.label ?? current.id)
     : null;
   const closeCard = () => {
@@ -647,7 +792,40 @@ export default function AdjustPanel({
             <button className={styles.close} onClick={closeCard} aria-label="Close card">×</button>
           </div>
           <div className={styles.cardBody}>
-            {popover === 'theme' ? (
+            {activeGroup ? (
+              <>
+                <Slider label="Group X" value={activeGroup.x ?? 0} min={-200} max={200} step={0.5}
+                  onChange={(x) => updateActiveGroup(activeGroup, { x })} />
+                <Slider label="Group Y" value={activeGroup.y ?? 0} min={-200} max={200} step={0.5}
+                  onChange={(y) => updateActiveGroup(activeGroup, { y })} />
+                {!canJoin(activeGroup.memberIds) && <p className={styles.note}>Group animation requires adjacent layers in each stack.</p>}
+                <fieldset disabled={!canJoin(activeGroup.memberIds)} className={styles.groupAnimationControls}>
+                <label>
+                  Entrance
+                  <select className={styles.select} value={activeGroup.anim ?? 'none'}
+                    onChange={(event) => updateActiveGroup(activeGroup, { anim: event.target.value as AnimType })}>
+                    {ANIM_OPTIONS.filter((type) => type !== 'tracking-in' && type !== 'scroll-fade').map((type) => (
+                      <option key={type} value={type}>{ANIM_LABELS[type]}</option>
+                    ))}
+                  </select>
+                </label>
+                <label>
+                  Exit
+                  <select className={styles.select} value={activeGroup.animOut ?? 'none'}
+                    onChange={(event) => updateActiveGroup(activeGroup, { animOut: event.target.value as AnimOutType })}>
+                    {ANIM_OUT_OPTIONS.map((type) => <option key={type} value={type}>{ANIM_OUT_LABELS[type]}</option>)}
+                  </select>
+                </label>
+                <label>
+                  Loop
+                  <select className={styles.select} value={activeGroup.animIdle ?? 'none'}
+                    onChange={(event) => updateActiveGroup(activeGroup, { animIdle: event.target.value as AnimIdleType })}>
+                    {Object.entries(ANIM_IDLE_LABELS).map(([type, label]) => <option key={type} value={type}>{label}</option>)}
+                  </select>
+                </label>
+                </fieldset>
+              </>
+            ) : popover === 'theme' ? (
               <>
         {slotTheme && (
           <>
@@ -1014,11 +1192,14 @@ export default function AdjustPanel({
 
                   {!isAnchor && (!isSheet || flowLayer) && (
                     <>
-                      <Slider label="Width" value={current.w} min={3} max={200} step={0.5} onChange={set('w')} />
+                      <Slider label="Width" value={current.w} min={3} max={200} step={0.5}
+                        onChange={current.lockBoxRatio && current.chain
+                          ? (width) => patchLayer(current.id, resizeLinkedBox(current.w, current.h, width))
+                          : set('w')} />
                       {!current.chain && !flowLayer && (
                         <Slider label="Height" value={current.h} min={3} max={200} step={0.5} onChange={set('h')} />
                       )}
-                      {isImage && (
+                      {(isImage || (current.lockBoxRatio && !flowLayer)) && (
                         <button
                           className={`${styles.chain} ${current.chain ? '' : styles.chainOff}`}
                           onClick={() => patchLayer(current.id, { chain: !current.chain })}
@@ -1615,8 +1796,50 @@ export default function AdjustPanel({
         </div>
 
         <div className={styles.label}>Layers · front to back</div>
+        <div className={styles.btnRow}>
+          {pickingGroup ? (
+            <>
+              <button className={styles.btn} disabled={Boolean(selectionIssue)}
+                onClick={createGroup}>Group selected</button>
+              <button className={styles.btn} onClick={() => setGroupSelection(undefined)}>Cancel selection</button>
+            </>
+          ) : (
+            <button className={styles.btn} onClick={() => setGroupSelection({ scope: groupScope, ids: [] })}>Select layers to group</button>
+          )}
+        </div>
+        {pickingGroup && <p className={styles.note} role="status">{selectionIssue ?? `${pickedLayers.length} layers selected.`}</p>}
+        {current && selectedGroup && (
+          <div className={styles.btnRow}>
+            <button className={styles.btn} onClick={() => moveOutOfGroup(current.id)}>Move out of group</button>
+          </div>
+        )}
+        {current && !selectedGroup && groupable(current) && groups.length > 0 && (
+          <select className={styles.select} aria-label="Move into group" value="" onChange={(e) => {
+            const destination = groups.find((group) => group.id === e.target.value);
+            if (destination) moveIntoGroup(current, destination);
+          }}>
+            <option value="" disabled>Move into group</option>
+            {groups.map((group) => (
+              <option key={group.id} value={group.id} disabled={!canMoveInto(current, group)}>{group.label}</option>
+            ))}
+          </select>
+        )}
         <div className={styles.layers} ref={layersRef}>
-          {roots.map((l) => renderRow(l, false))}
+          {roots.map((layer) => {
+            const group = groupByMember.get(layer.id);
+            if (!group) return renderRow(layer, 0);
+            return roots.find((member) => groupByMember.get(member.id)?.id === group.id) === layer
+              ? renderGroup(group)
+              : null;
+          })}
+          {draggedLayer && groupByMember.has(draggedLayer.id) && (
+            <div className={styles.groupDrop} onDragOver={(event) => { event.preventDefault(); event.dataTransfer.dropEffect = 'move'; }}
+              onDrop={(event) => {
+                event.preventDefault();
+                moveOutOfGroup(draggedLayer.id);
+                setDragId(null);
+              }}>Drop to move out of group</div>
+          )}
           {def.bg && (
             <div
               className={`${styles.row} ${bgSelected ? styles.rowActive : ''}`}

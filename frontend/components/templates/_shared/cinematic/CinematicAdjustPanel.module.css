@@ -1110,3 +1110,8 @@
 .animationProperties .animationEnabled { flex-direction: row; align-items: center; gap: 6px; }
 .animationAdd { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; margin-top: 10px; }
 .animationAdd button { padding: 7px 10px; border: 1px solid var(--border-default); border-radius: 4px; background: var(--surface-card); color: var(--text-strong); font-size: 11px; cursor: pointer; }
+
+.layerGroup[data-drop-target='true'] {
+  outline: 1px dashed var(--gold-400);
+  outline-offset: -1px;
+}

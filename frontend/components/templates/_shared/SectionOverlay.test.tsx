@@ -26,3 +26,22 @@ describe('shared flow overlay', () => {
     expect(screen.queryByText('Couple decoration')).toBeNull(); expect(screen.getByText('Removed decoration')).toBeInTheDocument();
   });
 });
+
+describe('Classic layer groups', () => {
+  it('renders Golden Elegance overlay decorations under one animation with their own positions', () => {
+    const config = { 't2.layout.mobile.welcome': JSON.stringify({
+      layers: [
+        layer('left-decoration', 'text', { x: 20, z: 2, text: 'Left' }),
+        layer('right-decoration', 'text', { x: 80, z: 3, text: 'Right' }),
+      ],
+      groups: [{ id: 'decor', label: 'Decorations', memberIds: ['left-decoration', 'right-decoration'], anim: 'fade' }],
+    }) };
+    const { container } = render(<SectionOverlay prefix="t2" stages={stages} stageId="welcome" breakpoint="mobile" config={config}
+      engine={{ assetRoot: '', assetSizes: {}, slotRegistry: {} }} className="overlay" />);
+    const group = container.querySelector('[data-layer="decor"] [data-sl-anim="fade"]');
+
+    expect(group?.querySelector('[data-layer="left-decoration"]')).toHaveStyle({ left: '20%' });
+    expect(group?.querySelector('[data-layer="right-decoration"]')).toHaveStyle({ left: '80%' });
+    expect(container.querySelector('[data-layer="shipped"]')?.closest('[data-layer="decor"]')).toBeNull();
+  });
+});

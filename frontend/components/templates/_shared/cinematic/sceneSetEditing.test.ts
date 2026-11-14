@@ -90,3 +90,36 @@ describe('scene-set transactions', () => {
     expect(result.mobile.find((layer) => layer.id === 'groom')!.z).toBeGreaterThan(result.mobile.find((layer) => layer.id === 'programme-board')!.z);
   });
 });
+
+describe('Painted Promise layer groups', () => {
+  it('groups existing artwork in one transaction, nudges one breakpoint, and persists set motion', () => {
+    const created = editCinematicSceneSets(engine, {}, {
+      type: 'create', id: 'portraits', label: 'Portraits', space: 'world', memberIds: ['bride', 'groom'],
+    });
+    const moved = editCinematicSceneSets(engine, created, {
+      type: 'move-set', id: 'portraits', breakpoint: 'mobile', dx: 2, dy: -1,
+    });
+    const animated = editCinematicSceneSets(engine, moved, {
+      type: 'patch', id: 'portraits', patch: { loop: 'float', enter: { kind: 'fade', easing: 'linear' } },
+    });
+    const result = resolve(animated);
+    expect(result.sets.find((set) => set.id === 'portraits')).toMatchObject({
+      composeTiming: true, loop: 'float', enter: { kind: 'fade' }, timingTrackId: 'dais',
+    });
+    for (const id of ['bride', 'groom']) {
+      const before = resolve({}).mobile.find((layer) => layer.id === id)!;
+      const desktop = resolve({}).desktop.find((layer) => layer.id === id)!;
+      expect(result.mobile.find((layer) => layer.id === id)).toMatchObject({ group: 'portraits', x: before.x + 2, y: before.y - 1 });
+      expect(result.desktop.find((layer) => layer.id === id)).toMatchObject({ group: 'portraits', x: desktop.x, y: desktop.y });
+    }
+    const unlinked = editCinematicSceneSets(engine, animated, { type: 'timing', id: 'portraits' });
+    expect(resolve(unlinked).sets.find((set) => set.id === 'portraits')?.timingTrackId).toBeUndefined();
+  });
+
+  it('rejects cross-space membership without partially creating a group', () => {
+    const config = {};
+    expect(editCinematicSceneSets(engine, config, {
+      type: 'create', id: 'portraits', label: 'Portraits', space: 'viewport', memberIds: ['bride', 'groom'],
+    })).toBe(config);
+  });
+});

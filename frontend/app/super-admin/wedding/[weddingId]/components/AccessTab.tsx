@@ -110,46 +110,46 @@ export default function AccessTab({ organizerAdmin, weddingId, onRefresh }: Acce
   if (!organizerAdmin) {
     return (
       <div className="max-w-lg">
-        <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-6">
-          <p className="text-sm text-blue-800">
+        <div className="bg-[var(--brand-subtle)] border border-[var(--brand-border)] rounded-xl p-4 mb-6">
+          <p className="text-sm text-[var(--text-body)]">
             Create a login account so the event organizer can access their dashboard to view RSVPs,
             wishes, photos, and customize their invitation.
           </p>
         </div>
 
-        <div className="bg-white rounded-xl border border-gray-200 p-6 space-y-4">
-          <h3 className="font-semibold text-gray-800 text-lg">Create Event Organizer Account</h3>
+        <div className="bg-[var(--surface-card)] rounded-xl border border-[var(--border-subtle)] p-6 space-y-4">
+          <h3 className="font-semibold text-[var(--text-strong)] text-lg">Create Event Organizer Account</h3>
 
           {createError && (
             <p className="text-sm text-red-600 bg-red-50 px-3 py-2 rounded-lg">{createError}</p>
           )}
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Email Address</label>
+            <label className="block text-sm font-medium text-[var(--text-body)] mb-1">Email Address</label>
             <input
               type="email"
               value={newEmail}
               onChange={(e) => setNewEmail(e.target.value)}
               placeholder="organizer@example.com"
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 focus:ring-2 focus:ring-rose-300 focus:border-rose-400 focus:outline-none"
+              className="w-full px-3 py-2 border border-[var(--border-default)] rounded-lg text-sm text-[var(--text-strong)] focus:ring-2 focus:ring-[var(--ring)] focus:border-[var(--brand)] focus:outline-none"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
+            <label className="block text-sm font-medium text-[var(--text-body)] mb-1">Password</label>
             <input
               type="password"
               value={newPassword}
               onChange={(e) => setNewPassword(e.target.value)}
               placeholder="Choose a strong password"
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 focus:ring-2 focus:ring-rose-300 focus:border-rose-400 focus:outline-none"
+              className="w-full px-3 py-2 border border-[var(--border-default)] rounded-lg text-sm text-[var(--text-strong)] focus:ring-2 focus:ring-[var(--ring)] focus:border-[var(--brand)] focus:outline-none"
             />
           </div>
 
           <button
             onClick={handleCreate}
             disabled={creating}
-            className="w-full py-2.5 bg-rose-500 text-white rounded-lg font-medium text-sm hover:bg-rose-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            className="w-full py-2.5 bg-[var(--brand)] text-[var(--brand-on)] rounded-lg font-medium text-sm hover:bg-[var(--brand-hover)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             {creating ? 'Creating…' : 'Create Account'}
           </button>
@@ -162,11 +162,11 @@ export default function AccessTab({ organizerAdmin, weddingId, onRefresh }: Acce
   return (
     <div className="max-w-lg space-y-6">
       {/* Account card */}
-      <div className="bg-white rounded-xl border border-gray-200 p-6">
+      <div className="bg-[var(--surface-card)] rounded-xl border border-[var(--border-subtle)] p-6">
         <div className="flex items-start justify-between mb-4">
           <div>
-            <h3 className="font-semibold text-gray-800 text-lg">{organizerAdmin.email}</h3>
-            <p className="text-xs text-gray-400 mt-0.5">
+            <h3 className="font-semibold text-[var(--text-strong)] text-lg">{organizerAdmin.email}</h3>
+            <p className="text-xs text-[var(--text-subtle)] mt-0.5">
               Created {new Date(organizerAdmin.createdDate).toLocaleDateString('en-US', {
                 year: 'numeric', month: 'long', day: 'numeric',
               })}
@@ -183,7 +183,7 @@ export default function AccessTab({ organizerAdmin, weddingId, onRefresh }: Acce
           </span>
         </div>
 
-        <p className="text-sm text-gray-500 mb-5">
+        <p className="text-sm text-[var(--text-muted)] mb-5">
           {organizerAdmin.isActive
             ? 'The event organizer can log in and manage their dashboard.'
             : 'Access is disabled. The event organizer cannot log in until you re-enable it.'}
@@ -191,15 +191,15 @@ export default function AccessTab({ organizerAdmin, weddingId, onRefresh }: Acce
 
         {/* Tier selector — SUPER_ADMIN only */}
         {viewerRole === 'SUPER_ADMIN' && (
-          <div className="mb-5 p-4 bg-gray-50 rounded-lg border border-gray-200">
-            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Account Tier</p>
+          <div className="mb-5 p-4 bg-[var(--surface-sunken)] rounded-lg border border-[var(--border-subtle)]">
+            <p className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wider mb-2">Account Tier</p>
             <div className="flex gap-2">
               {TIERS.map(t => {
                 const current = (organizerAdmin.tier ?? 'BASIC').toUpperCase() === t;
                 const colors: Record<Tier, string> = {
-                  BASIC:    current ? 'bg-gray-200 text-gray-800 border-gray-400' : 'bg-white text-gray-500 border-gray-200 hover:border-gray-400',
-                  PREMIUM: current ? 'bg-yellow-100 text-yellow-800 border-yellow-400' : 'bg-white text-gray-500 border-gray-200 hover:border-yellow-300',
-                  PRO:     current ? 'bg-indigo-100 text-indigo-800 border-indigo-400' : 'bg-white text-gray-500 border-gray-200 hover:border-indigo-300',
+                  BASIC:    current ? 'bg-[var(--brand-subtle-2)] text-[var(--text-strong)] border-[var(--border-default)]' : 'bg-[var(--surface-card)] text-[var(--text-muted)] border-[var(--border-subtle)] hover:border-[var(--border-default)]',
+                  PREMIUM: current ? 'bg-yellow-100 text-yellow-800 border-yellow-400' : 'bg-[var(--surface-card)] text-[var(--text-muted)] border-[var(--border-subtle)] hover:border-yellow-300',
+                  PRO:     current ? 'bg-[var(--brand-subtle-2)] text-[var(--brand)] border-[var(--brand)]' : 'bg-[var(--surface-card)] text-[var(--text-muted)] border-[var(--border-subtle)] hover:border-[var(--brand-border)]',
                 };
                 return (
                   <button
@@ -223,7 +223,7 @@ export default function AccessTab({ organizerAdmin, weddingId, onRefresh }: Acce
             disabled={toggling}
             className={`w-full py-2.5 rounded-lg font-medium text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
               organizerAdmin.isActive
-                ? 'bg-gray-100 text-gray-700 hover:bg-red-50 hover:text-red-700 border border-gray-200'
+                ? 'bg-[var(--surface-sunken)] text-[var(--text-body)] hover:bg-red-50 hover:text-red-700 border border-[var(--border-subtle)]'
                 : 'bg-green-500 text-white hover:bg-green-600'
             }`}
           >
@@ -238,30 +238,30 @@ export default function AccessTab({ organizerAdmin, weddingId, onRefresh }: Acce
           {!showReset ? (
             <button
               onClick={() => setShowReset(true)}
-              className="w-full py-2.5 bg-gray-100 text-gray-700 rounded-lg font-medium text-sm hover:bg-gray-200 border border-gray-200 transition-colors"
+              className="w-full py-2.5 bg-[var(--surface-sunken)] text-[var(--text-body)] rounded-lg font-medium text-sm hover:bg-[var(--brand-subtle-2)] border border-[var(--border-subtle)] transition-colors"
             >
               Reset Password
             </button>
           ) : (
-            <div className="space-y-2 border border-gray-200 rounded-lg p-3 bg-gray-50">
+            <div className="space-y-2 border border-[var(--border-subtle)] rounded-lg p-3 bg-[var(--surface-sunken)]">
               <input
                 type="password"
                 value={resetPassword}
                 onChange={(e) => setResetPassword(e.target.value)}
                 placeholder="New password"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 focus:ring-2 focus:ring-rose-300 focus:border-rose-400 focus:outline-none"
+                className="w-full px-3 py-2 border border-[var(--border-default)] rounded-lg text-sm text-[var(--text-strong)] focus:ring-2 focus:ring-[var(--ring)] focus:border-[var(--brand)] focus:outline-none"
               />
               <div className="flex gap-2">
                 <button
                   onClick={handleResetPassword}
                   disabled={resetting || !resetPassword.trim()}
-                  className="flex-1 py-2 bg-rose-500 text-white rounded-lg text-sm font-medium hover:bg-rose-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  className="flex-1 py-2 bg-[var(--brand)] text-[var(--brand-on)] rounded-lg text-sm font-medium hover:bg-[var(--brand-hover)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
                   {resetting ? 'Saving…' : 'Confirm'}
                 </button>
                 <button
                   onClick={() => { setShowReset(false); setResetPassword(''); }}
-                  className="px-4 py-2 bg-white text-gray-600 rounded-lg text-sm border border-gray-200 hover:bg-gray-50 transition-colors"
+                  className="px-4 py-2 bg-[var(--surface-card)] text-[var(--text-muted)] rounded-lg text-sm border border-[var(--border-subtle)] hover:bg-[var(--surface-sunken)] transition-colors"
                 >
                   Cancel
                 </button>
@@ -272,14 +272,14 @@ export default function AccessTab({ organizerAdmin, weddingId, onRefresh }: Acce
           {/* Delete account */}
           <button
             onClick={handleDelete}
-            className="w-full py-2.5 bg-white text-red-600 rounded-lg font-medium text-sm border border-red-200 hover:bg-red-50 transition-colors"
+            className="w-full py-2.5 bg-[var(--surface-card)] text-red-600 rounded-lg font-medium text-sm border border-red-200 hover:bg-red-50 transition-colors"
           >
             Delete Account
           </button>
         </div>
       </div>
 
-      <p className="text-xs text-gray-400">
+      <p className="text-xs text-[var(--text-subtle)]">
         Login URL: <span className="font-mono">/login</span> — share the email and password with the organizer.
       </p>
     </div>

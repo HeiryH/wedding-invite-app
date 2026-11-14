@@ -3,6 +3,8 @@ import type { SectionCode } from '@/lib/templateUtils';
 import type { Breakpoint, EditorHandle } from '@/components/templates/_shared/types';
 import { EngineProvider, type Engine } from '@/components/templates/_shared/engine';
 import Layer from '@/components/templates/_shared/Layer';
+import GroupedLayers from '@/components/templates/_shared/GroupedLayers';
+import { classicGroupPlane } from '@/components/templates/_shared/classicGroupPlane';
 import { resolveStage } from '@/components/templates/_shared/layout';
 import { SHIPPED_PROP_IDS, T12_STAGES } from './data/dreamyWoodlandStages';
 import styles from './PropLayer.module.css';
@@ -16,17 +18,21 @@ export function PropLayer({ section, breakpoint, config, editor }: {
   editor?: EditorHandle;
 }) {
   const def = T12_STAGES[section];
-  const { layers } = useMemo(() => resolveStage('t12', def, breakpoint, config), [def, breakpoint, config]);
+  const { layers, groups } = useMemo(() => resolveStage('t12', def, breakpoint, config), [def, breakpoint, config]);
   const shipped = SHIPPED_PROP_IDS[section] ?? new Set<string>();
   const props = layers.filter((layer) => layer.kind === 'img' && !layer.hidden && shipped.has(layer.id));
   const editing = Boolean(editor?.enabled);
   const active = editing && editor?.selectedStage === section;
 
+  const propGroups = groups.filter((group) => layers.every((layer) =>
+    !group.memberIds.includes(layer.id) || classicGroupPlane('t12', section, layer) === 'props'));
+
   return (
     <EngineProvider value={ENGINE}>
       <div className={styles.wrap} data-editing={editing || undefined}>
-        {props.map((layer) => <Layer key={layer.id} layer={layer} eager={section === 'welcome'} editing={editing}
-          stageActive={active} stageId={section} selected={active && editor?.selectedLayer === layer.id} />)}
+        <GroupedLayers layers={props} groups={propGroups} stageId={section}
+          selectedLayer={active ? editor?.selectedLayer : undefined} renderLayer={(layer) => <Layer key={layer.id} layer={layer} eager={section === 'welcome'} editing={editing}
+          stageActive={active} stageId={section} selected={active && editor?.selectedLayer === layer.id} />} />
       </div>
     </EngineProvider>
   );

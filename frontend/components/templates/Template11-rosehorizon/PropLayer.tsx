@@ -3,6 +3,8 @@ import type { SectionCode } from '@/lib/templateUtils';
 import type { Breakpoint, EditorHandle } from '@/components/templates/_shared/types';
 import { EngineProvider, type Engine } from '@/components/templates/_shared/engine';
 import SharedLayer from '@/components/templates/_shared/Layer';
+import GroupedLayers from '@/components/templates/_shared/GroupedLayers';
+import { classicGroupPlane } from '@/components/templates/_shared/classicGroupPlane';
 import { resolveStage, baseStage } from '@/components/templates/_shared/layout';
 import { T11_STAGES, SHIPPED_PROP_IDS } from './data/roseHorizonStages';
 import styles from './PropLayer.module.css';
@@ -96,7 +98,7 @@ export function PropLayer({
   editor?: EditorHandle;
 }) {
   const def = T11_STAGES[section];
-  const { layers } = useMemo(
+  const { layers, groups } = useMemo(
     () => resolveStage('t11', def, breakpoint, config),
     [def, breakpoint, config],
   );
@@ -116,6 +118,9 @@ export function PropLayer({
   const imgLayers = layers.filter((l) => l.kind === 'img' && !l.hidden && shippedIds.has(l.id));
   if (!imgLayers.length) return null;
 
+  const propGroups = groups.filter((group) => layers.every((layer) =>
+    !group.memberIds.includes(layer.id) || classicGroupPlane('t11', section, layer) === 'props'));
+
   return (
     <EngineProvider value={ENGINE}>
       {/* `data-editing='true'` on an ANCESTOR is what Stage.module.css's `.layerBox` pointer-events rule is
@@ -123,23 +128,24 @@ export function PropLayer({
           un-clickable even with `editing` wired in JS. See PropLayer.module.css's `.wrap` for the
           positioning/stacking-context half of this. */}
       <div className={styles.wrap} data-editing={dockOpen || undefined}>
-        {imgLayers.map((l) => {
-          const atDefault = l.y === defaultY.get(l.id);
-          const y = atDefault
-            ? clearZone({ y: l.y, h: l.h, frame: FRAME_PROP_IDS.has(l.id) }, reservedZone)
-            : l.y; // couple has explicitly repositioned this prop — their placement always wins
-          return (
+        <GroupedLayers layers={imgLayers.map((layer) => ({
+          ...layer,
+          y: layer.y === defaultY.get(layer.id)
+            ? clearZone({ y: layer.y, h: layer.h, frame: FRAME_PROP_IDS.has(layer.id) }, reservedZone)
+            : layer.y,
+        }))} groups={propGroups} stageId={section}
+          selectedLayer={stageActive ? editor?.selectedLayer : undefined}
+          renderLayer={(l) => (
             <SharedLayer
               key={l.id}
-              layer={{ ...l, y }}
+              layer={l}
               eager={false}
               selected={stageActive && editor?.selectedLayer === l.id}
               editing={dockOpen}
               stageActive={stageActive}
               stageId={section}
             />
-          );
-        })}
+          )} />
       </div>
     </EngineProvider>
   );

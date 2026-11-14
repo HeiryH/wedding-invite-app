@@ -1,13 +1,16 @@
 'use client';
 
 import { useId, useState } from 'react';
+import type { Breakpoint } from '../types';
+import type { CinematicTrackTransition } from './sequence';
 import type { CinematicSceneSet } from './sceneSets';
 import { nextSceneSetId, type SceneSetAction } from './sceneSetEditing';
 import type { CinematicSequenceTrack } from './sequence';
 import type { CinematicWorldLayer } from './world';
 import styles from './CinematicAdjustPanel.module.css';
 
-export default function SceneSetManager({ sets, layers, tracks, selectedId, onSelect, onAction }: {
+export default function SceneSetManager({ sets, layers, tracks, selectedId, onSelect, onAction, breakpoint = 'mobile' }: {
+  breakpoint?: Breakpoint;
   sets: CinematicSceneSet[];
   layers: CinematicWorldLayer[];
   tracks: CinematicSequenceTrack[];
@@ -18,11 +21,16 @@ export default function SceneSetManager({ sets, layers, tracks, selectedId, onSe
   const [creating, setCreating] = useState(false);
   const [collapsed, setCollapsed] = useState(true);
   const contentId = useId();
+  const [memberIds, setMemberIds] = useState<string[]>([]);
   const [name, setName] = useState('');
   const [space, setSpace] = useState<CinematicSceneSet['space']>('world');
   const [deleting, setDeleting] = useState<string>();
   const [moveTo, setMoveTo] = useState('');
   const active = sets.find((set) => set.id === selectedId);
+  const movable = layers.filter((layer) => layer.space === space && !layer.parentId && !layer.locked &&
+    !sets.find((set) => set.id === layer.group)?.locked);
+  const activeTrack = active && (tracks.find((track) => track.id === active.timingTrackId) ??
+    tracks.find((track) => track.target.type === 'group' && track.target.id === active.id));
   const ordered = [...sets].sort((a, b) => a.z - b.z);
   return (
     <section className={styles.sceneSetsManager} data-collapsed={collapsed} aria-label="Scene set manager">
@@ -40,14 +48,22 @@ export default function SceneSetManager({ sets, layers, tracks, selectedId, onSe
           event.preventDefault();
           if (!name.trim()) return;
           const id = nextSceneSetId(name, sets.map((set) => set.id));
-          onAction({ type: 'create', id, label: name, space });
+          onAction({ type: 'create', id, label: name, space, memberIds: movable.filter((layer) => memberIds.includes(layer.id)).map((layer) => layer.id) });
           onSelect(id);
-          setName(''); setCreating(false);
+          setName(''); setMemberIds([]); setCreating(false);
         }}>
           <label>Set name<input className={styles.field} autoFocus value={name} required maxLength={120} onChange={(event) => setName(event.target.value)} /></label>
           <label>Coordinate space<select aria-label="Coordinate space" className={styles.field} value={space} onChange={(event) => setSpace(event.target.value as CinematicSceneSet['space'])}>
             <option value="world">World · follows the camera</option><option value="viewport">Viewport · stays on screen</option>
           </select></label>
+          {movable.length > 0 && <details>
+            <summary>Include layers</summary>
+            {movable.map((layer) => <label key={layer.id}>
+              <input type="checkbox" checked={memberIds.includes(layer.id)}
+                onChange={(event) => setMemberIds(event.target.checked ? [...memberIds, layer.id] : memberIds.filter((id) => id !== layer.id))} />
+              {layer.label}
+            </label>)}
+          </details>}
           <div className={styles.sceneSetActions}><button type="button" onClick={() => setCreating(false)}>Cancel</button><button type="submit" disabled={!name.trim()}>Create scene set</button></div>
         </form>
       )}
@@ -89,6 +105,32 @@ export default function SceneSetManager({ sets, layers, tracks, selectedId, onSe
             <option value="">Always visible · unlink timing</option>
             {tracks.filter((track) => track.kind !== 'interaction').map((track) => <option key={track.id} value={track.id}>{track.label}</option>)}
           </select></label>
+          {(['enter', 'exit'] as const).map((edge) => {
+            const label = edge === 'enter' ? 'Set entrance' : 'Set exit';
+            const transition = active[edge] ?? activeTrack?.[edge];
+            return <label key={edge}>{label}
+              <select className={styles.field} value={transition?.kind ?? 'cut'} disabled={active.locked || !activeTrack}
+                onChange={(event) => onAction({ type: 'patch', id: active.id, patch: {
+                  [edge]: { ...transition, kind: event.target.value as CinematicTrackTransition['kind'], easing: transition?.easing ?? 'linear' },
+                } })}>
+                {(['cut', 'fade', 'slide', 'fade-slide', ...(transition?.kind === 'scale' ? ['scale'] : [])] as const).map((kind) => <option key={kind} value={kind}>{kind}</option>)}
+              </select>
+            </label>;
+          })}
+          <label>Set loop
+            <select className={styles.field} value={active.loop ?? ''} disabled={active.locked}
+              onChange={(event) => onAction({ type: 'patch', id: active.id, patch: { loop: (event.target.value || undefined) as CinematicSceneSet['loop'] } })}>
+              <option value="">None</option><option value="float">Float</option><option value="sway">Sway</option>
+            </select>
+          </label>
+          {!activeTrack && <p className={styles.note}>Choose a timing track to set entrance and exit.</p>}
+          <fieldset className={styles.sceneSetActions} disabled={active.locked ||
+            !layers.some((layer) => layer.group === active.id && !layer.parentId) ||
+            layers.some((layer) => layer.group === active.id && !layer.parentId && layer.locked)}>
+            <legend>Move set · {breakpoint}</legend>
+            {([['Left', -1, 0], ['Right', 1, 0], ['Up', 0, -1], ['Down', 0, 1]] as const).map(([label, dx, dy]) =>
+              <button key={label} type="button" onClick={() => onAction({ type: 'move-set', id: active.id, breakpoint, dx, dy })}>{label}</button>)}
+          </fieldset>
           <div className={styles.sceneSetActions}>
             <button type="button" disabled={active.locked} onClick={() => {
               const copyId = nextSceneSetId(`${active.id}-copy`, sets.map((set) => set.id));

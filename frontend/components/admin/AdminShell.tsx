@@ -4,6 +4,8 @@ import { useEffect, useRef, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { Icon } from '@/components/ui/Icon';
 import { IconButton } from '@/components/ui/IconButton';
+import { Wordmark } from '@/components/marketing/Wordmark';
+import styles from './AdminShell.module.css';
 
 export interface NavItem {
   id: string;
@@ -19,8 +21,7 @@ interface AdminShellProps {
    *  gives every item an equal slice, so past ~4 it stops being tappable and starts being a wall
    *  of icons. Everything else belongs in `menuItems`. */
   navItems: NavItem[];
-  /** Secondary destinations. Desktop still lists them in the rail (there's room); mobile reaches
-   *  them through the avatar menu instead of the tab bar. */
+  /** Secondary destinations in the account menu and the mobile More menu. */
   menuItems?: NavItem[];
   onLogout: () => void;
   userInitials?: string;
@@ -33,8 +34,6 @@ interface AdminShellProps {
   sidePillLinks?: { label: string; href: string }[];
   homeHref?: string;
 }
-
-const isSuperAdmin = (role: string) => role === 'Super Admin';
 
 export default function AdminShell({
   children,
@@ -50,19 +49,26 @@ export default function AdminShell({
 }: AdminShellProps) {
   const pathname = usePathname();
   const router = useRouter();
-  const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [menuOpen, setMenuOpen] = useState(false);
-  const avatarRef = useRef<HTMLDivElement>(null);
-  const dark = isSuperAdmin(role);
+  const [menu, setMenu] = useState<'mobileAccount' | 'railAccount' | 'more' | null>(null);
+  const mobileAvatarRef = useRef<HTMLDivElement>(null);
+  const railAvatarRef = useRef<HTMLDivElement>(null);
+  const moreRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
-    if (!menuOpen) return;
-    const close = (e: MouseEvent) => {
-      if (!avatarRef.current?.contains(e.target as Node)) setMenuOpen(false);
+    if (!menu) return;
+    const close = (event: PointerEvent) => {
+      const container = menu === 'mobileAccount' ? mobileAvatarRef.current
+        : menu === 'railAccount' ? railAvatarRef.current : moreRef.current;
+      if (!container?.contains(event.target as Node)) setMenu(null);
     };
-    document.addEventListener('mousedown', close);
-    return () => document.removeEventListener('mousedown', close);
-  }, [menuOpen]);
+    const escape = (event: KeyboardEvent) => { if (event.key === 'Escape') setMenu(null); };
+    document.addEventListener('pointerdown', close);
+    document.addEventListener('keydown', escape);
+    return () => {
+      document.removeEventListener('pointerdown', close);
+      document.removeEventListener('keydown', escape);
+    };
+  }, [menu]);
 
   const allItems = [...navItems, ...(menuItems ?? [])];
   const activeId = allItems.reduce<string>((best, item) => {
@@ -71,60 +77,19 @@ export default function AdminShell({
     }
     return best;
   }, navItems[0]?.id ?? '');
-  const showFab = Boolean(fabHref) && !(fabHiddenOn ?? []).some(p => pathname.startsWith(p));
+  const hasPageCreate = role !== 'Event Organizer' && pathname === navItems[0]?.href;
+  const showFab = Boolean(fabHref) && !hasPageCreate && pathname !== fabHref
+    && !(fabHiddenOn ?? []).some(p => pathname.startsWith(p));
 
-  // ── Topbar ───────────────────────────────────────────────────────────────
-  const topbar = (
-    <header style={{
-      position: 'sticky', top: 0, zIndex: 'var(--z-sticky)' as unknown as number,
-      height: 'var(--topbar-h)',
-      display: 'flex', alignItems: 'center', gap: 10, padding: '0 18px',
-      background: 'color-mix(in srgb, var(--surface-card) 88%, transparent)',
-      backdropFilter: 'saturate(140%) blur(14px)',
-      WebkitBackdropFilter: 'saturate(140%) blur(14px)',
-      borderBottom: '1px solid var(--border-subtle)',
-    }}>
-      {/* Hamburger — desktop only */}
-      <button
-        className="hidden lg:flex items-center justify-center"
-        onClick={() => setSidebarOpen(p => !p)}
-        style={{
-          width: 36, height: 36, borderRadius: 'var(--radius-md)',
-          color: 'var(--text-muted)', background: 'transparent',
-          border: 'none', cursor: 'pointer', flexShrink: 0,
-          display: 'none',
-        }}
-      >
-        <Icon name="menu" size={19} />
-      </button>
+  const renderAccount = (placement: 'mobileAccount' | 'railAccount') => {
+    const menuOpen = menu === placement;
+    const inRail = placement === 'railAccount';
 
-      {/* Brand — the yellow "e" logo mark */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, flex: '1 1 auto', minWidth: 0 }}>
-        <span
-          aria-label="The Invit_e"
-          style={{
-            width: 34, height: 34, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontFamily: 'var(--font-vibes), cursive', color: '#e2a23c', fontSize: 34, lineHeight: 1,
-          }}
-        >
-          e
-        </span>
-        <span style={{
-          fontSize: 10, color: 'var(--text-subtle)',
-          letterSpacing: 'var(--tracking-caps)', textTransform: 'uppercase',
-          fontFamily: 'var(--font-ui)', minWidth: 0,
-        }}>
-          {role}
-        </span>
-      </div>
-
-      {/* Bell */}
-      <IconButton name="bell" label="Notifications" variant="outline" />
-
-      {/* Avatar dropdown */}
-      <div ref={avatarRef} style={{ position: 'relative', flexShrink: 0 }}>
+    return (
+      <div ref={inRail ? railAvatarRef : mobileAvatarRef} className={styles.account}>
         <button
-          onClick={() => setMenuOpen(p => !p)}
+          onClick={() => setMenu(menuOpen ? null : placement)}
+          aria-expanded={menuOpen}
           aria-label="Account menu"
           style={{
             width: 34, height: 34, borderRadius: '50%',
@@ -141,12 +106,7 @@ export default function AdminShell({
         </button>
 
         {menuOpen && (
-          <div style={{
-            position: 'absolute', top: 'calc(100% + 8px)', right: 0,
-            background: 'var(--surface-card)', border: '1px solid var(--border-subtle)',
-            borderRadius: 'var(--radius-lg)', padding: 6, minWidth: 172,
-            boxShadow: 'var(--shadow-lg)', zIndex: 60,
-          }}>
+          <div className={`${styles.accountMenu} ${inRail ? styles.railAccountMenu : ''}`}>
             <div style={{ padding: '8px 12px 10px', borderBottom: '1px solid var(--border-subtle)', marginBottom: 6 }}>
               <p style={{ fontSize: 11, color: 'var(--text-subtle)', margin: 0, textTransform: 'uppercase', letterSpacing: 'var(--tracking-caps)', fontFamily: 'var(--font-ui)' }}>
                 {role}
@@ -155,14 +115,12 @@ export default function AdminShell({
                 {userInitials}
               </p>
             </div>
-            {/* Secondary destinations live here on mobile — the tab bar only carries the few
-                things you switch between constantly. */}
             {menuItems?.map(item => (
               <MenuBtn
                 key={item.id}
                 icon={item.icon}
                 active={item.id === activeId}
-                onClick={() => { setMenuOpen(false); router.push(item.href); }}
+                onClick={() => { setMenu(null); router.push(item.href); }}
               >
                 {item.label}
               </MenuBtn>
@@ -170,147 +128,120 @@ export default function AdminShell({
             {menuItems && menuItems.length > 0 && (
               <div style={{ height: 1, background: 'var(--border-subtle)', margin: '6px 0' }} />
             )}
-            <MenuBtn icon="log-out" danger onClick={() => { setMenuOpen(false); onLogout(); }}>
+            <MenuBtn icon="log-out" danger onClick={() => { setMenu(null); onLogout(); }}>
               Log out
             </MenuBtn>
           </div>
         )}
       </div>
+    );
+  };
+
+  const topbar = (
+    <header className={styles.topbar}>
+      <div className={styles.mobileBrand}>
+        <Wordmark size={21} />
+        <div className={styles.role}>{role}</div>
+      </div>
+      <IconButton name="bell" label="Notifications" variant="outline" />
+      {renderAccount('mobileAccount')}
     </header>
   );
 
-  // ── Sidebar ──────────────────────────────────────────────────────────────
   const sidebar = (
-    <aside
-      className={sidebarOpen ? 'hidden lg:flex' : 'hidden'}
-      style={{
-        flexDirection: 'column', gap: 3, padding: '24px 14px',
-        position: 'sticky', top: 0, alignSelf: 'start',
-        height: '100vh', overflowY: 'auto',
-        background: dark ? 'var(--espresso)' : 'var(--surface-card)',
-        borderRight: dark ? 'none' : '1px solid var(--border-subtle)',
-        width: 240, flexShrink: 0,
-      }}
-    >
-      {/* Nav items — the rail has room for the secondary destinations too. */}
-      {allItems.map(item => {
-        const isActive = item.id === activeId;
-        return (
-          <button
-            key={item.id}
-            onClick={() => router.push(item.href)}
-            style={{
-              display: 'flex', alignItems: 'center', gap: 11,
-              padding: '9px 11px', borderRadius: 'var(--radius-md)',
-              color: dark
-                ? (isActive ? '#fff' : 'rgba(255,255,255,.62)')
-                : (isActive ? 'var(--brand)' : 'var(--text-muted)'),
-              background: dark
-                ? (isActive ? 'rgba(255,255,255,.10)' : 'transparent')
-                : (isActive ? 'var(--brand-subtle)' : 'transparent'),
-              border: 'none', cursor: 'pointer',
-              fontSize: 'var(--text-md)', fontFamily: 'var(--font-ui)',
-              fontWeight: isActive ? 600 : 500,
-              transition: 'var(--transition-control)',
-              textAlign: 'left', width: '100%',
-            }}
-            onMouseEnter={e => {
-              if (!isActive) (e.currentTarget as HTMLElement).style.background =
-                dark ? 'rgba(255,255,255,.07)' : 'var(--surface-sunken)';
-            }}
-            onMouseLeave={e => {
-              if (!isActive) (e.currentTarget as HTMLElement).style.background = 'transparent';
-            }}
-          >
-            <Icon name={item.icon} size={18} />
-            <span style={{ flex: 1 }}>{item.label}</span>
-            {item.count !== undefined && (
-              <span style={{
-                fontFamily: 'var(--font-mono)', fontSize: 11,
-                color: dark ? 'rgba(255,255,255,.45)' : 'var(--text-subtle)',
-                background: dark ? 'rgba(255,255,255,.08)' : 'var(--surface-sunken)',
-                padding: '1px 6px', borderRadius: 'var(--radius-full)',
-              }}>
-                {item.count}
-              </span>
-            )}
-          </button>
-        );
-      })}
-
-      {/* Quick access pill (organizer-admin only) */}
-      {!dark && sidePillLinks && sidePillLinks.length > 0 && (
-        <div style={{
-          marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: 8,
-          padding: 14, borderRadius: 'var(--radius-lg)',
-          background: 'var(--brand-gradient)',
-          border: '1px solid var(--brand-border)',
-        }}>
-          <div style={{
-            display: 'flex', alignItems: 'center', gap: 6,
-            fontSize: 11, letterSpacing: 'var(--tracking-caps)',
-            textTransform: 'uppercase', color: 'rgba(255,255,255,.75)',
-            fontFamily: 'var(--font-ui)',
-          }}>
-            <Icon name="sparkles" size={13} /> Quick access
-          </div>
-          {sidePillLinks.map(link => (
+    <aside className={styles.rail} aria-label="Admin sidebar">
+      <div className={styles.railControls}>
+        {renderAccount('railAccount')}
+        <IconButton name="bell" label="Notifications" variant="outline" />
+      </div>
+      <div className={styles.railBrand}>
+        <Wordmark size={26} byline />
+        <div className={styles.role}>{role}</div>
+      </div>
+      <div className={styles.railLinks}>
+        {navItems.map(item => {
+          const isActive = item.id === activeId;
+          return (
             <button
-              key={link.href}
-              onClick={() => router.push(link.href)}
+              key={item.id}
+              onClick={() => router.push(item.href)}
+              aria-current={isActive ? 'page' : undefined}
+              data-active={isActive}
+              className={styles.navButton}
               style={{
-                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                padding: '8px 12px', borderRadius: 'var(--radius-sm)',
-                background: 'rgba(255,255,255,.14)', border: '1px solid rgba(255,255,255,.22)',
-                color: '#fff', fontSize: 'var(--text-sm)', fontWeight: 500,
-                fontFamily: 'var(--font-ui)', cursor: 'pointer',
-                transition: 'background var(--dur-fast) var(--ease-standard)',
+                display: 'flex', alignItems: 'center', gap: 11, padding: '9px 11px',
+                borderRadius: 'var(--radius-md)', color: isActive ? 'var(--brand)' : 'var(--text-muted)',
+                background: isActive ? 'var(--brand-subtle)' : 'transparent',
+                border: 'none', cursor: 'pointer', fontSize: 'var(--text-md)', fontFamily: 'var(--font-ui)',
+                fontWeight: isActive ? 600 : 500, transition: 'var(--transition-control)', textAlign: 'left', width: '100%',
               }}
-              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,.22)'; }}
-              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,.14)'; }}
             >
-              {link.label}
-              <Icon name="arrow-right" size={14} />
+              <Icon name={item.icon} size={18} />
+              <span style={{ flex: 1 }}>{item.label}</span>
+              {item.count !== undefined && (
+                <span style={{
+                  fontFamily: 'var(--font-mono)', fontSize: 11,
+                  color: 'var(--text-subtle)',
+                  background: 'var(--surface-sunken)',
+                  padding: '1px 6px', borderRadius: 'var(--radius-full)',
+                }}>
+                  {item.count}
+                </span>
+              )}
             </button>
-          ))}
-        </div>
-      )}
+          );
+        })}
 
-      {/* Bottom section (dark rail): home link + user pill */}
-      {dark && (
-        <div style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: 4 }}>
-          {homeHref && (
-            <HomeLink href={homeHref} />
-          )}
+        {/* Quick access pill (organizer-admin only) */}
+        {role !== 'Super Admin' && sidePillLinks && sidePillLinks.length > 0 && (
           <div style={{
-            display: 'flex', alignItems: 'center', gap: 10,
-            padding: '10px 8px', borderTop: '1px solid rgba(255,255,255,.12)',
+            marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: 8,
+            padding: 14, borderRadius: 'var(--radius-lg)',
+            background: 'var(--brand-gradient)',
+            border: '1px solid var(--brand-border)',
           }}>
-            <span style={{
-              width: 30, height: 30, borderRadius: '50%',
-              background: 'var(--brand)', display: 'flex', alignItems: 'center',
-              justifyContent: 'center', color: '#fff', fontFamily: 'var(--font-ui)',
-              fontWeight: 700, fontSize: 12, flexShrink: 0,
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: 6,
+              fontSize: 11, letterSpacing: 'var(--tracking-caps)',
+              textTransform: 'uppercase', color: 'rgba(255,255,255,.75)',
+              fontFamily: 'var(--font-ui)',
             }}>
-              {userInitials}
-            </span>
-            <div style={{ fontFamily: 'var(--font-ui)', fontSize: 'var(--text-sm)' }}>
-              <div style={{ fontWeight: 600, color: '#fff' }}>{userInitials}</div>
-              <div style={{ color: 'rgba(255,255,255,.55)', fontSize: 11 }}>{role}</div>
+              <Icon name="sparkles" size={13} /> Quick access
             </div>
+            {sidePillLinks.map(link => (
+              <button
+                key={link.href}
+                onClick={() => router.push(link.href)}
+                style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                  padding: '8px 12px', borderRadius: 'var(--radius-sm)',
+                  background: 'rgba(255,255,255,.14)', border: '1px solid rgba(255,255,255,.22)',
+                  color: '#fff', fontSize: 'var(--text-sm)', fontWeight: 500,
+                  fontFamily: 'var(--font-ui)', cursor: 'pointer',
+                  transition: 'background var(--dur-fast) var(--ease-standard)',
+                }}
+                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,.22)'; }}
+                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,.14)'; }}
+              >
+                {link.label}
+                <Icon name="arrow-right" size={14} />
+              </button>
+            ))}
           </div>
-        </div>
-      )}
+        )}
+
+      </div>
+      {homeHref && <div className={styles.railFooter}><HomeLink href={homeHref} /></div>}
     </aside>
   );
 
   return (
-    <div style={{ display: 'flex', minHeight: '100vh', background: 'var(--surface-app)', fontFamily: 'var(--font-ui)' }}>
-      {/* Full-height left rail */}
+    <div className={styles.shell}>
+      {/* Desktop navigation */}
       {sidebar}
 
-      {/* Content column — topbar lives here, so it only spans the area right of the rail */}
-      <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
+      {/* The top bar is only needed when the desktop rail is hidden. */}
+      <div className={styles.content}>
         {topbar}
         <main className="px-4 pt-5 pb-28 lg:py-7 lg:px-8" style={{ flex: 1, minWidth: 0 }}>
           <div style={{ maxWidth: 1140, margin: '0 auto', width: '100%' }}>
@@ -321,24 +252,19 @@ export default function AdminShell({
 
       {/* Mobile tab bar */}
       <nav
-        className="flex items-center lg:hidden"
-        style={{
-          position: 'fixed', bottom: 0, left: 0, right: 0,
-          background: 'color-mix(in srgb, var(--surface-card) 92%, transparent)',
-          backdropFilter: 'blur(20px) saturate(140%)',
-          WebkitBackdropFilter: 'blur(20px) saturate(140%)',
-          borderTop: '1px solid var(--border-subtle)',
-          minHeight: 'var(--tabbar-h)',
-          padding: '6px 12px calc(6px + env(safe-area-inset-bottom))',
-          gap: 4, zIndex: 50,
-        }}
+        ref={moreRef}
+        aria-label="Admin navigation"
+        className={`${styles.tabbar} flex items-center lg:hidden`}
       >
         {navItems.map(item => {
           const isActive = item.id === activeId;
           return (
             <button
               key={item.id}
-              onClick={() => router.push(item.href)}
+              onClick={() => { setMenu(null); router.push(item.href); }}
+              aria-current={isActive ? 'page' : undefined}
+              data-active={isActive}
+              className={styles.navButton}
               style={{
                 flex: 1, height: 44, borderRadius: 'var(--radius-md)',
                 display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 2,
@@ -358,6 +284,34 @@ export default function AdminShell({
             </button>
           );
         })}
+        {!!menuItems?.length && (
+          <>
+            <button
+              type="button"
+              aria-expanded={menu === 'more'}
+              data-active={menu === 'more' || menuItems.some((item) => item.id === activeId)}
+              className={styles.navButton}
+              onClick={() => setMenu(menu === 'more' ? null : 'more')}
+              style={{
+                flex: 1, height: 44, border: 0, borderRadius: 'var(--radius-md)', display: 'grid',
+                placeContent: 'center', justifyItems: 'center', gap: 2, cursor: 'pointer',
+                color: 'var(--text-muted)', background: menu === 'more' ? 'var(--brand-subtle)' : 'transparent', fontSize: 10,
+              }}
+            >
+              <Icon name="more-horizontal" size={18} />
+              More
+            </button>
+            {menu === 'more' && (
+              <div className={styles.moreMenu}>
+                {menuItems.map((item) => (
+                  <MenuBtn key={item.id} icon={item.icon} active={item.id === activeId} onClick={() => { setMenu(null); router.push(item.href); }}>
+                    {item.label}
+                  </MenuBtn>
+                ))}
+              </div>
+            )}
+          </>
+        )}
       </nav>
 
       {/* Create — one floating action, same corner on mobile and desktop. It used to be wedged
@@ -394,8 +348,8 @@ function HomeLink({ href }: { href: string }) {
       style={{
         display: 'flex', alignItems: 'center', gap: 9,
         padding: '9px 11px', borderRadius: 'var(--radius-md)',
-        color: hover ? '#fff' : 'rgba(255,255,255,.55)',
-        background: hover ? 'rgba(255,255,255,.08)' : 'transparent',
+        color: hover ? 'var(--text-strong)' : 'var(--text-muted)',
+        background: hover ? 'var(--surface-sunken)' : 'transparent',
         fontSize: 'var(--text-md)', fontFamily: 'var(--font-ui)', fontWeight: 500,
         textDecoration: 'none',
         transition: 'var(--transition-control)',

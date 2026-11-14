@@ -18,6 +18,7 @@ interface PreviewPayload {
   wedding: Wedding;
   coupleMedia: Photo[];
   wishes: Wish[];
+  photos?: Photo[];
   photoBoothEnabled: boolean;
   customConfig: Record<string, string>;
   itinerary: ItineraryItem[];
@@ -90,6 +91,8 @@ export default function PreviewPage() {
   // template — a hydration mismatch. Reading it in an effect keeps SSR and the first client render
   // in agreement; the parent also replays the latest state right after PREVIEW_READY.
   useEffect(() => {
+    // The public mini editor sends its own starting design after the handshake.
+    if (new URLSearchParams(window.location.search).get('trial') === '1') return;
     try {
       const stored = localStorage.getItem(STORAGE_KEY);
       if (stored) {
@@ -102,6 +105,7 @@ export default function PreviewPage() {
   }, []);
 
   useEffect(() => {
+    const isTrial = new URLSearchParams(window.location.search).get('trial') === '1';
     // Tell parent we're ready — parent will replay latest state via postMessage
     window.parent.postMessage({ type: 'PREVIEW_READY' }, window.location.origin);
 
@@ -116,7 +120,9 @@ export default function PreviewPage() {
           pendingScrollRef.current = null;
         }
         setPayload(p);
-        try { localStorage.setItem(STORAGE_KEY, JSON.stringify(p)); } catch {}
+        if (!isTrial) {
+          try { localStorage.setItem(STORAGE_KEY, JSON.stringify(p)); } catch {}
+        }
       }
 
       if (event.data?.type === 'PREVIEW_SCROLL') {
@@ -201,7 +207,7 @@ export default function PreviewPage() {
               onTemplateReady={templateReady}
               wedding={payload.wedding}
               wishes={payload.wishes}
-              photos={[]}
+              photos={payload.photos ?? []}
               guests={[]}
               photoBoothEnabled={payload.photoBoothEnabled}
               coupleMedia={payload.coupleMedia}

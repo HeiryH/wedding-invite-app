@@ -232,28 +232,26 @@ export default function HostWeddingDetailPage() {
 
       {/* Hero */}
       <div style={{
-        background: 'var(--brand-gradient)', borderRadius: 'var(--radius-2xl)',
+        background: 'var(--surface-card)', borderRadius: 'var(--radius-lg)',
         padding: '22px 22px 26px', position: 'relative', overflow: 'hidden',
-        border: '1px solid var(--brand-border)', marginBottom: 18,
-        boxShadow: 'var(--shadow-foil)',
+        border: '1px solid var(--border-subtle)', marginBottom: 18,
+        boxShadow: 'var(--card-shadow)',
       }}>
-        <div style={{ position: 'absolute', right: -50, top: -50, width: 220, height: 220, borderRadius: '50%', background: 'radial-gradient(circle, rgba(255,255,255,.12), transparent 70%)', pointerEvents: 'none' }} />
-
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 14, flexWrap: 'wrap', position: 'relative', zIndex: 1 }}>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-              <Badge tone={weddingStatus === 'Live' ? 'success' : weddingStatus === 'Upcoming' ? 'info' : 'neutral'} dot>{weddingStatus}</Badge>
+              <Badge tone={weddingStatus === 'Live' ? 'success' : weddingStatus === 'Upcoming' ? 'gold' : 'neutral'} dot>{weddingStatus}</Badge>
             </div>
-            <h1 style={{ margin: 0, fontFamily: 'var(--font-display)', fontSize: 'clamp(26px, 4vw, 38px)', fontWeight: 400, color: '#fff', lineHeight: 1.1, letterSpacing: 'var(--tracking-tight)' }}>
+            <h1 style={{ margin: 0, fontFamily: 'var(--font-display)', fontSize: 'clamp(26px, 4vw, 38px)', fontWeight: 400, color: 'var(--text-strong)', lineHeight: 1.1, letterSpacing: 'var(--tracking-tight)' }}>
               {wedding.displayName}
             </h1>
-            <p style={{ margin: '10px 0 0', color: 'rgba(255,255,255,.75)', fontSize: 'var(--text-sm)', fontFamily: 'var(--font-ui)' }}>
+            <p style={{ margin: '10px 0 0', color: 'var(--text-muted)', fontSize: 'var(--text-sm)', fontFamily: 'var(--font-ui)' }}>
               {weddingDateStr} · {weddingTimeStr} · {wedding.venue}
             </p>
           </div>
           <button
             onClick={() => window.open(`/${urlSegmentForEventType(wedding.eventType)}/${wedding.slug}`, '_blank')}
-            style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 14px', borderRadius: 'var(--radius-md)', background: 'rgba(255,255,255,.15)', border: '1px solid rgba(255,255,255,.25)', color: '#fff', fontSize: 'var(--text-sm)', cursor: 'pointer', fontFamily: 'var(--font-ui)', fontWeight: 500, flexShrink: 0 }}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 14px', borderRadius: 'var(--radius-md)', background: 'var(--brand)', border: '1px solid var(--brand)', color: 'var(--brand-on)', fontSize: 'var(--text-sm)', cursor: 'pointer', fontFamily: 'var(--font-ui)', fontWeight: 500, flexShrink: 0 }}
           >
             <Icon name="eye" size={15} /> Preview
           </button>

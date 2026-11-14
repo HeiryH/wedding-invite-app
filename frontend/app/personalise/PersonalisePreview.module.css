@@ -1,0 +1,112 @@
+.stage {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template: minmax(0, 1fr) / minmax(0, 1fr);
+  place-items: center;
+}
+
+.stage > iframe {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+
+.error {
+  padding: 16px;
+  text-align: center;
+}
+
+.error > button {
+  padding: 8px 16px;
+}
+
+.venueMap > div:not([hidden]) {
+  display: grid;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.venueMap button {
+  padding: 8px 16px;
+  font-size: 14px;
+}
+
+.venueMap iframe {
+  width: 100%;
+  height: 220px;
+  border: 1px solid var(--mkt-ink);
+  border-radius: 14px;
+}
+
+.rsvpControl {
+  display: grid;
+  gap: 6px;
+}
+
+.seatingHint {
+  margin: 0;
+  color: var(--mkt-muted-2);
+  font-size: 13px;
+}
+
+.tableCard {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  box-shadow: none;
+}
+
+.tableCard > button {
+  justify-self: start;
+  padding: 6px 12px;
+  box-shadow: none;
+}
+
+.rsvpFields {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.rsvpField {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-left: 12px;
+  border-bottom: 1px solid var(--mkt-sand);
+}
+
+.rsvpEye {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--mkt-ink);
+  cursor: pointer;
+}
+
+@media (min-width: 769px) {
+  .stage {
+    container-type: size;
+    margin: 16px;
+  }
+
+  .stage > iframe {
+    width: min(100%, 402px, calc(100cqh * 402 / 714));
+    height: auto;
+    aspect-ratio: 402 / 714;
+    border-radius: 22px;
+    outline: 2px solid var(--mkt-ink);
+    box-shadow: 0 6px 0 rgba(23, 19, 13, .12);
+    background: var(--mkt-card);
+  }
+}

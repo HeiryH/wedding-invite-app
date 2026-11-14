@@ -84,7 +84,7 @@ export const T7_STAGES: Record<string, StageDef> = {
   'ceremony-walimah': {
     id: 'ceremony-walimah',
     label: 'Ceremony',
-    bg: 'ceremony/background.webp',
+    bg: 'ceremony/background.webp?v=5',
     bgFit: 'cover',
     // Desktop reuses the couple's existing hand-tuned `desktop:` layer overrides below (a human
     // already composed these for wide screens) — this canvas entry doesn't change any of those
@@ -97,7 +97,7 @@ export const T7_STAGES: Record<string, StageDef> = {
       // A landscape architrave: on a portrait phone its straight top edge saws a visible seam
       // across the screen, and scaling it up to hide that pushes the columns off both sides.
       // It's a wide-viewport framing device, so it only exists at the desktop breakpoint.
-      L({ id: 'pillars', kind: 'img',  src: 'ceremony/pillars.webp',         x: 50, y: 46, w: 145, z: 2, order: 0, depth: 0.4, hidden: true }),
+      L({ id: 'pillars', kind: 'img',  src: 'ceremony/pillars.webp?v=3',         x: 50, y: 46, w: 145, z: 2, order: 0, depth: 0.4, hidden: true }),
       L({ id: 'potL',    kind: 'img',  src: 'ceremony/left-plant-pot.webp',  x: 10, y: 76, w: 30,  z: 3, order: 2, depth: 1.4 }),
       L({ id: 'potR',    kind: 'img',  src: 'ceremony/right-plant-pot.webp', x: 90, y: 77, w: 25,  z: 3, order: 3, depth: 1.4 }),
       L({ id: 'bench',   kind: 'img',  src: 'ceremony/bench.webp',           x: 50, y: 86, w: 82,  z: 4, order: 4, depth: 0.9 }),
@@ -117,7 +117,7 @@ export const T7_STAGES: Record<string, StageDef> = {
   'ceremony-couple': {
     id: 'ceremony-couple',
     label: 'The Couple',
-    bg: 'ceremony/background.webp',
+    bg: 'ceremony/background.webp?v=5',
     bgFit: 'cover',
     // Desktop reuses the couple's existing hand-tuned `desktop:` layer overrides below (a human
     // already composed these for wide screens) — this canvas entry doesn't change any of those
@@ -130,7 +130,7 @@ export const T7_STAGES: Record<string, StageDef> = {
       // A landscape architrave: on a portrait phone its straight top edge saws a visible seam
       // across the screen, and scaling it up to hide that pushes the columns off both sides.
       // It's a wide-viewport framing device, so it only exists at the desktop breakpoint.
-      L({ id: 'pillars', kind: 'img',  src: 'ceremony/pillars.webp',         x: 50, y: 46, w: 145, z: 2, order: 0, depth: 0.4, hidden: true }),
+      L({ id: 'pillars', kind: 'img',  src: 'ceremony/pillars.webp?v=3',         x: 50, y: 46, w: 145, z: 2, order: 0, depth: 0.4, hidden: true }),
       L({ id: 'potL',    kind: 'img',  src: 'ceremony/left-plant-pot.webp',  x: 10, y: 76, w: 30,  z: 3, order: 2, depth: 1.4 }),
       L({ id: 'potR',    kind: 'img',  src: 'ceremony/right-plant-pot.webp', x: 90, y: 77, w: 25,  z: 3, order: 3, depth: 1.4 }),
       L({ id: 'bench',   kind: 'img',  src: 'ceremony/bench.webp',           x: 50, y: 86, w: 82,  z: 4, order: 4, depth: 0.9 }),
@@ -150,7 +150,7 @@ export const T7_STAGES: Record<string, StageDef> = {
   'ceremony-details': {
     id: 'ceremony-details',
     label: 'Details',
-    bg: 'ceremony/background.webp',
+    bg: 'ceremony/background.webp?v=5',
     bgFit: 'cover',
     // Desktop reuses the couple's existing hand-tuned `desktop:` layer overrides below (a human
     // already composed these for wide screens) — this canvas entry doesn't change any of those
@@ -163,7 +163,7 @@ export const T7_STAGES: Record<string, StageDef> = {
       // A landscape architrave: on a portrait phone its straight top edge saws a visible seam
       // across the screen, and scaling it up to hide that pushes the columns off both sides.
       // It's a wide-viewport framing device, so it only exists at the desktop breakpoint.
-      L({ id: 'pillars', kind: 'img',  src: 'ceremony/pillars.webp',         x: 50, y: 46, w: 145, z: 2, order: 0, depth: 0.4, hidden: true }),
+      L({ id: 'pillars', kind: 'img',  src: 'ceremony/pillars.webp?v=3',         x: 50, y: 46, w: 145, z: 2, order: 0, depth: 0.4, hidden: true }),
       L({ id: 'potL',    kind: 'img',  src: 'ceremony/left-plant-pot.webp',  x: 10, y: 76, w: 30,  z: 3, order: 2, depth: 1.4 }),
       L({ id: 'potR',    kind: 'img',  src: 'ceremony/right-plant-pot.webp', x: 90, y: 77, w: 25,  z: 3, order: 3, depth: 1.4 }),
       L({ id: 'bench',   kind: 'img',  src: 'ceremony/bench.webp',           x: 50, y: 86, w: 82,  z: 4, order: 4, depth: 0.9 }),
@@ -183,7 +183,7 @@ export const T7_STAGES: Record<string, StageDef> = {
   'ceremony-programme': {
     id: 'ceremony-programme',
     label: 'Programme',
-    bg: 'ceremony/background.webp',
+    bg: 'ceremony/background.webp?v=5',
     bgFit: 'cover',
     // Desktop reuses the couple's existing hand-tuned `desktop:` layer overrides below (a human
     // already composed these for wide screens) — this canvas entry doesn't change any of those
@@ -194,7 +194,7 @@ export const T7_STAGES: Record<string, StageDef> = {
     canvas: { mobile: { w: 390, h: 844 }, desktop: { w: 1440, h: 900 } },
     layers: [
       // Desktop-only — see the note on the other ceremony stages.
-      L({ id: 'pillars',   kind: 'img',  src: 'ceremony/pillars.webp',         x: 50, y: 46, w: 145, z: 2, order: 0, depth: 0.4, hidden: true }),
+      L({ id: 'pillars',   kind: 'img',  src: 'ceremony/pillars.webp?v=3',         x: 50, y: 46, w: 145, z: 2, order: 0, depth: 0.4, hidden: true }),
       L({ id: 'potL',      kind: 'img',  src: 'ceremony/left-plant-pot.webp',  x: 10, y: 76, w: 30,  z: 3, order: 2, depth: 1.4 }),
       L({ id: 'potR',      kind: 'img',  src: 'ceremony/right-plant-pot.webp', x: 90, y: 77, w: 25,  z: 3, order: 3, depth: 1.4 }),
       L({ id: 'title',     kind: 'slot', slot: 'itineraryTitle',                x: 50, y: 16, w: 64, h: 8,  z: 6, order: 0, chain: false, depth: 0.3, label: 'Schedule Title' }),
@@ -226,10 +226,10 @@ export const T7_STAGES: Record<string, StageDef> = {
     // This stage owns the row's single shared background: the rail resolves and renders it (with
     // the couple's Fit/Position/Scale/Replace overrides) so it's adjusted here, in one place,
     // exactly like any other stage's background.
-    bg: 'ceremony/background.webp',
+    bg: 'ceremony/background.webp?v=5',
     bgFit: 'cover',
     layers: [
-      L({ id: 'rail-pillars', kind: 'img', src: 'ceremony/pillars.webp',         x: 50, y: 46, w: 34, z: 2, order: 0, depth: 0.4, hidden: true }),
+      L({ id: 'rail-pillars', kind: 'img', src: 'ceremony/pillars.webp?v=3',         x: 50, y: 46, w: 34, z: 2, order: 0, depth: 0.4, hidden: true }),
       L({ id: 'rail-potL',    kind: 'img', src: 'ceremony/left-plant-pot.webp',   x: 5,  y: 76, w: 9,  z: 3, order: 1, depth: 1.4 }),
       L({ id: 'rail-potR',    kind: 'img', src: 'ceremony/right-plant-pot.webp',  x: 95, y: 77, w: 8,  z: 3, order: 2, depth: 1.4 }),
       L({ id: 'rail-bench',   kind: 'img', src: 'ceremony/bench.webp',            x: 50, y: 86, w: 27, z: 4, order: 3, depth: 0.9 }),
@@ -245,7 +245,7 @@ export const T7_STAGES: Record<string, StageDef> = {
   rsvp: {
     id: 'rsvp',
     label: 'RSVP',
-    bg: 'rsvp/background.webp',
+    bg: 'rsvp/background.webp?v=2',
     bgFit: 'cover',
     // Desktop reuses the couple's existing hand-tuned `desktop:` layer overrides below (a human
     // already composed these for wide screens) — this canvas entry doesn't change any of those
@@ -262,7 +262,7 @@ export const T7_STAGES: Record<string, StageDef> = {
     // repositionable anyway, same as any other layer. `form` keeps its pre-split layer id so a
     // wedding's already-saved override (a moved/resized step-1 box) keeps applying unchanged.
     layers: [
-      L({ id: 'frame',   kind: 'img',  src: 'rsvp/frame.webp',      x: 50, y: 44, w: 148, z: 2, order: 0, depth: 0.3 }),
+      L({ id: 'frame',   kind: 'img',  src: 'rsvp/frame.webp?v=2',      x: 50, y: 44, w: 148, z: 2, order: 0, depth: 0.3 }),
       L({ id: 'pots',    kind: 'img',  src: 'rsvp/plant-pots.webp', x: 50, y: 90, w: 140, z: 3, order: 2, depth: 1.2 }),
       L({ id: 'title',   kind: 'slot', slot: 'rsvpTitle',           x: 50, y: 22, w: 70, h: 8,  z: 6, order: 0, chain: false, depth: 0.3, label: 'RSVP Title' }),
       L({ id: 'prompt',  kind: 'slot', slot: 'rsvpPrompt',          x: 50, y: 31, w: 78, h: 6,  z: 5, order: 0, chain: false, depth: 0.3, label: 'RSVP Prompt' }),
@@ -359,14 +359,16 @@ export const T7_STAGES: Record<string, StageDef> = {
     canvas: { mobile: { w: 390, h: 844 }, desktop: { w: 1440, h: 900 } },
     layers: [
       L({ id: 'partition', kind: 'img',  src: 'photobooth/title-partition.webp', x: 50, y: 14, w: 36,  z: 3, order: 0, depth: 0.5 }),
-      L({ id: 'frame',     kind: 'img',  src: 'photobooth/frame.webp',           x: 50, y: 46, w: 100, z: 2, order: 1, depth: 0.3 }),
+      L({ id: 'frame',     kind: 'img',  src: 'photobooth/frame.webp?v=2',           x: 50, y: 46, w: 100, z: 2, order: 1, depth: 0.3 }),
       L({ id: 'columnL',   kind: 'img',  src: 'photobooth/left-column.webp',     x: 8,  y: 55, w: 26,  z: 4, order: 3, depth: 1.2 }),
       L({ id: 'oval',      kind: 'img',  src: 'photobooth/oval-frame.webp',      x: 88, y: 40, w: 26,  z: 4, order: 4, depth: 1 }),
       L({ id: 'square',    kind: 'img',  src: 'photobooth/square-frame.webp',    x: 90, y: 66, w: 22,  z: 4, order: 5, depth: 1.1 }),
       L({ id: 'iconMsg',   kind: 'img',  src: 'photobooth/icon-msg.webp',        x: 50, y: 80, w: 62,  z: 4, order: 6, depth: 0.8 }),
       L({ id: 'deco',      kind: 'img',  src: 'photobooth/bottom-deco.webp',     x: 50, y: 93, w: 28,  z: 3, order: 7, depth: 0.8 }),
       // Gallery only — the wish sheet's optional photo step is T7's single upload path.
-      L({ id: 'booth',     kind: 'slot', slot: 'photoGallery',                   x: 50, y: 46, w: 76, h: 46, z: 5, order: 2, chain: false, depth: 0.15 }),
+      L({ id: 'booth',     kind: 'slot', slot: 'photoGallery',                   x: 50, y: 46, w: 76, h: 46, z: 5, order: 2, chain: false, lockBoxRatio: true, depth: 0.15, label: 'Photo Booth' }),
+      L({ id: 'booth-text', kind: 'anchor', parent: 'booth', label: 'Text', anim: 'none' }),
+      L({ id: 'booth-gallery', kind: 'anchor', parent: 'booth', label: 'Gallery', anim: 'none' }),
     ],
     desktop: {
       partition: { y: 15, w: 18 },

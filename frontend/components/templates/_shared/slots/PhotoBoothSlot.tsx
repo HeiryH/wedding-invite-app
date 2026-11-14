@@ -9,6 +9,8 @@ import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { Photo } from '@/lib/api';
 import type { SlotProps } from '../types';
+import { SlotPiece } from './SlotPiece';
+import { subLayersOf } from './subLayerStyle';
 // The two alternating frame overlays are a deliberate, accepted T7 art borrow (see
 // slots.module.css's .framedArt comment) — not generalized to a neutral asset in this pass.
 import { T7_ASSETS } from '../../Template7-romangarden/data/stages';
@@ -73,7 +75,7 @@ const stackVariants = {
  * versions) onto the shared slot so any authored template gets the same interaction, not just a
  * static grid.
  */
-function PhotoBoothBody({ photos, onUploadPhoto, t, editing, upload }: SlotProps & { upload: boolean }) {
+function PhotoBoothBody({ photos, onUploadPhoto, t, editing, upload, layer, stageLayers, editor }: SlotProps & { upload: boolean }) {
   const submission = useGuestSubmission();
   // The engraved-frame overlay is T7 art specifically — a template whose own photobooth scene
   // doesn't want it (e.g. Sunny Safari draws its own gallery board) sets `photobooth.frameArt` to
@@ -100,12 +102,140 @@ function PhotoBoothBody({ photos, onUploadPhoto, t, editing, upload }: SlotProps
   const goNext = () => { setDirection(1); setIndex((i) => (i + 1) % photos.length); };
   const goPrev = () => { setDirection(-1); setIndex((i) => (i - 1 + photos.length) % photos.length); };
 
-  return (
-    <div className={styles.panel}>
+  const pieces = subLayersOf(stageLayers, layer?.id);
+  const textPiece = pieces['booth-text'];
+  const galleryPiece = pieces['booth-gallery'];
+  const heading = (
+    <>
       <h3 className={styles.panelTitle}>{t('photobooth.title', 'Photo Booth')}</h3>
       <p className={styles.sectionLead}>
         {t('photobooth.prompt', 'Snap a photo, leave it in our gallery, and cherish it with us forever.')}
       </p>
+    </>
+  );
+
+  const gallery = photos.length > 0 && (
+    <>
+      {photos.length > 1 && (
+        <div className={styles.galleryToggle}>
+          <button
+            className={`${styles.layoutBtn} ${layout === 'stack' ? styles.layoutBtnActive : ''}`}
+            onClick={() => setLayout('stack')}
+          >
+            Stack
+          </button>
+          <button
+            className={`${styles.layoutBtn} ${layout === 'grid' ? styles.layoutBtnActive : ''}`}
+            onClick={() => setLayout('grid')}
+          >
+            Grid
+          </button>
+        </div>
+      )}
+
+      {layout === 'stack' ? (
+        <div className={styles.stackContainer}>
+          {photos.length > 2 && (
+            <div className={styles.stackGhost2}>
+              {framed
+                ? <FramedPhoto photo={photos[(index + 2) % photos.length]} frame={frameFor((index + 2) % photos.length)} className={styles.stackFramed} />
+                : (
+                  <div className={styles.stackPolaroid}>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={getImageUrl(photos[(index + 2) % photos.length].photoUrl, API_BASE)} className={styles.stackPhoto} alt="" draggable={false} />
+                  </div>
+                )}
+            </div>
+          )}
+          {photos.length > 1 && (
+            <div className={styles.stackGhost1}>
+              {framed
+                ? <FramedPhoto photo={photos[(index + 1) % photos.length]} frame={frameFor((index + 1) % photos.length)} className={styles.stackFramed} />
+                : (
+                  <div className={styles.stackPolaroid}>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={getImageUrl(photos[(index + 1) % photos.length].photoUrl, API_BASE)} className={styles.stackPhoto} alt="" draggable={false} />
+                  </div>
+                )}
+            </div>
+          )}
+          <AnimatePresence custom={direction} mode="popLayout">
+            <motion.div
+              key={index}
+              className={styles.stackCard}
+              custom={direction}
+              variants={stackVariants}
+              initial="enter"
+              animate="center"
+              exit="exit"
+              transition={{ type: 'spring', stiffness: 340, damping: 32 }}
+              drag={photos.length > 1 ? 'x' : false}
+              dragConstraints={{ left: 0, right: 0 }}
+              dragElastic={0.22}
+              onDragEnd={(_, info) => {
+                if (info.offset.x < -55 || info.velocity.x < -400) goNext();
+                else if (info.offset.x > 55 || info.velocity.x > 400) goPrev();
+              }}
+              onClick={() => setLightbox(photos[index])}
+            >
+              {framed ? (
+                <div className={styles.stackFramedCard}>
+                  <FramedPhoto photo={photos[index]} frame={frameFor(index)} className={styles.stackFramed} />
+                  {photos[index].caption && <span className={styles.polaroidCaption}>{photos[index].caption}</span>}
+                  {photos[index].guestName && <span className={styles.polaroidBy}>— {photos[index].guestName}</span>}
+                </div>
+              ) : (
+                <div className={styles.stackPolaroid}>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={getImageUrl(photos[index].photoUrl, API_BASE)}
+                    alt={photos[index].caption ?? ''}
+                    className={styles.stackPhoto}
+                    draggable={false}
+                  />
+                  {photos[index].caption && <span className={styles.polaroidCaption}>{photos[index].caption}</span>}
+                  {photos[index].guestName && <span className={styles.polaroidBy}>— {photos[index].guestName}</span>}
+                </div>
+              )}
+            </motion.div>
+          </AnimatePresence>
+          {photos.length > 1 && (
+            <>
+              <button className={`${styles.stackNav} ${styles.stackNavPrev}`} onClick={goPrev}>‹</button>
+              <button className={`${styles.stackNav} ${styles.stackNavNext}`} onClick={goNext}>›</button>
+              <div className={styles.stackDots}>
+                {photos.map((_, i) => (
+                  <span
+                    key={i}
+                    className={`${styles.stackDot} ${i === index ? styles.stackDotActive : ''}`}
+                    onClick={() => { setDirection(i > index ? 1 : -1); setIndex(i); }}
+                  />
+                ))}
+              </div>
+            </>
+          )}
+        </div>
+      ) : (
+        <div className={styles.gallery}>
+          {/* Alternate the two engraved frames so the grid doesn't read as a repeat; each cell
+              takes its frame's own aspect (square ≈ 1:1, oval ≈ 3:4) and rows align by width. */}
+          {photos.map((p, i) => (
+            <figure key={p.photoId} className={styles.photoFrame} onClick={() => setLightbox(p)}>
+              <FramedPhoto photo={p} frame={framed ? frameFor(i) : undefined} />
+            </figure>
+          ))}
+        </div>
+      )}
+    </>
+  );
+
+  return (
+    <div className={styles.panel}>
+      {textPiece ? (
+        <SlotPiece layer={textPiece} id={textPiece.id} editor={editor} stageId="photobooth">
+          <div>{heading}</div>
+        </SlotPiece>
+      ) : heading}
 
       {upload && onUploadPhoto && (
         <div className={styles.uploadRow}>
@@ -121,120 +251,11 @@ function PhotoBoothBody({ photos, onUploadPhoto, t, editing, upload }: SlotProps
         </div>
       )}
 
-      {photos.length > 0 && (
-        <>
-          {photos.length > 1 && (
-            <div className={styles.galleryToggle}>
-              <button
-                className={`${styles.layoutBtn} ${layout === 'stack' ? styles.layoutBtnActive : ''}`}
-                onClick={() => setLayout('stack')}
-              >
-                Stack
-              </button>
-              <button
-                className={`${styles.layoutBtn} ${layout === 'grid' ? styles.layoutBtnActive : ''}`}
-                onClick={() => setLayout('grid')}
-              >
-                Grid
-              </button>
-            </div>
-          )}
-
-          {layout === 'stack' ? (
-            <div className={styles.stackContainer}>
-              {photos.length > 2 && (
-                <div className={styles.stackGhost2}>
-                  {framed
-                    ? <FramedPhoto photo={photos[(index + 2) % photos.length]} frame={frameFor((index + 2) % photos.length)} className={styles.stackFramed} />
-                    : (
-                      <div className={styles.stackPolaroid}>
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src={getImageUrl(photos[(index + 2) % photos.length].photoUrl, API_BASE)} className={styles.stackPhoto} alt="" draggable={false} />
-                      </div>
-                    )}
-                </div>
-              )}
-              {photos.length > 1 && (
-                <div className={styles.stackGhost1}>
-                  {framed
-                    ? <FramedPhoto photo={photos[(index + 1) % photos.length]} frame={frameFor((index + 1) % photos.length)} className={styles.stackFramed} />
-                    : (
-                      <div className={styles.stackPolaroid}>
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src={getImageUrl(photos[(index + 1) % photos.length].photoUrl, API_BASE)} className={styles.stackPhoto} alt="" draggable={false} />
-                      </div>
-                    )}
-                </div>
-              )}
-              <AnimatePresence custom={direction} mode="popLayout">
-                <motion.div
-                  key={index}
-                  className={styles.stackCard}
-                  custom={direction}
-                  variants={stackVariants}
-                  initial="enter"
-                  animate="center"
-                  exit="exit"
-                  transition={{ type: 'spring', stiffness: 340, damping: 32 }}
-                  drag={photos.length > 1 ? 'x' : false}
-                  dragConstraints={{ left: 0, right: 0 }}
-                  dragElastic={0.22}
-                  onDragEnd={(_, info) => {
-                    if (info.offset.x < -55 || info.velocity.x < -400) goNext();
-                    else if (info.offset.x > 55 || info.velocity.x > 400) goPrev();
-                  }}
-                  onClick={() => setLightbox(photos[index])}
-                >
-                  {framed ? (
-                    <div className={styles.stackFramedCard}>
-                      <FramedPhoto photo={photos[index]} frame={frameFor(index)} className={styles.stackFramed} />
-                      {photos[index].caption && <span className={styles.polaroidCaption}>{photos[index].caption}</span>}
-                      {photos[index].guestName && <span className={styles.polaroidBy}>— {photos[index].guestName}</span>}
-                    </div>
-                  ) : (
-                    <div className={styles.stackPolaroid}>
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src={getImageUrl(photos[index].photoUrl, API_BASE)}
-                        alt={photos[index].caption ?? ''}
-                        className={styles.stackPhoto}
-                        draggable={false}
-                      />
-                      {photos[index].caption && <span className={styles.polaroidCaption}>{photos[index].caption}</span>}
-                      {photos[index].guestName && <span className={styles.polaroidBy}>— {photos[index].guestName}</span>}
-                    </div>
-                  )}
-                </motion.div>
-              </AnimatePresence>
-              {photos.length > 1 && (
-                <>
-                  <button className={`${styles.stackNav} ${styles.stackNavPrev}`} onClick={goPrev}>‹</button>
-                  <button className={`${styles.stackNav} ${styles.stackNavNext}`} onClick={goNext}>›</button>
-                  <div className={styles.stackDots}>
-                    {photos.map((_, i) => (
-                      <span
-                        key={i}
-                        className={`${styles.stackDot} ${i === index ? styles.stackDotActive : ''}`}
-                        onClick={() => { setDirection(i > index ? 1 : -1); setIndex(i); }}
-                      />
-                    ))}
-                  </div>
-                </>
-              )}
-            </div>
-          ) : (
-            <div className={styles.gallery}>
-              {/* Alternate the two engraved frames so the grid doesn't read as a repeat; each cell
-                  takes its frame's own aspect (square ≈ 1:1, oval ≈ 3:4) and rows align by width. */}
-              {photos.map((p, i) => (
-                <figure key={p.photoId} className={styles.photoFrame} onClick={() => setLightbox(p)}>
-                  <FramedPhoto photo={p} frame={framed ? frameFor(i) : undefined} />
-                </figure>
-              ))}
-            </div>
-          )}
-        </>
-      )}
+      {galleryPiece && gallery ? (
+        <SlotPiece layer={galleryPiece} id={galleryPiece.id} editor={editor} stageId="photobooth">
+          <div className={styles.responsiveGallery}>{gallery}</div>
+        </SlotPiece>
+      ) : gallery}
 
       {/* Portaled to <body>: the slot sits inside `.stage`, whose `container-type` implies layout
           containment and therefore becomes the containing block for `position: fixed` — left in

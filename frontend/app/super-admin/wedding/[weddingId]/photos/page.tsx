@@ -1,5 +1,6 @@
 'use client';
 
+import { StatCard } from '@/components/ui/Card';
 import Image from 'next/image';
 
 import { useCallback, useEffect, useState } from 'react';
@@ -117,19 +118,19 @@ export default function PhotoManagementPage() {
     return (
         <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
             {/* Header */}
-            <div className="bg-white border-b border-gray-200 shadow-sm">
+            <div className="bg-[var(--surface-card)] border-b border-[var(--border-subtle)] shadow-sm">
                 <div className="max-w-7xl mx-auto px-4 py-6">
                     <div className="flex justify-between items-center">
                         <div>
-                            <h1 className="text-3xl font-bold text-gray-800">Photo Management</h1>
-                            <p className="text-gray-600 mt-1">
+                            <h1 className="text-3xl font-bold text-[var(--text-strong)]">Photo Management</h1>
+                            <p className="text-[var(--text-muted)] mt-1">
                                 {wedding?.displayName}
                             </p>
                         </div>
                         <div className="flex gap-3">
                             <button
                                 onClick={() => router.push(`/super-admin/wedding/${weddingId}`)}
-                                className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
+                                className="px-4 py-2 bg-[var(--brand-subtle-2)] text-[var(--text-body)] rounded-lg hover:bg-gray-300 transition-colors"
                             >
                                 ← Back to Wedding
                             </button>
@@ -140,30 +141,15 @@ export default function PhotoManagementPage() {
 
             <div className="max-w-7xl mx-auto px-4 py-8">
                 {/* Stats */}
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-                    <StatCard title="Total Photos" value={photos.length} icon="📸" color="blue" />
-                    <StatCard
-                        title="Pending Review"
-                        value={pendingCount}
-                        icon="⏳"
-                        color="yellow"
-                    />
-                    <StatCard
-                        title="Approved"
-                        value={approvedCount}
-                        icon="✅"
-                        color="green"
-                    />
-                    <StatCard
-                        title="Featured"
-                        value={featuredCount}
-                        icon="⭐"
-                        color="purple"
-                    />
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-8">
+                    <StatCard label="Total photos" value={photos.length} />
+                    <StatCard label="Pending review" value={pendingCount} tone="gold" />
+                    <StatCard label="Approved" value={approvedCount} tone="success" />
+                    <StatCard label="Featured" value={featuredCount} tone="brand" />
                 </div>
 
                 {/* Filter Tabs */}
-                <div className="bg-white rounded-xl shadow-md mb-6 p-4">
+                <div className="bg-[var(--surface-card)] rounded-xl shadow-md mb-6 p-4">
                     <div className="flex gap-2">
                         <FilterButton
                             active={filter === 'all'}
@@ -197,8 +183,8 @@ export default function PhotoManagementPage() {
                         ))}
                     </div>
                 ) : filteredPhotos.length === 0 ? (
-                    <div className="bg-white rounded-xl shadow-md p-12 text-center">
-                        <p className="text-gray-500 text-lg">No photos in this category</p>
+                    <div className="bg-[var(--surface-card)] rounded-xl shadow-md p-12 text-center">
+                        <p className="text-[var(--text-muted)] text-lg">No photos in this category</p>
                     </div>
                 ) : (
                     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
@@ -210,12 +196,12 @@ export default function PhotoManagementPage() {
                                     animate={{ opacity: 1, scale: 1 }}
                                     exit={{ opacity: 0, scale: 0.8 }}
                                     transition={{ delay: index * 0.05 }}
-                                    className="bg-white rounded-xl overflow-hidden shadow-md hover:shadow-xl transition-shadow relative group"
+                                    className="bg-[var(--surface-card)] rounded-xl overflow-hidden shadow-md hover:shadow-xl transition-shadow relative group"
                                 >
                                     {/* Featured Badge */}
                                     {photo.isFeatured && (
                                         <div className="absolute top-2 left-2 z-10">
-                                            <span className="bg-gradient-to-r from-purple-500 to-pink-500 text-white text-xs px-2 py-1 rounded-full font-semibold">
+                                            <span className="bg-[var(--brand-subtle)] text-[var(--brand)] text-xs px-2 py-1 rounded-full font-semibold">
                                                 ⭐ Featured
                                             </span>
                                         </div>
@@ -273,8 +259,8 @@ export default function PhotoManagementPage() {
                                                         }
                                                         disabled={actionLoading === photo.photoId}
                                                         className={`px-4 py-2 rounded-lg transition-colors text-sm font-medium ${photo.isFeatured
-                                                                ? 'bg-purple-500 text-white hover:bg-purple-600'
-                                                                : 'bg-white text-purple-600 hover:bg-purple-50'
+                                                                ? 'bg-[var(--brand)] text-[var(--brand-on)] hover:bg-[var(--brand-hover)]'
+                                                                : 'bg-[var(--surface-card)] text-[var(--brand)] hover:bg-[var(--brand-subtle)]'
                                                             }`}
                                                     >
                                                         {photo.isFeatured ? '⭐ Unfeature' : '⭐ Feature'}
@@ -301,15 +287,15 @@ export default function PhotoManagementPage() {
 
                                     {/* Photo Info */}
                                     <div className="p-3">
-                                        <p className="font-semibold text-sm text-gray-800 truncate">
+                                        <p className="font-semibold text-sm text-[var(--text-strong)] truncate">
                                             {photo.guestName}
                                         </p>
                                         {photo.caption && (
-                                            <p className="text-xs text-gray-600 italic truncate">
+                                            <p className="text-xs text-[var(--text-muted)] italic truncate">
                                                 &quot;{photo.caption}&quot;
                                             </p>
                                         )}
-                                        <p className="text-xs text-gray-400 mt-1">
+                                        <p className="text-xs text-[var(--text-subtle)] mt-1">
                                             {new Date(photo.createdDate).toLocaleDateString()}
                                         </p>
                                     </div>
@@ -320,41 +306,6 @@ export default function PhotoManagementPage() {
                 )}
             </div>
         </div>
-    );
-}
-
-// Stat Card Component
-function StatCard({
-    title,
-    value,
-    icon,
-    color,
-}: {
-    title: string;
-    value: number;
-    icon: string;
-    color: 'blue' | 'yellow' | 'green' | 'purple';
-}) {
-    const colorClasses = {
-        blue: 'from-blue-500 to-blue-600',
-        yellow: 'from-yellow-500 to-yellow-600',
-        green: 'from-green-500 to-green-600',
-        purple: 'from-purple-500 to-purple-600',
-    };
-
-    return (
-        <motion.div
-            whileHover={{ scale: 1.02 }}
-            className={`bg-gradient-to-br ${colorClasses[color]} rounded-xl shadow-md p-6 text-white`}
-        >
-            <div className="flex justify-between items-start">
-                <div>
-                    <p className="text-sm opacity-90 mb-1">{title}</p>
-                    <p className="text-3xl font-bold">{value}</p>
-                </div>
-                <div className="text-4xl opacity-80">{icon}</div>
-            </div>
-        </motion.div>
     );
 }
 
@@ -374,8 +325,8 @@ function FilterButton({
         <button
             onClick={onClick}
             className={`relative px-4 py-2 rounded-lg font-medium transition-all ${active
-                    ? 'bg-rose-500 text-white'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    ? 'bg-[var(--brand)] text-[var(--brand-on)]'
+                    : 'bg-[var(--surface-sunken)] text-[var(--text-body)] hover:bg-[var(--brand-subtle-2)]'
                 }`}
         >
             {label}

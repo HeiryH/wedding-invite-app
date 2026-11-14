@@ -410,3 +410,18 @@
   overflow-y: auto;
   padding: 12px 14px 14px;
 }
+
+.groupAnimationControls {
+  display: grid;
+  gap: 8px;
+  margin: 8px 0 0;
+  padding: 0;
+  border: 0;
+}
+
+.groupDrop {
+  outline: 1px dashed var(--gold-400);
+  outline-offset: -1px;
+  background: var(--gold-50);
+  padding: 5px 6px;
+}

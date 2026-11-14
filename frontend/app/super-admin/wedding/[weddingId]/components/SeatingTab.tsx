@@ -14,7 +14,7 @@ interface SeatingTabProps {
 
 const inp: React.CSSProperties = {
   width: '100%', padding: '9px 12px', border: '1px solid var(--line-2)', borderRadius: 10,
-  fontSize: 14, color: 'var(--ink)', background: 'white', outline: 'none', boxSizing: 'border-box',
+  fontSize: 14, color: 'var(--ink)', background: 'var(--surface-card)', outline: 'none', boxSizing: 'border-box',
 };
 
 // ── Table Form Modal ──────────────────────────────────────────────────────────
@@ -39,7 +39,7 @@ function TableModal({ weddingId, table, onClose, onSaved }: {
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(42,42,53,.35)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50, padding: 16, backdropFilter: 'blur(4px)' }}>
       <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
-        style={{ background: 'var(--floral)', borderRadius: 'var(--radius-lg)', boxShadow: 'var(--shadow-lg)', width: '100%', maxWidth: 380 }}>
+        style={{ background: 'var(--surface-raised)', borderRadius: 'var(--radius-lg)', boxShadow: 'var(--shadow-lg)', width: '100%', maxWidth: 380 }}>
         <div style={{ padding: '18px 24px', borderBottom: '1px solid var(--line)', fontFamily: 'var(--serif)', fontSize: 20, letterSpacing: '-0.01em', color: 'var(--ink)' }}>
           {table ? 'Edit Table' : 'Add Table'}
         </div>
@@ -48,7 +48,7 @@ function TableModal({ weddingId, table, onClose, onSaved }: {
             <label style={{ display: 'block', fontSize: 11, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--muted)', marginBottom: 6 }}>Table Name *</label>
             <input type="text" value={form.tableName} onChange={e => setForm({ ...form, tableName: e.target.value })}
               placeholder="e.g. Table 1, VIP Table" style={inp}
-              onFocus={e => { e.currentTarget.style.borderColor = 'var(--lavender-grey)'; e.currentTarget.style.boxShadow = '0 0 0 4px var(--lavender)'; }}
+              onFocus={e => { e.currentTarget.style.borderColor = 'var(--brand-border)'; e.currentTarget.style.boxShadow = '0 0 0 4px var(--brand-subtle)'; }}
               onBlur={e => { e.currentTarget.style.borderColor = 'var(--line-2)'; e.currentTarget.style.boxShadow = 'none'; }}
               required />
           </div>
@@ -56,21 +56,21 @@ function TableModal({ weddingId, table, onClose, onSaved }: {
             <div>
               <label style={{ display: 'block', fontSize: 11, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--muted)', marginBottom: 6 }}>Capacity</label>
               <input type="number" min={1} max={100} value={form.capacity} onChange={e => setForm({ ...form, capacity: parseInt(e.target.value) || 1 })} style={inp}
-                onFocus={e => { e.currentTarget.style.borderColor = 'var(--lavender-grey)'; e.currentTarget.style.boxShadow = '0 0 0 4px var(--lavender)'; }}
+                onFocus={e => { e.currentTarget.style.borderColor = 'var(--brand-border)'; e.currentTarget.style.boxShadow = '0 0 0 4px var(--brand-subtle)'; }}
                 onBlur={e => { e.currentTarget.style.borderColor = 'var(--line-2)'; e.currentTarget.style.boxShadow = 'none'; }} />
             </div>
             <div>
               <label style={{ display: 'block', fontSize: 11, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--muted)', marginBottom: 6 }}>Sort Order</label>
               <input type="number" min={0} value={form.sortOrder} onChange={e => setForm({ ...form, sortOrder: parseInt(e.target.value) || 0 })} style={inp}
-                onFocus={e => { e.currentTarget.style.borderColor = 'var(--lavender-grey)'; e.currentTarget.style.boxShadow = '0 0 0 4px var(--lavender)'; }}
+                onFocus={e => { e.currentTarget.style.borderColor = 'var(--brand-border)'; e.currentTarget.style.boxShadow = '0 0 0 4px var(--brand-subtle)'; }}
                 onBlur={e => { e.currentTarget.style.borderColor = 'var(--line-2)'; e.currentTarget.style.boxShadow = 'none'; }} />
             </div>
           </div>
           <div style={{ display: 'flex', gap: 10, paddingTop: 4 }}>
-            <button type="submit" disabled={saving} style={{ flex: 1, padding: '10px 14px', background: 'var(--lavender-grey-ink)', color: 'var(--floral)', border: 'none', borderRadius: 12, fontSize: 13.5, fontWeight: 500, cursor: 'pointer', opacity: saving ? 0.6 : 1 }}>
+            <button type="submit" disabled={saving} style={{ flex: 1, padding: '10px 14px', background: 'var(--brand)', color: 'var(--brand-on)', border: 'none', borderRadius: 12, fontSize: 13.5, fontWeight: 500, cursor: 'pointer', opacity: saving ? 0.6 : 1 }}>
               {saving ? 'Saving…' : 'Save'}
             </button>
-            <button type="button" onClick={onClose} style={{ flex: 1, padding: '10px 14px', background: 'white', color: 'var(--ink)', border: '1px solid var(--line-2)', borderRadius: 12, fontSize: 13.5, fontWeight: 500, cursor: 'pointer' }}>
+            <button type="button" onClick={onClose} style={{ flex: 1, padding: '10px 14px', background: 'var(--surface-card)', color: 'var(--ink)', border: '1px solid var(--line-2)', borderRadius: 12, fontSize: 13.5, fontWeight: 500, cursor: 'pointer' }}>
               Cancel
             </button>
           </div>
@@ -99,7 +99,7 @@ function AssignGuestModal({ table, unassignedGuests, onClose, onAssigned }: {
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(42,42,53,.35)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50, padding: 16, backdropFilter: 'blur(4px)' }}>
       <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
-        style={{ background: 'var(--floral)', borderRadius: 'var(--radius-lg)', boxShadow: 'var(--shadow-lg)', width: '100%', maxWidth: 380 }}>
+        style={{ background: 'var(--surface-raised)', borderRadius: 'var(--radius-lg)', boxShadow: 'var(--shadow-lg)', width: '100%', maxWidth: 380 }}>
         <div style={{ padding: '18px 24px', borderBottom: '1px solid var(--line)', fontFamily: 'var(--serif)', fontSize: 20, letterSpacing: '-0.01em', color: 'var(--ink)' }}>
           Assign to {table.tableName}
         </div>
@@ -119,10 +119,10 @@ function AssignGuestModal({ table, unassignedGuests, onClose, onAssigned }: {
           )}
           <div style={{ display: 'flex', gap: 10 }}>
             <button onClick={handleAssign} disabled={saving || !selectedGuestId}
-              style={{ flex: 1, padding: '10px 14px', background: 'var(--lavender-grey-ink)', color: 'var(--floral)', border: 'none', borderRadius: 12, fontSize: 13.5, fontWeight: 500, cursor: !selectedGuestId || saving ? 'not-allowed' : 'pointer', opacity: !selectedGuestId || saving ? 0.5 : 1 }}>
+              style={{ flex: 1, padding: '10px 14px', background: 'var(--brand)', color: 'var(--brand-on)', border: 'none', borderRadius: 12, fontSize: 13.5, fontWeight: 500, cursor: !selectedGuestId || saving ? 'not-allowed' : 'pointer', opacity: !selectedGuestId || saving ? 0.5 : 1 }}>
               {saving ? 'Assigning…' : 'Assign'}
             </button>
-            <button onClick={onClose} style={{ flex: 1, padding: '10px 14px', background: 'white', color: 'var(--ink)', border: '1px solid var(--line-2)', borderRadius: 12, fontSize: 13.5, fontWeight: 500, cursor: 'pointer' }}>
+            <button onClick={onClose} style={{ flex: 1, padding: '10px 14px', background: 'var(--surface-card)', color: 'var(--ink)', border: '1px solid var(--line-2)', borderRadius: 12, fontSize: 13.5, fontWeight: 500, cursor: 'pointer' }}>
               Cancel
             </button>
           </div>
@@ -163,7 +163,7 @@ export default function SeatingTab({ weddingId, tables, guests, onRefresh }: Sea
         <div style={{ display: 'flex', gap: 20 }}>
           {[
             { label: 'Tables', value: tables.length, color: 'var(--ink)' },
-            { label: 'Seated', value: totalSeated, color: 'var(--lavender-grey-ink)' },
+            { label: 'Seated', value: totalSeated, color: 'var(--brand)' },
             { label: 'Capacity', value: totalCapacity, color: 'var(--muted)' },
             { label: 'Unassigned', value: unassignedAttending.length, color: unassignedAttending.length > 0 ? 'var(--warn)' : 'var(--muted)' },
           ].map(s => (
@@ -175,7 +175,7 @@ export default function SeatingTab({ weddingId, tables, guests, onRefresh }: Sea
         </div>
         <button
           onClick={() => { setEditingTable(null); setShowTableModal(true); }}
-          style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '9px 14px', background: 'var(--lavender-grey-ink)', color: 'var(--floral)', border: 'none', borderRadius: 12, fontSize: 13.5, fontWeight: 500, cursor: 'pointer' }}
+          style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '9px 14px', background: 'var(--brand)', color: 'var(--brand-on)', border: 'none', borderRadius: 12, fontSize: 13.5, fontWeight: 500, cursor: 'pointer' }}
         >
           <Icon name="plus" size={15} /> Add Table
         </button>
@@ -183,8 +183,8 @@ export default function SeatingTab({ weddingId, tables, guests, onRefresh }: Sea
 
       {/* Tables grid */}
       {tables.length === 0 ? (
-        <div style={{ padding: '40px 16px', textAlign: 'center', color: 'var(--muted)', border: '1px dashed var(--line-2)', borderRadius: 12, background: 'var(--floral)', marginBottom: 16 }}>
-          <Icon name="group" size={28} style={{ color: 'var(--thistle)', display: 'block', margin: '0 auto 8px' }} />
+        <div style={{ padding: '40px 16px', textAlign: 'center', color: 'var(--muted)', border: '1px dashed var(--line-2)', borderRadius: 12, background: 'var(--surface-sunken)', marginBottom: 16 }}>
+          <Icon name="group" size={28} style={{ color: 'var(--text-muted)', display: 'block', margin: '0 auto 8px' }} />
           <p style={{ fontSize: 14, color: 'var(--ink-2)', margin: '0 0 4px', fontWeight: 500 }}>No tables yet</p>
           <p style={{ fontSize: 12, color: 'var(--muted)', margin: 0 }}>Add tables to start assigning guests to seats.</p>
         </div>
@@ -194,22 +194,22 @@ export default function SeatingTab({ weddingId, tables, guests, onRefresh }: Sea
             const isFull = table.guestCount >= table.capacity;
             return (
               <motion.div key={table.tableId} layout
-                style={{ background: 'var(--floral)', border: '1px solid var(--line)', borderRadius: 12, padding: 16 }}>
+                style={{ background: 'var(--surface-sunken)', border: '1px solid var(--line)', borderRadius: 12, padding: 16 }}>
                 <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 10 }}>
                   <div>
                     <h3 style={{ margin: '0 0 5px', fontSize: 14, fontWeight: 600, color: 'var(--ink)' }}>{table.tableName}</h3>
                     <span style={{
                       display: 'inline-block', fontSize: 11, fontWeight: 500, padding: '2px 8px', borderRadius: 999,
-                      background: isFull ? 'var(--thistle-soft)' : '#e8f5ec',
+                      background: isFull ? 'var(--danger-subtle)' : '#e8f5ec',
                       color: isFull ? 'var(--danger)' : 'var(--success)',
-                      border: `1px solid ${isFull ? 'var(--thistle)' : '#b2d8bb'}`,
+                      border: `1px solid ${isFull ? 'var(--danger-border)' : '#b2d8bb'}`,
                     }}>
                       {table.guestCount} / {table.capacity} seats
                     </span>
                   </div>
                   <div style={{ display: 'flex', gap: 4 }}>
                     <button onClick={() => { setEditingTable(table); setShowTableModal(true); }}
-                      style={{ width: 28, height: 28, borderRadius: 8, background: 'rgba(255,255,255,.8)', border: '1px solid var(--line)', display: 'grid', placeItems: 'center', cursor: 'pointer', color: 'var(--lavender-grey-deep)' }}
+                      style={{ width: 28, height: 28, borderRadius: 8, background: 'rgba(255,255,255,.8)', border: '1px solid var(--line)', display: 'grid', placeItems: 'center', cursor: 'pointer', color: 'var(--text-muted)' }}
                       title="Edit table">
                       <Icon name="settings" size={13} />
                     </button>
@@ -226,7 +226,7 @@ export default function SeatingTab({ weddingId, tables, guests, onRefresh }: Sea
                     <p style={{ fontSize: 12, color: 'var(--muted)', fontStyle: 'italic', margin: 0 }}>No guests assigned yet</p>
                   ) : (
                     table.guests.map(g => (
-                      <div key={g.guestId} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'white', borderRadius: 8, padding: '6px 10px', border: '1px solid var(--line)' }}>
+                      <div key={g.guestId} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'var(--surface-card)', borderRadius: 8, padding: '6px 10px', border: '1px solid var(--line)' }}>
                         <span style={{ fontSize: 13, color: 'var(--ink)', fontWeight: 500 }}>{g.guestName}</span>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                           <span style={{ fontSize: 11, color: 'var(--muted)' }}>×{g.numberOfAttendees}</span>
@@ -246,7 +246,7 @@ export default function SeatingTab({ weddingId, tables, guests, onRefresh }: Sea
                 {!isFull && (
                   <button
                     onClick={() => setAssigningTable(table)}
-                    style={{ marginTop: 10, width: '100%', padding: '7px', border: '1.5px dashed var(--lavender-deep)', background: 'transparent', color: 'var(--lavender-grey-deep)', borderRadius: 8, fontSize: 12, fontWeight: 500, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
+                    style={{ marginTop: 10, width: '100%', padding: '7px', border: '1.5px dashed var(--brand-border)', background: 'transparent', color: 'var(--text-muted)', borderRadius: 8, fontSize: 12, fontWeight: 500, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
                     <Icon name="plus" size={12} /> Assign Guest
                   </button>
                 )}
@@ -258,13 +258,13 @@ export default function SeatingTab({ weddingId, tables, guests, onRefresh }: Sea
 
       {/* Unassigned attending guests */}
       {unassignedAttending.length > 0 && (
-        <div style={{ background: 'var(--veil)', border: '1px solid var(--veil-deep)', borderRadius: 12, padding: 16 }}>
+        <div style={{ background: 'var(--surface-sunken)', border: '1px solid var(--border-default)', borderRadius: 12, padding: 16 }}>
           <h3 style={{ margin: '0 0 10px', fontSize: 13, fontWeight: 600, color: 'var(--ink-2)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
             Unassigned ({unassignedAttending.length})
           </h3>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
             {unassignedAttending.map(g => (
-              <span key={g.guestId} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: 'rgba(255,255,255,.7)', border: '1px solid rgba(255,255,255,.9)', color: 'var(--lavender-grey-ink)', fontSize: 12.5, padding: '4px 10px', borderRadius: 999, fontWeight: 500 }}>
+              <span key={g.guestId} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: 'rgba(255,255,255,.7)', border: '1px solid rgba(255,255,255,.9)', color: 'var(--brand)', fontSize: 12.5, padding: '4px 10px', borderRadius: 999, fontWeight: 500 }}>
                 {g.guestName}
                 <span style={{ fontSize: 11, color: 'var(--muted)' }}>×{g.numberOfAttendees}</span>
               </span>

@@ -23,7 +23,7 @@ interface GuestsTabProps {
 
 const sel: React.CSSProperties = {
   padding: '9px 12px', border: '1px solid var(--line-2)', borderRadius: 10,
-  fontSize: 13.5, color: 'var(--ink)', background: 'white', outline: 'none',
+  fontSize: 13.5, color: 'var(--ink)', background: 'var(--surface-card)', outline: 'none',
   width: '100%', boxSizing: 'border-box',
 };
 
@@ -46,7 +46,7 @@ export default function GuestsTab({
             value={searchTerm}
             onChange={e => setSearchTerm(e.target.value)}
             style={{ ...sel, paddingLeft: 34 }}
-            onFocus={e => { e.currentTarget.style.borderColor = 'var(--lavender-grey)'; e.currentTarget.style.boxShadow = '0 0 0 4px var(--lavender)'; }}
+            onFocus={e => { e.currentTarget.style.borderColor = 'var(--brand-border)'; e.currentTarget.style.boxShadow = '0 0 0 4px var(--brand-subtle)'; }}
             onBlur={e => { e.currentTarget.style.borderColor = 'var(--line-2)'; e.currentTarget.style.boxShadow = 'none'; }}
           />
         </div>
@@ -66,7 +66,7 @@ export default function GuestsTab({
             <option value="No">Not attending</option>
           </select>
           <button onClick={onExport}
-            style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '9px 14px', background: 'white', color: 'var(--ink-2)', border: '1px solid var(--line-2)', borderRadius: 10, fontSize: 13, fontWeight: 500, cursor: 'pointer', whiteSpace: 'nowrap' }}>
+            style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '9px 14px', background: 'var(--surface-card)', color: 'var(--ink-2)', border: '1px solid var(--line-2)', borderRadius: 10, fontSize: 13, fontWeight: 500, cursor: 'pointer', whiteSpace: 'nowrap' }}>
             <Icon name="copy" size={14} /> Export CSV
           </button>
         </div>
@@ -80,7 +80,7 @@ export default function GuestsTab({
       <div style={{ overflowX: 'auto', borderRadius: 12, border: '1px solid var(--line)' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 580 }}>
           <thead>
-            <tr style={{ background: 'var(--floral)', borderBottom: '1px solid var(--line)' }}>
+            <tr style={{ background: 'var(--surface-sunken)', borderBottom: '1px solid var(--line)' }}>
               {(showSide ? ['Name', 'Contact', 'Side', 'Status', 'No.', 'Song', ''] : ['Name', 'Contact', 'Status', 'No.', 'Song', '']).map(h => (
                 <th key={h} style={{ padding: '9px 14px', textAlign: 'left', fontSize: 11, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--muted)', fontWeight: 500, whiteSpace: 'nowrap' }}>{h}</th>
               ))}
@@ -97,7 +97,7 @@ export default function GuestsTab({
               guests.map(guest => (
                 <tr key={guest.guestId}
                   style={{ borderBottom: '1px solid var(--line)' }}
-                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'var(--floral)'; }}
+                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'var(--surface-sunken)'; }}
                   onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'white'; }}>
                   <td style={{ padding: '10px 14px', whiteSpace: 'nowrap' }}>
                     <p style={{ fontSize: 14, fontWeight: 500, color: 'var(--ink)', margin: 0 }}>{guest.guestName}</p>
@@ -111,9 +111,9 @@ export default function GuestsTab({
                     <td style={{ padding: '10px 14px', whiteSpace: 'nowrap' }}>
                       <span style={{
                         display: 'inline-block', fontSize: 12, fontWeight: 500, padding: '3px 10px', borderRadius: 999,
-                        background: guest.guestSide === 'PRIMARY' ? 'var(--lavender)' : 'var(--veil)',
-                        color: 'var(--lavender-grey-ink)',
-                        border: `1px solid ${guest.guestSide === 'PRIMARY' ? 'var(--lavender-deep)' : 'var(--veil-deep)'}`,
+                        background: guest.guestSide === 'PRIMARY' ? 'var(--brand-subtle)' : 'var(--surface-sunken)',
+                        color: 'var(--brand)',
+                        border: `1px solid ${guest.guestSide === 'PRIMARY' ? 'var(--brand-border)' : 'var(--border-default)'}`,
                       }}>
                         {guest.guestSide === 'PRIMARY' ? 'Bride' : guest.guestSide === 'SECONDARY' ? 'Groom' : '—'}
                       </span>
@@ -122,9 +122,9 @@ export default function GuestsTab({
                   <td style={{ padding: '10px 14px', whiteSpace: 'nowrap' }}>
                     <span style={{
                       display: 'inline-block', fontSize: 12, fontWeight: 500, padding: '3px 10px', borderRadius: 999,
-                      background: guest.isAttending ? '#e8f5ec' : 'var(--thistle-soft)',
+                      background: guest.isAttending ? '#e8f5ec' : 'var(--danger-subtle)',
                       color: guest.isAttending ? 'var(--success)' : 'var(--muted)',
-                      border: `1px solid ${guest.isAttending ? '#b2d8bb' : 'var(--thistle)'}`,
+                      border: `1px solid ${guest.isAttending ? '#b2d8bb' : 'var(--danger-border)'}`,
                     }}>
                       {guest.isAttending ? 'Attending' : 'Declined'}
                     </span>
@@ -139,12 +139,12 @@ export default function GuestsTab({
                     <div style={{ display: 'inline-flex', gap: 6 }}>
                       {onEdit && (
                         <button onClick={() => onEdit(guest)}
-                          style={{ padding: '5px 10px', background: 'var(--lavender)', color: 'var(--lavender-grey-ink)', border: '1px solid var(--lavender-deep)', borderRadius: 8, fontSize: 12, fontWeight: 500, cursor: 'pointer' }}>
+                          style={{ padding: '5px 10px', background: 'var(--brand-subtle)', color: 'var(--brand)', border: '1px solid var(--brand-border)', borderRadius: 8, fontSize: 12, fontWeight: 500, cursor: 'pointer' }}>
                           Edit
                         </button>
                       )}
                       <button onClick={() => onDelete(guest.guestId)}
-                        style={{ padding: '5px 10px', background: 'var(--thistle-soft)', color: 'var(--danger)', border: '1px solid var(--thistle)', borderRadius: 8, fontSize: 12, fontWeight: 500, cursor: 'pointer' }}>
+                        style={{ padding: '5px 10px', background: 'var(--danger-subtle)', color: 'var(--danger)', border: '1px solid var(--danger-border)', borderRadius: 8, fontSize: 12, fontWeight: 500, cursor: 'pointer' }}>
                         Delete
                       </button>
                     </div>

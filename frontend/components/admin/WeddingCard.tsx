@@ -1,7 +1,9 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import Image from 'next/image';
 import Icon from './Icon';
+import styles from './WeddingCard.module.css';
 import { tierLabel } from '@/lib/tierRank';
 
 interface WeddingCardData {
@@ -14,6 +16,7 @@ interface WeddingCardData {
   eventDate: string;
   venue: string;
   templateName?: string | null;
+  templateCode?: string | null;
   isActive: boolean;
   totalAttending: number;
   totalGuests: number;
@@ -22,6 +25,7 @@ interface WeddingCardData {
 
 interface WeddingCardProps {
   wedding: WeddingCardData;
+  thumbnailUrl?: string;
   onManage: (id: number) => void;
   onPreview: (slug: string, eventType: string) => void;
   onToggleActive: (id: number, current: boolean) => void;
@@ -39,16 +43,10 @@ function daysTo(dateStr: string) {
   return Math.ceil((new Date(dateStr).getTime() - Date.now()) / 86400000);
 }
 
-const RAIL: Record<string, string> = {
-  upcoming: 'var(--brand)',
-  live: 'var(--success)',
-  draft: 'var(--border-default)',
-};
-
 const STATUS_COLOR: Record<string, { bg: string; color: string }> = {
-  upcoming: { bg: 'var(--brand-subtle)',   color: 'var(--brand)' },
+  upcoming: { bg: 'var(--brand-subtle)',   color: 'var(--accent-deep)' },
   live:     { bg: '#e5f1ea',               color: 'var(--success)' },
-  draft:    { bg: 'var(--surface-sunken)', color: 'var(--text-subtle)' },
+  draft:    { bg: 'var(--surface-sunken)', color: 'var(--text-muted)' },
 };
 
 const STATUS_LABEL: Record<string, string> = { upcoming: 'Upcoming', live: 'Live', draft: 'Draft' };
@@ -59,47 +57,54 @@ const TIER_COLOR: Record<string, { bg: string; color: string }> = {
   PRO:     { bg: 'color-mix(in srgb, var(--brand) 10%, transparent)',     color: 'var(--brand)' },
 };
 
-export default function WeddingCard({ wedding, onManage, onPreview, onToggleActive, onDelete, onExport }: WeddingCardProps) {
+export default function WeddingCard({ wedding, thumbnailUrl, onManage, onPreview, onToggleActive, onDelete, onExport }: WeddingCardProps) {
   const status = getStatus(wedding);
   const days = daysTo(wedding.eventDate);
   const date = new Date(wedding.eventDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
   const sc = STATUS_COLOR[status];
   const tier = (wedding.ownerTier ?? 'BASIC').toUpperCase();
   const tc = TIER_COLOR[tier] ?? TIER_COLOR.BASIC;
+  const bundledThumbnail = wedding.templateCode ? `/template-previews/${encodeURIComponent(wedding.templateCode)}.png` : '';
+  const thumbnail = thumbnailUrl?.trim() || bundledThumbnail;
 
   return (
     <article
-      style={{
-        background: 'var(--surface-card)',
-        border: '1px solid var(--border-subtle)',
-        borderRadius: 'var(--radius-lg)',
-        overflow: 'hidden',
-        display: 'flex',
-        transition: 'border-color var(--dur-base) var(--ease-out), box-shadow var(--dur-base) var(--ease-out)',
-        cursor: 'pointer',
-      }}
-      onMouseEnter={e => {
-        (e.currentTarget as HTMLElement).style.borderColor = 'var(--brand-border)';
-        (e.currentTarget as HTMLElement).style.boxShadow = 'var(--shadow-md)';
-      }}
-      onMouseLeave={e => {
-        (e.currentTarget as HTMLElement).style.borderColor = 'var(--border-subtle)';
-        (e.currentTarget as HTMLElement).style.boxShadow = 'none';
-      }}
+      className={styles.card}
       onClick={() => onManage(wedding.eventId)}
     >
-      {/* Left rail */}
-      <div style={{ width: 4, flexShrink: 0, background: RAIL[status] }} />
+      <div className={styles.art} aria-hidden="true">
+        <Icon name="design-nib" size={27} />
+        {thumbnail && (
+          <Image
+            key={thumbnail}
+            src={thumbnail}
+            alt=""
+            fill
+            unoptimized
+            onError={({ currentTarget }) => {
+              if (bundledThumbnail && currentTarget.getAttribute('src') !== bundledThumbnail) {
+                currentTarget.src = bundledThumbnail;
+              } else {
+                currentTarget.hidden = true;
+              }
+            }}
+          />
+        )}
+      </div>
 
       {/* Body */}
-      <div style={{ padding: '16px 16px 14px', flex: '1 1 auto', minWidth: 0, display: 'flex', flexDirection: 'column', gap: 12 }}>
+      <div className={styles.body}>
 
         {/* Top row: names + status */}
-        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10 }}>
-          <div style={{ minWidth: 0, flex: '1 1 auto' }}>
-            <div style={{ fontFamily: 'var(--font-display)', fontSize: 20, lineHeight: 1.1, letterSpacing: 'var(--tracking-tight)', color: 'var(--text-strong)' }}>
+        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}>
+          <div style={{ minWidth: 0, flex: '1 1 130px' }}>
+            <button
+              type="button"
+              className={styles.title}
+              onClick={(event) => { event.stopPropagation(); onManage(wedding.eventId); }}
+            >
               {wedding.displayName}
-            </div>
+            </button>
             <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--text-subtle)', marginTop: 4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               /{wedding.slug}
             </div>
@@ -121,7 +126,7 @@ export default function WeddingCard({ wedding, onManage, onPreview, onToggleActi
         </div>
 
         {/* Meta grid */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px 16px', fontSize: 12, color: 'var(--text-body)', fontFamily: 'var(--font-ui)' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(96px, 100%), 1fr))', gap: '4px 10px', fontSize: 12, color: 'var(--text-body)', fontFamily: 'var(--font-ui)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
             <Icon name="calendar" size={13} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
             <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{date}</span>
@@ -218,7 +223,7 @@ function CardMenu({ isActive, onToggleActive, onExport, onDelete }: {
           style={{
             position: 'absolute', bottom: 'calc(100% + 6px)', right: 0,
             minWidth: 176, padding: 5, zIndex: 40,
-            background: 'var(--surface-card)', border: '1px solid var(--border-subtle)',
+            background: 'var(--surface-raised)', border: '1px solid var(--border-default)',
             borderRadius: 'var(--radius-lg)', boxShadow: 'var(--shadow-lg)',
           }}
         >

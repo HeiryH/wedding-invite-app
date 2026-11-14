@@ -14,6 +14,7 @@ import PlayOnceVideoLayer from './effects/PlayOnceVideoLayer';
 import WaterLayer from './effects/WaterLayer';
 import { resolveBindings } from './bindings';
 import { hasCustomFormBackground, slotLayerStyle } from './slotLayerStyle';
+import { resizeLinkedBox } from './layout';
 import styles from './Stage.module.css';
 import './reveal.css';
 
@@ -70,6 +71,7 @@ interface DragState {
   layerW: number;
   layerH: number;
   chain: boolean;
+  lockBoxRatio?: boolean;
   moved: boolean;
   /** 'resize-w' only — which edge is being dragged, since a flow item's box is horizontally
    *  centred (margin: 0 auto): dragging the right edge rightward and the left edge leftward must
@@ -122,6 +124,7 @@ export default function Layer({ layer, slotProps, eager, selected, editing, stag
       startX: e.clientX, startY: e.clientY,
       rectW: rect.width, rectH: rect.height,
       layerX: layer.x, layerY: layer.y, layerW: layer.w, layerH: layer.h, chain: layer.chain,
+      lockBoxRatio: layer.lockBoxRatio,
       moved: false,
     };
     // Capture is deliberately NOT taken here. While an element holds the pointer, the browser
@@ -156,7 +159,11 @@ export default function Layer({ layer, slotProps, eager, selected, editing, stag
       // The box is centre-anchored (translate(-50%,-50%)), so growing it to keep the dragged
       // corner under the pointer means both edges move — the width/height delta is doubled.
       const nextW = clampSize(d.layerW + 2 * dxPct);
-      schedulePatch(d.chain ? { w: nextW } : { w: nextW, h: clampSize(d.layerH + 2 * dyPct) });
+      if (d.chain) {
+        schedulePatch(d.lockBoxRatio ? resizeLinkedBox(d.layerW, d.layerH, nextW) : { w: nextW });
+      } else {
+        schedulePatch({ w: nextW, h: clampSize(d.layerH + 2 * dyPct) });
+      }
     } else if (d.mode === 'resize-w') {
       // Flow items are horizontally centred (margin: 0 auto), so the same doubled-delta trick
       // applies — just width, no y/h (a flow item has no free vertical position to resize into).
@@ -185,7 +192,7 @@ export default function Layer({ layer, slotProps, eager, selected, editing, stag
     left: `${layer.x}%`,
     top: `${layer.y}%`,
     width: `${layer.w}%`,
-    height: layer.chain ? 'auto' : `${layer.h}%`,
+    height: layer.chain && !layer.lockBoxRatio ? 'auto' : `${layer.h}%`,
     // A numeric z-index makes `.layerBox` its own stacking context, so a selected layer's resize
     // handle — nested inside that context — can never paint or hit-test above a higher-z sibling
     // it happens to overlap. Editing mode should also float the active layer to the front, which

@@ -407,28 +407,26 @@ export default function OrganizerAdminDashboard() {
     { key: 'seating' as ActiveTab, label: 'Seating',     icon: 'layout-grid', requiredTier: 'PREMIUM' },
   ] : [];
 
-  // Fields for the hero's inline edit form (on a dark background, so use translucent inputs)
-  const heroInp: React.CSSProperties = { padding: '8px 12px', border: '1px solid rgba(255,255,255,.4)', borderRadius: 'var(--radius-md)', background: 'rgba(255,255,255,.18)', color: '#fff', fontSize: 14, outline: 'none', fontFamily: 'var(--font-ui)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)' };
+  // Fields for the event summary’s inline edit form.
+  const heroInp: React.CSSProperties = { padding: '8px 12px', border: '1px solid var(--border-default)', borderRadius: 'var(--radius-md)', background: 'var(--surface-raised)', color: 'var(--text-body)', minWidth: 0, fontSize: 14, fontFamily: 'var(--font-ui)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)' };
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
 
       {/* ── Hero ───────────────────────────────────────────────────────────── */}
       <div style={{
-        background: 'var(--brand-gradient)',
+        background: 'var(--surface-card)',
+        border: '1px solid var(--border-subtle)',
         borderRadius: 'var(--radius-xl)', padding: '24px 24px 28px',
         position: 'relative', overflow: 'hidden',
-        boxShadow: 'var(--shadow-foil)',
+        boxShadow: 'var(--card-shadow)',
       }}>
-        {/* Decorative glare */}
-        <div style={{ position: 'absolute', right: -60, top: -60, width: 240, height: 240, borderRadius: '50%', background: 'radial-gradient(circle, rgba(255,255,255,.18), transparent 70%)', pointerEvents: 'none' }} />
-
         {isEditing ? (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10, maxWidth: 520, position: 'relative', zIndex: 1 }}>
             {wedding.eventType === 'WEDDING' && (
               <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                 <input className="hero-inp" value={editData.brideName} onChange={e => setEditData({ ...editData, brideName: e.target.value })} placeholder="Bride's Name" style={{ ...heroInp, flex: 1, fontSize: 16 }} />
-                <span style={{ color: 'rgba(255,255,255,.6)', fontFamily: 'var(--font-display)', fontStyle: 'italic', fontSize: 20 }}>&amp;</span>
+                <span style={{ color: 'var(--text-muted)', fontFamily: 'var(--font-display)', fontStyle: 'italic', fontSize: 20 }}>&amp;</span>
                 <input className="hero-inp" value={editData.groomName} onChange={e => setEditData({ ...editData, groomName: e.target.value })} placeholder="Groom's Name" style={{ ...heroInp, flex: 1, fontSize: 16 }} />
               </div>
             )}
@@ -449,17 +447,17 @@ export default function OrganizerAdminDashboard() {
             <input className="hero-inp" value={editData.venueAddress} onChange={e => setEditData({ ...editData, venueAddress: e.target.value })} placeholder="Venue Address" style={{ ...heroInp, width: '100%', boxSizing: 'border-box' }} />
             <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
               <input className="hero-inp" type="number" min={0} value={editData.maxCapacity} onChange={e => setEditData({ ...editData, maxCapacity: parseInt(e.target.value) || 0 })} placeholder="0 = unlimited" style={{ ...heroInp, width: 120, textAlign: 'right' }} />
-              <span style={{ fontSize: 12, color: 'rgba(255,255,255,.75)', fontFamily: 'var(--font-ui)', whiteSpace: 'nowrap' }}>total capacity (0 = unlimited)</span>
+              <span style={{ fontSize: 12, color: 'var(--text-muted)', fontFamily: 'var(--font-ui)', whiteSpace: 'nowrap' }}>total capacity (0 = unlimited)</span>
             </div>
-            <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: 'rgba(255,255,255,.85)', fontFamily: 'var(--font-ui)', cursor: 'pointer' }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: 'var(--text-muted)', fontFamily: 'var(--font-ui)', cursor: 'pointer' }}>
               <input type="checkbox" checked={editData.showCapacityWarning} onChange={e => setEditData({ ...editData, showCapacityWarning: e.target.checked })} style={{ width: 16, height: 16, accentColor: 'var(--gold-400)', cursor: 'pointer' }} />
               Show spots remaining to guests
             </label>
             <div style={{ display: 'flex', gap: 8 }}>
-              <button onClick={handleSaveEdit} disabled={saving} style={{ padding: '9px 20px', background: 'rgba(255,255,255,.95)', color: 'var(--brand)', border: 'none', borderRadius: 'var(--radius-md)', fontSize: 13.5, fontWeight: 700, cursor: 'pointer', fontFamily: 'var(--font-ui)', opacity: saving ? 0.7 : 1 }}>
+              <button onClick={handleSaveEdit} disabled={saving} style={{ padding: '9px 20px', background: 'var(--brand)', color: 'var(--brand-on)', border: 'none', borderRadius: 'var(--radius-md)', fontSize: 13.5, fontWeight: 700, cursor: 'pointer', fontFamily: 'var(--font-ui)', opacity: saving ? 0.7 : 1 }}>
                 {saving ? 'Saving…' : 'Save'}
               </button>
-              <button onClick={() => setIsEditing(false)} style={{ padding: '9px 20px', background: 'rgba(255,255,255,.15)', color: '#fff', border: '1px solid rgba(255,255,255,.35)', borderRadius: 'var(--radius-md)', fontSize: 13.5, fontWeight: 500, cursor: 'pointer', fontFamily: 'var(--font-ui)' }}>
+              <button onClick={() => setIsEditing(false)} style={{ padding: '9px 20px', background: 'var(--surface-raised)', color: 'var(--text-strong)', border: '1px solid var(--border-default)', borderRadius: 'var(--radius-md)', fontSize: 13.5, fontWeight: 500, cursor: 'pointer', fontFamily: 'var(--font-ui)' }}>
                 Cancel
               </button>
             </div>
@@ -468,45 +466,45 @@ export default function OrganizerAdminDashboard() {
           <div style={{ position: 'relative', zIndex: 1 }}>
             {/* Days pill + edit */}
             <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, marginBottom: 16 }}>
-              <div style={{ display: 'inline-flex', alignItems: 'baseline', gap: 6, background: 'rgba(255,255,255,.18)', border: '1px solid rgba(255,255,255,.35)', padding: '6px 12px', borderRadius: 'var(--radius-full)', fontSize: 11, letterSpacing: 'var(--tracking-caps)', textTransform: 'uppercase', color: 'rgba(255,255,255,.85)', fontFamily: 'var(--font-ui)', backdropFilter: 'blur(8px)' }}>
-                <b style={{ fontFamily: 'var(--font-display)', fontSize: 16, letterSpacing: 'var(--tracking-tight)', textTransform: 'none', fontWeight: 400, color: '#fff' }}>{daysUntil}</b>
+              <div style={{ display: 'inline-flex', alignItems: 'baseline', gap: 6, background: 'var(--surface-raised)', border: '1px solid var(--border-default)', padding: '6px 12px', borderRadius: 'var(--radius-full)', fontSize: 11, letterSpacing: 'var(--tracking-caps)', textTransform: 'uppercase', color: 'var(--text-muted)', fontFamily: 'var(--font-ui)', backdropFilter: 'blur(8px)' }}>
+                <b style={{ fontFamily: 'var(--font-display)', fontSize: 16, letterSpacing: 'var(--tracking-tight)', textTransform: 'none', fontWeight: 400, color: 'var(--text-strong)' }}>{daysUntil}</b>
                 days to go
               </div>
-              <button onClick={startEdit} style={{ padding: '7px 12px', background: 'rgba(255,255,255,.18)', border: '1px solid rgba(255,255,255,.35)', borderRadius: 'var(--radius-md)', fontSize: 12.5, fontWeight: 500, color: '#fff', cursor: 'pointer', flexShrink: 0, display: 'inline-flex', alignItems: 'center', gap: 5, fontFamily: 'var(--font-ui)', backdropFilter: 'blur(8px)' }}>
+              <button onClick={startEdit} style={{ padding: '7px 12px', background: 'var(--surface-raised)', border: '1px solid var(--border-default)', borderRadius: 'var(--radius-md)', fontSize: 12.5, fontWeight: 500, color: 'var(--text-strong)', cursor: 'pointer', flexShrink: 0, display: 'inline-flex', alignItems: 'center', gap: 5, fontFamily: 'var(--font-ui)', backdropFilter: 'blur(8px)' }}>
                 <Icon name="settings" size={12} /> Edit
               </button>
             </div>
 
             {/* Names */}
-            <h1 style={{ margin: '0 0 14px', fontFamily: 'var(--font-display)', fontSize: 'clamp(26px, 6vw, 48px)', fontWeight: 400, lineHeight: 1.05, letterSpacing: 'var(--tracking-tight)', color: '#fff' }}>
+            <h1 style={{ margin: '0 0 14px', fontFamily: 'var(--font-display)', fontSize: 'clamp(26px, 6vw, 48px)', fontWeight: 400, lineHeight: 1.05, letterSpacing: 'var(--tracking-tight)', color: 'var(--text-strong)' }}>
               {wedding.displayName}
             </h1>
 
             {/* Meta */}
-            <div style={{ color: 'rgba(255,255,255,.8)', fontSize: 13, fontFamily: 'var(--font-ui)', display: 'flex', flexDirection: 'column', gap: 4, marginBottom: 18 }}>
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><Icon name="calendar" size={13} style={{ color: 'rgba(255,255,255,.6)', flexShrink: 0 }} /> {dateStr}</span>
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><Icon name="clock" size={13} style={{ color: 'rgba(255,255,255,.6)', flexShrink: 0 }} /> {timeStr}</span>
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><Icon name="map-pin" size={13} style={{ color: 'rgba(255,255,255,.6)', flexShrink: 0 }} /> {wedding.venue}{wedding.venueAddress ? `, ${wedding.venueAddress}` : ''}</span>
+            <div style={{ color: 'var(--text-muted)', fontSize: 13, fontFamily: 'var(--font-ui)', display: 'flex', flexDirection: 'column', gap: 4, marginBottom: 18 }}>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><Icon name="calendar" size={13} style={{ color: 'var(--text-muted)', flexShrink: 0 }} /> {dateStr}</span>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><Icon name="clock" size={13} style={{ color: 'var(--text-muted)', flexShrink: 0 }} /> {timeStr}</span>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><Icon name="map-pin" size={13} style={{ color: 'var(--text-muted)', flexShrink: 0 }} /> {wedding.venue}{wedding.venueAddress ? `, ${wedding.venueAddress}` : ''}</span>
             </div>
 
             {/* Action buttons */}
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
               <button
                 onClick={() => router.push('/organizer-admin/customize')}
-                style={{ flex: '1 1 calc(50% - 4px)', minWidth: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '10px 14px', background: 'rgba(255,255,255,.96)', color: 'var(--brand)', border: 'none', borderRadius: 'var(--radius-md)', fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'var(--font-ui)' }}
+                style={{ flex: '1 1 calc(50% - 4px)', minWidth: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '10px 14px', background: 'var(--brand)', color: 'var(--brand-on)', border: 'none', borderRadius: 'var(--radius-md)', fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'var(--font-ui)' }}
               >
                 <Icon name="palette" size={14} /> Customise
               </button>
               <button
                 onClick={() => window.open(`/${urlSegmentForEventType(wedding.eventType)}/${wedding.slug}`, '_blank')}
-                style={{ flex: '1 1 calc(50% - 4px)', minWidth: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '10px 14px', background: 'rgba(255,255,255,.14)', border: '1px solid rgba(255,255,255,.35)', borderRadius: 'var(--radius-md)', fontSize: 13, fontWeight: 500, color: '#fff', cursor: 'pointer', fontFamily: 'var(--font-ui)' }}
+                style={{ flex: '1 1 calc(50% - 4px)', minWidth: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '10px 14px', background: 'var(--surface-raised)', border: '1px solid var(--border-default)', borderRadius: 'var(--radius-md)', fontSize: 13, fontWeight: 500, color: 'var(--text-strong)', cursor: 'pointer', fontFamily: 'var(--font-ui)' }}
               >
                 <Icon name="eye" size={14} /> {isFree ? 'Preview' : 'View'}
               </button>
               {!isFree && (
                 <button
                   onClick={() => navigator.clipboard?.writeText(`${window.location.origin}/${urlSegmentForEventType(wedding.eventType)}/${wedding.slug}`)}
-                  style={{ flex: '1 1 100%', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '10px 14px', background: 'rgba(255,255,255,.10)', border: '1px solid rgba(255,255,255,.25)', borderRadius: 'var(--radius-md)', fontSize: 13, fontWeight: 500, color: 'rgba(255,255,255,.85)', cursor: 'pointer', fontFamily: 'var(--font-ui)' }}
+                  style={{ flex: '1 1 100%', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '10px 14px', background: 'var(--surface-raised)', border: '1px solid var(--border-default)', borderRadius: 'var(--radius-md)', fontSize: 13, fontWeight: 500, color: 'var(--text-muted)', cursor: 'pointer', fontFamily: 'var(--font-ui)' }}
                 >
                   <Icon name="share-2" size={14} /> Copy invitation link
                 </button>

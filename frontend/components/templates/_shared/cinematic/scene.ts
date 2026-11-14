@@ -54,12 +54,21 @@ export function resolveCinematicScene({ layers, sceneSets, tracks, progress, beh
     const set = byId.get(layer.group);
     if (!set) return [];
     const exact = layerTracks.get(layer.id) ?? (layer.timingTrackId ? tracksById.get(layer.timingTrackId) : undefined);
+    const independent = exact ? cinematicTrackPresentation(progress, exact, tracksById) : undefined;
+    const shared = set.presentation;
+    const sharedTrackId = set.definition.timingTrackId ?? groupTracks.get(set.definition.id)?.id;
+    const composed = independent && exact?.id !== sharedTrackId && set.definition.composeTiming && !layer.parentId ? {
+      opacity: independent.opacity * shared.opacity,
+      xVw: independent.xVw + shared.xVw,
+      yVh: independent.yVh + shared.yVh,
+      scale: independent.scale * shared.scale,
+    } : independent;
     return [{
       layer,
       sceneSet: set.definition,
       // Independent layer timing can override inherited timing, but never bypass a set's flags.
       presentation: layer.timingTrackId && !exact ? { ...set.presentation, opacity: 0 }
-        : exact ? cinematicTrackPresentation(progress, exact, tracksById)
+        : composed ? composed
           : layer.parentId ? { opacity: 1, xVw: 0, yVh: 0, scale: 1 } : set.presentation,
     }];
   }).sort((a, b) => a.layer.z - b.layer.z);

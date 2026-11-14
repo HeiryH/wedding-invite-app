@@ -22,6 +22,8 @@ export interface CinematicSceneSet {
   system: boolean;
   /** Optional registry key for behaviour supplied by a later functional-layer phase. */
   behavior?: string;
+  composeTiming?: boolean;
+  loop?: 'float' | 'sway';
   enter?: CinematicTrackTransition;
   exit?: CinematicTrackTransition;
 }
@@ -33,9 +35,10 @@ export interface CinematicSceneSetIssue {
 
 type SceneSetPatch = Partial<Omit<
   CinematicSceneSet,
-  'id' | 'timingTrackId' | 'behavior' | 'enter' | 'exit'
+  'id' | 'timingTrackId' | 'behavior' | 'enter' | 'exit' | 'loop'
 >> & {
   id: string;
+  loop?: CinematicSceneSet['loop'] | null;
   timingTrackId?: string | null;
   behavior?: string | null;
   enter?: CinematicTrackTransition | null;
@@ -136,6 +139,7 @@ function normalizeSet(
   const exit = value.exit === null
     ? undefined
     : value.exit === undefined ? fallback?.exit : normalizeTransition(value.exit);
+  const loop = value.loop === undefined ? fallback?.loop : value.loop;
   return {
     id: value.id,
     label,
@@ -147,6 +151,8 @@ function normalizeSet(
     locked: typeof value.locked === 'boolean' ? value.locked : fallback?.locked ?? false,
     system: typeof value.system === 'boolean' ? value.system : fallback?.system ?? false,
     ...(behavior ? { behavior } : {}),
+    ...((value.composeTiming ?? fallback?.composeTiming) === true ? { composeTiming: true } : {}),
+    ...(loop === 'float' || loop === 'sway' ? { loop } : {}),
     ...(enter ? { enter } : {}),
     ...(exit ? { exit } : {}),
   };
@@ -222,10 +228,10 @@ export function serializeCinematicSceneSets(
       continue;
     }
     const patch: SceneSetPatch = { id: set.id };
-    for (const key of ['label', 'space', 'z', 'hidden', 'opacity', 'locked', 'system'] as const) {
+    for (const key of ['label', 'space', 'z', 'hidden', 'opacity', 'locked', 'system', 'composeTiming'] as const) {
       if (JSON.stringify(set[key]) !== JSON.stringify(base[key])) patch[key] = set[key] as never;
     }
-    for (const key of ['timingTrackId', 'behavior', 'enter', 'exit'] as const) {
+    for (const key of ['timingTrackId', 'behavior', 'enter', 'exit', 'loop'] as const) {
       if (JSON.stringify(set[key]) !== JSON.stringify(base[key])) {
         (patch as Record<string, unknown>)[key] = set[key] ?? null;
       }

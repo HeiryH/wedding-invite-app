@@ -25,7 +25,19 @@ vi.mock('@/app/organizer-admin/customize/_components/PreviewPanel', () => ({
   PreviewPanel: () => <div>Shared preview</div>,
   frameFromPreset: () => ({ w: 390, lvh: 844, svh: 700, scale: 1, safe: { top: 0, bottom: 0, left: 0, right: 0 } }),
 }));
-vi.mock('@/components/templates/_shared/adjust/AdjustPanel', () => ({ default: () => <div>Shared Adjust</div> }));
+vi.mock('@/components/templates/_shared/adjust/AdjustPanel', () => ({
+  default: ({ config, onGroupLayoutChange }: {
+    config: Record<string, string>;
+    onGroupLayoutChange: (key: string, value: string) => void;
+  }) => {
+    const key = 't7.layout.mobile.rsvp';
+    return <div>
+      <output aria-label="Group layout">{config[key] ?? 'No group'}</output>
+      <button onClick={() => onGroupLayoutChange(key, '{"groups":[{"id":"decor","label":"Layer group","memberIds":["frame","pots"]}]}')}>Create test group</button>
+      <button onClick={() => onGroupLayoutChange(key, '{"groups":[{"id":"decor","label":"RSVP decor","memberIds":["frame","pots"]}]}')}>Rename test group</button>
+    </div>;
+  },
+}));
 vi.mock('@/components/templates/_shared/cinematic/CinematicAdjustPanel', () => ({ default: () => <div>Cinematic Adjust</div> }));
 
 const initial = { templateId: 7, version: 0, config: {}, sample: {}, revisions: [], updatedDate: null };
@@ -38,6 +50,26 @@ describe('master editor adapter', () => {
     mocks.save.mockImplementation(async (_id, _version, config, sample) => ({ ...initial, version: 1, config, sample }));
   });
   afterEach(cleanup);
+
+  it('undoes and redoes rapid group commands one at a time', async () => {
+    render(<CustomizationWorkspace masterTemplateId={7} />);
+    await screen.findByText('Roman Garden · Master');
+    fireEvent.click(screen.getByRole('button', { name: 'Adjust' }));
+    const layout = screen.getByLabelText('Group layout');
+    fireEvent.click(screen.getByRole('button', { name: 'Create test group' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Rename test group' }));
+    expect(layout).toHaveTextContent('RSVP decor');
+    const undo = screen.getByRole('button', { name: /Undo/ });
+    const redo = screen.getByRole('button', { name: /Redo/ });
+    fireEvent.click(undo);
+    expect(layout).toHaveTextContent('Layer group');
+    fireEvent.click(undo);
+    expect(layout).toHaveTextContent('No group');
+    fireEvent.click(redo);
+    expect(layout).toHaveTextContent('Layer group');
+    fireEvent.click(redo);
+    expect(layout).toHaveTextContent('RSVP decor');
+  });
 
   it('saves sample edits to the template draft without touching a client event', async () => {
     render(<CustomizationWorkspace masterTemplateId={7} />);

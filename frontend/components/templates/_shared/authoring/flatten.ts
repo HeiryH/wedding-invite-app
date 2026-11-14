@@ -49,6 +49,7 @@ export function flattenStage(prefix: string, def: StageDef, config: Record<strin
     bgPosition: mobile.bgPosition,
     bgScale: mobile.bgScale,
     layers,
+    ...(mobile.groups.length || desktop.groups.length ? { groups: { mobile: mobile.groups, desktop: desktop.groups } } : {}),
     // Structural (author-set via the stage sidebar's "Flow" checkbox), not a per-wedding delta —
     // resolveStage never touches it, so it must be carried through by hand here or it would
     // silently vanish on every save.

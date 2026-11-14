@@ -1,19 +1,23 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
-import { landingService } from '@/lib/api';
+import { Fragment, useEffect, useMemo, useState } from 'react';
+import { isAxiosError } from 'axios';
+import { InviteStepArt } from '@/components/marketing/InviteSteps';
+import { landingService, templateService } from '@/lib/api';
+import type { Template } from '@/lib/api';
 import type { LandingDto, LandingItemDto, LandingSectionDto } from '@/lib/api/types';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
+import { Select } from '@/components/ui/Select';
 import { Textarea } from '@/components/ui/Textarea';
 import { Switch } from '@/components/ui/Switch';
 import { IconButton } from '@/components/ui/IconButton';
 import { Card } from '@/components/ui/Card';
 import { Icon } from '@/components/ui/Icon';
-import { LANDING_CONTENT_DEFAULTS, DEFAULT_FEATURE_ITEMS, DEFAULT_STORY_ITEMS, DEFAULT_PRICING_ITEMS, LandingDefaultItem } from '@/lib/landing/defaults';
+import { LANDING_CONTENT_DEFAULTS, INVITE_STEPS, DEFAULT_STORY_ITEMS, DEFAULT_PRICING_ITEMS, LandingDefaultItem } from '@/lib/landing/defaults';
+import { LANDING_MENU_KEY, LANDING_MENU_SECTIONS, readLandingMenu, type LandingMenuLink } from '@/lib/landing/menu';
 
 const DEFAULT_ITEMS_BY_SECTION: Record<string, LandingDefaultItem[]> = {
-  features: DEFAULT_FEATURE_ITEMS,
   pricing: DEFAULT_PRICING_ITEMS,
   stories: DEFAULT_STORY_ITEMS,
 };
@@ -28,7 +32,7 @@ type ContentField = [string, string, boolean?]; // content key, label, isTextare
 // One entry per landing section, config-driven so the page renders a single card
 // per section instead of scattering its text / visibility / item-list controls
 // across separate cards. `items` is only set for sections that have a repeatable
-// list (Feature cards, Pricing tiers, Testimonials) — About has none.
+// list (Pricing tiers and Testimonials).
 const MIDDLE_SECTIONS: {
   key: string;
   label: string;
@@ -46,8 +50,7 @@ const MIDDLE_SECTIONS: {
   {
     key: 'features',
     label: 'Features',
-    fields: [['features.title', 'Heading'], ['features.subtitle', 'Subtitle']],
-    items: { label: 'Feature cards', metaLabel: 'Colour (hex)' },
+    fields: [['steps.title', 'Heading'], ['steps.subtitle', 'Subtitle (optional)']],
   },
   {
     key: 'pricing',
@@ -70,20 +73,24 @@ const MIDDLE_SECTIONS: {
 
 // Hero and Footer are always shown on the public page (no visibility/order
 // control), so they stay as plain single-field cards outside MIDDLE_SECTIONS.
-const HERO_FIELDS: ContentField[] = [['hero.tagline', 'Tagline']];
+const HERO_FIELDS: ContentField[] = [['hero.tagline', 'Tagline'], ['hero.heading', 'Hero heading'], ['hero.body', 'Hero body', true]];
+const EXPLORE_FIELDS: ContentField[] = [['explore.title', 'Heading'], ['explore.subtitle', 'Subtitle']];
 const FOOTER_FIELDS: ContentField[] = [['footer.tagline', 'Tagline']];
 
 export default function LandingAdminPage() {
+  const [templates, setTemplates] = useState<Template[]>([]);
   const [content, setContent] = useState<Record<string, string>>({});
   const [sections, setSections] = useState<LandingSectionDto[]>([]);
   const [items, setItems] = useState<LandingItemDto[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState('');
+  const [uploadingStep, setUploadingStep] = useState<string | null>(null);
+  const [stepImageError, setStepImageError] = useState<{ step: string; message: string } | null>(null);
 
   const flash = (m: string) => { setToast(m); setTimeout(() => setToast(''), 2200); };
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => { load(); templateService.getActive().then(setTemplates).catch(() => {}); }, []);
   const load = async () => {
     setLoading(true);
     try {
@@ -92,7 +99,7 @@ export default function LandingAdminPage() {
       // live on the public page today (instead of leaving the field empty).
       setContent({ ...LANDING_CONTENT_DEFAULTS, ...(data.content ?? {}) });
       // Seed each item list from the live defaults if the CMS has no rows for it yet.
-      const items = data.items ?? [];
+      const items = (data.items ?? []).filter((item) => item.sectionKey !== 'features');
       const seededItems = [...items];
       for (const key of Object.keys(DEFAULT_ITEMS_BY_SECTION)) {
         if (items.some((it) => it.sectionKey === key)) continue;
@@ -121,6 +128,15 @@ export default function LandingAdminPage() {
     for (const k of keys) next[k] = LANDING_CONTENT_DEFAULTS[k] ?? '';
     return next;
   });
+  const menuLinks = readLandingMenu(content[LANDING_MENU_KEY]);
+  const setMenuLinks = (links: LandingMenuLink[]) => setKey(LANDING_MENU_KEY, JSON.stringify(links));
+  const unusedMenuSections = LANDING_MENU_SECTIONS.filter(({ value }) => !menuLinks.some((link) => link.section === value));
+  const moveMenuLink = (index: number, direction: -1 | 1) => {
+    const next = [...menuLinks];
+    const destination = index + direction;
+    [next[index], next[destination]] = [next[destination], next[index]];
+    setMenuLinks(next);
+  };
 
   // ── Sections (order + visibility) — these live in each section card's own
   // header now, and apply immediately (like a light switch) instead of behind
@@ -168,6 +184,19 @@ export default function LandingAdminPage() {
     setItems((arr) => arr.filter((it) => it.id !== id));
   };
   const uploadImage = async (it: LandingItemDto, file: File) => { const url = await landingService.uploadImage(file); patchItem(it.id, { imageUrl: url }); };
+
+  const uploadStepImage = async (step: string, file: File) => {
+    setUploadingStep(step);
+    setStepImageError(null);
+    try {
+      setKey(`steps.${step}.image`, await landingService.uploadImage(file));
+    } catch (error) {
+      const message = isAxiosError(error) ? error.response?.data?.message : undefined;
+      setStepImageError({ step, message: typeof message === 'string' ? message : 'Image upload failed. Please try again.' });
+    } finally {
+      setUploadingStep(null);
+    }
+  };
 
   // ── One save button for the whole page ── persists every card's text fields
   // (a single whole-bag PUT) plus every item row's edits (rows seeded from the
@@ -271,6 +300,40 @@ export default function LandingAdminPage() {
         <p style={{ color: 'var(--text-muted)', fontSize: 14, margin: '6px 0 0' }}>Each card below is one section of the public page — its text, its visibility &amp; order, and its list of cards, all in one place. Visibility, order, adding and deleting apply right away; edit any field, then hit the save button in the corner to store your changes.</p>
       </div>
 
+      <Card style={{ padding: 20 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
+          <h2 style={sectionHeading}>Navigation menu</h2>
+          <IconButton name="refresh-cw" label="Reset navigation to default" size="sm" onClick={() => setMenuLinks(readLandingMenu())} />
+        </div>
+        <p style={{ color: 'var(--text-muted)', fontSize: 14, margin: '6px 0 16px' }}>
+          Choose where each link goes and the order it appears. Links to hidden sections are skipped. Use Save to publish your menu changes.
+        </p>
+        <ol style={{ display: 'grid', gap: 12, margin: 0, padding: 0, listStyle: 'none' }}>
+          {menuLinks.map((link, index) => {
+            const updateLink = (patch: Partial<LandingMenuLink>) =>
+              setMenuLinks(menuLinks.map((item) => item.section === link.section ? { ...item, ...patch } : item));
+            const section = LANDING_MENU_SECTIONS.find(({ value }) => value === link.section);
+            return (
+              <li key={link.section} style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'end', gap: 10, padding: 12, border: '1px solid var(--border-default)', borderRadius: 'var(--radius-md)' }}>
+                <Input label="Menu label" aria-label={`Menu label for link ${index + 1}`} value={link.label} placeholder={section?.label} maxLength={60} onChange={(event) => updateLink({ label: event.target.value })} style={{ flex: '1 1 155px' }} />
+                <Select label="Link to section" aria-label={`Destination for link ${index + 1}`} options={LANDING_MENU_SECTIONS.filter(({ value }) => value === link.section || unusedMenuSections.some((option) => option.value === value))} value={link.section} onChange={(event) => updateLink({ section: event.target.value })} style={{ flex: '1 1 170px' }} />
+                <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                  <IconButton name="chevron-up" label={`Move link ${index + 1} up`} size="sm" disabled={index === 0} onClick={() => moveMenuLink(index, -1)} />
+                  <IconButton name="chevron-down" label={`Move link ${index + 1} down`} size="sm" disabled={index === menuLinks.length - 1} onClick={() => moveMenuLink(index, 1)} />
+                  <Button variant="ghost" onClick={() => setMenuLinks(menuLinks.filter((item) => item.section !== link.section))}>Remove</Button>
+                </div>
+              </li>
+            );
+          })}
+        </ol>
+        {unusedMenuSections.length > 0 && (
+          <Button variant="soft" style={{ marginTop: 14 }} onClick={() => {
+            const { value, label } = unusedMenuSections[0];
+            setMenuLinks([...menuLinks, { section: value, label }]);
+          }}>+ Add link</Button>
+        )}
+      </Card>
+
       {/* Hero — always shown, no visibility/order control, no item list. */}
       <Card style={{ padding: 20 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '0 0 14px' }}>
@@ -282,40 +345,119 @@ export default function LandingAdminPage() {
 
       {/* Features / Pricing / Stories / About — one self-contained card each:
           visibility + reorder in the header (applies instantly), text content
-          with its own Save, and — where the section has one — its item list. */}
+          with the shared Save, and — where the section has one — its item list. */}
       {sections.map((s, i) => {
         const cfg = MIDDLE_SECTIONS.find((m) => m.key === s.sectionKey);
         if (!cfg) return null;
         return (
-          <Card key={s.sectionKey} style={{ padding: 20 }}>
-            {/* All four controls are icon-sized and sit on the heading's own line — the words
-                ("Visible", "Reset to default") and the default Button padding made this row wider
-                than a phone. The switch still says what it does through its title/aria-label. */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 4, margin: '0 0 14px' }}>
-              <h2 style={{ ...sectionHeading, flex: '1 1 auto', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{cfg.label}</h2>
-              {/* `title` has to ride a wrapper: Switch spreads the rest of its props onto its
-                  visually-hidden <input>, so a title there would never be hoverable. */}
-              <span
-                title={s.isVisible ? 'Visible on the landing page — click to hide' : 'Hidden — click to show'}
-                style={{ display: 'inline-flex', marginRight: 4 }}
-              >
-                <Switch
+          <Fragment key={s.sectionKey}>
+            <Card style={{ padding: 20 }}>
+              {/* All four controls are icon-sized and sit on the heading's own line — the words
+                  ("Visible", "Reset to default") and the default Button padding made this row wider
+                  than a phone. The switch still says what it does through its title/aria-label. */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 4, margin: '0 0 14px' }}>
+                <h2 style={{ ...sectionHeading, flex: '1 1 auto', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{cfg.label}</h2>
+                {/* `title` has to ride a wrapper: Switch spreads the rest of its props onto its
+                    visually-hidden <input>, so a title there would never be hoverable. */}
+                <span
+                  title={s.isVisible ? 'Visible on the landing page — click to hide' : 'Hidden — click to show'}
+                  style={{ display: 'inline-flex', marginRight: 4 }}
+                >
+                  <Switch
+                    size="sm"
+                    checked={s.isVisible}
+                    onChange={() => toggleVisible(s.sectionKey)}
+                    aria-label={s.isVisible ? 'Section visible' : 'Section hidden'}
+                  />
+                </span>
+                {/* The two reorder arrows read as one control, so no gap between them. */}
+                <span style={{ display: 'inline-flex' }}>
+                  <IconButton name="chevron-up" label="Move up" size="sm" onClick={() => move(s.sectionKey, -1)} disabled={i === 0} />
+                  <IconButton name="chevron-down" label="Move down" size="sm" onClick={() => move(s.sectionKey, 1)} disabled={i === sections.length - 1} />
+                </span>
+                <IconButton
+                  name="refresh-cw"
+                  label="Reset to default"
                   size="sm"
-                  checked={s.isVisible}
-                  onChange={() => toggleVisible(s.sectionKey)}
-                  aria-label={s.isVisible ? 'Section visible' : 'Section hidden'}
+                  disabled={s.sectionKey === 'features' && !!uploadingStep}
+                  onClick={() => resetGroup([
+                    ...cfg.fields.map(([key]) => key),
+                    ...(s.sectionKey === 'features' ? INVITE_STEPS.flatMap((step) => ['title', 'body', 'image'].map((field) => `steps.${step}.${field}`)) : []),
+                  ])}
                 />
-              </span>
-              {/* The two reorder arrows read as one control, so no gap between them. */}
-              <span style={{ display: 'inline-flex' }}>
-                <IconButton name="chevron-up" label="Move up" size="sm" onClick={() => move(s.sectionKey, -1)} disabled={i === 0} />
-                <IconButton name="chevron-down" label="Move down" size="sm" onClick={() => move(s.sectionKey, 1)} disabled={i === sections.length - 1} />
-              </span>
-              <IconButton name="refresh-cw" label="Reset to default" size="sm" onClick={() => resetGroup(cfg.fields.map(([key]) => key))} />
-            </div>
-            {contentFields(cfg.fields)}
-            {cfg.items && itemRows(cfg.items, s.sectionKey)}
-          </Card>
+              </div>
+              {contentFields(cfg.fields)}
+              {cfg.items && itemRows(cfg.items, s.sectionKey)}
+              {s.sectionKey === 'features' && (
+                <div style={{ display: 'grid', gap: 16, marginTop: 24 }}>
+                  <p style={{ color: 'var(--text-muted)', fontSize: 13, margin: 0 }}>Use the Save button to apply your copy and image changes to the landing page.</p>
+                  {INVITE_STEPS.map((step, index) => {
+                    const imageKey = `steps.${step}.image`;
+                    const imageUrl = content[imageKey];
+                    return (
+                      <fieldset key={step} style={{ minWidth: 0, margin: 0, padding: 16, border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-md)' }}>
+                        <legend style={{ ...subHeading, padding: '0 6px' }}>Step {index + 1}</legend>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(250px, 100%), 1fr))', alignItems: 'start', gap: 18 }}>
+                          <div style={{ display: 'grid', gap: 12 }}>
+                            <Input label={`Step ${index + 1} title`} value={content[`steps.${step}.title`] ?? ''} onChange={(e) => setKey(`steps.${step}.title`, e.target.value)} />
+                            <Textarea label={`Step ${index + 1} description`} value={content[`steps.${step}.body`] ?? ''} onChange={(e) => setKey(`steps.${step}.body`, e.target.value)} rows={3} />
+                          </div>
+                          <div style={{ display: 'grid', gap: 8, minWidth: 0 }}>
+                            <div style={{ background: 'var(--surface-sunken)', borderRadius: 'var(--radius-md)', padding: '8px 0 0' }}>
+                              <InviteStepArt step={step} imageUrl={imageUrl} />
+                            </div>
+                            <label htmlFor={imageKey} style={{ fontSize: 14, fontWeight: 600 }}>Step {index + 1} image</label>
+                            <input
+                              id={imageKey}
+                              type="file"
+                              accept=".jpg,.jpeg,.png,.gif,.webp"
+                              disabled={!!uploadingStep || saving}
+                              style={{ maxWidth: '100%', fontSize: 13 }}
+                              onChange={(e) => {
+                                const file = e.currentTarget.files?.[0];
+                                e.currentTarget.value = '';
+                                if (file) void uploadStepImage(step, file);
+                              }}
+                            />
+                            {uploadingStep === step && <span role="status">Uploading image…</span>}
+                            {stepImageError?.step === step && <span role="alert" style={{ color: 'var(--danger)', fontSize: 13 }}>{stepImageError.message}</span>}
+                            {imageUrl ? (
+                              <div style={{ justifySelf: 'start' }}>
+                                <Button variant="ghost" size="sm" disabled={!!uploadingStep || saving} onClick={() => setKey(imageKey, '')}>Restore default image</Button>
+                              </div>
+                            ) : (
+                              <span style={{ color: 'var(--text-muted)', fontSize: 13 }}>Using the default illustration. JPG, PNG, GIF or WebP, up to 10 MB.</span>
+                            )}
+                          </div>
+                        </div>
+                      </fieldset>
+                    );
+                  })}
+                </div>
+              )}
+            </Card>
+            {s.sectionKey === 'features' && (
+              <Card style={{ padding: 20 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                  <h2 style={sectionHeading}>Explore invitation designs</h2>
+                  <IconButton name="refresh-cw" label="Reset Explore to default" size="sm" onClick={() => resetGroup([...EXPLORE_FIELDS.map(([key]) => key), 'explore.templates'])} />
+                </div>
+                <p style={{ color: 'var(--text-muted)', fontSize: 13, margin: '0 0 14px' }}>Shown directly below Features. Choose the active templates to highlight in the order listed.</p>
+                {contentFields(EXPLORE_FIELDS)}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(200px, 100%), 1fr))', gap: 10, marginTop: 16 }}>
+                  {templates.map((template, index) => {
+                    const selected = content['explore.templates'] === 'auto' ? index < 3 : (content['explore.templates'] || '').split(',').includes(template.templateCode);
+                    return <Switch key={template.templateId} checked={selected} label={template.templateName} onChange={() => {
+                      const codes = content['explore.templates'] === 'auto' ? templates.slice(0, 3).map((t) => t.templateCode) : (content['explore.templates'] || '').split(',').filter(Boolean);
+                      const next = selected ? codes.filter((code) => code !== template.templateCode) : [...codes, template.templateCode];
+                      setKey('explore.templates', next.length ? templates.filter((t) => next.includes(t.templateCode)).map((t) => t.templateCode).join(',') : 'none');
+                    }} />;
+                  })}
+                </div>
+                {templates.length === 0 && <p style={{ color: 'var(--text-muted)', fontSize: 13 }}>No active templates available.</p>}
+              </Card>
+            )}
+          </Fragment>
         );
       })}
 
@@ -341,6 +483,7 @@ export default function LandingAdminPage() {
         <Button
           onClick={saveAll}
           loading={saving}
+          disabled={!!uploadingStep}
           aria-label="Save all changes"
           title="Save all changes"
           style={{ width: 56, height: 56, padding: 0, borderRadius: '50%', boxShadow: '0 8px 24px rgba(0,0,0,.28)', flexShrink: 0 }}

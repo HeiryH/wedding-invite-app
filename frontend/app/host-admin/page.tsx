@@ -7,13 +7,15 @@ import { useRouter } from 'next/navigation';
 import { eventService, Event } from '@/lib/api';
 import { downloadBlob } from '@/lib/utils';
 import WeddingCard from '@/components/admin/WeddingCard';
+import { useEventThumbnails } from '@/components/admin/useEventThumbnails';
 import { urlSegmentForEventType, EVENT_TYPES, EventTypeKey } from '@/lib/eventTypes';
 import { Icon } from '@/components/ui/Icon';
 import { StatCard } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { EmptyState } from '@/components/ui/EmptyState';
 
-type Filter = 'all' | 'upcoming' | 'active' | 'inactive';
+import { EventStatusTabs, type EventStatusFilter } from '@/components/admin/EventStatusTabs';
+import styles from '@/components/admin/EventsDashboard.module.css';
 
 function FilterChip({ active, onClick, children, count }: { active: boolean; onClick: () => void; children: React.ReactNode; count: number }) {
   return (
@@ -43,10 +45,11 @@ function FilterChip({ active, onClick, children, count }: { active: boolean; onC
 
 export default function HostAdminDashboard() {
   const router = useRouter();
+  const thumbnails = useEventThumbnails();
   const [weddings, setWeddings] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [filter, setFilter] = useState<Filter>('all');
+  const [filter, setFilter] = useState<EventStatusFilter>('all');
   const [eventTypeFilter, setEventTypeFilter] = useState<'ALL' | EventTypeKey>('ALL');
   const [searchTerm, setSearchTerm] = useState('');
   const [searchFocus, setSearchFocus] = useState(false);
@@ -132,30 +135,17 @@ export default function HostAdminDashboard() {
 
   return (
     <div>
-      {/* Page header */}
-      <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 16, marginBottom: 24 }}>
+      <div className={styles.header}>
         <div>
-          <h1 style={{ margin: 0, fontFamily: 'var(--font-display)', fontSize: 'clamp(28px, 5vw, 40px)', fontWeight: 400, letterSpacing: 'var(--tracking-tight)', lineHeight: 1, color: 'var(--text-strong)' }}>
-            My <em style={{ fontStyle: 'italic', color: 'var(--text-muted)' }}>events</em>
-          </h1>
-          <p style={{ margin: '6px 0 0', color: 'var(--text-subtle)', fontSize: 'var(--text-sm)', fontFamily: 'var(--font-ui)' }}>
-            All invitations you manage.
-          </p>
+          <h1>My events</h1>
+          <p>All invitations you manage.</p>
         </div>
-        <div className="hidden lg:block">
-          <Button
-            variant="primary"
-            tone="brand"
-            iconLeft={<Icon name="plus" size={15} />}
-            onClick={() => router.push('/host-admin/wedding/create')}
-          >
-            New event
-          </Button>
-        </div>
+        <Button size="sm" iconLeft={<Icon name="plus" size={15} />} onClick={() => router.push('/host-admin/wedding/create')}>
+          New event
+        </Button>
       </div>
 
-      {/* Stat cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 10, marginBottom: 20 }} className="sm:grid-cols-4">
+      <div className={styles.metrics}>
         <StatCard label="Total events" value={counts.all} icon={<Icon name="heart" size={16} />} tone="brand" />
         <StatCard label="Live now" value={counts.active} icon={<Icon name="radio" size={16} />} tone="success" />
         <StatCard label="Upcoming" value={counts.upcoming} icon={<Icon name="calendar" size={16} />} tone="gold" />
@@ -169,6 +159,7 @@ export default function HostAdminDashboard() {
             <Icon name="search" size={16} />
           </div>
           <input
+            aria-label="Search events"
             placeholder="Search name, slug or venue…"
             value={searchTerm}
             onChange={e => setSearchTerm(e.target.value)}
@@ -186,13 +177,9 @@ export default function HostAdminDashboard() {
             }}
           />
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6, overflowX: 'auto', scrollbarWidth: 'none', paddingBottom: 2, flexShrink: 0 }}>
-          <FilterChip active={filter === 'all'} onClick={() => setFilter('all')} count={counts.all}>All</FilterChip>
-          <FilterChip active={filter === 'upcoming'} onClick={() => setFilter('upcoming')} count={counts.upcoming}>Upcoming</FilterChip>
-          <FilterChip active={filter === 'active'} onClick={() => setFilter('active')} count={counts.active}>Live</FilterChip>
-          <FilterChip active={filter === 'inactive'} onClick={() => setFilter('inactive')} count={counts.inactive}>Drafts</FilterChip>
-        </div>
       </div>
+
+      <EventStatusTabs value={filter} onChange={setFilter} counts={counts} />
 
       {/* Event type filter */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 6, overflowX: 'auto', scrollbarWidth: 'none', paddingBottom: 2, marginBottom: 14 }}>
@@ -213,11 +200,12 @@ export default function HostAdminDashboard() {
       </div>
 
       {filtered.length > 0 ? (
-        <div style={{ display: 'grid', gap: 12 }} className="md:grid-cols-2 xl:grid-cols-3">
+        <div className={styles.events}>
           {filtered.map(w => (
             <WeddingCard
               key={w.eventId}
               wedding={w}
+              thumbnailUrl={thumbnails[w.templateId]}
               onManage={id => router.push(`/host-admin/wedding/${id}`)}
               onPreview={(slug, eventType) => window.open(`/${urlSegmentForEventType(eventType)}/${slug}`, '_blank')}
               onToggleActive={handleToggleActive}

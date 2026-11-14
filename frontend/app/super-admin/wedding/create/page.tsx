@@ -27,7 +27,7 @@ const suggestedSlug = (f: { eventType: EventTypeKey; brideName: string; groomNam
 const inputStyle: React.CSSProperties = {
   width: '100%', padding: '10px 12px',
   border: '1px solid var(--line-2)', borderRadius: 10,
-  fontSize: 14, color: 'var(--ink)', background: 'white',
+  fontSize: 14, color: 'var(--ink)', background: 'var(--surface-card)',
   outline: 'none', boxSizing: 'border-box',
 };
 
@@ -104,8 +104,8 @@ export default function CreateWeddingPage() {
 
   const focusHandlers = {
     onFocus: (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-      e.currentTarget.style.borderColor = 'var(--lavender-grey)';
-      e.currentTarget.style.boxShadow = '0 0 0 4px var(--lavender)';
+      e.currentTarget.style.borderColor = 'var(--brand-border)';
+      e.currentTarget.style.boxShadow = '0 0 0 4px var(--brand-subtle)';
     },
     onBlur: (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement>) => {
       e.currentTarget.style.borderColor = 'var(--line-2)';
@@ -118,7 +118,7 @@ export default function CreateWeddingPage() {
       {/* Page header */}
       <div style={{ marginBottom: 20 }}>
         <h1 style={{ margin: 0, fontFamily: 'var(--serif)', fontSize: 'clamp(30px, 5vw, 42px)', fontWeight: 400, letterSpacing: '-0.02em', lineHeight: 1, color: 'var(--ink)' }}>
-          Create an <em style={{ fontStyle: 'italic', color: 'var(--lavender-grey-deep)' }}>event</em>
+          Create an <em style={{ fontStyle: 'italic', color: 'var(--text-muted)' }}>event</em>
         </h1>
         <p style={{ margin: '6px 0 0', color: 'var(--muted)', fontSize: 13 }}>Set up a new invitation.</p>
       </div>
@@ -127,7 +127,7 @@ export default function CreateWeddingPage() {
         <motion.div
           initial={{ opacity: 0, y: -16 }}
           animate={{ opacity: 1, y: 0 }}
-          style={{ background: 'var(--thistle-soft)', border: '1px solid var(--thistle)', borderRadius: 10, padding: '10px 14px', marginBottom: 16 }}
+          style={{ background: 'var(--danger-subtle)', border: '1px solid var(--danger-border)', borderRadius: 10, padding: '10px 14px', marginBottom: 16 }}
         >
           <p style={{ color: 'var(--danger)', fontSize: 13, margin: 0 }}>{error}</p>
         </motion.div>
@@ -135,7 +135,7 @@ export default function CreateWeddingPage() {
 
       <form onSubmit={handleSubmit}>
         {/* ── Event Type ── */}
-        <div style={{ background: 'white', border: '1px solid var(--line)', borderRadius: 'var(--radius-md)', padding: 20, marginBottom: 14 }}>
+        <div style={{ background: 'var(--surface-card)', border: '1px solid var(--line)', borderRadius: 'var(--radius-md)', padding: 20, marginBottom: 14 }}>
           {sectionLabel('Event type')}
           <div style={{ display: 'flex', gap: 8 }}>
             {EVENT_TYPES.map((et) => (
@@ -145,9 +145,9 @@ export default function CreateWeddingPage() {
                 onClick={() => setFormData({ ...formData, eventType: et.key })}
                 style={{
                   flex: 1, padding: '10px 12px', borderRadius: 10, cursor: 'pointer',
-                  border: `1.5px solid ${formData.eventType === et.key ? 'var(--lavender-grey-ink)' : 'var(--line-2)'}`,
-                  background: formData.eventType === et.key ? 'var(--lavender)' : 'white',
-                  color: formData.eventType === et.key ? 'var(--lavender-grey-ink)' : 'var(--muted)',
+                  border: `1.5px solid ${formData.eventType === et.key ? 'var(--brand)' : 'var(--line-2)'}`,
+                  background: formData.eventType === et.key ? 'var(--brand-subtle)' : 'white',
+                  color: formData.eventType === et.key ? 'var(--brand)' : 'var(--muted)',
                   fontSize: 13.5, fontWeight: 500, transition: 'all .15s ease',
                 }}
               >
@@ -158,7 +158,7 @@ export default function CreateWeddingPage() {
         </div>
 
         {/* ── Couple / Honoree / Event Information ── */}
-        <div style={{ background: 'white', border: '1px solid var(--line)', borderRadius: 'var(--radius-md)', padding: 20, marginBottom: 14 }}>
+        <div style={{ background: 'var(--surface-card)', border: '1px solid var(--line)', borderRadius: 'var(--radius-md)', padding: 20, marginBottom: 14 }}>
           {sectionLabel(
             formData.eventType === 'WEDDING' ? 'Couple information'
               : formData.eventType === 'PARTY' ? 'Honoree information'
@@ -206,7 +206,7 @@ export default function CreateWeddingPage() {
         </div>
 
         {/* ── Event Details ── */}
-        <div style={{ background: 'white', border: '1px solid var(--line)', borderRadius: 'var(--radius-md)', padding: 20, marginBottom: 14 }}>
+        <div style={{ background: 'var(--surface-card)', border: '1px solid var(--line)', borderRadius: 'var(--radius-md)', padding: 20, marginBottom: 14 }}>
           {sectionLabel('Event details')}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
             <div>
@@ -230,7 +230,7 @@ export default function CreateWeddingPage() {
 
         {/* ── Template Selection ── */}
         {visibleTemplates.length > 0 && (
-          <div style={{ background: 'white', border: '1px solid var(--line)', borderRadius: 'var(--radius-md)', padding: 20, marginBottom: 20 }}>
+          <div style={{ background: 'var(--surface-card)', border: '1px solid var(--line)', borderRadius: 'var(--radius-md)', padding: 20, marginBottom: 20 }}>
             {sectionLabel('Choose a template')}
             <div className="grid md:grid-cols-2 gap-3">
               {visibleTemplates.map(template => (
@@ -239,10 +239,10 @@ export default function CreateWeddingPage() {
                   onClick={() => setFormData({ ...formData, templateId: template.templateId })}
                   style={{
                     borderRadius: 12, cursor: 'pointer', overflow: 'hidden',
-                    border: `2px solid ${formData.templateId === template.templateId ? 'var(--lavender-grey-ink)' : 'var(--line-2)'}`,
-                    background: 'white',
+                    border: `2px solid ${formData.templateId === template.templateId ? 'var(--brand)' : 'var(--line-2)'}`,
+                    background: 'var(--surface-card)',
                     transition: 'all .15s ease',
-                    boxShadow: formData.templateId === template.templateId ? '0 0 0 3px var(--lavender)' : 'none',
+                    boxShadow: formData.templateId === template.templateId ? '0 0 0 3px var(--brand-subtle)' : 'none',
                   }}
                 >
                   <TemplatePreview templateCode={template.templateCode} thumbnailUrl={template.thumbnailUrl} />
@@ -255,7 +255,7 @@ export default function CreateWeddingPage() {
                           const styles: Record<string, React.CSSProperties> = {
                             BASIC:    { background: 'var(--sand-1)', color: 'var(--text-muted)', border: '1px solid var(--border-subtle)' },
                             PREMIUM: { background: 'color-mix(in srgb, var(--accent) 12%, transparent)', color: 'var(--accent-deep)', border: '1px solid color-mix(in srgb, var(--accent) 30%, transparent)' },
-                            PRO:     { background: 'var(--lavender)', color: 'var(--lavender-grey-deep)', border: '1px solid var(--lavender-deep)' },
+                            PRO:     { background: 'var(--brand-subtle)', color: 'var(--text-muted)', border: '1px solid var(--brand-border)' },
                           };
                           const labels: Record<string, string> = { BASIC: 'Basic', PREMIUM: 'Premium', PRO: 'Pro' };
                           return (
@@ -265,7 +265,7 @@ export default function CreateWeddingPage() {
                           );
                         })()}
                       </div>
-                      {formData.templateId === template.templateId && <Icon name="check-circle" size={16} style={{ color: 'var(--lavender-grey-ink)' }} />}
+                      {formData.templateId === template.templateId && <Icon name="check-circle" size={16} style={{ color: 'var(--brand)' }} />}
                     </div>
                     <p style={{ fontSize: 12, color: 'var(--ink-2)', margin: 0 }}>{template.description}</p>
                   </div>
@@ -279,13 +279,13 @@ export default function CreateWeddingPage() {
         <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
           <button
             type="button" onClick={() => router.push('/super-admin')}
-            style={{ padding: '10px 20px', borderRadius: 10, background: 'white', border: '1px solid var(--line-2)', color: 'var(--ink-2)', fontSize: 13.5, fontWeight: 500, cursor: 'pointer' }}
+            style={{ padding: '10px 20px', borderRadius: 10, background: 'var(--surface-card)', border: '1px solid var(--line-2)', color: 'var(--ink-2)', fontSize: 13.5, fontWeight: 500, cursor: 'pointer' }}
           >
             Cancel
           </button>
           <button
             type="submit" disabled={submitDisabled}
-            style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '10px 20px', borderRadius: 10, background: submitDisabled ? 'var(--muted)' : 'var(--lavender-grey-ink)', color: 'var(--floral)', border: 'none', fontSize: 13.5, fontWeight: 500, cursor: submitDisabled ? 'not-allowed' : 'pointer', boxShadow: loading ? 'none' : '0 1px 0 rgba(255,255,255,.12) inset, 0 1px 2px rgba(0,0,0,.08)' }}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '10px 20px', borderRadius: 10, background: submitDisabled ? 'var(--muted)' : 'var(--brand)', color: 'var(--brand-on)', border: 'none', fontSize: 13.5, fontWeight: 500, cursor: submitDisabled ? 'not-allowed' : 'pointer', boxShadow: loading ? 'none' : '0 1px 0 rgba(255,255,255,.12) inset, 0 1px 2px rgba(0,0,0,.08)' }}
           >
             {loading ? (
               <>

@@ -164,6 +164,8 @@ export interface Layer {
   canvasAnchor?: boolean;
 
   chain: boolean;
+  /** Keep the explicit box dimensions proportional when `chain` is enabled. */
+  lockBoxRatio?: boolean;
   hidden: boolean;
   opacity: number;
   /**
@@ -473,6 +475,8 @@ export interface StageDef {
   bgPosition?: string;
   bgScale?: number;
   layers: Layer[];
+  /** Groups baked into authored template defaults, independently for each breakpoint. */
+  groups?: Partial<Record<Breakpoint, LayerGroup[]>>;
   /** Sparse per-layer overrides applied on top of `layers` at the desktop breakpoint. */
   desktop?: Record<string, Partial<Layer>>;
   /**
@@ -485,6 +489,18 @@ export interface StageDef {
   flow?: boolean;
 }
 
+/** An editor-created group of layers in one stage and breakpoint. */
+export interface LayerGroup {
+  id: string;
+  label: string;
+  memberIds: string[];
+  x?: number;
+  y?: number;
+  anim?: AnimType;
+  animOut?: AnimOutType;
+  animIdle?: AnimIdleType;
+}
+
 /** The persisted unit: one stage's delta at one breakpoint, under `<prefix>.layout.<bp>.<stageId>`. */
 export interface StageLayout {
   bgFit?: ObjectFit;
@@ -493,6 +509,7 @@ export interface StageLayout {
   bgScale?: number;
   bgSrc?: string;
   layers?: (Partial<Layer> & { id: string })[];
+  groups?: LayerGroup[];
 }
 
 export interface SlotProps {

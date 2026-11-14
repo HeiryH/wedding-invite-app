@@ -281,6 +281,7 @@ export default function Template14({
             key={r.def.id}
             def={r.def}
             layers={visibleSlotLayers(r.layers, slotProps)}
+            groups={r.groups}
             bgFit={r.bgFit}
             bgPosition={r.bgPosition}
             bgScale={r.bgScale}

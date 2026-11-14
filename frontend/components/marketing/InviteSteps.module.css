@@ -1,0 +1,93 @@
+.section {
+  background: var(--mkt-card);
+  border-block: 2px solid var(--mkt-ink);
+}
+
+.inner { max-width: 940px; margin: 0 auto; text-align: center; }
+.inner h2 {
+  font: 700 clamp(29px, 4.1vw, 40px) / 1.12 var(--mkt-serif);
+  margin: 0 auto;
+}
+.subtitle {
+  font: 400 16px / 1.5 var(--mkt-sans);
+  color: var(--mkt-muted-2);
+  margin: 10px 0 0;
+}
+
+.steps {
+  --step-gap: clamp(22px, 4.5vw, 50px);
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-areas: 'design details' 'reply share';
+  gap: var(--step-gap);
+  list-style: none;
+  max-width: 700px;
+  margin: 24px auto 0;
+  padding: 0;
+}
+
+.step {
+  position: relative;
+  min-width: 0;
+  border: 1px solid var(--mkt-ink);
+  border-radius: 18px;
+  padding: 12px 16px 18px;
+}
+
+.step[data-step='design'] { grid-area: design; }
+.step[data-step='details'] { grid-area: details; }
+.step[data-step='share'] { grid-area: share; }
+.step[data-step='reply'] { grid-area: reply; }
+
+.step:not(:last-child)::after {
+  content: '';
+  position: absolute;
+  left: 100%;
+  top: 44%;
+  width: var(--step-gap);
+  height: 20px;
+  transform: translateY(-50%);
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 20' fill='none' stroke='%23a77c35' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 10h25m-8-7 8 7-8 7'/%3E%3C/svg%3E") center / min(75%, 32px) 20px no-repeat;
+}
+
+.step[data-step='details']::after {
+  left: 50%;
+  top: 100%;
+  height: var(--step-gap);
+  transform: translateX(-50%) rotate(90deg);
+}
+
+.step[data-step='share']::after {
+  left: auto;
+  right: 100%;
+  transform: translateY(-50%) rotate(180deg);
+}
+
+.art {
+  width: min(100%, 210px);
+  height: 150px;
+  margin: 0 auto 8px;
+  background: url('/marketing/invite-steps.webp') center / 300% auto no-repeat;
+}
+.design { background-position: left center; }
+.details { background: url('/marketing/invite-details.webp') center / auto 130% no-repeat; }
+.share { background-position: center; }
+.reply { background-position: right center; }
+.customArt { position: relative; background: none; }
+
+.step h3 {
+  font: 700 clamp(20px, 2.5vw, 26px) / 1.15 var(--mkt-serif);
+  margin: 0;
+}
+.step p {
+  font: 400 15px / 1.35 var(--mkt-sans);
+  margin: 7px auto 0;
+  max-width: 26ch;
+}
+
+@media (max-width: 520px) {
+  .step { padding: 10px 8px 14px; }
+  .step .art { height: clamp(90px, 28vw, 140px); }
+  .step h3 { font-size: clamp(16px, 4.5vw, 21px); }
+  .step p { font-size: 13px; }
+}

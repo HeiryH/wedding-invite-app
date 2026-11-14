@@ -299,6 +299,7 @@ export default function CinematicAdjustPanel({
   const [selectedTimingSetId, setSelectedTimingSetId] = useState<string>();
   const [deleteConfirmSet, setDeleteConfirmSet] = useState<string>();
   const [selectedSceneSet, setSelectedSceneSet] = useState<string>();
+  const [draggedSetLayer, setDraggedSetLayer] = useState<string>();
   const [animationLayerId, setAnimationLayerId] = useState<string>();
   const [sidebarPreferences, setSidebarPreferences, sidebarReady] = useWorkspacePreference('einvite.cinematic.sidebar.v1', DEFAULT_SIDEBAR, decodeSidebar);
   const [layerFilter, setLayerFilter] = useWorkspacePreference('einvite.cinematic.layer-filter.v1', 'all', decodeLayerFilter);
@@ -399,7 +400,7 @@ export default function CinematicAdjustPanel({
     group: set.id,
     layers: frontToBack.filter((layer) => layer.group === set.id),
     visibility: visibilitySets.find((visibility) => visibility.group === set.id),
-  })).filter((entry) => entry.layers.some(matchesLayerFilter));
+  })).filter((entry) => draggedSetLayer || entry.layers.some(matchesLayerFilter));
   const activeBeatIndex = Math.max(0, beats.findIndex((beat) => beat.id === activeBeat?.id));
   const isShippedBeat = Boolean(activeBeat && shippedBeatIds.includes(activeBeat.id));
   const ownedTracks = activeBeat ? tracks.filter((track) =>
@@ -1189,7 +1190,7 @@ export default function CinematicAdjustPanel({
 
         {mode === 'scene' && (
           <>
-            {onSceneSetAction && <SceneSetManager sets={availableSets} layers={layers} tracks={tracks}
+            {onSceneSetAction && <SceneSetManager breakpoint={breakpoint} sets={availableSets} layers={layers} tracks={tracks}
               selectedId={selectedSceneSet} onSelect={setSelectedSceneSet} onAction={onSceneSetAction} />}
             <section className={styles.layerBrowser} aria-label="Scene layer browser" data-active={timingSelectionMode || popover === 'add'}>
             <div ref={layerBrowserHeaderRef} className={styles.layerBrowserHeader}>
@@ -1230,8 +1231,18 @@ export default function CinematicAdjustPanel({
                 const visibleNow = !visibility || cinematicSetOpacity(progress, visibility) > 0.08;
                 const groupTrack = tracks.find((track) =>
                   track.target.type === 'group' && track.target.id === group);
+                const source = editorLayers.find((layer) => layer.id === draggedSetLayer);
+                const destination = setById.get(group);
+                const canDrop = Boolean(onSceneSetAction && source && destination && !destination.locked &&
+                  source.group !== destination.id && source.space === destination.space);
                 return (
-                  <section key={group} className={styles.layerGroup}>
+                  <section key={group} className={styles.layerGroup} data-drop-target={canDrop || undefined}
+                    onDragOver={canDrop ? (event) => event.preventDefault() : undefined}
+                    onDrop={canDrop && source ? (event) => {
+                      event.preventDefault();
+                      onSceneSetAction?.({ type: 'move-layer', layerId: source.id, setId: group });
+                      setDraggedSetLayer(undefined);
+                    } : undefined}>
                     <button type="button" className={styles.layerGroupHeader}
                       disabled={!groupTrack}
                       aria-label={`Edit ${setById.get(group)?.label ?? group} timing`}
@@ -1249,6 +1260,12 @@ export default function CinematicAdjustPanel({
                         key={layer.id}
                         ref={layer.id === selectedLayer ? selectedRowRef : undefined}
                         data-scene-layer={layer.id}
+                        draggable={Boolean(onSceneSetAction && !layer.parentId && !layer.locked && !setById.get(group)?.locked)}
+                        onDragStart={(event) => {
+                          event.dataTransfer.setData('text/plain', layer.id);
+                          setDraggedSetLayer(layer.id);
+                        }}
+                        onDragEnd={() => setDraggedSetLayer(undefined)}
                         style={{ paddingLeft: `${6 + depth * 14}px` }}
                         className={`${styles.layerRow} ${layer.id === selectedLayer ? styles.layerRowActive : ''} ${selectedTimingLayers.includes(layer.id) ? styles.layerRowChecked : ''}`}
                       >

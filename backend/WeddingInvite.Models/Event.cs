@@ -52,6 +52,7 @@ namespace WeddingInvite.Models
         public ICollection<EventFeature> EventFeatures { get; set; } = new List<EventFeature>();
         public ICollection<Photo> Photos { get; set; } = new List<Photo>();
         public ICollection<ItineraryItem> ItineraryItems { get; set; } = new List<ItineraryItem>();
+        public ICollection<Table> Tables { get; set; } = new List<Table>();
 
     }
 }

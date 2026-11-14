@@ -326,3 +326,37 @@
   }
   /* The `.layerInner` reduced-motion reset now lives in reveal.css (keyed on data-sl-anim). */
 }
+
+.groupPlane {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.groupOutline {
+  position: absolute;
+  outline: 2px dashed #c98a54;
+  pointer-events: none;
+}
+.groupHandle {
+  position: absolute;
+  left: 50%;
+  top: 0;
+  transform: translate(-50%, -100%);
+  pointer-events: auto;
+  touch-action: none;
+  cursor: move;
+  white-space: nowrap;
+}
+.groupPlane > .layerBox:is([data-kind='slot'], [data-kind='scrollVideo']) {
+  pointer-events: auto;
+}
+
+/* A group split across the art and content boxes travels the same viewport distance on exit. */
+.groupPlane[data-shared-canvas-exit] {
+  --sl-exit-distance-x: calc(var(--fvw, 100vw) * 0.6);
+  --sl-exit-distance-y: calc(var(--fsvh, 100svh) * 0.6);
+}
+.layerBox {
+  --sl-exit-distance-x: initial;
+  --sl-exit-distance-y: initial;
+}

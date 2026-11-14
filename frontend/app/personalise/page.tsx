@@ -2,17 +2,60 @@
 
 import Link from 'next/link';
 
-import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Fragment, Suspense, useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { templateService, Template, authService } from '@/lib/api';
+import { templateService, templateConfigService, Template, authService } from '@/lib/api';
 import type { TemplateConfigField } from '@/lib/api/types';
-import { getGuestFields, buildDefaultConfig, blockOf } from '@/lib/templateConfigSchema';
+import { getGuestFields, getConfigFields, buildDefaultConfig, blockOf } from '@/lib/templateConfigSchema';
+import { Icon } from '@/components/ui/Icon';
+import { getTemplateCapabilities } from '@/components/templates/templateCapabilities';
+import { sectionAnchorId } from '@/components/templates/_shared/registry';
 import { resolveSectionOrder, SectionCode } from '@/lib/templateUtils';
 import { EVENT_TYPES, EventTypeKey } from '@/lib/eventTypes';
+import styles from './PersonalisePreview.module.css';
 
 const DRAFT_KEY = 'personalise_draft_v1';
+const SAMPLE_CEREMONY: Record<EventTypeKey, string> = {
+  WEDDING: 'Join us for our wedding ceremony, followed by a meal and photos with family and friends.',
+  PARTY: 'Join us for games, cake, and a celebration with family and friends.',
+  CEREMONY: 'Please join us for the ceremony, followed by light refreshments and photos.',
+};
+const MAX_TABLES = 100;
+const SEATS_PER_TABLE = 8;
+const MAX_TABLE_CAPACITY = 1000;
+const RSVP_LAYOUT = 'rsvp.form_layout';
+const RSVP_FIELD_PREFIX = 'rsvp.fields.';
+const RSVP_COPY = new Set(['rsvp.title', 'rsvp.subtitle']);
+const RSVP_FIELD_LABELS: Record<string, string> = {
+  email: 'Email',
+  phone: 'Phone number',
+  party_size: 'Party size',
+  family_side: 'Family side',
+  song_request: 'Song request',
+};
 
-type ItineraryRow = { label: string; detail: string; sortOrder: number };
+type ItineraryRow = { label: string; detail: string; sortOrder: number; sample?: true };
+type TableDraft = { id: number; tableName: string; capacity: number; sample?: true };
+type PreviewSection = SectionCode | 'seating';
+
+function newTable(id: number): TableDraft {
+  return { id, tableName: `Table ${id}`, capacity: SEATS_PER_TABLE };
+}
+
+const SAMPLE_TABLES: TableDraft[] = ['Family', 'Relatives', 'Friends'].map((tableName, index) => ({
+  ...newTable(index + 1), tableName, sample: true,
+}));
+
+function sampleSchedule(event: EventTypeKey): ItineraryRow[] {
+  const labels = ['Guests arrive', event === 'PARTY' ? 'Games and celebration' : 'Ceremony begins', 'Food and photos'];
+  return labels.map((label, sortOrder) => ({ label, detail: ['10:00 AM', '10:30 AM', '12:00 PM'][sortOrder], sortOrder, sample: true }));
+}
+
+const SAMPLE_PHOTOS = ['couple', 'ring', 'ceremony'].map((name, index) => ({
+  photoId: index + 1, eventId: 0, photoUrl: `/samples/couple-gallery/${name}.webp`,
+  caption: 'Sample photo', uploadedBy: 'GUEST', fileSize: 0, contentType: 'image/webp',
+  isApproved: true, isVisible: true, isFeatured: false, createdDate: '',
+}));
 
 // WEDDING: brideName + groomName. PARTY: brideName holds the honoree's single name (minimal
 // plumbing disruption — see eventType-driven branching below). CEREMONY: eventTitle only.
@@ -30,6 +73,11 @@ interface Draft {
   event?: string;
   wedding: WeddingDraft;
   config: Record<string, string>;
+  overridesOnly?: true;
+  scheduleSeeded?: true;
+  tableCount?: number;
+  tables?: TableDraft[];
+  seatingSeeded?: true;
   itinerary: ItineraryRow[];
 }
 
@@ -81,11 +129,43 @@ function MText({ label, value, onChange, type = 'text', placeholder }: { label: 
   );
 }
 
-function MArea({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
+function VenueMap({ venue, address, onChoose }: { venue: string; address: string; onChoose: (address: string) => void }) {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState('');
+  const [shownQuery, setShownQuery] = useState('');
+  const mapId = useId();
+
+  return (
+    <div className={styles.venueMap}>
+      <button type="button" className="mkt-btn" aria-expanded={open} aria-controls={mapId} onClick={() => {
+        if (!open) {
+          setQuery(address.trim() || venue.trim());
+          setShownQuery(address.trim() || venue.trim());
+        }
+        setOpen(!open);
+      }}>{open ? 'Close map' : 'See in map'}</button>
+      <div id={mapId} hidden={!open}>
+        {open && <>
+          <MText label="Find a place or address" value={query} onChange={setQuery} />
+          <button type="button" className="mkt-btn" disabled={!query.trim()} onClick={() => setShownQuery(query.trim())}>Search map</button>
+          {shownQuery && (
+            <iframe title="Venue location on Google Maps" src={`https://maps.google.com/maps?q=${encodeURIComponent(shownQuery)}&output=embed`} loading="lazy" />
+          )}
+          <button type="button" className="mkt-btn mkt-btn-dark" disabled={!shownQuery || shownQuery !== query.trim()} onClick={() => {
+            onChoose(shownQuery);
+            setOpen(false);
+          }}>Use this location</button>
+        </>}
+      </div>
+    </div>
+  );
+}
+
+function MArea({ label, value, onChange, placeholder }: { label: string; value: string; onChange: (v: string) => void; placeholder?: string }) {
   return (
     <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
       <FieldLabel>{label}</FieldLabel>
-      <textarea value={value} onChange={(e) => onChange(e.target.value)} rows={3} style={{ ...fieldInput, resize: 'vertical', lineHeight: 1.5 }} />
+      <textarea value={value} placeholder={placeholder} onChange={(e) => onChange(e.target.value)} rows={3} style={{ ...fieldInput, resize: 'vertical', lineHeight: 1.5 }} />
     </label>
   );
 }
@@ -101,31 +181,32 @@ function MToggle({ label, value, onChange }: { label: string; value: boolean; on
   );
 }
 
-function GuestField({ field, value, onChange }: { field: TemplateConfigField; value: string; onChange: (v: string) => void }) {
+function GuestField({ field, value, onChange, placeholder }: { field: TemplateConfigField; value: string; onChange: (v: string) => void; placeholder?: string }) {
   if (field.fieldType === 'boolean') {
     return <MToggle label={field.label} value={value === 'true'} onChange={(v) => onChange(v ? 'true' : 'false')} />;
   }
   if (field.fieldType === 'richtext') {
-    return <MArea label={field.label} value={value} onChange={onChange} />;
+    return <MArea label={field.label} value={value} onChange={onChange} placeholder={placeholder} />;
   }
   return <MText label={field.label} value={value} onChange={onChange} />;
 }
 
 // ── Local itinerary editor (array-backed, no network) ────────────────────────
 function LocalItineraryEditor({ rows, onChange }: { rows: ItineraryRow[]; onChange: (r: ItineraryRow[]) => void }) {
-  const update = (i: number, patch: Partial<ItineraryRow>) => onChange(rows.map((r, j) => (j === i ? { ...r, ...patch } : r)));
+  const update = (i: number, patch: Partial<ItineraryRow>) => onChange(rows.map((r, j) => (j === i ? { ...r, ...patch, sample: undefined } : r)));
   const add = () => onChange([...rows, { label: '', detail: '', sortOrder: rows.length }]);
   const remove = (i: number) => onChange(rows.filter((_, j) => j !== i).map((r, k) => ({ ...r, sortOrder: k })));
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+      {rows.some((row) => row.sample) && <p style={{ margin: 0 }}>Edit the example items to add them to your invitation.</p>}
       {rows.map((r, i) => (
         <div key={i} className="mkt-card" style={{ padding: 12, display: 'flex', flexDirection: 'column', gap: 8, boxShadow: 'none' }}>
           <div style={{ display: 'flex', gap: 8 }}>
-            <input value={r.label} placeholder="e.g. Akad Nikah" onChange={(e) => update(i, { label: e.target.value })} style={{ ...fieldInput, padding: '9px 11px' }} />
+            <input aria-label={`Schedule item ${i + 1}`} value={r.label} placeholder="e.g. Akad Nikah" onChange={(e) => update(i, { label: e.target.value })} style={{ ...fieldInput, padding: '9px 11px' }} />
             <button onClick={() => remove(i)} aria-label="Remove" style={{ flex: 'none', width: 40, borderRadius: 12, border: '2px solid var(--mkt-ink)', background: 'var(--mkt-card)', cursor: 'pointer', fontSize: 16 }}>✕</button>
           </div>
-          <input value={r.detail} placeholder="e.g. 10:00 AM · Main Hall" onChange={(e) => update(i, { detail: e.target.value })} style={{ ...fieldInput, padding: '9px 11px' }} />
+          <input aria-label={`Time or details for schedule item ${i + 1}`} value={r.detail} placeholder="e.g. 10:00 AM · Main Hall" onChange={(e) => update(i, { detail: e.target.value })} style={{ ...fieldInput, padding: '9px 11px' }} />
         </div>
       ))}
       <button onClick={add} className="mkt-btn" style={{ fontSize: 15, padding: '10px', boxShadow: '0 4px 0 rgba(23,19,13,.14)' }}>+ Add schedule item</button>
@@ -149,20 +230,54 @@ function Chevron({ size = 22, up = false }: { size?: number; up?: boolean }) {
 }
 
 // ── Collapsible section card ─────────────────────────────────────────────────
-function SectionCard({ title, children }: { title: string; children: React.ReactNode }) {
+function SectionCard({ title, open, onToggle, children }: {
+  title: string; open: boolean; onToggle: () => void; children: React.ReactNode;
+}) {
   return (
     // flexShrink: 0 matters here — this card's own `overflow: hidden` (for the
     // rounded-corner clip) makes it a flex "scroll container", which per the flex
     // spec gets an automatic min-height of 0. Without an explicit flexShrink:0 the
     // column flex layout would compress this card (and its siblings) to fit the
     // available height instead of letting the scroll parent grow and scroll.
-    <details className="mkt-card pers-section" style={{ padding: 0, overflow: 'hidden', flexShrink: 0 }}>
-      <summary style={{ listStyle: 'none', cursor: 'pointer', padding: '14px 16px', fontFamily: 'var(--mkt-serif)', fontWeight: 600, fontSize: 19, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+    <details open={open} className="mkt-card pers-section" style={{ padding: 0, overflow: 'hidden', flexShrink: 0 }}>
+      <summary onClick={(event) => { event.preventDefault(); onToggle(); }} style={{ listStyle: 'none', cursor: 'pointer', padding: '14px 16px', fontFamily: 'var(--mkt-serif)', fontWeight: 600, fontSize: 19, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
         {title}
         <Chevron size={24} />
       </summary>
       <div style={{ padding: '4px 16px 16px', display: 'flex', flexDirection: 'column', gap: 14 }}>{children}</div>
     </details>
+  );
+}
+
+function SeatingEditor({ tables, onChange }: { tables: TableDraft[]; onChange: (tables: TableDraft[]) => void }) {
+  const update = (id: number, patch: Partial<TableDraft>) =>
+    onChange(tables.map((table) => table.id === id ? { ...table, ...patch, sample: undefined } : table));
+
+  return (
+    <>
+      <p className={styles.seatingHint}>When guest table selection is enabled on your plan, guests who choose Attending see the seating form after completing their RSVP details.</p>
+      {tables.some((table) => table.sample) && <p className={styles.seatingHint}>Edit an example table to include it in your invitation. Untouched examples appear only in the preview.</p>}
+      {tables.map((table) => (
+        <div key={table.id} className={`mkt-card ${styles.tableCard}`}>
+          {table.sample && <small className={styles.seatingHint}>Example table</small>}
+          <MText label="Table name" value={table.tableName} placeholder={`Table ${table.id}`}
+            onChange={(tableName) => update(table.id, { tableName: tableName.slice(0, 100) })} />
+          <label className={styles.rsvpControl}>
+            <FieldLabel>Guest capacity</FieldLabel>
+            <input type="number" min={1} max={MAX_TABLE_CAPACITY} step={1} style={fieldInput} value={table.capacity || ''}
+              onChange={(event) => {
+                const capacity = event.target.valueAsNumber;
+                update(table.id, { capacity: Number.isFinite(capacity) ? Math.max(1, Math.min(MAX_TABLE_CAPACITY, Math.trunc(capacity))) : 0 });
+              }}
+              onBlur={() => { if (!table.capacity) update(table.id, { capacity: SEATS_PER_TABLE }); }} />
+          </label>
+          <button type="button" className="mkt-btn" onClick={() => onChange(tables.filter(({ id }) => id !== table.id))}
+            aria-label={`Remove ${table.tableName.trim() || `Table ${table.id}`}`}>Remove table</button>
+        </div>
+      ))}
+      <button type="button" className="mkt-btn" disabled={tables.length >= MAX_TABLES}
+        onClick={() => onChange([...tables, newTable(Math.max(0, ...tables.map(({ id }) => id)) + 1)])}>+ Add table</button>
+    </>
   );
 }
 
@@ -212,15 +327,37 @@ function PersonaliseEditor() {
   const searchParams = useSearchParams();
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
-  const [templates, setTemplates] = useState<Template[]>([]);
+  const [design, setDesign] = useState<{ templates: Template[]; defaults: Record<string, string> } | null>(null);
+  const [designError, setDesignError] = useState(false);
+  const [loadAttempt, setLoadAttempt] = useState(0);
   const [templateId] = useState<number>(Number(searchParams.get('template')) || 1);
   // The picker's ?event= choice, load-bearing here: drives which fields the form shows and what
   // shape the preview/submit payloads take. Fixed for the life of this page (same as templateId).
   const eventType = parseEventType(searchParams.get('event'));
   const [wedding, setWedding] = useState<WeddingDraft>({ brideName: 'Aisyah', groomName: 'Hariz', eventTitle: '', weddingDate: '', venue: 'Grand Ballroom', venueAddress: '' });
   const [config, setConfig] = useState<Record<string, string>>({});
+  const effectiveConfig = useMemo(() => ({ ...design?.defaults, ...config }), [design, config]);
+  const previewConfig = useMemo(() => {
+    const body = effectiveConfig['walimah.body'] ?? '';
+    const visibleText = body.replace(/<[^>]*>|&nbsp;|&#(?:160|xA0);/gi, '').trim();
+    if (visibleText || /<img\b/i.test(body)) return effectiveConfig;
+
+    const preview = { ...effectiveConfig };
+    // Woodland already renders its own sample copy with the live date and venue.
+    if (templateId === 12) delete preview['walimah.body'];
+    else preview['walimah.body'] = `<p>${SAMPLE_CEREMONY[eventType]}</p>`;
+    return preview;
+  }, [effectiveConfig, eventType, templateId]);
+  const selected = design?.templates.find((template) => template.templateId === templateId);
   const [itinerary, setItinerary] = useState<ItineraryRow[]>([]);
-  const [previewReady, setPreviewReady] = useState(false);
+  const [tables, setTables] = useState<TableDraft[]>([]);
+  const [expandedSection, setExpandedSection] = useState<PreviewSection | null>('welcome');
+  const [previewSection, setPreviewSection] = useState<PreviewSection | null>(null);
+  const [previewNavigation, setPreviewNavigation] = useState(0);
+  const rsvpControls = useMemo(() => getConfigFields(templateId, 'ORGANIZER_ADMIN', 'BASIC')
+    .filter(({ key }) => key === RSVP_LAYOUT || key.startsWith(RSVP_FIELD_PREFIX)), [templateId]);
+  const canPreviewSeating = getTemplateCapabilities(templateId, selected?.isAuthored).seating;
+  const [previewVersion, setPreviewVersion] = useState(0);
   // Guards the "persist draft" effect below from firing before the "seed defaults" effect has
   // actually committed its result. Must be STATE, not a ref: under React StrictMode's dev-mode
   // double-invoke, both effects run twice back-to-back with no commit in between, so a ref flag
@@ -242,8 +379,13 @@ function PersonaliseEditor() {
   // Keep this trial public even when a previous login remains in localStorage.
   // Cached identity does not prove a live session and must not divert the picker flow.
 
-  // Load templates.
-  useEffect(() => { templateService.getActive().then(setTemplates).catch(() => {}); }, []);
+  useEffect(() => {
+    let cancelled = false;
+    Promise.all([templateService.getActive(), templateConfigService.getTemplateDefault(templateId)])
+      .then(([templates, defaults]) => { if (!cancelled) setDesign({ templates, defaults }); })
+      .catch(() => { if (!cancelled) setDesignError(true); });
+    return () => { cancelled = true; };
+  }, [templateId, loadAttempt]);
 
   // Init: rehydrate a matching draft, else seed type-aware defaults.
   useEffect(() => {
@@ -251,8 +393,20 @@ function PersonaliseEditor() {
     try { draft = JSON.parse(localStorage.getItem(DRAFT_KEY) || 'null'); } catch {}
     if (draft && draft.templateId === templateId && parseEventType(draft.event ?? null) === eventType) {
       setWedding({ ...draft.wedding, eventTitle: draft.wedding.eventTitle ?? '' });
-      setConfig(draft.config);
-      setItinerary(draft.itinerary || []);
+      // Older drafts contain a full snapshot of the schema defaults. Keep only
+      // guest edits so stale defaults cannot mask the published starting design.
+      const seeded = draft.overridesOnly ? {} : buildDefaultConfig(templateId);
+      const editableKeys = [...getGuestFields(templateId).map(({ key }) => key), ...rsvpControls.map(({ key }) => key), 'general.showVenueMap'];
+      setConfig(Object.fromEntries(editableKeys.flatMap((key) => {
+        const value = draft?.config?.[key];
+        return typeof value === 'string' && value !== seeded[key] ? [[key, value]] : [];
+      })));
+      setItinerary(draft.scheduleSeeded || draft.itinerary?.length ? draft.itinerary ?? [] : sampleSchedule(eventType));
+      const savedCount = draft.tableCount ?? 0;
+      const storedTables = draft.tables ?? Array.from({
+        length: Number.isInteger(savedCount) ? Math.max(0, Math.min(MAX_TABLES, savedCount)) : 0,
+      }, (_, index) => newTable(index + 1));
+      setTables(draft.seatingSeeded || storedTables.length > 0 ? storedTables : SAMPLE_TABLES);
     } else {
       const d = new Date(); d.setMonth(d.getMonth() + 6);
       const defaultDate = d.toISOString().slice(0, 10);
@@ -263,24 +417,26 @@ function PersonaliseEditor() {
           ? { brideName: '', groomName: '', eventTitle: "Ali's Aqiqah", weddingDate: defaultDate, venue: 'Grand Ballroom', venueAddress: '' }
           : { brideName: 'Aisyah', groomName: 'Hariz', eventTitle: '', weddingDate: defaultDate, venue: 'Grand Ballroom', venueAddress: '' };
       setWedding(seeded);
-      setConfig(buildDefaultConfig(templateId));
-      setItinerary([]);
+      setConfig({});
+      setItinerary(sampleSchedule(eventType));
+      setTables(SAMPLE_TABLES);
     }
     setHasSeeded(true);
-  }, [templateId, eventType]);
+  }, [templateId, eventType, rsvpControls]);
 
   // Persist draft on any change — gated on hasSeeded, see its declaration above for why.
   useEffect(() => {
     if (!hasSeeded) return;
-    const draft: Draft = { templateId, event: eventType, wedding, config, itinerary };
+    const draft: Draft = { templateId, event: eventType, wedding, config, itinerary, tables, overridesOnly: true, scheduleSeeded: true, seatingSeeded: true };
     localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
-  }, [hasSeeded, templateId, eventType, wedding, config, itinerary]);
+  }, [hasSeeded, templateId, eventType, wedding, config, itinerary, tables]);
 
   // Listen for preview handshake.
   useEffect(() => {
     const handler = (e: MessageEvent) => {
-      if (e.origin !== window.location.origin) return;
-      if (e.data?.type === 'PREVIEW_READY') setPreviewReady(true);
+      if (e.origin !== window.location.origin || e.source !== iframeRef.current?.contentWindow) return;
+      if (e.data?.type === 'PREVIEW_READY') setPreviewVersion((version) => version + 1);
+      if (e.data?.type === 'PREVIEW_SEATING_DISMISS') setPreviewSection((section) => section === 'seating' ? null : section);
     };
     window.addEventListener('message', handler);
     return () => window.removeEventListener('message', handler);
@@ -288,7 +444,7 @@ function PersonaliseEditor() {
 
   const pushPreview = useCallback(() => {
     const iframe = iframeRef.current;
-    if (!iframe?.contentWindow) return;
+    if (!iframe?.contentWindow || !design || !hasSeeded) return;
     // Native Event fields for Template8 (PARTY)/Template9 (CEREMONY) — mirrors exactly what
     // AuthController.SelfRegister would persist onto the real Event row for this event type.
     const name1 = eventType === 'WEDDING' || eventType === 'PARTY' ? (wedding.brideName || null) : null;
@@ -298,6 +454,8 @@ function PersonaliseEditor() {
       eventType === 'WEDDING' ? `${slugify(wedding.brideName || 'bride')}-and-${slugify(wedding.groomName || 'groom')}`
       : eventType === 'PARTY' ? slugify(wedding.brideName || 'party')
       : slugify(wedding.eventTitle || 'ceremony');
+    const previewTables = previewSection === 'seating' ? tables : tables.filter((table) => !table.sample);
+    const seatingEnabled = canPreviewSeating && previewTables.length > 0 && effectiveConfig['seating.mode'] !== 'organizer';
     const payload = {
       wedding: {
         weddingId: 0,
@@ -309,8 +467,9 @@ function PersonaliseEditor() {
         venueAddress: wedding.venueAddress || '',
         totalGuests: 0, totalAttending: 0, daysUntilWedding: 180, isActive: true,
         totalPhotos: 0, enabledFeaturesCount: 0, templateId,
-        templateName: templates.find((t) => t.templateId === templateId)?.templateName ?? '',
-        isRsvpOpen: false,
+        templateName: selected?.templateName ?? '',
+        templateStagesJson: selected?.isAuthored ? selected.stagesJson : undefined,
+        isRsvpOpen: true,
         // Native Event fields, read by Template8/9 instead of brideName/groomName.
         name1, name2, eventTitle,
         eventType,
@@ -321,28 +480,65 @@ function PersonaliseEditor() {
         { wishId: 1, weddingId: 0, guestName: 'Sarah', message: 'Wishing you a lifetime of joy! 🌸', createdDate: new Date().toISOString() },
         { wishId: 2, weddingId: 0, guestName: 'James', message: 'Congratulations to the beautiful couple!', createdDate: new Date().toISOString() },
       ],
-      photoBoothEnabled: false,
-      customConfig: config,
+      photos: SAMPLE_PHOTOS,
+      photoBoothEnabled: true,
+      seatingEnabled,
+      previewSeating: previewSection === 'seating' && seatingEnabled,
+      tables: previewTables.map(({ id, tableName, capacity }, index) => ({
+        tableId: id, eventId: 0, tableName: tableName.trim() || `Table ${id}`, capacity: capacity || SEATS_PER_TABLE,
+        sortOrder: index, guestCount: 0, guests: [],
+      })),
+      customConfig: previewConfig,
       itinerary: itinerary.map((r, i) => ({ itineraryItemId: i + 1, weddingId: 0, label: r.label, detail: r.detail, sortOrder: r.sortOrder })),
     };
-    localStorage.setItem('preview_draft_v2', JSON.stringify(payload));
     iframe.contentWindow.postMessage({ type: 'PREVIEW_UPDATE', payload }, window.location.origin);
-  }, [wedding, config, itinerary, templateId, templates, eventType]);
+  }, [wedding, effectiveConfig, previewConfig, itinerary, templateId, design, selected, eventType, hasSeeded, tables, canPreviewSeating, previewSection]);
 
-  useEffect(() => { if (previewReady) pushPreview(); }, [previewReady, pushPreview]);
+  useEffect(() => { if (previewVersion > 0) pushPreview(); }, [previewVersion, pushPreview]);
 
   // Guest fields grouped by block + ordered by the template's section order.
   const { blocks, order, detailsFields } = useMemo(() => {
     const fields = getGuestFields(templateId);
     const byBlock: Record<string, TemplateConfigField[]> = {};
-    for (const f of fields) { (byBlock[blockOf(f)] ??= []).push(f); }
+    for (const f of fields) {
+      if (f.key !== 'footer.tagline') (byBlock[blockOf(f)] ??= []).push(f);
+    }
     const hasWalimah = (byBlock['walimah']?.length ?? 0) > 0;
     const hasPhotobooth = (byBlock['photobooth']?.length ?? 0) > 0;
-    const codes = resolveSectionOrder(config['section.order'], hasWalimah, true, hasPhotobooth);
+    const codes = resolveSectionOrder(effectiveConfig['section.order'], hasWalimah, true, hasPhotobooth);
     return { blocks: byBlock, order: codes, detailsFields: byBlock['details'] ?? [] };
-  }, [templateId, config]);
+  }, [templateId, effectiveConfig]);
+
+  const previewBlock = previewSection === 'seating' ? 'rsvp' : previewSection;
+  const previewAnchor = previewBlock ? sectionAnchorId(templateId, previewBlock, { draftConfig: effectiveConfig }) : undefined;
+  const previewFraction = previewBlock ? Math.max(0, order.indexOf(previewBlock)) / order.length : 0;
+  useEffect(() => {
+    if (!previewVersion || !previewBlock) return;
+    iframeRef.current?.contentWindow?.postMessage({
+      type: 'PREVIEW_SCROLL', sectionId: previewAnchor, fraction: previewFraction,
+    }, window.location.origin);
+  }, [previewVersion, previewNavigation, previewBlock, previewAnchor, previewFraction]);
+
+  const sectionProps = (section: PreviewSection) => ({
+    open: expandedSection === section,
+    onToggle: () => {
+      if (expandedSection === section) {
+        setExpandedSection(null);
+        if (section === 'seating') setPreviewSection(null);
+        return;
+      }
+      setExpandedSection(section);
+      setPreviewSection(section);
+      setPreviewNavigation((navigation) => navigation + 1);
+    },
+  });
 
   const setKey = (key: string, v: string) => setConfig((c) => ({ ...c, [key]: v }));
+  const seatingSection = (
+    <SectionCard title="Seating" {...sectionProps('seating')}>
+      <SeatingEditor tables={tables} onChange={setTables} />
+    </SectionCard>
+  );
 
   const handleRegister = async (email: string, password: string) => {
     setSaveError(''); setSaving(true);
@@ -355,7 +551,11 @@ function PersonaliseEditor() {
         eventType,
         eventDate: wedding.weddingDate ? `${wedding.weddingDate}T10:00:00Z` : '',
         venue: wedding.venue, venueAddress: wedding.venueAddress, templateId,
-        config, itinerary,
+        config, tables: tables.filter((table) => !table.sample).map(({ id, tableName, capacity }) => ({
+          tableName: tableName.trim() || `Table ${id}`, capacity: capacity || SEATS_PER_TABLE,
+        })),
+        itinerary: itinerary.filter((row) => !row.sample && row.label.trim())
+          .map(({ label, detail }, sortOrder) => ({ label, detail, sortOrder })),
       });
       localStorage.setItem('user', JSON.stringify({ email: res.email, role: res.role, weddingId: res.weddingId, tier: res.tier }));
       localStorage.removeItem(DRAFT_KEY);
@@ -367,8 +567,6 @@ function PersonaliseEditor() {
       setSaving(false);
     }
   };
-
-  const selected = templates.find((t) => t.templateId === templateId);
 
   return (
     <>
@@ -394,7 +592,7 @@ function PersonaliseEditor() {
 
           <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', overscrollBehavior: 'contain', WebkitOverflowScrolling: 'touch', padding: 18, display: 'flex', flexDirection: 'column', gap: 14 }}>
             {/* Your details */}
-            <SectionCard title="Your details">
+            <SectionCard title="Your details" {...sectionProps('welcome')}>
               {eventType === 'WEDDING' && (
                 <>
                   <MText label="Bride's name" value={wedding.brideName} onChange={(v) => setWedding((w) => ({ ...w, brideName: v }))} placeholder="e.g. Aisyah" />
@@ -413,34 +611,82 @@ function PersonaliseEditor() {
               <MText label="Date" value={wedding.weddingDate} onChange={(v) => setWedding((w) => ({ ...w, weddingDate: v }))} type="date" />
               <MText label="Venue" value={wedding.venue} onChange={(v) => setWedding((w) => ({ ...w, venue: v }))} placeholder="e.g. Grand Ballroom" />
               <MText label="Venue address" value={wedding.venueAddress} onChange={(v) => setWedding((w) => ({ ...w, venueAddress: v }))} placeholder="Optional" />
+              <VenueMap venue={wedding.venue} address={wedding.venueAddress} onChoose={(address) => {
+                setWedding((draft) => ({ ...draft, venueAddress: address }));
+                setKey('general.showVenueMap', 'true');
+              }} />
               {detailsFields.map((f) => (
-                <GuestField key={f.key} field={f} value={config[f.key] ?? f.defaultValue} onChange={(v) => setKey(f.key, v)} />
+                <GuestField key={f.key} field={f} value={effectiveConfig[f.key] ?? f.defaultValue} onChange={(v) => setKey(f.key, v)} />
               ))}
             </SectionCard>
 
             {/* Content sections in the template's own order */}
             {order.map((code) => {
+              if (code === 'welcome' || code === 'wishes' || code === 'photobooth') return null;
               if (code === 'itinerary') {
                 return (
-                  <SectionCard key="itinerary" title={SECTION_LABELS.itinerary}>
+                  <SectionCard key="itinerary" title={SECTION_LABELS.itinerary} {...sectionProps(code)}>
                     <LocalItineraryEditor rows={itinerary} onChange={setItinerary} />
                   </SectionCard>
                 );
               }
               const fields = blocks[code];
+              if (code === 'rsvp') {
+                return (
+                  <Fragment key={code}>
+                    <SectionCard title="RSVP" {...sectionProps(code)}>
+                      {fields?.filter(({ key }) => RSVP_COPY.has(key)).map((field) => (
+                        <GuestField key={field.key} field={field} value={effectiveConfig[field.key] ?? field.defaultValue} onChange={(value) => setKey(field.key, value)} />
+                      ))}
+                      {rsvpControls.some(({ key }) => key === RSVP_LAYOUT) && (
+                        <label className={styles.rsvpControl}>
+                          <FieldLabel>RSVP layout</FieldLabel>
+                          <select style={fieldInput} value={effectiveConfig[RSVP_LAYOUT] === 'inline' ? 'inline' : 'button'} onChange={(event) => setKey(RSVP_LAYOUT, event.target.value)}>
+                            <option value="button">Button opens form</option>
+                            <option value="inline">Form on invitation</option>
+                          </select>
+                        </label>
+                      )}
+                      {rsvpControls.some(({ key }) => key.startsWith(RSVP_FIELD_PREFIX)) && (
+                        <fieldset className={styles.rsvpFields}>
+                          <legend><FieldLabel>RSVP fields</FieldLabel></legend>
+                          {rsvpControls.filter(({ key }) => key.startsWith(RSVP_FIELD_PREFIX)).map(({ key }) => {
+                            const field = key.slice(RSVP_FIELD_PREFIX.length);
+                            if (field === 'family_side' && eventType !== 'WEDDING') return null;
+                            const label = RSVP_FIELD_LABELS[field];
+                            const visible = effectiveConfig[key] !== 'false';
+                            return (
+                              <div className={styles.rsvpField} key={key}>
+                                <span>{label}</span>
+                                <button type="button" className={styles.rsvpEye} aria-label={`Show ${label.toLowerCase()}`} aria-pressed={visible} title={visible ? 'Hide field' : 'Show field'} onClick={() => setKey(key, String(!visible))}>
+                                  <Icon name={visible ? 'eye' : 'eye-off'} size={20} />
+                                </button>
+                              </div>
+                            );
+                          })}
+                        </fieldset>
+                      )}
+                    </SectionCard>
+                    {seatingSection}
+                  </Fragment>
+                );
+              }
               if (!fields || fields.length === 0) return null;
               return (
-                <SectionCard key={code} title={SECTION_LABELS[code] ?? code}>
+                <SectionCard key={code} title={SECTION_LABELS[code] ?? code} {...sectionProps(code)}>
                   {fields.map((f) => (
-                    <GuestField key={f.key} field={f} value={config[f.key] ?? f.defaultValue} onChange={(v) => setKey(f.key, v)} />
+                    <GuestField key={f.key} field={f} value={effectiveConfig[f.key] ?? f.defaultValue}
+                      placeholder={f.key === 'walimah.body' ? SAMPLE_CEREMONY[eventType] : undefined}
+                      onChange={(v) => setKey(f.key, v)} />
                   ))}
                 </SectionCard>
               );
             })}
+            {!order.includes('rsvp') && seatingSection}
           </div>
 
           <div style={{ padding: '14px 18px', borderTop: '2px solid var(--mkt-ink)', flexShrink: 0 }}>
-            <button onClick={() => setShowModal(true)} className="mkt-btn mkt-btn-dark" style={{ width: '100%', fontSize: 18, padding: 14 }}>
+            <button disabled={!design || !hasSeeded} onClick={() => setShowModal(true)} className="mkt-btn mkt-btn-dark" style={{ width: '100%', fontSize: 18, padding: 14 }}>
               Publish invite ✦
             </button>
             <p style={{ margin: '8px 0 0', fontFamily: 'var(--mkt-sans)', fontSize: 12, color: 'var(--mkt-muted)', textAlign: 'center' }}>Editing is free — no sign-up needed. Sign up only to publish.</p>
@@ -461,10 +707,23 @@ function PersonaliseEditor() {
               ‹
             </button>
             <span style={{ fontFamily: 'var(--mkt-sans)', fontSize: 13, color: 'var(--mkt-muted-2)', paddingLeft: 36, paddingRight: 36, textAlign: 'center', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              {selected ? `${selected.templateName} · Live preview` : 'Live preview'}{previewReady ? '' : ' · loading…'}
+              {selected ? `${selected.templateName} · Live preview` : 'Live preview'}{previewVersion || designError ? '' : ' · loading…'}
             </span>
           </div>
-          <iframe ref={iframeRef} src="/organizer-admin/preview" onLoad={() => setTimeout(pushPreview, 300)} style={{ flex: 1, border: 'none', width: '100%' }} title="Invitation preview" />
+          <div className={styles.stage}>
+            {design && hasSeeded && (
+              <iframe ref={iframeRef} src="/organizer-admin/preview?trial=1" title="Invitation preview" />
+            )}
+            {designError && (
+              <div className={styles.error} role="alert">
+                <p>Couldn’t load the saved design.</p>
+                <button type="button" className="mkt-btn" onClick={() => {
+                  setDesignError(false);
+                  setLoadAttempt((attempt) => attempt + 1);
+                }}>Try again</button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 

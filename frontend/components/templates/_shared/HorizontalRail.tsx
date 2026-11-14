@@ -1,17 +1,19 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import type { EditorHandle, Layer as LayerModel, ObjectFit, SlotProps, StageDef } from './types';
+import type { EditorHandle, Layer as LayerModel, LayerGroup, ObjectFit, SlotProps, StageDef } from './types';
 import { useEngine } from './engine';
 import { frameSvh, frameW } from './frameViewport';
 import Stage from './Stage';
 import Layer from './Layer';
+import GroupedLayers from './GroupedLayers';
 import styles from './HorizontalRail.module.css';
 
 export interface RailPanel {
   def: StageDef;
   /** Per-beat content only (slots). Shared art is lifted into the rail's shared plane. */
   layers: LayerModel[];
+  groups?: LayerGroup[];
   bgFit: ObjectFit;
 }
 
@@ -21,6 +23,7 @@ interface Props {
   /** Frame art shared by the whole row, rendered ONCE in a full-width plane. Positioned as a
    *  percentage of the entire row, so a wide piece (a pillar) spans across the beats. */
   sharedLayers: LayerModel[];
+  sharedGroups?: LayerGroup[];
   /** Stage id the shared art edits/persists under (its Adjust-panel entry). Also carried on a
    *  scroll anchor so selecting that tab pans the preview to the room's start. */
   sharedStageId?: string;
@@ -49,7 +52,7 @@ const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v
  *  slower (parallax); the frame art spans the row in one shared plane; each beat's content reveals
  *  as it centres and each shared art piece reveals as it individually pans into view. */
 export default function HorizontalRail({
-  panels, sharedLayers, sharedStageId, bg, bgFit = 'cover', bgPosition, bgScale, bgSrc,
+  panels, sharedLayers, sharedGroups, sharedStageId, bg, bgFit = 'cover', bgPosition, bgScale, bgSrc,
   slotProps, editing, editor, parallaxOn, firstEager,
 }: Props) {
   const { assetRoot } = useEngine();
@@ -92,7 +95,7 @@ export default function HorizontalRail({
     );
     nodes.forEach((el) => io.observe(el));
     return () => io.disconnect();
-  }, [shared.length]);
+  }, [shared.length, sharedGroups]);
 
   useEffect(() => {
     const rail = railRef.current;
@@ -210,21 +213,23 @@ export default function HorizontalRail({
 
         {/* Shared frame art — rendered once across the full row so a wide piece spans the beats. */}
         <div ref={planeRef} className={styles.plane} style={{ width: `calc(var(--fvw, 100vw) * ${n})` }}>
-          {shared.map((l, i) => {
+          <GroupedLayers layers={shared} groups={sharedGroups} stageId={sharedStageId}
+            selectedLayer={editing && editor?.selectedStage === sharedStageId ? editor?.selectedLayer : undefined}
+            renderLayer={(l) => {
             const sharedActive = editing && editor?.selectedStage === sharedStageId;
             return (
               <Layer
                 key={l.id}
                 layer={l}
                 slotProps={slotProps}
-                eager={Boolean(firstEager) && i === 0}
+                eager={Boolean(firstEager) && l === shared[0]}
                 selected={sharedActive && editor?.selectedLayer === l.id}
                 editing={editing}
                 stageActive={sharedActive}
                 stageId={sharedStageId}
               />
             );
-          })}
+          }} />
         </div>
 
         <div ref={trackRef} className={styles.track} style={{ width: `calc(var(--fvw, 100vw) * ${n})` }}>
@@ -233,6 +238,7 @@ export default function HorizontalRail({
               <Stage
                 def={{ ...p.def, bg: '' }} // background is shared by the rail, not per-panel
                 layers={p.layers}
+                groups={p.groups}
                 bgFit={p.bgFit}
                 seen={seen.has(i)}
                 slotProps={slotProps}
