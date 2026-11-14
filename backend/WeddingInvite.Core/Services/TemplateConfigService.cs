@@ -1,6 +1,7 @@
 using WeddingInvite.Core.Config;
 using WeddingInvite.Data.Repositories;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 
 namespace WeddingInvite.Core.Services
 {
@@ -148,9 +149,10 @@ namespace WeddingInvite.Core.Services
         /// the complete JSON document, then rechunk it and update its manifest so capturing a starting
         /// design can never leave an unreadable project.
         /// </summary>
-        private static void ReassembleCapturedCinematicProjects(Dictionary<string, string> design)
+        internal static List<string> ReassembleCapturedCinematicProjects(Dictionary<string, string> design)
         {
             const int chunkSize = 3500;
+            var documents = new List<string>();
             var projects = design.Keys
                 .Select(TemplateConfigPolicy.CinematicProjectBaseKey)
                 .Where(p => p != null)
@@ -171,6 +173,21 @@ namespace WeddingInvite.Core.Services
                         .ToList();
                     if (parts.Any(p => p == null)) continue;
                     var stripped = TemplateConfigPolicy.StripLayerLocks(string.Concat(parts.Select(p => p!)));
+                    // Older Cinematic renderers require an explicit lock flag on complete custom
+                    // layers. Keep them unlocked without dropping that required field.
+                    var document = JsonNode.Parse(stripped) as JsonObject;
+                    if (document?["layers"] is JsonObject worlds)
+                    {
+                        foreach (var world in worlds.Select(pair => pair.Value).OfType<JsonObject>())
+                            if (world["layers"] is JsonArray layers)
+                                foreach (var layer in layers.OfType<JsonObject>())
+                                    if (layer.ContainsKey("id") && layer.ContainsKey("label") &&
+                                        layer.ContainsKey("group") && layer.ContainsKey("space") &&
+                                        layer.ContainsKey("x") && layer.ContainsKey("y") &&
+                                        layer.ContainsKey("w") && layer.ContainsKey("opacity"))
+                                        layer["locked"] = false;
+                        stripped = document.ToJsonString();
+                    }
                     var chunks = Enumerable.Range(0, (int)Math.Ceiling(stripped.Length / (double)chunkSize))
                         .Select(i => stripped.Substring(i * chunkSize, Math.Min(chunkSize, stripped.Length - i * chunkSize)))
                         .ToList();
@@ -183,12 +200,14 @@ namespace WeddingInvite.Core.Services
                         length = stripped.Length,
                     });
                     for (var i = 0; i < chunks.Count; i++) design[$"{projectBase}.{i}"] = chunks[i];
+                    documents.Add(stripped);
                 }
                 catch (JsonException)
                 {
                     // Preserve malformed source data as-is; project resolution will fall back safely.
                 }
             }
+            return documents;
         }
     }
 }

@@ -56,5 +56,10 @@ describe('cinematic world layout', () => {
       [cinematicWorldKey('t15', 'mobile')]: saved,
     });
     expect(resolved.find((layer) => layer.id === custom.id)).toEqual(custom);
+
+    const master = resolveCinematicWorld('t15', PAINTED_PROMISE_WORLD, 'mobile', {
+      [cinematicWorldKey('t15', 'mobile')]: JSON.stringify({ layers: [{ ...custom, locked: undefined }] }),
+    });
+    expect(master.find((layer) => layer.id === custom.id)).toEqual(custom);
   });
 });

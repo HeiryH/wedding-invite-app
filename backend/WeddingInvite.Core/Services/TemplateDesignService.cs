@@ -90,12 +90,17 @@ namespace WeddingInvite.Core.Services
                     StagesJson = t.StagesJson,
                     DefaultConfig = _configs == null ? await _defaultRepo.GetByTemplateIdAsync(t.TemplateId) : await _configs.GetDefaultAsync(t.TemplateId),
                 };
+                // Normalize already-captured projects too, so older renderers can load their
+                // custom layers when this bundle is imported.
+                var projects = TemplateConfigService.ReassembleCapturedCinematicProjects(entry.DefaultConfig);
                 bundle.Templates.Add(entry);
 
                 CollectRefs(entry.ThumbnailUrl, assets);
                 CollectRefs(entry.StagesJson, assets);
-                foreach (var v in entry.DefaultConfig.Values) CollectRefs(v, assets);
-                foreach (var value in entry.DefaultConfig.Values.Append(entry.ThumbnailUrl))
+                var values = entry.DefaultConfig.Where(kv => Config.TemplateConfigPolicy.CinematicProjectBaseKey(kv.Key) == null)
+                    .Select(kv => kv.Value).Concat(projects);
+                foreach (var v in values) CollectRefs(v, assets);
+                foreach (var value in values.Append(entry.ThumbnailUrl))
                     foreach (Match match in ShippedRef.Matches(value)) assets.Add(match.Value);
             }
 

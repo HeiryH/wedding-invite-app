@@ -109,13 +109,13 @@ function defaultsFor(defs: CinematicWorldLayer[], breakpoint: Breakpoint) {
     : { ...layer });
 }
 
-function isCompleteUserLayer(value: StoredLayer): value is CinematicWorldLayer {
+function isCompleteUserLayer(value: StoredLayer): value is Omit<CinematicWorldLayer, 'locked'> & { locked?: boolean } {
   return typeof value.id === 'string' && typeof value.label === 'string' &&
     typeof value.group === 'string' && (value.space === 'world' || value.space === 'viewport') &&
     typeof value.x === 'number' && typeof value.y === 'number' && typeof value.w === 'number' &&
     typeof value.z === 'number' && typeof value.rotation === 'number' &&
     typeof value.flipX === 'boolean' && typeof value.hidden === 'boolean' &&
-    typeof value.locked === 'boolean' && typeof value.opacity === 'number' &&
+    (value.locked === undefined || typeof value.locked === 'boolean') && typeof value.opacity === 'number' &&
     (value.kind === undefined || value.kind === 'img' || value.kind === 'text' || value.kind === 'shape' || value.kind === 'functional');
 }
 
@@ -138,7 +138,8 @@ export function resolveCinematicWorld(
         else if (isCompleteUserLayer(patch)) {
           // User-added layers are stored whole. Unknown partial records are ignored so malformed
           // config cannot create an unrenderable object in the invitation.
-          byId.set(patch.id, patch as CinematicWorldLayer);
+          // Master capture removes editor locks from both shipped and custom layers.
+          byId.set(patch.id, { ...patch, locked: patch.locked ?? false });
         }
       }
       layers = [...byId.values()];

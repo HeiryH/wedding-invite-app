@@ -130,7 +130,11 @@ public class TemplateStudioTests
         {
             var config = new TemplateConfigService(new TemplateConfigRepository(db.Context), new TemplateConfigDefaultRepository(db.Context), new EventRepository(db.Context));
             var studio = new TemplateStudioService(db.Context, config, new StudioEnvironment { WebRootPath = root });
-            var json = JsonSerializer.Serialize(new { id = "art", image = "/uploads/63/art.png", locked = true, text = new string('x', 5000) });
+            var json = JsonSerializer.Serialize(new { layers = new { mobile = new { layers = new[] {
+                new { id = "art", label = "Custom art", group = "custom", space = "world",
+                    x = 50, y = 50, w = 20, opacity = 1, locked = true,
+                    src = "/uploads/63/art.png", text = new string('x', 5000) }
+            } } } });
             const string project = "t7.layout.cinematic-project";
             await studio.SaveAsync(7, new(0, new() {
                 [project] = JsonSerializer.Serialize(new { version = 1, chunks = 2, length = json.Length }),
@@ -142,10 +146,11 @@ public class TemplateStudioTests
             var assembled = string.Concat(Enumerable.Range(0, manifest.RootElement.GetProperty("chunks").GetInt32()).Select(i => saved[$"{project}.{i}"]));
             Assert.Equal(assembled.Length, manifest.RootElement.GetProperty("length").GetInt32());
             using var parsed = JsonDocument.Parse(assembled);
-            var image = parsed.RootElement.GetProperty("image").GetString()!;
+            var layer = parsed.RootElement.GetProperty("layers").GetProperty("mobile").GetProperty("layers")[0];
+            var image = layer.GetProperty("src").GetString()!;
             Assert.StartsWith("/uploads/templates/studio-7/", image);
             Assert.True(File.Exists(Path.Combine(root, image.TrimStart('/'))));
-            Assert.DoesNotContain("locked", assembled);
+            Assert.False(layer.GetProperty("locked").GetBoolean());
         }
         finally { Directory.Delete(root, true); }
     }
