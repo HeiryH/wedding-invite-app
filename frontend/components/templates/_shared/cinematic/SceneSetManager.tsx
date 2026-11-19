@@ -3,14 +3,15 @@
 import { useId, useState } from 'react';
 import type { Breakpoint } from '../types';
 import type { CinematicTrackTransition } from './sequence';
-import type { CinematicSceneSet } from './sceneSets';
+import type { CinematicCompositionFrame, CinematicSceneSet } from './sceneSets';
 import { nextSceneSetId, type SceneSetAction } from './sceneSetEditing';
 import type { CinematicSequenceTrack } from './sequence';
 import type { CinematicWorldLayer } from './world';
 import styles from './CinematicAdjustPanel.module.css';
 
-export default function SceneSetManager({ sets, layers, tracks, selectedId, onSelect, onAction, breakpoint = 'mobile' }: {
+export default function SceneSetManager({ sets, layers, tracks, selectedId, onSelect, onAction, previewFrame, breakpoint = 'mobile' }: {
   breakpoint?: Breakpoint;
+  previewFrame?: CinematicCompositionFrame;
   sets: CinematicSceneSet[];
   layers: CinematicWorldLayer[];
   tracks: CinematicSequenceTrack[];
@@ -29,6 +30,7 @@ export default function SceneSetManager({ sets, layers, tracks, selectedId, onSe
   const active = sets.find((set) => set.id === selectedId);
   const movable = layers.filter((layer) => layer.space === space && !layer.parentId && !layer.locked &&
     !sets.find((set) => set.id === layer.group)?.locked);
+  const reference = active?.referenceFrames?.[breakpoint];
   const activeTrack = active && (tracks.find((track) => track.id === active.timingTrackId) ??
     tracks.find((track) => track.target.type === 'group' && track.target.id === active.id));
   const ordered = [...sets].sort((a, b) => a.z - b.z);
@@ -97,6 +99,20 @@ export default function SceneSetManager({ sets, layers, tracks, selectedId, onSe
             onChange={(event) => onAction({ type: 'patch', id: active.id, patch: { space: event.target.value as CinematicSceneSet['space'] } })}>
             <option value="world">World · follows the camera</option><option value="viewport">Viewport · stays on screen</option>
           </select></label>
+          {previewFrame && <fieldset className={styles.sceneSetActions} disabled={active.locked}>
+            <legend>Scale together · {breakpoint}</legend>
+            <p className={styles.note}>{reference
+              ? `Reference preview ${reference.width} × ${reference.height}`
+              : 'Keep the spacing between layers as the preview resizes.'}</p>
+            {!reference && <button type="button" onClick={() => onAction({ type: 'patch', id: active.id, patch: {
+              referenceFrames: { ...active.referenceFrames, [breakpoint]: previewFrame },
+            } })}>Use current preview as reference</button>}
+            {reference && <button type="button" onClick={() => {
+              const referenceFrames = { ...active.referenceFrames };
+              delete referenceFrames[breakpoint];
+              onAction({ type: 'patch', id: active.id, patch: { referenceFrames } });
+            }}>Use flexible layout</button>}
+          </fieldset>}
           <label>Timing<select aria-label="Timing" className={styles.field} disabled={active.locked}
             value={tracks.find((track) => track.target.type === 'group' && track.target.id === active.id)?.timing.mode === 'linked'
               ? (tracks.find((track) => track.target.type === 'group' && track.target.id === active.id)!.timing as { trackId: string }).trackId

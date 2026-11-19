@@ -35,6 +35,7 @@ export const LANDING_CONTENT_DEFAULTS: Record<string, string> = {
 export interface LandingDefaultItem {
   title?: string;
   body: string;
+  imageUrl?: string;
   meta: string;
   price?: string;
   features?: string;

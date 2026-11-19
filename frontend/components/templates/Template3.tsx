@@ -129,7 +129,7 @@ export default function Template3({
 
   const overlayBreakpoint: Breakpoint = useBreakpoint(editor?.enabled ? editor.breakpoint : undefined);
   const overlayProps = { breakpoint: overlayBreakpoint, config: customConfig, editor };
-  const { a, tx, sx, ax } = useAnchors(customConfig, overlayBreakpoint, editor);
+  const { anchorProps, tx, sx, ax } = useAnchors(customConfig, overlayBreakpoint, editor);
   const NAV_LABELS: Record<SectionCode, string> = {
     welcome: t('nav.invite', 'Invitation'),
     walimah: t('nav.walimah', 'Ceremony'),
@@ -281,7 +281,7 @@ export default function Template3({
               <SectionOverlay stageId="welcome" {...overlayProps} />
               {/* Header */}
               <div className="text-center mb-12">
-                <div style={a('welcome', 'heading')}>
+                <div {...anchorProps('welcome', 'heading')}>
                   <motion.p
                     {...hAnim}
                     className={`text-green-600 text-sm uppercase tracking-[0.25em] mb-3 ${alignClass(customConfig?.['invite.heading.align'])}`}
@@ -290,7 +290,7 @@ export default function Template3({
                     — {t('invite.heading', "You're Invited to the Wedding of")} —
                   </motion.p>
                 </div>
-                <div style={a('welcome', 'brideName')} data-seen="true">
+                <div {...anchorProps('welcome', 'brideName')} data-seen="true">
                   <motion.h1
                     {...hAnim}
                     transition={{ ...hAnim.transition, delay: Number(hAnim.transition?.delay ?? 0) + 0.2 }}
@@ -307,7 +307,7 @@ export default function Template3({
                   </span>
                   <div className="h-px w-24 bg-green-300" />
                 </div>
-                <div style={a('welcome', 'groomName')} data-seen="true">
+                <div {...anchorProps('welcome', 'groomName')} data-seen="true">
                   <motion.h1
                     {...hAnim}
                     transition={{ ...hAnim.transition, delay: Number(hAnim.transition?.delay ?? 0) + 0.4 }}
@@ -319,11 +319,11 @@ export default function Template3({
                 </div>
                 <p
                   className={`text-green-700 text-lg mb-8 max-w-md mx-auto ${alignClass(customConfig?.['invite.body.align'])}`}
-                  style={a('welcome', 'body')}
+                  {...anchorProps('welcome', 'body')}
                   dangerouslySetInnerHTML={{ __html: t('invite.body', 'We joyfully invite you to share in the celebration of our wedding') }}
                 />
 
-                <div className="inline-block border border-green-300 rounded-2xl px-8 py-4 bg-white shadow-sm" style={a('welcome', 'dateCard')}>
+                <div className="inline-block border border-green-300 rounded-2xl px-8 py-4 bg-white shadow-sm" {...anchorProps('welcome', 'dateCard')}>
                   <p className="text-green-700 font-medium text-lg">
                     {formatEventDate(weddingDate, 'en-US', {
                       weekday: 'long',
@@ -343,7 +343,7 @@ export default function Template3({
               </div>
 
               {/* Portraits */}
-              <div className="grid grid-cols-2 gap-6 mb-10 max-w-sm mx-auto" style={a('welcome', 'portraits')}>
+              <div className="grid grid-cols-2 gap-6 mb-10 max-w-sm mx-auto" {...anchorProps('welcome', 'portraits')}>
                 <PortraitSlot src={groomPortrait} label={wedding.groomName} />
                 <PortraitSlot src={bridePortrait} label={wedding.brideName} />
               </div>
@@ -361,7 +361,7 @@ export default function Template3({
               {wedding.daysUntilWedding > 0 && (
                 <div
                   className="text-center bg-white rounded-2xl shadow-sm border border-green-100 py-8 px-6"
-                  style={a('welcome', 'countdown')}
+                  {...anchorProps('welcome', 'countdown')}
                   data-seen="true"
                 >
                   <p className="text-green-500 text-sm mb-2">{t('invite.countdown_prefix', 'Celebrating in')}</p>
@@ -386,7 +386,7 @@ export default function Template3({
               className={`relative max-w-lg mx-auto bg-white rounded-2xl border border-green-100 shadow-sm p-8 mb-16 scroll-mt-20 ${alignClass(customConfig?.['walimah.body.align'])}`}
             >
               <SectionOverlay stageId="walimah" {...overlayProps} />
-              <h2 className="text-2xl font-bold text-green-900 mb-4" style={a('walimah', 'title')}>Ceremony Details</h2>
+              <h2 className="text-2xl font-bold text-green-900 mb-4" {...anchorProps('walimah', 'title')}>Ceremony Details</h2>
               <div
                 className="text-green-800 prose prose-sm max-w-none"
                 dangerouslySetInnerHTML={{ __html: customConfig?.['walimah.body'] ?? '' }}
@@ -410,7 +410,7 @@ export default function Template3({
                 const iAlign = customConfig?.['walimah.body.align'] ?? 'left';
                 return (
                   <>
-                    <h2 className={`text-2xl font-bold text-green-900 mb-6 ${alignClass(iAlign)}`} style={a('itinerary', 'title')}>Schedule</h2>
+                    <h2 className={`text-2xl font-bold text-green-900 mb-6 ${alignClass(iAlign)}`} {...anchorProps('itinerary', 'title')}>Schedule</h2>
                     <ol className="space-y-3">
                       {itinerary.map((item) => (
                         <li
@@ -442,7 +442,7 @@ export default function Template3({
               style={{ order: sectionOrder.indexOf('rsvp'), ...sectionBgStyle(customConfig?.['section.ceremony.bg'], API_BASE) }}
             >
               <SectionOverlay stageId="rsvp" {...overlayProps} />
-              <div style={a('rsvp', 'heading')}>
+              <div {...anchorProps('rsvp', 'heading')}>
                 <h2 className="text-3xl font-bold text-green-900 text-center mb-2">RSVP</h2>
                 <p className="text-green-600 text-center mb-8">{t('rsvp.subtitle', 'Will you be joining us?')}</p>
               </div>
@@ -577,7 +577,7 @@ export default function Template3({
               style={{ order: sectionOrder.indexOf('wishes'), ...sectionBgStyle(customConfig?.['section.celebration.bg'], API_BASE) }}
             >
               <SectionOverlay stageId="wishes" {...overlayProps} />
-              <div style={a('wishes', 'heading')}>
+              <div {...anchorProps('wishes', 'heading')}>
                 <h2 className="text-3xl font-bold text-green-900 text-center mb-4">Wishes &amp; Guestbook</h2>
                 <p className="text-green-600 text-center mb-8">{t('wish.prompt', 'Leave a message for the happy couple')}</p>
               </div>
@@ -639,7 +639,7 @@ export default function Template3({
               className="relative max-w-3xl mx-auto mb-16 scroll-mt-20"
             >
               <SectionOverlay stageId="photobooth" {...overlayProps} />
-              <h2 className="text-3xl font-bold text-green-900 text-center mb-8" style={a('photobooth', 'heading')}>Photo Booth</h2>
+              <h2 className="text-3xl font-bold text-green-900 text-center mb-8" {...anchorProps('photobooth', 'heading')}>Photo Booth</h2>
 
               {!photoSuccess ? (
                 <form onSubmit={handlePhotoSubmit} className="bg-white rounded-2xl shadow-sm border border-green-100 p-6 space-y-4 mb-10">

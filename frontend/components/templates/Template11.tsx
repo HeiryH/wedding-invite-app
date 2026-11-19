@@ -114,7 +114,7 @@ export default function Template11({
   const editing = Boolean(editor?.enabled);
   // Pinned by the Adjust panel while editing, same convention every other template uses.
   const breakpoint = useBreakpoint(editing ? editor!.breakpoint : undefined);
-  const { a, sx } = useAnchors(customConfig, breakpoint, editor);
+  const { anchorProps, sx } = useAnchors(customConfig, breakpoint, editor);
   const overlayProps = { breakpoint, config: customConfig, editor };
 
   // "Background · Flow" — the Adjust panel's stage-independent control (see component doc
@@ -255,7 +255,7 @@ export default function Template11({
                 code={code}
                 {...overlayProps}
                 seen={seen.has(code) || reduced}
-                contentStyle={a('welcome', 'hero')}
+                contentProps={anchorProps('welcome', 'hero')}
                 extra={
                   <button
                     className={styles.scrollCue}
@@ -266,24 +266,24 @@ export default function Template11({
                   </button>
                 }
               >
-                <div className={styles.themeLabel} style={{ ...a('welcome', 'themeLabel'), ...sx('welcome', 'themeLabel') }}>
+                <div className={styles.themeLabel} {...anchorProps('welcome', 'themeLabel', { ...sx('welcome', 'themeLabel') })}>
                   {t('nav.invite', 'The Wedding Of')}
                 </div>
                 <h1 className={styles.heading}>
-                  <span style={{ ...a('welcome', 'nameFirst'), ...sx('welcome', 'nameFirst') }}>{wedding.brideName}</span>
+                  <span {...anchorProps('welcome', 'nameFirst', { ...sx('welcome', 'nameFirst') })}>{wedding.brideName}</span>
                   <span className={styles.amp}>&amp;</span>
-                  <span style={{ ...a('welcome', 'nameSecond'), ...sx('welcome', 'nameSecond') }}>{wedding.groomName}</span>
+                  <span {...anchorProps('welcome', 'nameSecond', { ...sx('welcome', 'nameSecond') })}>{wedding.groomName}</span>
                 </h1>
-                <div className={styles.subheading} style={{ ...a('welcome', 'date'), ...sx('welcome', 'date') }}>
+                <div className={styles.subheading} {...anchorProps('welcome', 'date', { ...sx('welcome', 'date') })}>
                   {dateLabel}
                 </div>
                 {showIslamicDate && (
-                  <p className={styles.hijriDate} style={{ ...a('welcome', 'hijri'), ...sx('welcome', 'hijri') }}>
+                  <p className={styles.hijriDate} {...anchorProps('welcome', 'hijri', { ...sx('welcome', 'hijri') })}>
                     {toHijriString(weddingDate)}
                   </p>
                 )}
                 {countdown && (
-                  <div className={styles.countdown} style={a('welcome', 'timer')} data-seen="true">
+                  <div className={styles.countdown} {...anchorProps('welcome', 'timer')} data-seen="true">
                     {([
                       ['Days', countdown.days],
                       ['Hrs', countdown.hours],
@@ -297,7 +297,7 @@ export default function Template11({
                     ))}
                   </div>
                 )}
-                <div className={styles.body} style={{ ...a('welcome', 'venue'), ...sx('welcome', 'venue') }}>
+                <div className={styles.body} {...anchorProps('welcome', 'venue', { ...sx('welcome', 'venue') })}>
                   {wedding.venue}<br />{wedding.venueAddress}
                 </div>
               </StageSection>
@@ -305,45 +305,45 @@ export default function Template11({
 
           case 'walimah':
             return (
-              <StageSection key={code} code={code} {...overlayProps} seen={seen.has(code) || reduced} contentStyle={a('walimah', 'ceremonyContent')}>
+              <StageSection key={code} code={code} {...overlayProps} seen={seen.has(code) || reduced} contentProps={anchorProps('walimah', 'ceremonyContent')}>
                 <h2
                   className={styles.heading}
-                  style={{ fontSize: '1.8rem', ...a('walimah', 'title'), ...sx('walimah', 'title') }}
+                  {...anchorProps('walimah', 'title', { fontSize: '1.8rem', ...sx('walimah', 'title') })}
                 >
                   {t('walimah.title', 'Walimatul Urus')}
                 </h2>
                 {customConfig?.['walimah.body'] ? (
-                  <div className={styles.body} style={{ ...a('walimah', 'body'), ...sx('walimah', 'body') }} dangerouslySetInnerHTML={{ __html: customConfig['walimah.body'] }} />
+                  <div className={styles.body} {...anchorProps('walimah', 'body', { ...sx('walimah', 'body') })} dangerouslySetInnerHTML={{ __html: customConfig['walimah.body'] }} />
                 ) : (
-                  <div className={styles.body} style={{ ...a('walimah', 'body'), ...sx('walimah', 'body') }}>{dateLabel} · {wedding.venue}</div>
+                  <div className={styles.body} {...anchorProps('walimah', 'body', { ...sx('walimah', 'body') })}>{dateLabel} · {wedding.venue}</div>
                 )}
               </StageSection>
             );
 
           case 'rsvp':
             return (
-              <StageSection key={code} code={code} {...overlayProps} seen={seen.has(code) || reduced} panelless contentStyle={a('rsvp', 'rsvpContent')}>
+              <StageSection key={code} code={code} {...overlayProps} seen={seen.has(code) || reduced} panelless contentProps={anchorProps('rsvp', 'rsvpContent')}>
                 {flowSlotsFor('rsvp')}
               </StageSection>
             );
 
           case 'itinerary':
             return (
-              <StageSection key={code} code={code} {...overlayProps} seen={seen.has(code) || reduced} panelless contentStyle={a('itinerary', 'itineraryContent')}>
+              <StageSection key={code} code={code} {...overlayProps} seen={seen.has(code) || reduced} panelless contentProps={anchorProps('itinerary', 'itineraryContent')}>
                 {flowSlotsFor('itinerary')}
               </StageSection>
             );
 
           case 'wishes':
             return (
-              <StageSection key={code} code={code} {...overlayProps} seen={seen.has(code) || reduced} panelless contentStyle={a('wishes', 'wishesContent')}>
+              <StageSection key={code} code={code} {...overlayProps} seen={seen.has(code) || reduced} panelless contentProps={anchorProps('wishes', 'wishesContent')}>
                 {flowSlotsFor('wishes')}
               </StageSection>
             );
 
           case 'photobooth':
             return (
-              <StageSection key={code} code={code} {...overlayProps} seen={seen.has(code) || reduced} panelless contentStyle={a('photobooth', 'photoboothContent')}>
+              <StageSection key={code} code={code} {...overlayProps} seen={seen.has(code) || reduced} panelless contentProps={anchorProps('photobooth', 'photoboothContent')}>
                 {flowSlotsFor('photobooth')}
               </StageSection>
             );

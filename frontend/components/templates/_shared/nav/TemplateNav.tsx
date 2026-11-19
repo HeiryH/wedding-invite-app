@@ -21,7 +21,8 @@ function NavIcon({ src, fallback }: { src?: string; fallback: string }) {
 }
 
 interface Props {
-  items: { id: string; label: string }[];
+  items: { id: string; label: string; icon?: string; badge?: boolean }[];
+  className?: string;
   active: string;
   onNav: (id: string) => void;
   /** `nav.layout` (templateConfigSchema.ts). Defaults to 'bottom-pill' — every template's
@@ -44,7 +45,7 @@ interface Props {
  * radius, backdrop, the nav.size/nav.textSize scale factors) comes in via the `vars` custom
  * properties, exactly like the slot catalog's `--slot-*` tokens.
  */
-export default function TemplateNav({ items, active, onNav, layout = 'bottom-pill', vars, config }: Props) {
+export default function TemplateNav({ items, active, onNav, layout = 'bottom-pill', vars, config, className }: Props) {
   const preview = useContext(NavigationAdjustPreview);
   const appearance = navAppearance(config, layout);
   if (appearance.style === 'hidden') return null;
@@ -75,7 +76,10 @@ export default function TemplateNav({ items, active, onNav, layout = 'bottom-pil
   } as CSSProperties;
   return (
     <nav
-      className={`${styles.nav} ${styles[appearance.position] || styles.bottom} ${styles[appearance.style] || styles.pill}`}
+      className={`${styles.nav} ${styles[appearance.position] || styles.bottom} ${styles[appearance.style] || styles.pill} ${className ?? ''}`}
+      data-nav-style={appearance.style}
+      data-nav-position={appearance.position}
+      data-nav-content={appearance.content}
       style={style}
       data-adjust-selected={preview === 'selected' || undefined}
       aria-label="Sections"
@@ -89,6 +93,7 @@ export default function TemplateNav({ items, active, onNav, layout = 'bottom-pil
             key={item.id}
             className={`${styles.navBtn} ${active === item.id ? styles.navActive : ''}`}
             type="button"
+            data-badge={item.badge || undefined}
             onClick={() => {
               if (preview) window.parent.postMessage({ type: 'PREVIEW_NAVIGATION_SELECT' }, window.location.origin);
               else onNav(item.id);
@@ -97,7 +102,7 @@ export default function TemplateNav({ items, active, onNav, layout = 'bottom-pil
             aria-label={showIcon ? label : undefined}
             title={showIcon && appearance.style !== 'bubbles' ? label : undefined}
           >
-            {showIcon && <NavIcon key={icon} src={icon} fallback={DEFAULT_ICONS[item.id] ?? '•'} />}
+            {showIcon && <NavIcon key={icon} src={icon} fallback={item.icon ?? DEFAULT_ICONS[item.id] ?? '•'} />}
             {(!showIcon || appearance.style === 'bubbles') && (
               <span className={showIcon ? styles.bubbleLabel : undefined}>{label}</span>
             )}

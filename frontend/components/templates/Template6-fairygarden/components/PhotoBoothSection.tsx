@@ -1,9 +1,10 @@
 'use client';
+import type { AnchorBinding } from '@/components/templates/_shared/hooks/useAnchors';
 import { getImageUrl } from '@/lib/utils';
 import { useGuestSubmission } from '@/components/templates/_shared/guest/useGuestSubmission';
 import type { PhotoUploadSubmission } from '@/components/templates/guestContracts';
 
-import { useRef, type CSSProperties } from 'react';
+import { useRef } from 'react';
 import { motion } from 'framer-motion';
 import { Photo } from '@/lib/api';
 import { uploadPhotoFile } from '@/components/templates/_shared/slots/PhotoBoothSlot';
@@ -17,10 +18,10 @@ interface Props {
   photos: Photo[];
   onUploadPhoto?: (data: PhotoUploadSubmission) => Promise<void>;
   overlayProps: { breakpoint: Breakpoint; config?: Record<string, string>; editor?: EditorHandle };
-  a: (stageId: string, elementId: string, base?: CSSProperties) => CSSProperties;
+  anchorProps: AnchorBinding;
 }
 
-export default function PhotoBoothSection({ photos, onUploadPhoto, overlayProps, a }: Props) {
+export default function PhotoBoothSection({ photos, onUploadPhoto, overlayProps, anchorProps }: Props) {
   const submission = useGuestSubmission();
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -41,7 +42,7 @@ export default function PhotoBoothSection({ photos, onUploadPhoto, overlayProps,
         viewport={{ once: true, margin: '-80px' }}
         transition={{ duration: 0.8 }}
       >
-        <h2 className={styles.sectionTitle} style={a('photobooth', 'title')}>
+        <h2 className={styles.sectionTitle} {...anchorProps('photobooth', 'title')}>
           <span className={styles.titleDecor}>✦</span>
           Photo Garden
           <span className={styles.titleDecor}>✦</span>

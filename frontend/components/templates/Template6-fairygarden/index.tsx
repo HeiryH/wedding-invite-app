@@ -80,7 +80,7 @@ export default function Template6({
 
   const overlayBreakpoint: Breakpoint = useBreakpoint(editor?.enabled ? editor.breakpoint : undefined);
   const overlayProps = { breakpoint: overlayBreakpoint, config: customConfig, editor };
-  const { a, tx, sx, ax } = useAnchors(customConfig, overlayBreakpoint, editor);
+  const { anchorProps, tx, sx, ax } = useAnchors(customConfig, overlayBreakpoint, editor);
 
   const [musicExpanded, setMusicExpanded] = useState(true);
   const collapseTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -130,20 +130,20 @@ export default function Template6({
         showIslamicDate={showIslamicDate}
         onScrollDown={scrollDown}
         overlayProps={overlayProps}
-        a={a}
+        anchorProps={anchorProps}
         tx={tx}
         sx={sx}
         ax={ax}
       />
     ),
     walimah: (
-      <CeremonySection customConfig={customConfig} overlayProps={overlayProps} a={a} />
+      <CeremonySection customConfig={customConfig} overlayProps={overlayProps} anchorProps={anchorProps} />
     ),
     rsvp: (
-      <RSVPSection seatingEnabled={seatingEnabled} tables={tables} onRSVP={onRSVP} customConfig={customConfig} wedding={wedding} overlayProps={overlayProps} a={a} />
+      <RSVPSection seatingEnabled={seatingEnabled} tables={tables} onRSVP={onRSVP} customConfig={customConfig} wedding={wedding} overlayProps={overlayProps} anchorProps={anchorProps} />
     ),
     itinerary: (
-      <ItinerarySection items={itinerary} overlayProps={overlayProps} a={a} />
+      <ItinerarySection items={itinerary} overlayProps={overlayProps} anchorProps={anchorProps} />
     ),
     wishes: (
       <WishesSection
@@ -151,11 +151,11 @@ export default function Template6({
         onSubmitWish={onSubmitWish}
         customConfig={customConfig}
         overlayProps={overlayProps}
-        a={a}
+        anchorProps={anchorProps}
       />
     ),
     photobooth: (
-      <PhotoBoothSection photos={photos} onUploadPhoto={onUploadPhoto} overlayProps={overlayProps} a={a} />
+      <PhotoBoothSection photos={photos} onUploadPhoto={onUploadPhoto} overlayProps={overlayProps} anchorProps={anchorProps} />
     ),
   };
 

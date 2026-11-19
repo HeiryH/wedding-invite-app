@@ -1,3 +1,6 @@
+import { normalizeAssetAnimations, type CinematicAssetAnimation } from './assetAnimations';
+import { normalizeAssetKeyframes, type AssetKeyframe } from './assetKeyframes';
+import type { Breakpoint } from '../types';
 import type { CinematicTrackTransition } from './sequence';
 import type { CinematicWorldLayer } from './world';
 
@@ -10,6 +13,52 @@ export type CinematicSceneSpace = 'viewport' | 'world';
  * A scene set is an authored container, not an engine-known category. Templates provide starting
  * sets, while saved projects may add any valid id without changing the renderer's vocabulary.
  */
+export interface CinematicLayerGroup {
+  id: string;
+  label: string;
+  memberIds: string[];
+  hidden?: boolean;
+  scale?: number;
+  rotation?: number;
+  animations?: CinematicAssetAnimation[];
+  keyframes?: AssetKeyframe[];
+  enter?: CinematicTrackTransition;
+  exit?: CinematicTrackTransition;
+}
+
+export function cinematicGroupCenter(layers: readonly CinematicWorldLayer[]) {
+  const count = Math.max(1, layers.length);
+  return {
+    x: layers.reduce((sum, layer) => sum + layer.x, 0) / count,
+    y: layers.reduce((sum, layer) => sum + layer.y, 0) / count,
+  };
+}
+
+export const cinematicGroupTargetId = (setId: string, groupId: string) => `layer-group:${setId}:${groupId}`;
+
+export function cinematicEffectGroup(sets: CinematicSceneSet[], layers: CinematicWorldLayer[], breakpoint: Breakpoint, targetId: string) {
+  for (const set of sets) {
+    const group = set.layerGroups?.[breakpoint]?.find((item) => cinematicGroupTargetId(set.id, item.id) === targetId);
+    if (!group) continue;
+    const members = layers.filter((layer) => !layer.parentId && layer.group === set.id &&
+      layer.space === set.space && group.memberIds.includes(layer.id));
+    if (members.length >= 2) return { set, group, members };
+  }
+}
+
+/** The shared animation editor uses the owning scene's appearance window. */
+export function cinematicGroupAnimationTarget(set: CinematicSceneSet, group: CinematicLayerGroup, member: CinematicWorldLayer): CinematicWorldLayer {
+  return { ...member, id: cinematicGroupTargetId(set.id, group.id), label: group.label, group: set.id, kind: 'shape',
+    timingTrackId: set.timingTrackId, animations: group.animations, keyframes: group.keyframes, hidden: set.hidden };
+}
+
+export interface CinematicCompositionFrame { width: number; height: number }
+
+export function fitCinematicComposition(reference: CinematicCompositionFrame, viewport: CinematicCompositionFrame) {
+  const scale = Math.min(viewport.width / reference.width, viewport.height / reference.height);
+  return { width: reference.width * scale, height: reference.height * scale };
+}
+
 export interface CinematicSceneSet {
   id: CinematicSceneSetId;
   label: string;
@@ -22,7 +71,9 @@ export interface CinematicSceneSet {
   system: boolean;
   /** Optional registry key for behaviour supplied by a later functional-layer phase. */
   behavior?: string;
+  layerGroups?: Partial<Record<Breakpoint, CinematicLayerGroup[]>>;
   composeTiming?: boolean;
+  referenceFrames?: Partial<Record<Breakpoint, CinematicCompositionFrame>>;
   loop?: 'float' | 'sway';
   enter?: CinematicTrackTransition;
   exit?: CinematicTrackTransition;
@@ -59,12 +110,14 @@ export const cinematicSceneSetsKey = (prefix: string) =>
   `${prefix}.layout.cinematic-scene-sets`;
 
 /** Apply container flags at render time, never bake them into the per-layer saved geometry. */
-export function applyCinematicSceneSets(layers: CinematicWorldLayer[], sets: CinematicSceneSet[]): CinematicWorldLayer[] {
+export function applyCinematicSceneSets(layers: CinematicWorldLayer[], sets: CinematicSceneSet[], breakpoint: Breakpoint = 'mobile'): CinematicWorldLayer[] {
   const byId = new Map(sets.map((set) => [set.id, set]));
   return layers.map((layer) => {
     const set = byId.get(layer.group);
     if (!set) return { ...layer, hidden: true };
-    return { ...layer, hidden: layer.hidden || set.hidden, locked: layer.locked || set.locked,
+    const groupHidden = !layer.parentId && set.space === layer.space && set.layerGroups?.[breakpoint]?.some((group) =>
+      group.hidden && group.memberIds.includes(layer.id));
+    return { ...layer, hidden: layer.hidden || set.hidden || Boolean(groupHidden), locked: layer.locked || set.locked,
       opacity: layer.opacity * (layer.parentId ? 1 : set.opacity) };
   });
 }
@@ -92,6 +145,39 @@ function normalizeTransition(value: unknown): CinematicTrackTransition | undefin
     ...(distance !== undefined ? { distance } : {}),
     ...(scale !== undefined ? { scale } : {}),
   };
+}
+
+function normalizeLayerGroups(value: CinematicSceneSet['layerGroups']) {
+  const result: CinematicSceneSet['layerGroups'] = {};
+  for (const bp of ['mobile', 'desktop'] as const) {
+    const input = value?.[bp];
+    if (!Array.isArray(input)) continue;
+    const ids = new Set<string>();
+    const members = new Set<string>();
+    result[bp] = input.flatMap((group) => {
+      if (!group || !isCinematicSceneSetId(group.id) || ids.has(group.id) ||
+        typeof group.label !== 'string' || !group.label.trim() || !Array.isArray(group.memberIds)) return [];
+      const memberIds = [...new Set(group.memberIds)].filter((id) => isCinematicSceneSetId(id) && !members.has(id));
+      if (memberIds.length < 2) return [];
+      ids.add(group.id);
+      memberIds.forEach((id) => members.add(id));
+      const animations = normalizeAssetAnimations(group.animations);
+      const keyframes = normalizeAssetKeyframes(group.keyframes);
+      const scale = Math.min(10, Math.max(.05, finite(group.scale, 1)));
+      const rotation = Math.min(360, Math.max(-360, finite(group.rotation, 0)));
+      const enter = normalizeTransition(group.enter);
+      const exit = normalizeTransition(group.exit);
+      return [{ id: group.id, label: group.label.trim().slice(0, 64), memberIds,
+        ...(group.hidden === true ? { hidden: true } : {}),
+        ...(animations.length ? { animations } : {}),
+        ...(keyframes?.length ? { keyframes } : {}),
+        ...(scale !== 1 ? { scale } : {}),
+        ...(rotation ? { rotation } : {}),
+        ...(enter && enter.kind !== 'cut' ? { enter } : {}),
+        ...(exit && exit.kind !== 'cut' ? { exit } : {}) }];
+    });
+  }
+  return Object.keys(result).length ? result : undefined;
 }
 
 function normalizeSet(
@@ -139,6 +225,12 @@ function normalizeSet(
   const exit = value.exit === null
     ? undefined
     : value.exit === undefined ? fallback?.exit : normalizeTransition(value.exit);
+  const layerGroups = normalizeLayerGroups(value.layerGroups ?? fallback?.layerGroups);
+  const referenceFrames = Object.fromEntries((['mobile', 'desktop'] as const).flatMap((breakpoint) => {
+    const frame = (value.referenceFrames ?? fallback?.referenceFrames)?.[breakpoint];
+    return frame && [frame.width, frame.height].every((size) => Number.isFinite(size) && size >= 1 && size <= 20000)
+      ? [[breakpoint, { width: frame.width, height: frame.height }]] : [];
+  }));
   const loop = value.loop === undefined ? fallback?.loop : value.loop;
   return {
     id: value.id,
@@ -151,6 +243,8 @@ function normalizeSet(
     locked: typeof value.locked === 'boolean' ? value.locked : fallback?.locked ?? false,
     system: typeof value.system === 'boolean' ? value.system : fallback?.system ?? false,
     ...(behavior ? { behavior } : {}),
+    ...(layerGroups ? { layerGroups } : {}),
+    ...(value.referenceFrames || fallback?.referenceFrames ? { referenceFrames } : {}),
     ...((value.composeTiming ?? fallback?.composeTiming) === true ? { composeTiming: true } : {}),
     ...(loop === 'float' || loop === 'sway' ? { loop } : {}),
     ...(enter ? { enter } : {}),
@@ -228,7 +322,7 @@ export function serializeCinematicSceneSets(
       continue;
     }
     const patch: SceneSetPatch = { id: set.id };
-    for (const key of ['label', 'space', 'z', 'hidden', 'opacity', 'locked', 'system', 'composeTiming'] as const) {
+    for (const key of ['label', 'space', 'z', 'hidden', 'opacity', 'locked', 'system', 'composeTiming', 'layerGroups', 'referenceFrames'] as const) {
       if (JSON.stringify(set[key]) !== JSON.stringify(base[key])) patch[key] = set[key] as never;
     }
     for (const key of ['timingTrackId', 'behavior', 'enter', 'exit', 'loop'] as const) {

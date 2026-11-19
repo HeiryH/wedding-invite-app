@@ -12,7 +12,7 @@ export function EditorActions({ label, children, align = 'end' }: { label: strin
     document.addEventListener('pointerdown', outside);
     return () => document.removeEventListener('pointerdown', outside);
   }, []);
-  return <details ref={ref} className={styles.actions} data-align={align} onKeyDown={(event) => {
+  return <details ref={ref} data-editor-actions className={styles.actions} data-align={align} onKeyDown={(event) => {
     if (event.key === 'Escape') { event.stopPropagation(); if (ref.current) ref.current.open = false; trigger.current?.focus(); }
     if (!['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key)) return;
     if ((event.target as HTMLElement).matches('input, select, textarea')) return;
@@ -30,16 +30,17 @@ export function EditorActions({ label, children, align = 'end' }: { label: strin
   </details>;
 }
 
-export function ConfirmEditorAction({ label, description, onConfirm, disabled = false }: {
-  label: string; description: string; onConfirm: () => void; disabled?: boolean;
+export function ConfirmEditorAction({ label, description, onConfirm, disabled = false, reveal = false }: {
+  label: string; description: string; onConfirm: () => void; disabled?: boolean; reveal?: boolean;
 }) {
   const [confirming, setConfirming] = useState(false);
-  return confirming ? <div className={styles.confirm} role="alert">
+  return confirming ? <div className={styles.confirm} role="alert"
+    ref={reveal ? (node) => node?.scrollIntoView?.({ block: 'nearest' }) : undefined}>
     <strong>{label}?</strong><p>{description}</p>
     <div><button type="button" onClick={() => setConfirming(false)}>Cancel</button>
       <button type="button" disabled={disabled} onClick={(event) => {
         onConfirm(); setConfirming(false);
-        const details = event.currentTarget.closest('details'); if (details) details.open = false;
+        const details = event.currentTarget.closest<HTMLDetailsElement>('[data-editor-actions]'); if (details) details.open = false;
       }}>Confirm {label.toLowerCase()}</button></div>
   </div> : <button type="button" disabled={disabled} onClick={() => setConfirming(true)}>{label}</button>;
 }

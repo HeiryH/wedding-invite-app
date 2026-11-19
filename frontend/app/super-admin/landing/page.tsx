@@ -62,7 +62,7 @@ const MIDDLE_SECTIONS: {
     key: 'stories',
     label: 'Stories',
     fields: [['stories.title', 'Heading'], ['stories.subtitle', 'Subtitle']],
-    items: { label: 'Testimonials', metaLabel: 'Attribution' },
+    items: { label: 'Stories', metaLabel: 'Attribution', hasImage: true },
   },
   {
     key: 'about',
@@ -106,7 +106,7 @@ export default function LandingAdminPage() {
         DEFAULT_ITEMS_BY_SECTION[key].forEach((d, i) => {
           seededItems.push({
             id: nextDraftId--, sectionKey: key, sortOrder: i, isActive: true,
-            title: d.title ?? '', body: d.body, imageUrl: '', meta: d.meta,
+            title: d.title ?? '', body: d.body, imageUrl: d.imageUrl ?? '', meta: d.meta,
             price: d.price ?? '', features: d.features ?? '', cta: d.cta ?? '', ctaHref: d.ctaHref ?? '', highlighted: d.highlighted ?? false,
           });
         });
@@ -241,11 +241,16 @@ export default function LandingAdminPage() {
   const itemRows = (g: NonNullable<(typeof MIDDLE_SECTIONS)[number]['items']>, sectionKey: string) => (
     <div style={{ marginTop: 20, paddingTop: 18, borderTop: '1px solid var(--border-subtle)' }}>
       <h3 style={{ ...subHeading, marginBottom: 12 }}>{g.label}</h3>
+      {sectionKey === 'stories' && (
+        <datalist id="story-templates">
+          {templates.map((template) => <option key={template.templateId} value={template.templateName} />)}
+        </datalist>
+      )}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
         {(itemsBy[sectionKey] ?? []).map((it) => (
           <div key={it.id} style={{ padding: 14, border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-md)', display: 'flex', flexDirection: 'column', gap: 10 }}>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(200px, 100%), 1fr))', gap: 10 }}>
-              <Input label={g.hasPrice ? 'Tier name' : 'Title'} value={it.title} onChange={(e) => patchItem(it.id, { title: e.target.value })} />
+              <Input label={sectionKey === 'stories' ? 'Template used' : g.hasPrice ? 'Tier name' : 'Title'} list={sectionKey === 'stories' ? 'story-templates' : undefined} value={it.title} onChange={(e) => patchItem(it.id, { title: e.target.value })} />
               {g.hasPrice && <Input label="Price" placeholder="e.g. Contact us, $99/mo" value={it.price} onChange={(e) => patchItem(it.id, { price: e.target.value })} />}
               {g.metaLabel && <Input label={g.metaLabel} value={it.meta} onChange={(e) => patchItem(it.id, { meta: e.target.value })} />}
             </div>
@@ -262,7 +267,7 @@ export default function LandingAdminPage() {
             {g.hasImage && (
               <div style={{ display: 'flex', alignItems: 'flex-end', gap: 10, flexWrap: 'wrap' }}>
                 <div style={{ flex: '1 1 200px', minWidth: 0 }}>
-                  <Input label="Image URL" value={it.imageUrl} onChange={(e) => patchItem(it.id, { imageUrl: e.target.value })} />
+                  <Input label="Invitation image URL (optional)" value={it.imageUrl} onChange={(e) => patchItem(it.id, { imageUrl: e.target.value })} />
                 </div>
                 <input
                   type="file"
@@ -282,7 +287,7 @@ export default function LandingAdminPage() {
         ))}
       </div>
       <div style={{ marginTop: 14 }}>
-        <Button variant="soft" onClick={() => addItem(sectionKey)}>+ Add {g.label.toLowerCase().replace(/s$/, '')}</Button>
+        <Button variant="soft" onClick={() => addItem(sectionKey)}>+ Add {sectionKey === 'stories' ? 'story' : g.label.toLowerCase().replace(/s$/, '')}</Button>
       </div>
     </div>
   );

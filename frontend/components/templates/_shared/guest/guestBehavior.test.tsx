@@ -37,7 +37,7 @@ describe('shared guest behavior', () => {
   });
   it('T6 advances to seating, retains answers on Back and submits the selected table', async () => {
     const submit = vi.fn().mockResolvedValue(undefined);
-    render(<RSVPSection onRSVP={submit} wedding={{ isRsvpOpen: true } as Wedding} seatingEnabled tables={tables} overlayProps={{ breakpoint: 'mobile' }} a={() => ({})} />);
+    render(<RSVPSection onRSVP={submit} wedding={{ isRsvpOpen: true } as Wedding} seatingEnabled tables={tables} overlayProps={{ breakpoint: 'mobile' }} anchorProps={() => ({ style: {} })} />);
     fireEvent.click(screen.getByRole('button', { name: /Confirm Attendance/ }));
     fireEvent.change(screen.getByPlaceholderText('Full Name *'), { target: { value: 'Nadia' } });
     fireEvent.submit(screen.getByPlaceholderText('Full Name *').closest('form')!);
@@ -51,7 +51,7 @@ describe('shared guest behavior', () => {
   });
   it('T6 forced seating preview cannot submit', () => {
     const submit = vi.fn();
-    render(<SeatingPreviewContext.Provider value={{ dismiss() {} }}><RSVPSection onRSVP={submit} seatingEnabled tables={tables} overlayProps={{ breakpoint: 'mobile' }} a={() => ({})} /></SeatingPreviewContext.Provider>);
+    render(<SeatingPreviewContext.Provider value={{ dismiss() {} }}><RSVPSection onRSVP={submit} seatingEnabled tables={tables} overlayProps={{ breakpoint: 'mobile' }} anchorProps={() => ({ style: {} })} /></SeatingPreviewContext.Provider>);
     fireEvent.click(screen.getByRole('button', { name: 'Submit RSVP 💌' }));
     expect(submit).not.toHaveBeenCalled();
   });

@@ -292,10 +292,12 @@ describe('CinematicTimeline', () => {
       .not.toBeInTheDocument();
     expect(screen.getByText(/Availability span:/)).toBeInTheDocument();
     fireEvent.keyDown(screen.getByRole('button', { name: 'Move start of RSVP form availability' }), {
-      key: 'ArrowRight',
+      key: 'ArrowRight', altKey: true,
     });
+    const clip = PAINTED_PROMISE_SEQUENCE.tracks.find((track) => track.id === 'rsvp-availability')!.clip;
+    const start = Number((clip.start + .001).toFixed(3));
     expect(onTrackClipChange).toHaveBeenCalledWith('rsvp-availability', {
-      start: .81, enterEnd: .81, exitStart: .855, end: .855,
+      ...clip, start, enterEnd: start,
     });
   });
 

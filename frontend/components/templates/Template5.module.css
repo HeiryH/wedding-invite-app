@@ -140,73 +140,65 @@
 
 /* ── Bottom Navigation ───────────────────────────────────────────── */
 .sideNav {
-  position: fixed;
-  bottom: 5px;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 50;
-  min-width: 300px;
-  max-width: 350px;
+  --nav-bg: rgba(255, 251, 244, 0.72);
+  --nav-backdrop: blur(20px) saturate(160%);
+  --nav-border: rgba(255, 255, 255, 0.6);
+  --nav-color: var(--t5-ink-light);
+  --nav-active-color: white;
+  --nav-active-bg: linear-gradient(135deg, #f7a59a 0%, #ec6e8c 60%, #d9527a 100%);
+  --nav-font: var(--t5-font-display);
 }
 
-.sideNavList {
-  display: flex;
-  flex-direction: row;
-  gap: 4px;
+.sideNav[data-nav-style='pill'] {
+  gap: var(--nav-gap, 4px);
   padding: 6px 8px;
-  border-radius: 999px;
-  background: rgba(255, 251, 244, 0.72);
-  backdrop-filter: blur(20px) saturate(160%);
-  -webkit-backdrop-filter: blur(20px) saturate(160%);
-  border: 1px solid rgba(255, 255, 255, 0.6);
   box-shadow: var(--t5-card-shadow);
-  justify-content: space-between;
+  z-index: 50;
 }
 
-.sideNavBtn {
-  position: relative;
-  width: 42px;
-  height: 42px;
-  border-radius: 50%;
-  border: none;
-  background: transparent;
-  cursor: pointer;
+.sideNav[data-nav-style='pill'][data-nav-position='bottom'] {
+  bottom: max(var(--nav-edge-offset, 5px), var(--fsab, env(safe-area-inset-bottom)));
+}
+
+.sideNav[data-nav-style='pill'][data-nav-content='icons']:is([data-nav-position='top'], [data-nav-position='bottom']) {
+  width: 300px;
+  max-width: min(350px, calc(var(--fvw, 100vw) - 2rem));
+  justify-content: space-between;
+  overflow: visible;
+}
+
+.sideNav[data-nav-style='pill'][data-nav-content='icons'] > button {
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--t5-ink-light);
+  position: relative;
+  flex: none;
+  width: 42px;
+  height: 42px;
+  padding: 0;
+  border-radius: 50%;
   transition: color 150ms ease, background 150ms ease, transform 150ms ease;
 }
 
-.sideNavBtn:hover {
+.sideNav[data-nav-style='pill'] > button:hover {
   background: rgba(255, 251, 244, 0.6);
 }
 
-.sideNavBtnActive {
-  background: linear-gradient(135deg, #f7a59a 0%, #ec6e8c 60%, #d9527a 100%);
+.sideNav[data-nav-style='pill'] > button[aria-current='true'] {
+  background: var(--nav-active-bg);
   transform: scale(1.06);
   box-shadow: 0 8px 18px rgba(217, 82, 122, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.4);
-  color: white;
 }
 
-.sideNavBtnActive:hover {
-  background: linear-gradient(135deg, #f7a59a 0%, #ec6e8c 60%, #d9527a 100%);
-}
-
-.sideNavEmoji {
-  font-size: 1.1rem;
-  line-height: 1;
-}
-
-.sideNavTooltip {
+.sideNav[data-nav-style='pill'][data-nav-content='icons'] > button::after {
+  content: attr(aria-label);
   position: absolute;
   bottom: calc(100% + 10px);
   left: 50%;
   transform: translateX(-50%) translateY(6px);
   background: rgba(255, 251, 244, 0.95);
   color: var(--t5-ink);
-  font-size: 11px;
-  font-family: var(--t5-font-display);
+  font: 11px var(--t5-font-display);
   letter-spacing: 0.05em;
   padding: 5px 10px;
   border-radius: 999px;
@@ -217,12 +209,13 @@
   transition: opacity 200ms, transform 200ms;
 }
 
-.sideNavBtn:hover .sideNavTooltip {
+.sideNav[data-nav-style='pill'][data-nav-content='icons'] > button:hover::after {
   opacity: 1;
   transform: translateX(-50%) translateY(0);
 }
 
-.sideNavBadge {
+.sideNav > button[data-badge]::before {
+  content: '';
   position: absolute;
   top: 4px;
   right: 4px;
@@ -234,18 +227,18 @@
 }
 
 @media (max-width: 440px) {
-  .sideNav {
-    bottom: 14px;
+  .sideNav[data-nav-style='pill'] {
+    gap: var(--nav-gap, 2px);
+    padding: 5px 6px;
   }
 
-  .sideNavBtn {
+  .sideNav[data-nav-style='pill'][data-nav-position='bottom'] {
+    bottom: max(var(--nav-edge-offset, 14px), var(--fsab, env(safe-area-inset-bottom)));
+  }
+
+  .sideNav[data-nav-style='pill'][data-nav-content='icons'] > button {
     width: 38px;
     height: 38px;
-  }
-
-  .sideNavList {
-    gap: 2px;
-    padding: 5px 6px;
   }
 }
 
@@ -2206,3 +2199,7 @@
   position: relative;
   padding: 1rem 1.5rem 2rem;
 }
+
+.welcomeCardFrame { width: 100%; max-width: 40rem; }
+.welcomeDateFrame { width: 100%; max-width: 400px; }
+.welcomeHeadingFrame { width: 100%; max-width: 500px; }

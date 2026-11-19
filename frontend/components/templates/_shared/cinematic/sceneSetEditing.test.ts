@@ -123,3 +123,34 @@ describe('Painted Promise layer groups', () => {
     })).toBe(config);
   });
 });
+
+describe('groups inside a Painted Promise Scene Set', () => {
+  it('moves only the grouped mobile layers and preserves their original timing and position after ungrouping', () => {
+    const before = resolve({});
+    const group = { id: 'portraits', label: 'Portraits', memberIds: ['bride', 'groom'],
+      enter: { kind: 'slide', direction: 'left', distance: 12, easing: 'ease-out' } as const };
+    const saved = editCinematicSceneSets(engine, {}, {
+      type: 'save-layer-group', id: 'dais', breakpoint: 'mobile', group,
+    });
+    expect(resolve(saved).sets.find((set) => set.id === 'dais')?.layerGroups).toEqual({ mobile: [group] });
+    const hidden = resolve(editCinematicSceneSets(engine, saved, {
+      type: 'patch-layer-group', id: 'dais', breakpoint: 'mobile', groupId: group.id, patch: { hidden: true },
+    }));
+    expect(applyCinematicSceneSets(hidden.mobile, hidden.sets).find((layer) => layer.id === 'groom')?.hidden).toBe(true);
+    expect(applyCinematicSceneSets(hidden.desktop, hidden.sets, 'desktop').find((layer) => layer.id === 'groom')?.hidden).toBe(false);
+    expect(hidden.mobile.find((layer) => layer.id === 'groom')?.hidden).toBe(false);
+    const moved = editCinematicSceneSets(engine, saved, {
+      type: 'move-layer-group', id: 'dais', breakpoint: 'mobile', groupId: group.id, dx: 2, dy: -1,
+    });
+    const result = resolve(moved);
+    expect(result.mobile).toEqual(before.mobile.map((layer) => group.memberIds.includes(layer.id)
+      ? { ...layer, x: layer.x + 2, y: layer.y - 1 } : layer));
+    expect(result.desktop).toEqual(before.desktop);
+    expect(result.tracks).toEqual(before.tracks);
+    const ungrouped = resolve(editCinematicSceneSets(engine, moved, {
+      type: 'remove-layer-group', id: 'dais', breakpoint: 'mobile', groupId: group.id,
+    }));
+    expect(ungrouped.sets.find((set) => set.id === 'dais')?.layerGroups?.mobile).toEqual([]);
+    expect(ungrouped.mobile).toEqual(result.mobile);
+  });
+});

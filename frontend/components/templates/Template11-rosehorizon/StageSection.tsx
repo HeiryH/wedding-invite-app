@@ -1,4 +1,4 @@
-import { useRef, type CSSProperties, type ReactNode } from 'react';
+import { useRef, type HTMLAttributes, type ReactNode } from 'react';
 import type { SectionCode } from '@/lib/templateUtils';
 import type { Breakpoint, EditorHandle } from '@/components/templates/_shared/types';
 import { PropLayer, usePanelZone } from './PropLayer';
@@ -22,7 +22,7 @@ export function StageSection({
   config,
   editor,
   panelless,
-  contentStyle,
+  contentProps,
   seen,
 }: {
   code: SectionCode;
@@ -43,7 +43,7 @@ export function StageSection({
    */
   panelless?: boolean;
   /** Group-layer transform/visibility applied to the complete editable content block. */
-  contentStyle?: CSSProperties;
+  contentProps?: HTMLAttributes<HTMLDivElement>;
   /** Shared reveal state; starts false on reload so entrance animation has a painted start. */
   seen: boolean;
 }) {
@@ -55,7 +55,7 @@ export function StageSection({
     <section ref={sectionRef} id={code} data-stage={code} data-seen={seen} className={styles.section}>
       <PropLayer section={code} reservedZone={zone} breakpoint={breakpoint} config={config} editor={editor} />
       <SectionOverlay stageId={code} breakpoint={breakpoint} config={config} editor={editor} />
-      <div ref={panelRef} className={panelless ? styles.flowZone : styles.panel} data-depth={0.4} style={contentStyle}>
+      <div ref={panelRef} className={panelless ? styles.flowZone : styles.panel} data-depth={0.4} {...contentProps}>
         {children}
       </div>
       {extra}

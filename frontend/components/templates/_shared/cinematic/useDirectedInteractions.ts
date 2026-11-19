@@ -110,10 +110,11 @@ export function useDirectedInteractions({ definitions, tracks, beats, progress, 
   const isOpen = Boolean(openId || state.infoId);
   useEffect(() => {
     if (!isOpen || editing || activeRecord?.lockScroll === false) return;
-    const body = document.body, scrollY = window.scrollY;
-    const previous = { position: body.style.position, top: body.style.top, left: body.style.left, right: body.style.right, width: body.style.width };
-    Object.assign(body.style, { position: 'fixed', top: `-${scrollY}px`, left: '0', right: '0', width: '100%' });
-    return () => { Object.assign(body.style, previous); window.scrollTo(0, scrollY); };
+    // Fixing the body moves the sticky scene outside the view at a nonzero scroll position.
+    const root = document.documentElement;
+    const previous = root.style.overflow;
+    root.style.overflow = 'hidden';
+    return () => { root.style.overflow = previous; };
   }, [isOpen, editing, activeRecord?.lockScroll]);
   return { phase, recordFor, available, trigger, close, isOpen, focusId: state.focusId,
     info: definitions.find((record) => record.id === state.infoId), dismissInfo };

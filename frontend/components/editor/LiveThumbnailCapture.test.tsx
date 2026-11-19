@@ -10,7 +10,7 @@ describe('live thumbnail review', () => {
   let target: HTMLDivElement;
   let blob: Blob;
   beforeEach(() => {
-    vi.clearAllMocks();
+    vi.resetAllMocks();
     target = document.createElement('div');
     blob = new Blob(['live pixels'], { type: 'image/png' });
     mocks.capture.mockResolvedValue({ blob, width: 400, height: 700 });
@@ -33,6 +33,7 @@ describe('live thumbnail review', () => {
     render(<LiveThumbnailCapture templateId={7} getPreviewElement={() => target} onApplied={() => {}} />);
     fireEvent.click(screen.getByRole('button', { name: 'Capture thumbnail' }));
     expect(mocks.capture).toHaveBeenCalledWith(target, expect.any(AbortSignal));
+    await screen.findByRole('dialog');
     await screen.findByAltText('Live template preview capture');
     expect(mocks.upload).not.toHaveBeenCalled();
     expect(screen.getByText(/400 × 700 pixels/)).toBeInTheDocument();
@@ -42,6 +43,7 @@ describe('live thumbnail review', () => {
     const applied = vi.fn();
     render(<LiveThumbnailCapture templateId={7} getPreviewElement={() => target} onApplied={applied} />);
     fireEvent.click(screen.getByRole('button', { name: 'Capture thumbnail' }));
+    await screen.findByRole('dialog');
     await screen.findByAltText('Live template preview capture');
     fireEvent.click(screen.getByRole('button', { name: 'Use as thumbnail' }));
     await waitFor(() => expect(applied).toHaveBeenCalledTimes(1));
@@ -52,6 +54,7 @@ describe('live thumbnail review', () => {
   it('cancel discards the local image without calling the API', async () => {
     render(<LiveThumbnailCapture templateId={7} getPreviewElement={() => target} onApplied={() => {}} />);
     fireEvent.click(screen.getByRole('button', { name: 'Capture thumbnail' }));
+    await screen.findByRole('dialog');
     await screen.findByAltText('Live template preview capture');
     fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
     expect(mocks.upload).not.toHaveBeenCalled();
@@ -62,6 +65,7 @@ describe('live thumbnail review', () => {
   it('retake closes review before requesting another live frame', async () => {
     render(<LiveThumbnailCapture templateId={7} getPreviewElement={() => target} onApplied={() => {}} />);
     fireEvent.click(screen.getByRole('button', { name: 'Capture thumbnail' }));
+    await screen.findByRole('dialog');
     await screen.findByAltText('Live template preview capture');
     mocks.capture.mockImplementationOnce(() => {
       expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
@@ -69,6 +73,7 @@ describe('live thumbnail review', () => {
     });
     fireEvent.click(screen.getByRole('button', { name: 'Retake' }));
     await waitFor(() => expect(mocks.capture).toHaveBeenCalledTimes(2));
+    await screen.findByRole('dialog');
     await screen.findByAltText('Live template preview capture');
     expect(mocks.upload).not.toHaveBeenCalled();
   });

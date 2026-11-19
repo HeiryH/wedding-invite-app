@@ -28,7 +28,7 @@ const props = (): TemplateRenderProps => ({
 describe('local template regressions', () => {
   it('T6 passes an object payload to the public upload contract and resets the input', async () => {
     const onUploadPhoto = vi.fn().mockResolvedValue(undefined);
-    const { container } = render(<PhotoBoothSection photos={[]} onUploadPhoto={onUploadPhoto} overlayProps={{ breakpoint: 'mobile' }} a={() => ({})} />);
+    const { container } = render(<PhotoBoothSection photos={[]} onUploadPhoto={onUploadPhoto} overlayProps={{ breakpoint: 'mobile' }} anchorProps={() => ({ style: {} })} />);
     const input = container.querySelector('input')!;
     const file = new File(['image'], 'memory.jpg', { type: 'image/jpeg' });
     fireEvent.change(input, { target: { files: [file] } });

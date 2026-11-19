@@ -1,3 +1,4 @@
+import { PAINTED_PROMISE_RECEPTION } from './reception';
 import { MOTION_DEFAULT, type CinematicDirection, type CinematicEffect, type CinematicInteraction, type CinematicMotion } from '../../_shared/cinematic/direction';
 
 const effect = (id: string, label: string, targetId: string, from: Partial<CinematicMotion>, to: Partial<CinematicMotion>, extra: Partial<CinematicEffect> = {}): CinematicEffect => ({
@@ -26,13 +27,13 @@ export const PAINTED_PROMISE_DIRECTION: CinematicDirection = {
     interaction('rsvp', 'RSVP form', 'rsvp-letter', 'rsvp', { availabilityTrackId: 'rsvp-availability', resetTrackId: 'rsvp-reset-window', returnSetIds: ['table'], revealSetIds: ['table-wishes'] }),
     interaction('wish', 'Best Wishes form', 'wishes-book', 'wish', { availabilityTrackId: 'wishes-availability', resetTrackId: 'wishes-reset-window', returnSetIds: ['table'] }),
   ],
-  pacing: { mobileVh: 1250, desktopVh: 1150, beats: {} },
+  pacing: { mobileVh: 1250, desktopVh: 1150, beats: PAINTED_PROMISE_RECEPTION ? { 'rsvp-letter': { holdVh: 40 }, 'wishes-book': { holdVh: 40 } } : {} },
   navigation: [
     { id: 'welcome', label: 'Welcome', target: 'track-start', targetId: 'welcome' },
     { id: 'walimah', label: 'Walimah', target: 'beat', targetId: 'walimah' },
     { id: 'itinerary', label: 'Programme', target: 'track-enter', targetId: 'programme' },
-    { id: 'rsvp', label: 'RSVP', target: 'track-enter', targetId: 'table' },
-    { id: 'wishes', label: 'Wishes', target: 'track-start', targetId: 'table-wishes' },
+    { id: 'rsvp', label: 'RSVP', target: 'track-enter', targetId: PAINTED_PROMISE_RECEPTION ? 'rsvp' : 'table' },
+    { id: 'wishes', label: 'Wishes', target: PAINTED_PROMISE_RECEPTION ? 'track-enter' : 'track-start', targetId: PAINTED_PROMISE_RECEPTION ? 'wishes' : 'table-wishes' },
     { id: 'photobooth', label: 'Memories', target: 'track-start', targetId: 'memory-background-blur' },
   ],
   theme: {

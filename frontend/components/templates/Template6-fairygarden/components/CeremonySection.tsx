@@ -1,7 +1,7 @@
 'use client';
+import type { AnchorBinding } from '@/components/templates/_shared/hooks/useAnchors';
 import { configValue } from '@/components/templates/configValue';
 import { motion } from 'framer-motion';
-import type { CSSProperties } from 'react';
 import type { Breakpoint, EditorHandle } from '@/components/templates/_shared/types';
 import SectionOverlay from '../SectionOverlay';
 import styles from '../Template6.module.css';
@@ -10,10 +10,10 @@ import { alignClass } from '@/lib/templateUtils';
 interface Props {
   customConfig?: Record<string, string>;
   overlayProps: { breakpoint: Breakpoint; config?: Record<string, string>; editor?: EditorHandle };
-  a: (stageId: string, elementId: string, base?: CSSProperties) => CSSProperties;
+  anchorProps: AnchorBinding;
 }
 
-export default function CeremonySection({ customConfig, overlayProps, a }: Props) {
+export default function CeremonySection({ customConfig, overlayProps, anchorProps }: Props) {
   const t = (key: string, fallback: string) => configValue(customConfig, key, fallback);
   const body = t('walimah.body', '');
   const align = alignClass(t('walimah.body.align', 'center'));
@@ -32,7 +32,7 @@ export default function CeremonySection({ customConfig, overlayProps, a }: Props
         viewport={{ once: true, margin: '-80px' }}
         transition={{ duration: 0.8, ease: 'easeOut' }}
       >
-        <h2 className={styles.sectionTitle} style={a('walimah', 'title')}>
+        <h2 className={styles.sectionTitle} {...anchorProps('walimah', 'title')}>
           <span className={styles.titleDecor}>✦</span>
           Ceremony
           <span className={styles.titleDecor}>✦</span>

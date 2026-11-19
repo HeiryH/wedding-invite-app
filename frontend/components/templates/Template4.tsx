@@ -392,7 +392,7 @@ export default function Template4({
 
   const overlayBreakpoint: Breakpoint = useBreakpoint(editor?.enabled ? editor.breakpoint : undefined);
   const overlayProps = { breakpoint: overlayBreakpoint, config: customConfig, editor };
-  const { a, tx, sx, ax } = useAnchors(customConfig, overlayBreakpoint, editor);
+  const { anchorProps, tx, sx, ax } = useAnchors(customConfig, overlayBreakpoint, editor);
 
   const paxLimit = guestLimit(wedding);
 
@@ -594,7 +594,7 @@ export default function Template4({
 
         {/* Hero text */}
         <div className="relative z-10 flex flex-col items-center justify-end flex-1 text-center pb-16 px-6">
-          <div style={a('hero', 'heading')}>
+          <div {...anchorProps('hero', 'heading')}>
             <motion.p
               className={`text-white/70 text-[10px] tracking-[0.4em] uppercase mb-4 ${alignClass(customConfig?.['invite.heading.align'])}`}
               {...hAnim}
@@ -603,7 +603,7 @@ export default function Template4({
               {t('invite.heading', 'We\'re getting married')}
             </motion.p>
           </div>
-          <div style={a('hero', 'names')} data-seen="true">
+          <div {...anchorProps('hero', 'names')} data-seen="true">
             <motion.h1
               className="text-white text-5xl md:text-6xl italic font-normal leading-tight mb-3"
               initial={Object.keys(hAnim.initial).length ? hAnim.initial : { opacity: 0, y: 14 }}
@@ -618,7 +618,7 @@ export default function Template4({
               <span {...ax('hero', 'names')}>{wedding.groomName}</span>
             </motion.h1>
           </div>
-          <div style={a('hero', 'date')}>
+          <div {...anchorProps('hero', 'date')}>
             <motion.p
               className="text-white/60 text-sm tracking-[0.25em] mb-12"
               initial={{ opacity: 0 }}
@@ -660,7 +660,7 @@ export default function Template4({
             <p className="text-[10px] tracking-[0.35em] uppercase text-[#8A8A80] mb-8">
               {t('invite.countdown_prefix', 'Counting down to the big day')}
             </p>
-            <div className="flex justify-center gap-8" style={a('t4-details', 'countdown')} data-seen="true">
+            <div className="flex justify-center gap-8" {...anchorProps('t4-details', 'countdown')} data-seen="true">
               {[
                 { val: countdown.days, label: 'Days' },
                 { val: countdown.hours, label: 'Hrs' },
@@ -676,7 +676,7 @@ export default function Template4({
               ))}
             </div>
             {/* Day boxes */}
-            <div className="flex items-center justify-center gap-2 mt-10" style={a('t4-details', 'daybox')}>
+            <div className="flex items-center justify-center gap-2 mt-10" {...anchorProps('t4-details', 'daybox')}>
               <div className="border border-[#1C1C1A] px-4 py-2.5">
                 <p className="text-[9px] tracking-widest uppercase text-[#8A8A80]">{dayName}</p>
               </div>
@@ -695,7 +695,7 @@ export default function Template4({
           {/* Invite body */}
           <p
             className={`text-[#4A4A44] text-sm leading-relaxed mb-12 ${alignClass(customConfig?.['invite.body.align'])}`}
-            style={a('t4-details', 'body')}
+            {...anchorProps('t4-details', 'body')}
             dangerouslySetInnerHTML={{
               __html: t('invite.body', 'We joyfully invite you to share in the celebration of our wedding day. Your presence will make this moment unforgettable.'),
             }}
@@ -732,7 +732,7 @@ export default function Template4({
           })()}
 
           {/* Ceremony */}
-          <div className="text-center border-t border-[#E0DFD9] pt-10 pb-10" style={a('t4-details', 'ceremony')}>
+          <div className="text-center border-t border-[#E0DFD9] pt-10 pb-10" {...anchorProps('t4-details', 'ceremony')}>
             <div className="flex justify-center text-[#1C1C1A] mb-3"><IcoChurch /></div>
             <h3 className="text-xl italic text-[#1C1C1A] mb-1">Ceremony</h3>
             <p className="text-sm text-[#8A8A80] mb-0.5">{wedding.venue}</p>
@@ -752,7 +752,7 @@ export default function Template4({
           </div>
 
           {/* Reception */}
-          <div className="text-center border-t border-[#E0DFD9] py-10" style={a('t4-details', 'reception')}>
+          <div className="text-center border-t border-[#E0DFD9] py-10" {...anchorProps('t4-details', 'reception')}>
             <div className="flex justify-center text-[#1C1C1A] mb-3"><IcoGlass /></div>
             <h3 className="text-xl italic text-[#1C1C1A] mb-1">Reception</h3>
             <p className="text-sm text-[#8A8A80]">{wedding.venue}</p>
@@ -765,7 +765,7 @@ export default function Template4({
         <SectionOverlay stageId="t4-schedule" {...overlayProps} />
         <TornEdge fromDark={false} />
         <div className="py-16 px-6">
-          <div className="max-w-sm mx-auto" style={a('t4-schedule', 'schedule')}>
+          <div className="max-w-sm mx-auto" {...anchorProps('t4-schedule', 'schedule')}>
             <div className="text-center mb-10">
               <p className="text-[10px] tracking-[0.35em] uppercase text-[#6A6A64] mb-2">Order of the day</p>
               <h2 className="text-4xl italic font-normal text-white">Schedule</h2>
@@ -790,7 +790,7 @@ export default function Template4({
 
         {/* Mid couple photo */}
         {midPhoto && (
-          <div className="w-full overflow-hidden" style={a('t4-schedule', 'photo', { maxHeight: 440 })}>
+          <div className="w-full overflow-hidden" {...anchorProps('t4-schedule', 'photo', { maxHeight: 440 })}>
             {/* eslint-disable-next-line @next/next/no-img-element -- Swipe cards and uploaded portraits retain native sizing, clipping and direct source loading. */}
             <img src={midPhoto} alt="Couple" loading="lazy" decoding="async" className="w-full object-cover" style={{ maxHeight: 440 }} />
           </div>
@@ -816,7 +816,7 @@ export default function Template4({
             <div className="py-20 px-6">
             <div className="max-w-lg mx-auto">
               <motion.div initial={{ opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.5 }}>
-                <div className="text-center mb-10" style={a('t4-rsvp', 'heading')}>
+                <div className="text-center mb-10" {...anchorProps('t4-rsvp', 'heading')}>
                   <p className="text-[10px] tracking-[0.35em] uppercase text-[#8A8A80] mb-2">Kindly reply</p>
                   <h2 className="text-4xl italic font-normal text-[#1C1C1A]">RSVP</h2>
                   <p className="text-sm text-[#8A8A80] mt-2">{t('rsvp.subtitle', 'Will you be joining us?')}</p>
@@ -880,7 +880,7 @@ export default function Template4({
             <div className="py-20 px-6">
             <div className="max-w-4xl mx-auto">
               <motion.div initial={{ opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.5 }}>
-                <div className="text-center mb-12" style={a('t4-wishes', 'heading')}>
+                <div className="text-center mb-12" {...anchorProps('t4-wishes', 'heading')}>
                   <p className="text-[10px] tracking-[0.35em] uppercase text-[#6A6A64] mb-2">Leave a message</p>
                   <h2 className="text-4xl italic font-normal text-white">Wishes</h2>
                   <p className="text-sm text-[#6A6A64] mt-2">{t('wish.prompt', 'Share your love with the happy couple')}</p>
@@ -926,7 +926,7 @@ export default function Template4({
             <div className="py-20 px-6">
               <div className="max-w-lg mx-auto">
                 <motion.div initial={{ opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.5 }}>
-                  <div className="text-center mb-12" style={a('t4-photobooth', 'heading')}>
+                  <div className="text-center mb-12" {...anchorProps('t4-photobooth', 'heading')}>
                     <p className="text-[10px] tracking-[0.35em] uppercase text-[#8A8A80] mb-2">Capture the moment</p>
                     <h2 className="text-4xl italic font-normal text-[#1C1C1A]">Photo Booth</h2>
                     <p className="text-[10px] text-[#B0AFA8] tracking-wider mt-2 uppercase">Swipe left or right to browse</p>

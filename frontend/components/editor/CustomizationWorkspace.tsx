@@ -10,7 +10,7 @@ import { getUser } from '@/lib/auth';
 import { templateStudioService, type StudioState } from '@/lib/api/templateStudio.service';
 import { studioSample } from './studioSample';
 import { LiveThumbnailCapture } from './LiveThumbnailCapture';
-import { downloadBlob } from '@/lib/utils';
+import { downloadBlob, getImageUrl } from '@/lib/utils';
 import {
   eventService,
   photoService,
@@ -40,15 +40,17 @@ import { PRESETS, isShadowField, chipOf, useSchemaIndex } from '@/app/organizer-
 // a registry entry there, not a branch here.
 import AdjustPanel from '@/components/templates/_shared/adjust/AdjustPanel';
 import { TEMPLATE_ENGINES, sectionAnchorId } from '@/components/templates/_shared/registry';
+import { receptionArtworkFrame } from '@/components/templates/Template15-paintedpromise/data/reception';
 import CinematicAdjustPanel from '@/components/templates/_shared/cinematic/CinematicAdjustPanel';
 import { resolveCinematicTrackClip } from '@/components/templates/_shared/cinematic/sequence';
-import { compileAssetAnimationTracks, retimeAssetAnimation, NEUTRAL_ASSET_MOTION } from '@/components/templates/_shared/cinematic/assetAnimations';
-import { resolveCinematicDirection, saveCinematicDirection, normalizeMotion, type CinematicEffectPose } from '@/components/templates/_shared/cinematic/direction';
+import { assetClipPosition, assetPoseClip, clampPoseValue, keyframeTime, MAX_ASSET_KEYFRAMES, moveAssetKeyframe, normalizeAssetAnchor, normalizeAssetPose, openAssetKeyframeTime, supportsAssetKeyframes, type AssetAnchorOption, type AssetKeyframe, type AssetPose, type AssetPoseAppearance } from '@/components/templates/_shared/cinematic/assetKeyframes';
+import { compileAssetAnimationTracks, convertAssetAnimations, convertAssetEffect, retimeAssetAnimation, NEUTRAL_ASSET_MOTION } from '@/components/templates/_shared/cinematic/assetAnimations';
+import { resolveCinematicDirection, saveCinematicDirection } from '@/components/templates/_shared/cinematic/direction';
 import { CINEMATIC_ENGINES, type CinematicEditorMode } from '@/components/templates/_shared/cinematic/registry';
 import { cinematicWorldKey, resolveCinematicWorld, serializeCinematicWorld, type CinematicWorldGeometry, type CinematicWorldLayer } from '@/components/templates/_shared/cinematic/world';
 import { cinematicAncestors, cinematicEditorLayers } from '@/components/templates/_shared/cinematic/parts';
 import { baseBeatCameras, cinematicCameraKey, resolveCinematicCamera, serializeCinematicCamera, type CinematicBeatCamera } from '@/components/templates/_shared/cinematic/cameraLayout';
-import { resolveCinematicSceneSets } from '@/components/templates/_shared/cinematic/sceneSets';
+import { cinematicEffectGroup, cinematicGroupAnimationTarget, resolveCinematicSceneSets } from '@/components/templates/_shared/cinematic/sceneSets';
 import { editCinematicSceneSets, type SceneSetAction } from '@/components/templates/_shared/cinematic/sceneSetEditing';
 import {
   migrateCinematicConfigToProject, resetCinematicProjectConfig,
@@ -936,7 +938,12 @@ export default function CustomizationWorkspace({ masterTemplateId }: { masterTem
   const [selectedStage, setSelectedStage] = useState<string>('');
   const [selectedLayer, setSelectedLayer] = useState<string | undefined>();
   const [selectedCinematicTimingTrack, setSelectedCinematicTimingTrack] = useState<string | undefined>();
-  const [effectPoseRequest, setEffectPoseRequest] = useState<Pick<CinematicEffectPose, 'effectId' | 'side'>>();
+  const [animatingAsset, setAnimatingAsset] = useState<string>();
+  const [copiedAssetPoint, setCopiedAssetPoint] = useState<{ track: string; point: AssetKeyframe }>();
+  const [assetPoseRevision, setAssetPoseRevision] = useState(0);
+  const [assetPoseDraft, setAssetPoseDraft] = useState<{ session: string; pose: AssetPose }>();
+  const [cinematicFontPreview, setCinematicFontPreview] = useState<{ layerId: string; fontFamily: string }>();
+  const [assetPoseSample, setAssetPoseSample] = useState<{ session: string; layerId: string; breakpoint: Breakpoint; pose: AssetPose; appearance?: AssetPoseAppearance; frameCount?: number; anchors?: AssetAnchorOption[] }>();
   const [cinematicTimingSelectionRequest, setCinematicTimingSelectionRequest] = useState(0);
   const [selectedCinematicBeat, setSelectedCinematicBeat] = useState<string>('');
   const [cinematicProgress, setCinematicProgress] = useState(0.08);
@@ -988,7 +995,8 @@ export default function CustomizationWorkspace({ masterTemplateId }: { masterTem
     [wedding?.templateId, user?.role, user?.tier],
   );
   const schema = useSchemaIndex(fields);
-  const nav = navAppearance(draftConfig, schema.get('nav.layout')?.defaultValue as NavLayout | undefined);
+  const nav = navAppearance({ 'nav.content': schema.get('nav.content')?.defaultValue ?? 'labels', ...draftConfig },
+    schema.get('nav.layout')?.defaultValue as NavLayout | undefined);
   const showNavIcons = nav.content === 'icons' && nav.style !== 'hidden';
   const hasNavigationAdjust = schema.has('nav.style');
   const navigationSelected = hasNavigationAdjust && adjustNavigation;
@@ -1100,26 +1108,53 @@ export default function CustomizationWorkspace({ masterTemplateId }: { masterTem
   const cinematicTimelineTracks = useMemo(() => layout?.family === 'cinematic'
     ? promoteLegacyCinematicVisibilityTracks(layout.sequence.tracks, cinematicVisibilitySets)
     : [], [layout, cinematicVisibilitySets]);
+  const canAnimateLayer = (layer: CinematicWorldLayer) => layout?.family === 'cinematic' && layout.keyPrefix === 't15' &&
+    supportsAssetKeyframes(layer) && !layer.hidden && !layer.locked &&
+    !cinematicAncestors(layer, cinematicWorldLayers).some((parent) => parent.hidden || parent.locked) &&
+    !layout.sceneSets.find((set) => set.id === layer.group && (set.hidden || set.locked));
+  const animatableLayer = adjusting && cinematicMode === 'scene'
+    ? cinematicWorldLayers.find((layer) => layer.id === selectedLayer && canAnimateLayer(layer)) : undefined;
+  const activeAssetGroup = adjusting && cinematicMode === 'scene' && animatingAsset && layout?.family === 'cinematic'
+    ? cinematicEffectGroup(layout.sceneSets, cinematicWorldLayers, previewBreakpoint, animatingAsset) : undefined;
+  const groupAsset = activeAssetGroup && !activeAssetGroup.group.hidden && !activeAssetGroup.members.some((member) => member.locked)
+    ? cinematicGroupAnimationTarget(activeAssetGroup.set, activeAssetGroup.group, activeAssetGroup.members[0]) : undefined;
+  const activeAsset = groupAsset && canAnimateLayer(groupAsset) ? groupAsset
+    : animatableLayer?.id === animatingAsset ? animatableLayer : undefined;
+  const otherAssetBreakpoint = previewBreakpoint === 'mobile' ? 'desktop' : 'mobile';
+  const canCopyGroupAnimation = activeAssetGroup && activeAssetGroup.set.layerGroups?.[otherAssetBreakpoint]
+    ?.some((group) => group.id === activeAssetGroup.group.id);
+  const poseClip = activeAsset && assetPoseClip(activeAsset, cinematicTimelineTracks, cinematicWorldLayers);
+  const poseAt = poseClip ? keyframeTime(assetClipPosition(cinematicProgress, poseClip)) : 0;
+  const assetSession = activeAsset ? `${activeAsset.id}:${previewBreakpoint}:${cinematicProgress}:${assetPoseRevision}` : undefined;
+  const pendingAssetPose = assetPoseDraft?.session === assetSession ? assetPoseDraft?.pose : undefined;
+  const currentAssetSample = assetPoseSample?.session === assetSession ? assetPoseSample : undefined;
+  const currentAssetPose = pendingAssetPose ?? currentAssetSample?.pose;
+  // Keep the controls mounted between seeks. Only the sample for the current playhead can be edited or captured.
+  const displayedAssetSample = assetPoseSample?.layerId === activeAsset?.id && assetPoseSample?.breakpoint === previewBreakpoint
+    ? assetPoseSample : undefined;
+  const perspectiveArtwork = activeAsset && !activeAsset.parentId && !activeAssetGroup ? (
+    displayedAssetSample?.frameCount && (activeAsset.id === 'rsvp-letter' || activeAsset.id === 'wishes-book')
+      ? { sprite: receptionArtworkFrame(activeAsset.id === 'rsvp-letter' ? 'rsvp-guest-book' : 'wishes-envelope', currentAssetPose?.frame ?? displayedAssetSample.pose.frame ?? 0).style }
+      : (activeAsset.kind === 'img' || activeAsset.kind === undefined) && activeAsset.src
+        ? { src: getImageUrl(activeAsset.src) } : undefined
+  ) : undefined;
+  const selectedAssetPoint = activeAsset?.keyframes?.find((point) => point.at === poseAt);
+  const activeAssetTrack = activeAsset && `${wedding?.templateId}:${previewBreakpoint}:${activeAsset.id}`;
+  const copiedPointOnTrack = copiedAssetPoint?.track === activeAssetTrack ? copiedAssetPoint?.point : undefined;
+  const discardAssetPose = () => {
+    setAssetPoseDraft(undefined);
+    setAssetPoseRevision((revision) => revision + 1);
+  };
+  const closeAssetAnimator = () => {
+    discardAssetPose();
+    setAnimatingAsset(undefined);
+  };
+  const patchAssetPose = (patch: Partial<AssetPose>) => {
+    if (!assetSession || !currentAssetPose) return;
+    const pose = normalizeAssetPose({ ...currentAssetPose, ...patch });
+    if (pose) setAssetPoseDraft({ session: assetSession, pose });
+  };
   const cinematicAnimationTracks = useMemo(() => compileAssetAnimationTracks(cinematicWorldLayers, cinematicTimelineTracks), [cinematicWorldLayers, cinematicTimelineTracks]);
-  const cinematicEffectPose = useMemo<CinematicEffectPose | undefined>(() => {
-    if (!adjusting || cinematicMode !== 'scene' || layout?.family !== 'cinematic' || !effectPoseRequest) return;
-    const base = layout.direction.effects.find((effect) => effect.id === effectPoseRequest.effectId);
-    if (!base) return;
-    const effect = previewBreakpoint === 'desktop' ? { ...base, ...base.desktop } : base;
-    if (!effect.enabled || effect.target !== 'layer' || effect.targetId !== selectedLayer) return;
-    return { ...effectPoseRequest, layerId: effect.targetId, motion: effect[effectPoseRequest.side] };
-  }, [adjusting, cinematicMode, layout, effectPoseRequest, previewBreakpoint, selectedLayer]);
-  useEffect(() => { setEffectPoseRequest(undefined); }, [selectedLayer, cinematicMode, adjusting, previewBreakpoint]);
-  const editCinematicEffectPose = useCallback((pose?: Pick<CinematicEffectPose, 'effectId' | 'side'>) => {
-    if (pose && layout?.family === 'cinematic') {
-      const effect = layout.direction.effects.find((item) => item.id === pose.effectId);
-      const track = cinematicTimelineTracks.find((item) => item.id === effect?.trackId);
-      if (!track || !effect?.enabled) return;
-      const clip = resolveCinematicTrackClip(track, new Map(cinematicTimelineTracks.map((item) => [item.id, item])));
-      setCinematicProgress(pose.side === 'from' ? clip.start : clip.enterEnd);
-    }
-    setEffectPoseRequest(pose);
-  }, [layout, cinematicTimelineTracks]);
   const cinematicDisplayTracks = useMemo(() => {
     const visible = new Set(cinematicEditorLayers(cinematicWorldLayers).map((layer) => layer.id));
     return [...cinematicTimelineTracks, ...cinematicAnimationTracks].filter((track) =>
@@ -1213,37 +1248,47 @@ export default function CustomizationWorkspace({ masterTemplateId }: { masterTem
     );
   }, [layout, previewBreakpoint, handleCinematicLayoutChange]);
 
-  const patchCinematicLayerFromCanvas = useCallback((layerId: string, patch: Partial<CinematicWorldGeometry>) => {
-    if (!layout || layout.family !== 'cinematic') return;
-    if (cinematicEffectPose?.layerId === layerId) return; // Reject stale base-layout messages during pose editing.
-    const target = cinematicWorldLayers.find((layer) => layer.id === layerId);
-    if (!target || target.locked || cinematicAncestors(target, cinematicWorldLayers).some((parent) => parent.locked) ||
-      layout.sceneSets.find((set) => set.id === target.group)?.locked) return;
-    handleCinematicWorldChange(cinematicWorldLayers.map((layer) =>
-      layer.id === layerId ? { ...layer, ...patch } : layer));
-  }, [layout, cinematicWorldLayers, handleCinematicWorldChange, cinematicEffectPose]);
+  const cinematicCanvasPatches = useRef(new Map<string, Partial<CinematicWorldGeometry>>());
+  const cinematicCanvasFrame = useRef(0);
+  useEffect(() => {
+    const patches = cinematicCanvasPatches.current;
+    return () => {
+      if (cinematicCanvasFrame.current) cancelAnimationFrame(cinematicCanvasFrame.current);
+      cinematicCanvasFrame.current = 0;
+      patches.clear();
+    };
+  }, [adjusting, cinematicMode, previewBreakpoint, assetSession, wedding?.templateId]);
 
-  const patchCinematicEffectPose = useCallback((request: { effectId: string; layerId: string; side: 'from' | 'to'; patch: unknown }) => {
-    if (layout?.family !== 'cinematic' || !cinematicEffectPose || request.effectId !== cinematicEffectPose.effectId ||
-      request.layerId !== cinematicEffectPose.layerId || request.side !== cinematicEffectPose.side) return;
-    const target = cinematicWorldLayers.find((layer) => layer.id === request.layerId);
-    if (!target || target.locked || cinematicAncestors(target, cinematicWorldLayers).some((parent) => parent.locked) ||
-      layout.sceneSets.find((set) => set.id === target.group)?.locked) return;
-    if (!request.patch || typeof request.patch !== 'object') return;
-    // Canvas may change only screen offsets and scale, never layout or unrelated motion fields.
-    const patch = Object.fromEntries(Object.entries(request.patch).filter(([key, value]) =>
-      ['xVw', 'yVh', 'scale'].includes(key) && typeof value === 'number' && Number.isFinite(value)));
-    setDraftConfig((previous) => {
-      const direction = resolveCinematicDirection(layout.keyPrefix, layout.direction, previous);
-      return saveCinematicDirection(layout.keyPrefix, previous, { ...direction, effects: direction.effects.map((base) => {
-        if (base.id !== request.effectId) return base;
-        const effect = previewBreakpoint === 'desktop' ? { ...base, ...base.desktop } : base;
-        const rounded = Object.fromEntries(Object.entries(patch).map(([key, value]) => [key, Math.round(Number(value) * 1000) / 1000]));
-        const motion = normalizeMotion({ ...effect[request.side], ...rounded });
-        return previewBreakpoint === 'desktop' ? { ...base, desktop: { ...base.desktop, [request.side]: motion } } : { ...base, [request.side]: motion };
-      }) });
+  const patchCinematicLayerFromCanvas = useCallback((layerId: string, patch: Partial<CinematicWorldGeometry>) => {
+    if (layout?.family !== 'cinematic' || !patch || typeof patch !== 'object') return;
+    const { keyPrefix, world, sceneSetDefinitions } = layout;
+    const queued = cinematicCanvasPatches.current;
+    queued.set(layerId, { ...queued.get(layerId), ...patch });
+    if (cinematicCanvasFrame.current) return;
+
+    cinematicCanvasFrame.current = requestAnimationFrame(() => {
+      cinematicCanvasFrame.current = 0;
+      const batch = new Map(queued);
+      queued.clear();
+      setDraftConfig((previous) => {
+        const { config } = resolveCinematicProjectConfig(keyPrefix, previous);
+        const current = resolveCinematicWorld(keyPrefix, world, previewBreakpoint, config,
+          { frames: layout.direction.theme.memory.frames, programmeItems: itinerary.length });
+        const sets = resolveCinematicSceneSets(keyPrefix, sceneSetDefinitions, config).sceneSets;
+        let changed = false;
+        const next = current.map((layer) => {
+          const update = batch.get(layer.id);
+          if (!update || layer.locked || sets.some((set) => set.id === layer.group && set.locked) ||
+            cinematicAncestors(layer, current).some((parent) => parent.locked)) return layer;
+          if (Object.entries(update).every(([key, value]) => Object.is(layer[key as keyof CinematicWorldGeometry], value))) return layer;
+          changed = true;
+          return { ...layer, ...update };
+        });
+        return changed ? updateCinematicProjectValue(keyPrefix, previous, cinematicWorldKey(keyPrefix, previewBreakpoint),
+          serializeCinematicWorld(world, previewBreakpoint, next)) : previous;
+      });
     });
-  }, [layout, cinematicEffectPose, cinematicWorldLayers, previewBreakpoint]);
+  }, [layout, previewBreakpoint, itinerary.length]);
 
   const handleCinematicCameraChange = useCallback((cameras: CinematicBeatCamera[]) => {
     if (!layout || layout.family !== 'cinematic') return;
@@ -1540,7 +1585,6 @@ export default function CustomizationWorkspace({ masterTemplateId }: { masterTem
   }, [layout, previewBreakpoint, handleCinematicLayoutChange]);
 
   const handleCinematicProgressChange = useCallback((progress: number) => {
-    setEffectPoseRequest(undefined);
     if (!cinematicBeats.length) return;
     const closest = cinematicBeats.reduce((best, beat) =>
       Math.abs(beat.progress - progress) < Math.abs(best.progress - progress) ? beat : best,
@@ -1550,6 +1594,101 @@ export default function CustomizationWorkspace({ masterTemplateId }: { masterTem
     // the composition on screen is always the frame that the sliders/drag surface will persist.
     setCinematicProgress(cinematicMode === 'camera-beat' ? closest.progress : progress);
   }, [cinematicBeats, cinematicMode]);
+
+  const seekAsset = (at: number) => {
+    if (poseClip) handleCinematicProgressChange(poseClip.start + keyframeTime(at) * (poseClip.end - poseClip.start));
+  };
+  const commitAssetKeyframes = (keyframes: AssetKeyframe[] | undefined, breakpoint = previewBreakpoint) => {
+    if (layout?.family !== 'cinematic' || !activeAsset) return;
+    if (activeAssetGroup) {
+      handleSceneSetAction({ type: 'patch-layer-group', id: activeAssetGroup.set.id, breakpoint,
+        groupId: activeAssetGroup.group.id, patch: { keyframes } });
+      discardAssetPose();
+      return;
+    }
+    const source = breakpoint === previewBreakpoint ? cinematicWorldLayers : resolveCinematicWorld(
+      layout.keyPrefix, layout.world, breakpoint, layout.config,
+      { frames: layout.direction.theme.memory.frames, programmeItems: itinerary.length },
+    );
+    const target = source.find((layer) => layer.id === activeAsset.id);
+    if (!target || target.locked || !supportsAssetKeyframes(target)) return;
+    const layers = source.map((layer) => layer === target ? { ...layer, keyframes } : layer);
+    const key = cinematicWorldKey(layout.keyPrefix, breakpoint);
+    const value = serializeCinematicWorld(layout.world, breakpoint, layers);
+    const nextConfig = updateCinematicProjectValue(layout.keyPrefix, draftConfig, key, value);
+    if (JSON.stringify(nextConfig) === JSON.stringify(draftConfig)) {
+      discardAssetPose();
+      return;
+    }
+    const before: EditSnapshot = { draftConfig, weddingDraft, sectionOrder };
+    const after = { ...before, draftConfig: nextConfig };
+    setHistory((previous) => {
+      const stack = previous.stack.slice(0, previous.index + 1);
+      if (JSON.stringify(stack.at(-1)) !== JSON.stringify(before)) stack.push(before);
+      const next = [...stack, after].slice(-100);
+      return { stack: next, index: next.length - 1 };
+    });
+    setDraftConfig(nextConfig);
+    discardAssetPose();
+  };
+  const showAssetAnimator = (layer: CinematicWorldLayer) => {
+    if (!canAnimateLayer(layer)) return;
+    setSelectedLayer(layer.id.startsWith('layer-group:') ? undefined : layer.id);
+    setSelectedCinematicTimingTrack(undefined);
+    discardAssetPose();
+    setAnimatingAsset(layer.id);
+    const clip = assetPoseClip(layer, cinematicTimelineTracks, cinematicWorldLayers);
+    if (cinematicProgress < clip.start || cinematicProgress > clip.end) handleCinematicProgressChange(clip.start);
+  };
+  const existingAssetMotion = useMemo(() => {
+    if (!activeAsset || activeAsset.keyframes?.length || layout?.family !== 'cinematic') return;
+    const effects = layout.direction.effects.flatMap((effect) => {
+      const resolved = previewBreakpoint === 'desktop' ? { ...effect, ...effect.desktop } : effect;
+      return resolved.enabled && resolved.target === (activeAssetGroup ? 'group' : 'layer') && resolved.targetId === activeAsset.id ? [resolved] : [];
+    });
+    if (effects.length) return { keyframes: effects.length === 1
+      ? convertAssetEffect(activeAsset, cinematicTimelineTracks, cinematicWorldLayers, effects[0]) : undefined };
+    if (activeAsset.animations?.some((move) => move.enabled)) {
+      return { keyframes: convertAssetAnimations(activeAsset, cinematicTimelineTracks, cinematicWorldLayers) };
+    }
+  }, [activeAsset, activeAssetGroup, layout, previewBreakpoint, cinematicTimelineTracks, cinematicWorldLayers]);
+
+  const captureAssetKeyframe = () => {
+    if (!activeAsset || !currentAssetPose) return;
+    const points = activeAsset.keyframes ?? [];
+    if (!selectedAssetPoint && points.length >= MAX_ASSET_KEYFRAMES) return;
+    const point: AssetKeyframe = {
+      id: selectedAssetPoint?.id ?? crypto.randomUUID(),
+      at: poseAt, pose: currentAssetPose, easing: selectedAssetPoint?.easing ?? 'linear',
+    };
+    commitAssetKeyframes([...points.filter((item) => item.id !== point.id), point].sort((a, b) => a.at - b.at));
+  };
+  const retimeAssetPoint = (id: string, at: number) => {
+    const points = activeAsset?.keyframes ?? [];
+    const move = moveAssetKeyframe(points, id, at);
+    if (!move) return;
+    if (move.points !== points) commitAssetKeyframes(move.points);
+    seekAsset(move.at);
+  };
+  const insertAssetPointCopy = (point: AssetKeyframe, at: number) => {
+    if (!activeAsset || pendingAssetPose) return;
+    const points = activeAsset.keyframes ?? [];
+    if (points.length >= MAX_ASSET_KEYFRAMES || points.some((item) => item.at === at)) return;
+    commitAssetKeyframes([...points, { ...point, id: crypto.randomUUID(), at }].sort((a, b) => a.at - b.at));
+    seekAsset(at);
+  };
+  const duplicateAssetPoint = () => {
+    if (!selectedAssetPoint || !activeAsset) return;
+    const points = activeAsset.keyframes ?? [];
+    const index = points.indexOf(selectedAssetPoint);
+    const after = points[index + 1]?.at ?? 1;
+    const before = points[index - 1]?.at ?? 0;
+    const placeAfter = keyframeTime(after - selectedAssetPoint.at) >= .0002;
+    const at = openAssetKeyframeTime(points, placeAfter
+      ? Math.min(selectedAssetPoint.at + .1, (selectedAssetPoint.at + after) / 2)
+      : Math.max(selectedAssetPoint.at - .1, (selectedAssetPoint.at + before) / 2), placeAfter ? 1 : -1);
+    insertAssetPointCopy(selectedAssetPoint, at);
+  };
 
   // Canvas drag/resize (see Layer.tsx's PREVIEW_LAYER_EDIT) lands here — the same patch-and-
   // reserialize AdjustPanel's own sliders already do, just triggered from the preview iframe
@@ -1623,6 +1762,16 @@ export default function CustomizationWorkspace({ masterTemplateId }: { masterTem
   // fires setDraftConfig many times a second, and re-serialising the whole payload each tick would
   // make the preview stutter.
   const postFrameRef = useRef(0);
+  const latestAssetPose = useRef<{ session: string; pose: AssetPose } | undefined>(undefined);
+  const assetLayerId = activeAsset?.id;
+  useEffect(() => {
+    latestAssetPose.current = assetSession && pendingAssetPose ? { session: assetSession, pose: pendingAssetPose } : undefined;
+    if (!latestAssetPose.current) return;
+    const id = requestAnimationFrame(() => {
+      iframeRef.current?.contentWindow?.postMessage({ type: 'PREVIEW_ASSET_POSE_DRAFT', draft: latestAssetPose.current }, window.location.origin);
+    });
+    return () => cancelAnimationFrame(id);
+  }, [assetSession, pendingAssetPose]);
   const getPreviewElement = useCallback(() => iframeRef.current?.parentElement ?? null, []);
   useEffect(() => {
     if (!wedding) return;
@@ -1649,9 +1798,9 @@ export default function CustomizationWorkspace({ masterTemplateId }: { masterTem
               progress: cinematicProgress,
               beatId: activeCinematicBeat.id,
               mode: cinematicMode,
-              effectPose: cinematicEffectPose,
+              assetPoseEdit: assetLayerId && assetSession ? { layerId: assetLayerId, session: assetSession } : undefined,
               cameraOverride: cinematicMode === 'camera-compose' ? composedCamera : undefined,
-              referenceSrc: cinematicReferenceVisible ? activeCinematicBeat.referenceSrc : undefined,
+              referenceSrc: cinematicReferenceVisible && !assetLayerId ? activeCinematicBeat.referenceSrc : undefined,
               referenceOpacity: activeCinematicBeat.referenceOpacity ?? cinematicReferenceOpacity,
               referenceFit: activeCinematicBeat.referenceFit,
             }
@@ -1679,8 +1828,15 @@ export default function CustomizationWorkspace({ masterTemplateId }: { masterTem
         },
       },
     };
-    payloadRef.current = payload;
-    try { localStorage.setItem('preview_draft_v2', JSON.stringify(payload)); } catch {}
+    const fontPreview = adjusting && !navigationSelected && cinematicMode === 'scene' &&
+      cinematicFontPreview?.layerId === selectedLayer ? cinematicFontPreview : undefined;
+    payloadRef.current = fontPreview && payload.editor.cinematic ? {
+      ...payload, editor: { ...payload.editor, cinematic: { ...payload.editor.cinematic, fontPreview } },
+    } : payload;
+    // Browsing fonts only affects the live iframe. Keep the cached draft at its saved font choice.
+    if (!fontPreview) {
+      try { localStorage.setItem('preview_draft_v2', JSON.stringify(payload)); } catch {}
+    }
     if (postFrameRef.current) return;
     postFrameRef.current = requestAnimationFrame(() => {
       postFrameRef.current = 0;
@@ -1690,7 +1846,7 @@ export default function CustomizationWorkspace({ masterTemplateId }: { masterTem
     });
   }, [draftConfig, weddingDraft, coupleMedia, showSampleGallery, photoBoothEnabled, itinerary, wedding, adjusting, master, sampleSeating, previewSeating, eventSeating,
     previewBreakpoint, activeStage, selectedLayer, frame, layout, activeCinematicBeat, hasNavigationAdjust, navigationSelected,
-    cinematicProgress, cinematicMode, cinematicEffectPose, composedCamera, cinematicReferenceVisible, cinematicReferenceOpacity]);
+    cinematicProgress, cinematicMode, composedCamera, cinematicReferenceVisible, cinematicReferenceOpacity, assetLayerId, assetSession, cinematicFontPreview]);
 
   // Replay the latest payload when the iframe (re)mounts, and handle canvas-originated selection
   // + drag/resize. Layer.tsx posts these directly (it has no callback prop into this tree — it's
@@ -1698,12 +1854,32 @@ export default function CustomizationWorkspace({ masterTemplateId }: { masterTem
   useEffect(() => {
     const handler = (event: MessageEvent) => {
       if (event.origin !== window.location.origin) return;
-      if (event.data?.type === 'PREVIEW_CINEMATIC_EFFECT_POSE_EDIT') {
-        if (event.source === iframeRef.current?.contentWindow) patchCinematicEffectPose(event.data);
+      if (event.data?.type === 'PREVIEW_ASSET_POSE_SAMPLE' || event.data?.type === 'PREVIEW_ASSET_POSE_EDIT') {
+        const { session, layerId, anchors, frameCount, appearance } = event.data;
+        if (event.source !== iframeRef.current?.contentWindow || !assetSession || session !== assetSession || layerId !== activeAsset?.id) return;
+        const pose = normalizeAssetPose(event.data.pose);
+        if (!pose) return;
+        if (event.data.type === 'PREVIEW_ASSET_POSE_EDIT') setAssetPoseDraft({ session, pose });
+        else setAssetPoseSample({
+          session, layerId, breakpoint: previewBreakpoint, pose,
+          appearance: {
+            opacity: Number.isFinite(appearance?.opacity) ? clampPoseValue(appearance.opacity) : undefined,
+            blur: Number.isFinite(appearance?.blur) ? clampPoseValue(appearance.blur, 0, 40) : undefined,
+            shadowOpacity: Number.isFinite(appearance?.shadowOpacity) ? clampPoseValue(appearance.shadowOpacity) : undefined,
+          }, frameCount: Number.isInteger(frameCount) && frameCount >= 2 && frameCount <= 250 ? frameCount : undefined,
+          anchors: Array.isArray(anchors) ? anchors.flatMap((option) => {
+            const id = normalizeAssetAnchor(option?.id);
+            return id && typeof option.label === 'string' && Number.isFinite(option.x) && Number.isFinite(option.y)
+              ? [{ id, label: option.label, x: option.x, y: option.y }] : [];
+          }) : undefined,
+        });
         return;
       }
       if (event.data?.type === 'PREVIEW_READY' && payloadRef.current) {
         iframeRef.current?.contentWindow?.postMessage({ type: 'PREVIEW_UPDATE', payload: payloadRef.current }, window.location.origin);
+        if (latestAssetPose.current) {
+          iframeRef.current?.contentWindow?.postMessage({ type: 'PREVIEW_ASSET_POSE_DRAFT', draft: latestAssetPose.current }, window.location.origin);
+        }
       }
       if (event.data?.type === 'PREVIEW_SEATING_DISMISS' && event.source === iframeRef.current?.contentWindow) {
         setPreviewSeating(false);
@@ -1734,6 +1910,7 @@ export default function CustomizationWorkspace({ masterTemplateId }: { masterTem
         patchLayerFromCanvas(stageId, event.data.layerId as string, event.data.patch as Partial<LayerModel>);
       }
       if (event.data?.type === 'PREVIEW_CINEMATIC_LAYER_SELECT') {
+        if (activeAsset) return;
         setAdjustNavigation(false);
         const layerId = event.data.layerId as string | undefined;
         setSelectedLayer(layerId);
@@ -1741,6 +1918,7 @@ export default function CustomizationWorkspace({ masterTemplateId }: { masterTem
         if (layerId) setCinematicMode('scene');
       }
       if (event.data?.type === 'PREVIEW_CINEMATIC_LAYER_EDIT') {
+        if (event.source !== iframeRef.current?.contentWindow || activeAsset) return;
         patchCinematicLayerFromCanvas(
           event.data.layerId as string,
           event.data.patch as Partial<CinematicWorldGeometry>,
@@ -1755,7 +1933,7 @@ export default function CustomizationWorkspace({ masterTemplateId }: { masterTem
     };
     window.addEventListener('message', handler);
     return () => window.removeEventListener('message', handler);
-  }, [patchLayerFromCanvas, patchCinematicLayerFromCanvas, patchCinematicCamera, patchCinematicEffectPose, activeStage]);
+  }, [patchLayerFromCanvas, patchCinematicLayerFromCanvas, patchCinematicCamera, activeStage, activeAsset, assetSession, previewBreakpoint]);
 
   // Record a history snapshot ~500ms after the draft settles — long enough that a slider drag or a
   // burst of rapid edits (the Adjust dock's own per-frame patches during a canvas drag included)
@@ -2587,7 +2765,7 @@ export default function CustomizationWorkspace({ masterTemplateId }: { masterTem
 
         {canAdjust && (
           <Button variant={adjusting ? 'secondary' : 'primary'} tone="brand" size="sm"
-            onClick={toggleAdjust} style={{ borderRadius: 999 }}>
+            onClick={() => { if (activeAsset) closeAssetAnimator(); toggleAdjust(); }} disabled={Boolean(pendingAssetPose)} style={{ borderRadius: 999 }}>
             <Icon name="sliders" size={14} /> {adjusting ? 'Close Adjust' : 'Adjust'}
           </Button>
         )}
@@ -2746,7 +2924,7 @@ export default function CustomizationWorkspace({ masterTemplateId }: { masterTem
         <PreviewPanel
           iframeRef={iframeRef}
           device={device}
-          setDevice={d => { setDevice(d); setManualZoom(null); }}
+          setDevice={d => { if (!pendingAssetPose) { setDevice(d); setManualZoom(null); } }}
           manualZoom={manualZoom}
           setManualZoom={setManualZoom}
           activeBlock={activeBlock}
@@ -2757,7 +2935,7 @@ export default function CustomizationWorkspace({ masterTemplateId }: { masterTem
           wedding={wedding}
           frame={frame}
           setFrame={setFrame}
-          cinematicReference={canAdjust && adjusting && layout?.family === 'cinematic' && activeCinematicBeat ? {
+          cinematicReference={canAdjust && adjusting && !activeAsset && layout?.family === 'cinematic' && activeCinematicBeat ? {
             beat: activeCinematicBeat,
             visible: cinematicReferenceVisible,
             opacity: cinematicReferenceOpacity,
@@ -2770,35 +2948,73 @@ export default function CustomizationWorkspace({ masterTemplateId }: { masterTem
             beats: cinematicBeats,
             tracks: cinematicDisplayTracks,
             selectedAsset: selectedCinematicTimelineItem,
+            onAnimate: animatableLayer ? () => showAssetAnimator(animatableLayer) : undefined,
+            assetKeyframes: activeAsset ? {
+              label: activeAsset.label, breakpoint: previewBreakpoint, at: poseAt,
+              points: activeAsset.keyframes ?? [], selected: selectedAssetPoint,
+              pose: currentAssetPose ?? displayedAssetSample?.pose, poseReady: Boolean(currentAssetPose), appearance: displayedAssetSample?.appearance,
+              textMotion: activeAsset.kind === 'text' ? {
+                reveal: activeAsset.part !== 'body' || Boolean(activeAsset.text),
+                shadow: Boolean(activeAsset.textEffects?.shadow),
+              } : undefined,
+              perspectiveArtwork, frameCount: displayedAssetSample?.frameCount, anchors: displayedAssetSample?.anchors,
+              baseAnchorLabel: activeAsset.space === 'world' ? 'World' : 'Viewport',
+              pending: Boolean(pendingAssetPose),
+              legacyMotion: Boolean(existingAssetMotion),
+              onConvert: existingAssetMotion?.keyframes ? () => commitAssetKeyframes(existingAssetMotion.keyframes) : undefined,
+              onSeek: seekAsset, onPatch: patchAssetPose, onCapture: captureAssetKeyframe,
+              onDiscard: discardAssetPose, onDone: closeAssetAnimator, onRetime: retimeAssetPoint,
+              onAnchor: (anchor) => {
+                if (!currentAssetPose || anchor === currentAssetPose.anchor) return;
+                const origins = currentAssetSample?.anchors;
+                const previous = origins?.find((option) => option.id === currentAssetPose.anchor);
+                const next = origins?.find((option) => option.id === anchor);
+                if (anchor && !next) return;
+                patchAssetPose({
+                  anchor,
+                  x: currentAssetPose.x + (previous?.x ?? 0) - (next?.x ?? 0),
+                  y: currentAssetPose.y + (previous?.y ?? 0) - (next?.y ?? 0),
+                });
+              },
+              onEasing: (easing) => commitAssetKeyframes(activeAsset.keyframes?.map((point) =>
+                point.id === selectedAssetPoint?.id ? { ...point, easing } : point)),
+              onDelete: () => commitAssetKeyframes(activeAsset.keyframes?.filter((point) => point.id !== selectedAssetPoint?.id)),
+              onCopyKeyframe: selectedAssetPoint && activeAssetTrack ? () => setCopiedAssetPoint({ track: activeAssetTrack, point: selectedAssetPoint }) : undefined,
+              onPasteKeyframe: copiedPointOnTrack ? () => insertAssetPointCopy(copiedPointOnTrack, poseAt) : undefined,
+              onDuplicate: duplicateAssetPoint, onReset: () => commitAssetKeyframes(undefined),
+              onCopy: !activeAssetGroup || canCopyGroupAnimation ? () => commitAssetKeyframes(activeAsset.keyframes, otherAssetBreakpoint) : undefined,
+            } : undefined,
             selectedBeat: activeCinematicBeat?.id,
             editableBeats: cinematicMode === 'camera-beat',
             dirty: isDirty,
-            onChange: handleCinematicProgressChange,
+            onChange: (progress) => {
+              if (pendingAssetPose) return;
+              handleCinematicProgressChange(poseClip ? clampPoseValue(progress, poseClip.start, poseClip.end) : progress);
+            },
             onBeatMove: (id, progress) => {
               patchCinematicBeat(id, { at: progress });
               setSelectedCinematicBeat(id);
               setCinematicProgress(progress);
             },
-            onTrackClipChange: (id, clip: CinematicSequenceClip) =>
+            onTrackClipChange: activeAsset ? undefined : (id, clip: CinematicSequenceClip) =>
               patchCinematicTrack(id, { clip }),
-            onTrackSelect: (id) => {
+            onTrackSelect: activeAsset ? undefined : (id) => {
               setCinematicTimingSelectionRequest((request) => request + 1);
               setSelectedCinematicTimingTrack(id);
-              setEffectPoseRequest(undefined);
               setSelectedLayer(cinematicAnimationTracks.find((track) => track.id === id)?.assetAnimation?.layerId ??
                 (layout?.family === 'cinematic' ? layout.direction.effects.find((effect) => effect.trackId === id && effect.target === 'layer')?.targetId : undefined));
               setCinematicMode('scene');
             },
-            onClearSelection: () => {
+            onClearSelection: activeAsset ? undefined : () => {
               setSelectedLayer(undefined);
               setSelectedCinematicTimingTrack(undefined);
             },
-            onResetTrack: resetCinematicTrack,
+            onResetTrack: activeAsset ? undefined : resetCinematicTrack,
           } : undefined}
         />
 
         {/* Right: the existing Stage dock or the separate continuous-world Cinematic director. */}
-        {canAdjust && adjusting && ((layout?.family === 'stage' && activeStage) || layout?.family === 'cinematic' || navigationSelected) && (
+        {canAdjust && adjusting && !activeAsset && ((layout?.family === 'stage' && activeStage) || layout?.family === 'cinematic' || navigationSelected) && (
           <aside style={{
             width: 340, flexShrink: 0,
             borderLeft: '1px solid var(--border-subtle)',
@@ -2916,26 +3132,13 @@ export default function CustomizationWorkspace({ masterTemplateId }: { masterTem
                 progress={cinematicProgress}
                 mode={cinematicMode}
                 direction={layout.direction}
-                effectPose={cinematicEffectPose}
-                onEditEffectPose={editCinematicEffectPose}
                 onDirectionChange={(direction) => setDraftConfig((previous) => saveCinematicDirection(layout.keyPrefix, previous, direction))}
-                onAddEffectTrack={(id, label) => {
-                  const layer = cinematicWorldLayers.find((item) => item.id === selectedLayer);
-                  const timing = layer && resolveCinematicLayerTiming(layer.id, layer.group, cinematicTimelineTracks, layer.timingTrackId, cinematicWorldLayers);
-                  const source = timing?.source;
-                  const clip = source ? resolveCinematicTrackClip(source, new Map(cinematicTimelineTracks.map((item) => [item.id, item])))
-                    : { start: 0, enterEnd: .1, exitStart: 1, end: 1 };
-                  handleCinematicTracksChange([...cinematicTimelineTracks, {
-                  id, label, kind: 'effect', target: { type: 'effect', id },
-                  ownership: { kind: 'shared' },
-                  timing: { mode: 'independent' }, clip: { ...clip, enterEnd: clip.enterEnd > clip.start ? clip.enterEnd : clip.exitStart },
-                  enter: { kind: 'fade', easing: 'linear' }, exit: { kind: 'cut', easing: 'linear' },
-                }]);
-                }}
                 layers={cinematicWorldLayers}
                 sceneSets={layout.sceneSets}
                 onSceneSetAction={handleSceneSetAction}
+                previewFrame={{ width: Math.round(frame.w / frame.scale), height: Math.round(frame.svh / frame.scale) }}
                 selectedLayer={selectedLayer}
+                onFontPreview={setCinematicFontPreview}
                 camera={cinematicEditorCamera}
                 visibilitySets={cinematicVisibilitySets}
                 tracks={cinematicTimelineTracks}
@@ -2943,7 +3146,6 @@ export default function CustomizationWorkspace({ masterTemplateId }: { masterTem
                 selectedAnimationTrack={cinematicAnimationTracks.some((track) => track.id === selectedCinematicTimingTrack) || layout.direction.effects.some((effect) => effect.trackId === selectedCinematicTimingTrack && effect.target === 'layer')}
                 timingSelectionRequest={cinematicTimingSelectionRequest}
                 onSelectBeat={(id) => {
-                  setEffectPoseRequest(undefined);
                   const beat = cinematicBeats.find((candidate) => candidate.id === id);
                   if (!beat) return;
                   setSelectedCinematicBeat(id);
@@ -2966,6 +3168,8 @@ export default function CustomizationWorkspace({ masterTemplateId }: { masterTem
                   }
                 }}
                 onSelectLayer={setSelectedLayer}
+                canAnimateLayer={canAnimateLayer}
+                onAnimateLayer={showAssetAnimator}
                 onLayersChange={handleCinematicWorldChange}
                 onResetLayer={(id) => {
                   const initial = resolveCinematicWorld(

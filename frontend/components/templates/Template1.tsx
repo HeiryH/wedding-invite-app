@@ -92,7 +92,7 @@ export default function Template1({
 
   const overlayBreakpoint: Breakpoint = useBreakpoint(editor?.enabled ? editor.breakpoint : undefined);
   const overlayProps = { breakpoint: overlayBreakpoint, config: customConfig, editor };
-  const { a, tx, sx, ax } = useAnchors(customConfig, overlayBreakpoint, editor);
+  const { anchorProps, tx, sx, ax } = useAnchors(customConfig, overlayBreakpoint, editor);
   const NAV_LABELS: Record<SectionCode, string> = {
     welcome: t('nav.invite', 'Invitation'),
     walimah: t('nav.walimah', 'Ceremony'),
@@ -327,7 +327,7 @@ export default function Template1({
                   💍
                 </motion.div>
 
-                <div style={a('welcome', 'heading')} data-seen="true">
+                <div {...anchorProps('welcome', 'heading')} data-seen="true">
                   <motion.p
                     {...hAnim}
                     className="text-rose-600 text-sm uppercase tracking-widest mb-4 font-semibold"
@@ -337,7 +337,7 @@ export default function Template1({
                   </motion.p>
                 </div>
 
-                <div style={a('welcome', 'brideName')} data-seen="true">
+                <div {...anchorProps('welcome', 'brideName')} data-seen="true">
                   <motion.h1
                     {...hAnim}
                     transition={{ ...hAnim.transition, delay: Number(hAnim.transition?.delay ?? 0) + 0.2 }}
@@ -356,7 +356,7 @@ export default function Template1({
                   <span {...ax('welcome', 'connector')}>{tx('welcome', 'connector', '&')}</span>
                 </div>
 
-                <div style={a('welcome', 'groomName')} data-seen="true">
+                <div {...anchorProps('welcome', 'groomName')} data-seen="true">
                   <motion.h1
                     {...hAnim}
                     transition={{ ...hAnim.transition, delay: Number(hAnim.transition?.delay ?? 0) + 0.4 }}
@@ -368,13 +368,13 @@ export default function Template1({
                 </div>
                 <p
                   className={`text-gray-600 text-lg mt-6 max-w-md mx-auto ${alignClass(customConfig?.['invite.body.align'])}`}
-                  style={a('welcome', 'body')}
+                  {...anchorProps('welcome', 'body')}
                   dangerouslySetInnerHTML={{ __html: t('invite.body', 'We joyfully invite you to share in the celebration of our wedding') }}
                 />
               </div>
 
               {/* Wedding Details */}
-              <div className="bg-white rounded-2xl shadow-xl p-8 md:p-12 mb-8" style={a('welcome', 'details')}>
+              <div className="bg-white rounded-2xl shadow-xl p-8 md:p-12 mb-8" {...anchorProps('welcome', 'details')}>
                 <div className="text-center mb-8">
                   <p className="text-sm text-gray-500 uppercase tracking-wider mb-2">
                     Save the Date
@@ -414,7 +414,7 @@ export default function Template1({
 
                 <div
                   className="text-center bg-gradient-to-r from-rose-50 to-pink-50 rounded-xl p-6"
-                  style={a('welcome', 'countdown')}
+                  {...anchorProps('welcome', 'countdown')}
                   data-seen="true"
                 >
                   <p className="text-sm text-gray-600 mb-2">Countdown</p>
@@ -470,7 +470,7 @@ export default function Template1({
               className={`relative bg-white rounded-2xl shadow-md p-8 mb-16 scroll-mt-24 ${alignClass(customConfig?.['walimah.body.align'])}`}
             >
               <SectionOverlay stageId="walimah" {...overlayProps} />
-              <h2 className="text-3xl font-bold text-rose-500 mb-6" style={a('walimah', 'title')}>Ceremony Details</h2>
+              <h2 className="text-3xl font-bold text-rose-500 mb-6" {...anchorProps('walimah', 'title')}>Ceremony Details</h2>
               <div
                 className="text-gray-600 prose prose-sm max-w-none"
                 dangerouslySetInnerHTML={{ __html: customConfig?.['walimah.body'] ?? '' }}
@@ -494,7 +494,7 @@ export default function Template1({
                 const iAlign = customConfig?.['walimah.body.align'] ?? 'left';
                 return (
                   <>
-                    <h2 className={`text-3xl font-bold text-rose-500 mb-6 ${alignClass(iAlign)}`} style={a('itinerary', 'title')}>Schedule</h2>
+                    <h2 className={`text-3xl font-bold text-rose-500 mb-6 ${alignClass(iAlign)}`} {...anchorProps('itinerary', 'title')}>Schedule</h2>
                     <ol className="space-y-3">
                       {itinerary.map((item) => (
                         <li
@@ -526,7 +526,7 @@ export default function Template1({
               style={{ order: sectionOrder.indexOf('rsvp'), ...sectionBgStyle(customConfig?.['section.ceremony.bg'], API_BASE) }}
             >
               <SectionOverlay stageId="rsvp" {...overlayProps} />
-              <div className="text-center mb-8" style={a('rsvp', 'heading')}>
+              <div className="text-center mb-8" {...anchorProps('rsvp', 'heading')}>
                 <h2 className="text-4xl font-bold text-gray-800 mb-2">RSVP</h2>
                 <p className="text-gray-600">
                   {t('rsvp.subtitle', "We'd love to have you celebrate with us! 💕")}
@@ -746,7 +746,7 @@ export default function Template1({
               className="relative rounded-2xl mb-16 scroll-mt-24"
             >
               <SectionOverlay stageId="wishes" {...overlayProps} />
-              <div className="text-center mb-12" style={a('wishes', 'heading')}>
+              <div className="text-center mb-12" {...anchorProps('wishes', 'heading')}>
                 <h2 className="text-4xl font-bold text-gray-800 mb-2">
                   Wishes & Blessings
                 </h2>
@@ -851,7 +851,7 @@ export default function Template1({
           className="relative mb-16 scroll-mt-24"
         >
           <SectionOverlay stageId="photobooth" {...overlayProps} />
-          <div className="text-center mb-12" style={a('photobooth', 'heading')}>
+          <div className="text-center mb-12" {...anchorProps('photobooth', 'heading')}>
             <h2 className="text-4xl font-bold text-gray-800 mb-2">
               Photo Booth
             </h2>

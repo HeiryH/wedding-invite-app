@@ -1,4 +1,5 @@
 'use client';
+import type { AnchorBinding } from '@/components/templates/_shared/hooks/useAnchors';
 import { useRsvpController } from '@/components/templates/_shared/guest/useRsvpController';
 import { configValue } from '@/components/templates/configValue';
 import { useDialogBehavior } from '../../_shared/hooks/useDialogBehavior';
@@ -6,7 +7,7 @@ import { useGuestSubmission } from '@/components/templates/_shared/guest/useGues
 import { guestLimit, normalizeRsvp } from '@/components/templates/_shared/guest/rules';
 import type { TemplateRsvpSubmission } from '@/components/templates/guestContracts';
 
-import { useContext, useState, useRef, type CSSProperties } from 'react';
+import { useContext, useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Wedding, SeatingTable } from '@/lib/api';
 import type { Breakpoint, EditorHandle } from '@/components/templates/_shared/types';
@@ -22,10 +23,10 @@ interface Props {
   seatingEnabled?: boolean;
   tables?: SeatingTable[];
   overlayProps: { breakpoint: Breakpoint; config?: Record<string, string>; editor?: EditorHandle };
-  a: (stageId: string, elementId: string, base?: CSSProperties) => CSSProperties;
+  anchorProps: AnchorBinding;
 }
 
-export default function RSVPSection({ onRSVP, customConfig, wedding, seatingEnabled = false, tables = [], overlayProps, a }: Props) {
+export default function RSVPSection({ onRSVP, customConfig, wedding, seatingEnabled = false, tables = [], overlayProps, anchorProps }: Props) {
   const {
     screen: step,
     setScreen: setStep,
@@ -80,7 +81,7 @@ export default function RSVPSection({ onRSVP, customConfig, wedding, seatingEnab
         viewport={{ once: true, margin: '-80px' }}
         transition={{ duration: 0.8 }}
       >
-        <h2 className={styles.sectionTitle} style={a('rsvp', 'title')}>
+        <h2 className={styles.sectionTitle} {...anchorProps('rsvp', 'title')}>
           <span className={styles.titleDecor}>✦</span>
           RSVP
           <span className={styles.titleDecor}>✦</span>

@@ -204,26 +204,32 @@
   to   { filter: hue-rotate(calc(var(--sl-idle-intensity, 1) * 360deg)); }
 }
 
-[data-seen='true'] [data-sl-idle='wave']      { animation: sl-idle-wave      var(--sl-idle-dur, 2.6s) ease-in-out infinite; }
-[data-seen='true'] [data-sl-idle='sway']      { animation: sl-idle-sway      var(--sl-idle-dur, 3.2s) ease-in-out infinite; }
-[data-seen='true'] [data-sl-idle='pendulum']  { animation: sl-idle-pendulum  var(--sl-idle-dur, 2.8s) ease-in-out infinite; }
-[data-seen='true'] [data-sl-idle='float']     { animation: sl-idle-float     var(--sl-idle-dur, 3.4s) ease-in-out infinite; }
-[data-seen='true'] [data-sl-idle='drift']     { animation: sl-idle-drift     var(--sl-idle-dur, 4.2s) ease-in-out infinite; }
-[data-seen='true'] [data-sl-idle='bounce']    { animation: sl-idle-bounce    var(--sl-idle-dur, 1.6s) linear infinite; }
-[data-seen='true'] [data-sl-idle='wobble']    { animation: sl-idle-wobble    var(--sl-idle-dur, 2.2s) ease-in-out infinite; }
-[data-seen='true'] [data-sl-idle='spin']      { animation: sl-idle-spin      var(--sl-idle-dur, 6s) linear infinite; }
-[data-seen='true'] [data-sl-idle='tilt']      { animation: sl-idle-tilt      var(--sl-idle-dur, 4s) ease-in-out infinite; }
-[data-seen='true'] [data-sl-idle='pulse']     { animation: sl-idle-pulse     var(--sl-idle-dur, 1.8s) ease-in-out infinite; }
-[data-seen='true'] [data-sl-idle='breathe']   { animation: sl-idle-breathe   var(--sl-idle-dur, 3.6s) ease-in-out infinite; }
-[data-seen='true'] [data-sl-idle='heartbeat'] { animation: sl-idle-heartbeat var(--sl-idle-dur, 1.4s) ease-in-out infinite; }
-[data-seen='true'] [data-sl-idle='jitter']    { animation: sl-idle-jitter    var(--sl-idle-dur, 2.4s) linear infinite; }
-[data-seen='true'] [data-sl-idle='shake']     { animation: sl-idle-shake     var(--sl-idle-dur, 3s) linear infinite; }
-[data-seen='true'] [data-sl-idle='glitch']    { animation: sl-idle-glitch    var(--sl-idle-dur, 3.6s) steps(1, end) infinite; }
-[data-seen='true'] [data-sl-idle='flicker']   { animation: sl-idle-flicker   var(--sl-idle-dur, 2.2s) linear infinite; }
-[data-seen='true'] [data-sl-idle='blink']     { animation: sl-idle-blink     var(--sl-idle-dur, 1.2s) steps(1, end) infinite; }
-[data-seen='true'] [data-sl-idle='hue']       { animation: sl-idle-hue       var(--sl-idle-dur, 5s) linear infinite; }
+[data-seen='true'] [data-sl-idle='wave'], [data-anchor-group-idle='wave']      { animation: sl-idle-wave      var(--sl-idle-dur, 2.6s) ease-in-out infinite; }
+[data-seen='true'] [data-sl-idle='sway'], [data-anchor-group-idle='sway']      { animation: sl-idle-sway      var(--sl-idle-dur, 3.2s) ease-in-out infinite; }
+[data-seen='true'] [data-sl-idle='pendulum'], [data-anchor-group-idle='pendulum']  { animation: sl-idle-pendulum  var(--sl-idle-dur, 2.8s) ease-in-out infinite; }
+[data-seen='true'] [data-sl-idle='float'], [data-anchor-group-idle='float']     { animation: sl-idle-float     var(--sl-idle-dur, 3.4s) ease-in-out infinite; }
+[data-seen='true'] [data-sl-idle='drift'], [data-anchor-group-idle='drift']     { animation: sl-idle-drift     var(--sl-idle-dur, 4.2s) ease-in-out infinite; }
+[data-seen='true'] [data-sl-idle='bounce'], [data-anchor-group-idle='bounce']    { animation: sl-idle-bounce    var(--sl-idle-dur, 1.6s) linear infinite; }
+[data-seen='true'] [data-sl-idle='wobble'], [data-anchor-group-idle='wobble']    { animation: sl-idle-wobble    var(--sl-idle-dur, 2.2s) ease-in-out infinite; }
+[data-seen='true'] [data-sl-idle='spin'], [data-anchor-group-idle='spin']      { animation: sl-idle-spin      var(--sl-idle-dur, 6s) linear infinite; }
+[data-seen='true'] [data-sl-idle='tilt'], [data-anchor-group-idle='tilt']      { animation: sl-idle-tilt      var(--sl-idle-dur, 4s) ease-in-out infinite; }
+[data-seen='true'] [data-sl-idle='pulse'], [data-anchor-group-idle='pulse']     { animation: sl-idle-pulse     var(--sl-idle-dur, 1.8s) ease-in-out infinite; }
+[data-seen='true'] [data-sl-idle='breathe'], [data-anchor-group-idle='breathe']   { animation: sl-idle-breathe   var(--sl-idle-dur, 3.6s) ease-in-out infinite; }
+[data-seen='true'] [data-sl-idle='heartbeat'], [data-anchor-group-idle='heartbeat'] { animation: sl-idle-heartbeat var(--sl-idle-dur, 1.4s) ease-in-out infinite; }
+[data-seen='true'] [data-sl-idle='jitter'], [data-anchor-group-idle='jitter']    { animation: sl-idle-jitter    var(--sl-idle-dur, 2.4s) linear infinite; }
+[data-seen='true'] [data-sl-idle='shake'], [data-anchor-group-idle='shake']     { animation: sl-idle-shake     var(--sl-idle-dur, 3s) linear infinite; }
+[data-seen='true'] [data-sl-idle='glitch'], [data-anchor-group-idle='glitch']    { animation: sl-idle-glitch    var(--sl-idle-dur, 3.6s) steps(1, end) infinite; }
+[data-seen='true'] [data-sl-idle='flicker'], [data-anchor-group-idle='flicker']   { animation: sl-idle-flicker   var(--sl-idle-dur, 2.2s) linear infinite; }
+[data-seen='true'] [data-sl-idle='blink'], [data-anchor-group-idle='blink']     { animation: sl-idle-blink     var(--sl-idle-dur, 1.2s) steps(1, end) infinite; }
+[data-seen='true'] [data-sl-idle='hue'], [data-anchor-group-idle='hue']       { animation: sl-idle-hue       var(--sl-idle-dur, 5s) linear infinite; }
+
+[data-anchor-group-idle] {
+  animation-composition: add;
+}
 
 @media (prefers-reduced-motion: reduce) {
+  [data-anchor-group-idle] { animation: none !important; }
+
   [data-sl-anim],
   [data-seen='true'] [data-sl-anim] {
     opacity: var(--sl-opacity, 1);

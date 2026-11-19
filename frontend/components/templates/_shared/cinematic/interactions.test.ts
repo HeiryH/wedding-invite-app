@@ -35,15 +35,15 @@ describe('cinematic interaction lifecycle', () => {
     const tracks = PAINTED_PROMISE_SEQUENCE.tracks;
     expect(findCinematicInteractionTrack(tracks, 'rsvp')?.id).toBe('rsvp-availability');
     expect(findCinematicInteractionTrack(tracks, 'wish')?.id).toBe('wishes-availability');
-    expect(cinematicInteractionAvailable(tracks, 'rsvp', .82)).toBe(true);
+    expect(cinematicInteractionAvailable(tracks, 'rsvp', .8)).toBe(true);
     expect(cinematicInteractionAvailable(tracks, 'rsvp', .77)).toBe(false);
-    expect(cinematicInteractionAvailable(tracks, 'wish', .90)).toBe(true);
+    expect(cinematicInteractionAvailable(tracks, 'wish', .84)).toBe(true);
   });
 
   it('returns to the same table scene after dismissing within the availability range', () => {
     const tracks = PAINTED_PROMISE_SEQUENCE.tracks;
-    expect(cinematicInteractionReturnsToScene(tracks, 'rsvp', 'open', .83)).toBe(false);
-    expect(cinematicInteractionReturnsToScene(tracks, 'rsvp', 'closing', .83)).toBe(true);
+    expect(cinematicInteractionReturnsToScene(tracks, 'rsvp', 'open', .8)).toBe(false);
+    expect(cinematicInteractionReturnsToScene(tracks, 'rsvp', 'closing', .8)).toBe(true);
     expect(cinematicInteractionReturnsToScene(tracks, 'rsvp', 'dismissed', .87)).toBe(false);
   });
 });

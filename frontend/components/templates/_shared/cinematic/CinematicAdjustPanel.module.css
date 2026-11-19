@@ -151,9 +151,6 @@
 .proportionLock:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
 
 .modeSwitch {
-  position: sticky;
-  top: 0;
-  z-index: 5;
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 5px;
@@ -208,7 +205,7 @@
 .layerFilters span { font-size: 10px; font-weight: 400; }
 .filterHint { margin: 0 0 8px; color: var(--text-muted); font-size: 10px; line-height: 1.4; }
 .layerBrowser { position: relative; }
-.layerBrowserHeader { position: sticky; top: 48px; z-index: 6; display: flex; align-items: center; justify-content: space-between; gap: 6px; min-height: 48px; padding: 8px 0; background: var(--surface-card); }
+.layerBrowserHeader { position: sticky; top: 0; z-index: 6; display: flex; align-items: center; justify-content: space-between; gap: 6px; min-height: 48px; padding: 8px 0; background: var(--surface-card); }
 .layerBrowserHeader .label { margin: 0; flex: 1; min-width: 0; font-size: 9px; letter-spacing: .08em; }
 .layerTools { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
 .layerToolButton { display: grid; place-items: center; width: 30px; height: 30px; border: 1px solid var(--border-subtle); border-radius: 6px; background: var(--surface-card); color: var(--text-muted); cursor: pointer; }
@@ -221,7 +218,15 @@
   border-top: 1px solid var(--border-subtle);
 }
 
+.sceneLayerHeader {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
 .layerGroupHeader {
+  flex: 1;
+  min-width: 0;
   width: 100%;
   display: grid;
   grid-template-columns: 8px 1fr auto;
@@ -688,7 +693,7 @@
 
 .setEditorHeader {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 30px;
+  grid-template-columns: minmax(0, 1fr) repeat(2, 30px);
   align-items: center;
   gap: 6px;
   padding: 9px 10px;
@@ -1092,8 +1097,6 @@
 .directorFields p { margin: 0; color: #687063; font-size: 11px; line-height: 1.5; }
 .directorChecks { display: flex; flex-wrap: wrap; gap: 8px 14px; margin-top: 8px; }
 .directorChecks label, .directorFields .directorCheck { display: flex; align-items: center; gap: 6px; }
-.motionGrid { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr) minmax(0, 1fr); gap: 8px; align-items: center; }
-.motionRow { display: contents; }
 .narrativeEditor { border: 1px solid #d5d3ce; border-radius: 6px; overflow: hidden; }
 .narrativeEditor > div:first-child { display: flex; gap: 6px; padding: 6px; border-bottom: 1px solid #dedbd5; }
 .narrativeEditor button { padding: 4px 8px; background: white; border: 1px solid #dedbd5; border-radius: 4px; font-size: 11px; }
@@ -1106,12 +1109,165 @@
 .animationCard summary { cursor: pointer; padding: 10px; font-size: 12px; font-weight: 600; overflow-wrap: anywhere; }
 .animationProperties { display: grid; gap: 10px; padding: 0 10px 12px; }
 .animationProperties label { display: flex; flex-direction: column; gap: 5px; min-width: 0; color: var(--text-muted); font-size: 10px; }
-.animationProperties input:not([type="checkbox"]), .animationProperties select, .animationAdd select { box-sizing: border-box; width: 100%; min-width: 0; border: 1px solid var(--border-default); border-radius: 4px; padding: 7px; background: var(--surface-card); color: var(--text-strong); font-size: 12px; }
+.animationProperties input:not([type="checkbox"]) { box-sizing: border-box; width: 100%; min-width: 0; border: 1px solid var(--border-default); border-radius: 4px; padding: 7px; background: var(--surface-card); color: var(--text-strong); font-size: 12px; }
 .animationProperties .animationEnabled { flex-direction: row; align-items: center; gap: 6px; }
-.animationAdd { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; margin-top: 10px; }
-.animationAdd button { padding: 7px 10px; border: 1px solid var(--border-default); border-radius: 4px; background: var(--surface-card); color: var(--text-strong); font-size: 11px; cursor: pointer; }
 
 .layerGroup[data-drop-target='true'] {
   outline: 1px dashed var(--gold-400);
   outline-offset: -1px;
 }
+
+.anchorPoints { margin-block: .75rem; }
+.anchorPointDialog {
+  box-sizing: border-box;
+  width: min(920px, calc(100vw - 32px));
+  max-height: calc(100dvh - 32px);
+  padding: 0;
+  margin: auto;
+  border: 1px solid var(--border-default);
+  border-radius: 14px;
+  background: var(--surface-card);
+  color: var(--text-strong);
+  box-shadow: var(--shadow-lg);
+}
+.anchorPointDialog::backdrop { background: rgb(30 24 19 / 45%); }
+.anchorPointHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border-default);
+}
+.anchorPointHeader h2 { margin: 0; font-size: 17px; font-weight: 650; }
+.anchorPointHeader p { margin: 3px 0 0; color: var(--text-muted); font-size: 13px; overflow-wrap: anywhere; }
+.anchorPointWorkspace { display: grid; grid-template-columns: minmax(0, 1fr) 220px; }
+.anchorPointArt { min-width: 0; }
+.anchorPointZoom {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border-default);
+}
+.anchorPointZoom output { min-width: 4ch; text-align: center; font-variant-numeric: tabular-nums; }
+.anchorPointHeader button, .anchorPointZoom button, .anchorPointFields > button {
+  padding: 6px 10px;
+  border: 1px solid var(--border-default);
+  border-radius: 6px;
+  background: var(--surface-card);
+  color: inherit;
+  cursor: pointer;
+}
+.anchorPointDialog button:disabled { cursor: default; opacity: .55; }
+.anchorPointViewport {
+  height: min(540px, 60dvh);
+  overflow: auto;
+  overscroll-behavior: contain;
+  background: repeating-conic-gradient(var(--surface-sunken) 0 25%, var(--surface-card) 0 50%) 0 / 20px 20px;
+}
+.anchorPointBoard {
+  display: grid;
+  place-items: center;
+  box-sizing: border-box;
+  min-width: 100%;
+  min-height: 100%;
+  width: max-content;
+  padding: 20px;
+}
+.anchorPointCanvas {
+  display: block;
+  position: relative;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: crosshair;
+}
+.anchorPointCanvas img {
+  display: block;
+  width: 100%;
+  height: auto;
+  pointer-events: none;
+}
+.anchorPointCanvas span {
+  position: absolute;
+  box-sizing: border-box;
+  width: 13px;
+  height: 13px;
+  border: 2px solid #fff;
+  border-radius: 50%;
+  background: rgb(165 98 36 / 35%);
+  box-shadow: 0 0 0 1px #4f321e;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+.anchorPointCanvas span::after {
+  content: '';
+  position: absolute;
+  inset: 3px;
+  border-radius: 50%;
+  background: #4f321e;
+}
+.anchorPointFields {
+  display: grid;
+  gap: 10px;
+  align-content: start;
+  min-width: 0;
+  margin: 0;
+  padding: 14px;
+  border: 0;
+  border-left: 1px solid var(--border-default);
+}
+.anchorPointCoordinates { display: grid; gap: .5rem; grid-template-columns: 1fr 1fr; }
+@media (max-width: 580px) {
+  .anchorPointWorkspace { grid-template-columns: minmax(0, 1fr); }
+  .anchorPointViewport { height: min(380px, 43dvh); }
+  .anchorPointFields { border-left: 0; border-top: 1px solid var(--border-default); }
+}
+
+
+.textStyleTools {
+  display: grid;
+  gap: 6px;
+}
+.textStyleTools summary { cursor: pointer; }
+.textStyleTools details[open] summary { margin-bottom: 8px; }
+.textStyleTools input[type='range'] { width: 100%; min-width: 0; }
+.textStyleTools output { color: var(--text-muted); }
+
+.fontPicker {
+  display: grid;
+  gap: 5px;
+  margin-bottom: 8px;
+  min-width: 0;
+  color: var(--text-muted);
+  font-size: 11px;
+}
+
+.fontPicker > button {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  text-align: left;
+}
+
+.fontOptions {
+  position: relative;
+  max-height: 180px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  border: 1px solid var(--border-default);
+  border-radius: 6px;
+  background: var(--surface-card);
+  color: var(--text-strong);
+  font-size: 14px;
+}
+
+.fontOptions [role='option'] {
+  padding: 6px 10px;
+  cursor: pointer;
+}
+
+.fontOptions [data-active] { background: var(--surface-sunken); }
+.fontOptions [aria-selected='true'] { box-shadow: inset 2px 0 var(--text-muted); }

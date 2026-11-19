@@ -67,6 +67,44 @@ describe('generic cinematic scene', () => {
     expect(scene.entries[0].presentation.xVw).toBeCloseTo(-10);
   });
 
+  it('applies the same group slide offset only to its members on the authored breakpoint', () => {
+    const layers = [layer, { ...layer, id: 'chair', x: 25 }, { ...layer, id: 'flowers' }];
+    const sceneSets: CinematicSceneSet[] = [{ ...set, layerGroups: { mobile: [{
+      id: 'portraits', label: 'Portraits', memberIds: ['portrait', 'chair'],
+      enter: { kind: 'slide', direction: 'left', distance: 16, easing: 'linear' },
+      exit: { kind: 'slide', direction: 'down', distance: 8, easing: 'linear' },
+    }] } }];
+    const args = { layers, sceneSets, tracks: [track], progress: .3 };
+    const entrance = resolveCinematicScene(args).entries;
+    expect(entrance[0].presentation.xVw).toBeCloseTo(-8);
+    expect(entrance[1].presentation).toEqual(entrance[0].presentation);
+    expect(entrance[1].layer.x).toBe(25);
+    expect(entrance[2].presentation.xVw).toBe(0);
+    expect(resolveCinematicScene({ ...args, progress: .7 }).entries[0].presentation.yVh).toBeCloseTo(4);
+    expect(resolveCinematicScene({ ...args, breakpoint: 'desktop' }).entries[0].presentation.xVw).toBe(0);
+    expect(resolveCinematicScene({ ...args, reducedMotion: true }).entries[0].presentation.xVw).toBe(0);
+  });
+
+  it('samples one in-between group transform around the shared pivot', () => {
+    const layers = [layer, { ...layer, id: 'chair', x: 30, y: 70 }, { ...layer, id: 'flowers' }];
+    const sceneSets: CinematicSceneSet[] = [{ ...set, layerGroups: { mobile: [{
+      id: 'portraits', label: 'Portraits', memberIds: ['portrait', 'chair'], scale: 1.25,
+      animations: [{ id: 'turn', label: 'Turn', enabled: true, start: 0, end: 1, easing: 'linear',
+        x: 10, y: 4, scale: 2, rotate: 90 }],
+    }] } }];
+    const args = { layers, sceneSets, tracks: [track], progress: .5 };
+    const { entries } = resolveCinematicScene(args);
+    const transform = entries[0].groupTransform!;
+    expect(transform).toMatchObject({ centerX: 40, centerY: 60 });
+    expect(transform.x).toBeCloseTo(5);
+    expect(transform.rotate).toBeCloseTo(45);
+    expect(transform.scale).toBeCloseTo(1.875);
+    expect(entries[1].groupTransform).toEqual(transform);
+    expect(entries[2].groupTransform).toBeUndefined();
+    expect(resolveCinematicScene({ ...args, reducedMotion: true }).entries[0].groupTransform)
+      .toMatchObject({ x: 0, rotate: 0, scale: 1.25 });
+  });
+
   it('gives copied sets independent visibility and retains both breakpoint compositions', () => {
     const engine = CINEMATIC_ENGINES[15];
     let config = editCinematicSceneSets(engine, {}, { type: 'duplicate', id: 'table', copyId: 'second-table' });

@@ -75,7 +75,11 @@ const SHARED_NAV_FIELDS: TemplateConfigField[] = [
   { key: 'nav.content', label: 'Menu item display', fieldType: 'select', defaultValue: 'labels', maxLength: 6,
     options: ['labels', 'icons'], optionLabels: { labels: 'Labels', icons: 'Icons' },
     richText: false, adminOnly: false, section: 'navigation', group: 'Navigation Bar', chip: 'Display',
-    templateIds: templatesWith('sharedNavigation') },
+    templateIds: templatesWith('sharedNavigation').filter((id) => id !== 5) },
+  { key: 'nav.content', label: 'Menu item display', fieldType: 'select', defaultValue: 'icons', maxLength: 6,
+    options: ['labels', 'icons'], optionLabels: { labels: 'Labels', icons: 'Icons' },
+    richText: false, adminOnly: false, section: 'navigation', group: 'Navigation Bar', chip: 'Display',
+    templateIds: [5] },
   ...NAV_ADJUST_KEYS.map((key): TemplateConfigField => ({
     key, label: key, fieldType: 'hidden', defaultValue: '', maxLength: 8,
     richText: false, adminOnly: false, section: 'navigation',

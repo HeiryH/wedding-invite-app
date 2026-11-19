@@ -1,6 +1,6 @@
 'use client';
+import type { AnchorBinding } from '@/components/templates/_shared/hooks/useAnchors';
 import { motion } from 'framer-motion';
-import type { CSSProperties } from 'react';
 import { ItineraryItem } from '@/lib/api';
 import type { Breakpoint, EditorHandle } from '@/components/templates/_shared/types';
 import SectionOverlay from '../SectionOverlay';
@@ -9,10 +9,10 @@ import styles from '../Template6.module.css';
 interface Props {
   items: ItineraryItem[];
   overlayProps: { breakpoint: Breakpoint; config?: Record<string, string>; editor?: EditorHandle };
-  a: (stageId: string, elementId: string, base?: CSSProperties) => CSSProperties;
+  anchorProps: AnchorBinding;
 }
 
-export default function ItinerarySection({ items, overlayProps, a }: Props) {
+export default function ItinerarySection({ items, overlayProps, anchorProps }: Props) {
   if (!items.length) return null;
 
   return (
@@ -25,7 +25,7 @@ export default function ItinerarySection({ items, overlayProps, a }: Props) {
         viewport={{ once: true, margin: '-80px' }}
         transition={{ duration: 0.8 }}
       >
-        <h2 className={styles.sectionTitle} style={a('itinerary', 'title')}>
+        <h2 className={styles.sectionTitle} {...anchorProps('itinerary', 'title')}>
           <span className={styles.titleDecor}>✦</span>
           Programme
           <span className={styles.titleDecor}>✦</span>

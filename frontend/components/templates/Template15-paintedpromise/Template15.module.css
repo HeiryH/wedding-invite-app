@@ -168,3 +168,24 @@
 @media (prefers-reduced-motion: reduce) {
   .clouds, .world, .photoFinale, .letter { transition-duration: .45s; }
 }
+
+.receptionProp {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--cinematic-ink);
+}
+button.receptionProp { cursor: pointer; }
+button.receptionProp:focus-visible { outline: 2px solid var(--cinematic-accent); outline-offset: 4px; }
+.receptionSprite {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  translate: -50% -50%;
+  width: 100%;
+  background-repeat: no-repeat;
+}

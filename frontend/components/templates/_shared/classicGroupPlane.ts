@@ -5,6 +5,7 @@ import type { Layer } from './types';
 /** Classic props and the section overlay can have separate stacking and layout contexts. */
 export function classicGroupPlane(prefix: string, stageId: string, layer: Layer) {
   if (layer.kind === 'slot' || (prefix === 't5' && stageId === 'envelope')) return;
+  if (layer.kind === 'anchor') return layer.groupableAnchor ? 'anchors' : undefined;
   const shipped = prefix === 't11' ? ROSE_PROPS : prefix === 't12' ? WOODLAND_PROPS : undefined;
   return layer.kind === 'img' && shipped?.[stageId]?.has(layer.id) ? 'props' : 'overlay';
 }

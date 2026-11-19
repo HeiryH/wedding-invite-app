@@ -3,7 +3,7 @@ import { T1_STAGES, t1StageIds } from '../Template1-classicrose/data/t1Stages';
 import { T2_STAGES, t2StageIds } from '../Template2-goldenelegance/data/t2Stages';
 import { T3_STAGES, t3StageIds } from '../Template3-gardenromance/data/t3Stages';
 import { T4_STAGES, t4StageIds } from '../Template4-minimalnoir/data/t4Stages';
-import { T5_STAGES, t5StageIds } from '../Template5-dreamingfloral/data/t5Stages';
+import { t5Stages, t5StageIds } from '../Template5-dreamingfloral/data/t5Stages';
 import { T6_STAGES, t6StageIds } from '../Template6-fairygarden/data/t6Stages';
 import { T7_STAGES, T7_ASSETS, STAGE_GROUPS } from '../Template7-romangarden/data/stages';
 import { T10_STAGES, T10_ASSETS, STAGE_GROUPS as T10_STAGE_GROUPS } from '../Template10-sunnysafari/data/stages';
@@ -77,7 +77,7 @@ export const TEMPLATE_ENGINES: Record<number, TemplateEngine> = {
   2: { keyPrefix: 't2', reveal: false, resolveStages: () => T2_STAGES, stageIds: (ctx) => t2StageIds(ctx.codes) },
   3: { keyPrefix: 't3', reveal: false, resolveStages: () => T3_STAGES, stageIds: (ctx) => t3StageIds(ctx.codes) },
   4: { keyPrefix: 't4', reveal: false, resolveStages: () => T4_STAGES, stageIds: (ctx) => t4StageIds(ctx.photoBoothEnabled) },
-  5: { keyPrefix: 't5', reveal: false, resolveStages: () => T5_STAGES, stageIds: (ctx) => t5StageIds(ctx.codes) },
+  5: { keyPrefix: 't5', reveal: false, resolveStages: (ctx) => t5Stages(ctx.draftConfig), stageIds: (ctx) => t5StageIds(ctx.codes) },
   6: { keyPrefix: 't6', reveal: false, resolveStages: () => T6_STAGES, stageIds: (ctx) => t6StageIds(ctx.codes) },
   7: {
     keyPrefix: 't7',

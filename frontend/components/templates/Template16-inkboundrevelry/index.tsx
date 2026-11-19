@@ -30,8 +30,8 @@ export default function Template16(props: TemplateRenderProps) {
   const { wedding, coupleMedia, customConfig = {}, itinerary = [], photoBoothEnabled, seatingEnabled = false, tables = [], editor } = props;
   const t: Copy = (key, fallback) => configValue(customConfig, key, fallback, 'preserve');
   const breakpoint = useBreakpoint(editor?.breakpoint);
-  const { a, sx } = useAnchorsFor(T16_STAGES, 't16', customConfig, breakpoint, editor);
-  const anchored = (stageId: string, layerId: string) => ({ ...a(stageId, layerId), ...sx(stageId, layerId) });
+  const { anchorProps, sx } = useAnchorsFor(T16_STAGES, 't16', customConfig, breakpoint, editor);
+  const anchoredProps = (stageId: string, layerId: string) => anchorProps(stageId, layerId, sx(stageId, layerId));
   const overlayProps = { breakpoint, config: customConfig, editor };
   const date = new Date(wedding.weddingDate);
   const dateText = formatEventDate(date, 'en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
@@ -46,57 +46,57 @@ export default function Template16(props: TemplateRenderProps) {
     <div className={styles.paper}>
       <section id="welcome" data-section="welcome" className={styles.welcome}>
         <SectionOverlay stageId="welcome" {...overlayProps} />
-        <div className={styles.ribbon} style={a('welcome', 'ribbon')}><Ribbon /></div>
+        <div className={styles.ribbon} {...anchorProps('welcome', 'ribbon')}><Ribbon /></div>
         <div className={styles.hero}>
-          <p style={anchored('welcome', 'heading')}>{t('invite.heading', 'Together with our families')}</p>
-          <p className={styles.eventTitle} style={anchored('welcome', 'eventTitle')}>{t('inkbound.eventTitle', 'The Wedding Celebration')}</p>
-          <h1 style={a('welcome', 'names')}><span style={anchored('welcome', 'firstName')}>{first}</span><em style={anchored('welcome', 'connector')}>&</em><span style={anchored('welcome', 'secondName')}>{second}</span></h1>
-          <p className={styles.date} style={anchored('welcome', 'date')}>{dateText}</p>
-          {wedding.venue && <p className={styles.venue} style={anchored('welcome', 'venue')}>{wedding.venue}</p>}
-          {t('general.showIslamicDate', 'false') === 'true' && <p style={anchored('welcome', 'islamicDate')}>{toHijriString(date)}</p>}
-          <div className={styles.timer} style={a('welcome', 'countdown')}><TimerSlot {...slotProps} /></div>
+          <p {...anchoredProps('welcome', 'heading')}>{t('invite.heading', 'Together with our families')}</p>
+          <p className={styles.eventTitle} {...anchoredProps('welcome', 'eventTitle')}>{t('inkbound.eventTitle', 'The Wedding Celebration')}</p>
+          <h1 {...anchorProps('welcome', 'names')}><span {...anchoredProps('welcome', 'firstName')}>{first}</span><em {...anchoredProps('welcome', 'connector')}>&</em><span {...anchoredProps('welcome', 'secondName')}>{second}</span></h1>
+          <p className={styles.date} {...anchoredProps('welcome', 'date')}>{dateText}</p>
+          {wedding.venue && <p className={styles.venue} {...anchoredProps('welcome', 'venue')}>{wedding.venue}</p>}
+          {t('general.showIslamicDate', 'false') === 'true' && <p {...anchoredProps('welcome', 'islamicDate')}>{toHijriString(date)}</p>}
+          <div className={styles.timer} {...anchorProps('welcome', 'countdown')}><TimerSlot {...slotProps} /></div>
         </div>
       </section>
       <section id="walimah" data-section="walimah" className={styles.ceremony}>
         <SectionOverlay stageId="walimah" {...overlayProps} />
-        {t('walimah.body', '') && <div className={styles.medallion} style={a('walimah', 'medallion')}><Medallion /></div>}
-        <div className={styles.ceremonyBody} style={a('walimah', 'content')}>
-          {t('walimah.body', '') && <><h2 style={anchored('walimah', 'title')}>{t('walimah.title', 'Walimatul Urus')}</h2><div className={styles.richText} style={a('walimah', 'body')}><WalimahBodySlot {...slotProps} /></div></>}
-          <p className={styles.red} style={anchored('walimah', 'date')}>{formatEventDate(date, 'en-GB', { day: 'numeric', month: 'long', year: 'numeric' })} · {formatEventTime(date, 'en-GB', { hour: 'numeric', minute: '2-digit' })}</p>
-          {wedding.venue && <p style={anchored('walimah', 'venue')}>{wedding.venue}<br />{wedding.venueAddress}</p>}
-          <div style={a('walimah', 'actions')}><VenueActions wedding={wedding} t={t} /></div>
+        {t('walimah.body', '') && <div className={styles.medallion} {...anchorProps('walimah', 'medallion')}><Medallion /></div>}
+        <div className={styles.ceremonyBody} {...anchorProps('walimah', 'content')}>
+          {t('walimah.body', '') && <><h2 {...anchoredProps('walimah', 'title')}>{t('walimah.title', 'Walimatul Urus')}</h2><div className={styles.richText} {...anchorProps('walimah', 'body')}><WalimahBodySlot {...slotProps} /></div></>}
+          <p className={styles.red} {...anchoredProps('walimah', 'date')}>{formatEventDate(date, 'en-GB', { day: 'numeric', month: 'long', year: 'numeric' })} · {formatEventTime(date, 'en-GB', { hour: 'numeric', minute: '2-digit' })}</p>
+          {wedding.venue && <p {...anchoredProps('walimah', 'venue')}>{wedding.venue}<br />{wedding.venueAddress}</p>}
+          <div {...anchorProps('walimah', 'actions')}><VenueActions wedding={wedding} t={t} /></div>
         </div>
       </section>
       <section id="rsvp" data-section="rsvp" className={styles.marginSection}>
         <SectionOverlay stageId="rsvp" {...overlayProps} />
-        <div className={styles.trail} style={a('rsvp', 'trail')}><Trail envelopes /></div>
-        <div className={styles.content} style={a('rsvp', 'content')}>
-          <h2 style={anchored('rsvp', 'title')}>{t('rsvp.title', 'Join the celebration')}</h2><div className={styles.flourish} style={a('rsvp', 'flourish')}><Flourish /></div>
-          <p style={anchored('rsvp', 'prompt')}>{t('rsvp.subtitle', 'Kindly reply before our celebration')}</p>
-          <div style={a('rsvp', 'form')}><ReplyForm {...props} t={t} /></div>
+        <div className={styles.trail} {...anchorProps('rsvp', 'trail')}><Trail envelopes /></div>
+        <div className={styles.content} {...anchorProps('rsvp', 'content')}>
+          <h2 {...anchoredProps('rsvp', 'title')}>{t('rsvp.title', 'Join the celebration')}</h2><div className={styles.flourish} {...anchorProps('rsvp', 'flourish')}><Flourish /></div>
+          <p {...anchoredProps('rsvp', 'prompt')}>{t('rsvp.subtitle', 'Kindly reply before our celebration')}</p>
+          <div {...anchorProps('rsvp', 'form')}><ReplyForm {...props} t={t} /></div>
         </div>
       </section>
       <section id="itinerary" data-section="itinerary" className={styles.marginSection} hidden={!itinerary.length}>
         <SectionOverlay stageId="itinerary" {...overlayProps} />
-        <div className={styles.trail} style={a('itinerary', 'trail')}><Trail /></div>
-        <div className={styles.content} style={a('itinerary', 'content')}><h2 style={anchored('itinerary', 'title')}>{t('itinerary.title', 'The order of the day')}</h2>
-          <ol className={styles.programme} style={a('itinerary', 'programme')}>{itinerary.map((item) => <li key={item.itineraryItemId}>
+        <div className={styles.trail} {...anchorProps('itinerary', 'trail')}><Trail /></div>
+        <div className={styles.content} {...anchorProps('itinerary', 'content')}><h2 {...anchoredProps('itinerary', 'title')}>{t('itinerary.title', 'The order of the day')}</h2>
+          <ol className={styles.programme} {...anchorProps('itinerary', 'programme')}>{itinerary.map((item) => <li key={item.itineraryItemId}>
             {item.detail && <p className={styles.red}>{item.detail}</p>}<p>{item.label}</p>
           </li>)}</ol>
         </div>
       </section>
       <section id="wishes" data-section="wishes" className={styles.wishes}>
         <SectionOverlay stageId="wishes" {...overlayProps} />
-        <h2 style={anchored('wishes', 'title')}>{t('wish.title', 'Words to keep')}</h2><div className={styles.flourish} style={a('wishes', 'flourish')}><Flourish /></div>
-        <p style={anchored('wishes', 'prompt')}>{t('wish.prompt', 'Leave a little joy for our next chapter')}</p>
-        <div style={a('wishes', 'guestbook')}><Guestbook {...props} t={t} /></div>
-        <div className={styles.note} style={a('wishes', 'note')}><Note /></div>
+        <h2 {...anchoredProps('wishes', 'title')}>{t('wish.title', 'Words to keep')}</h2><div className={styles.flourish} {...anchorProps('wishes', 'flourish')}><Flourish /></div>
+        <p {...anchoredProps('wishes', 'prompt')}>{t('wish.prompt', 'Leave a little joy for our next chapter')}</p>
+        <div {...anchorProps('wishes', 'guestbook')}><Guestbook {...props} t={t} /></div>
+        <div className={styles.note} {...anchorProps('wishes', 'note')}><Note /></div>
       </section>
       <section id="photobooth" data-section="photobooth" className={styles.marginSection} hidden={!photoBoothEnabled}>
         <SectionOverlay stageId="photobooth" {...overlayProps} />
-        {photoBoothEnabled && <><div className={styles.flash} style={a('photobooth', 'flash')}><Flash /></div><div className={styles.content} style={a('photobooth', 'content')}>
-          <h2 style={anchored('photobooth', 'title')}>{t('photobooth.title', 'Our shared moments')}</h2><div className={styles.flourish} style={a('photobooth', 'flourish')}><Flourish /></div>
-          <p style={anchored('photobooth', 'prompt')}>{t('photobooth.prompt', 'Share a photograph from the day')}</p><div style={a('photobooth', 'album')}><Album {...props} t={t} /></div>
+        {photoBoothEnabled && <><div className={styles.flash} {...anchorProps('photobooth', 'flash')}><Flash /></div><div className={styles.content} {...anchorProps('photobooth', 'content')}>
+          <h2 {...anchoredProps('photobooth', 'title')}>{t('photobooth.title', 'Our shared moments')}</h2><div className={styles.flourish} {...anchorProps('photobooth', 'flourish')}><Flourish /></div>
+          <p {...anchoredProps('photobooth', 'prompt')}>{t('photobooth.prompt', 'Share a photograph from the day')}</p><div {...anchorProps('photobooth', 'album')}><Album {...props} t={t} /></div>
         </div></>}
       </section>
     </div>

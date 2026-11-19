@@ -101,13 +101,15 @@ describe('Inkbound Revelry flow', () => {
     await waitFor(() => expect(p.onUploadPhoto).toHaveBeenCalledWith({ guestName: 'Guest', caption: '', file }));
     expect(await screen.findByText('Your photo was uploaded.')).toBeInTheDocument();
   });
-  it('does not post mutations in edit mode', async () => {
+  it('selects the form instead of posting mutations in edit mode', () => {
+    const post = vi.spyOn(window.parent, 'postMessage');
     const p = props(); p.editor = { enabled: true, breakpoint: 'mobile' };
     render(<Template16 {...p} />);
     fireEvent.change(screen.getByLabelText('Full name'), { target: { value: 'Nadia' } });
     fireEvent.click(screen.getByRole('button', { name: 'Send RSVP' }));
-    expect(await screen.findByRole('alert')).toHaveTextContent('Preview only');
+    expect(post).toHaveBeenCalledWith({ type: 'PREVIEW_LAYER_SELECT', stageId: 'rsvp', layerId: 'form' }, window.location.origin);
     expect(p.onRSVP).not.toHaveBeenCalled();
+    post.mockRestore();
   });
   it('suppresses mutations in a normal preview even when Adjust is not active', async () => {
     const p = { ...props(), previewOnly: true };

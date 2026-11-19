@@ -67,7 +67,7 @@ export default function Template12({
 
   const editing = Boolean(editor?.enabled);
   const breakpoint = useBreakpoint(editing ? editor!.breakpoint : undefined);
-  const { a, sx } = useAnchors(customConfig, breakpoint, editor);
+  const { anchorProps, sx } = useAnchors(customConfig, breakpoint, editor);
   const overlayProps = { breakpoint, config: customConfig, editor };
   const defaultPageBgParallax = breakpoint === 'mobile' ? 0.12 : 0.22;
   const configuredPageBgParallax = Number(customConfig?.['t12.layout.pageBg.parallaxRate']);
@@ -132,45 +132,45 @@ export default function Template12({
           />
           {sectionOrder.map((code) => {
             if (code === 'welcome') return (
-              <StageSection key={code} code={code} {...overlayProps} seen={seen.has(code) || reduced} contentStyle={a('welcome', 'hero')} extra={
+              <StageSection key={code} code={code} {...overlayProps} seen={seen.has(code) || reduced} contentProps={anchorProps('welcome', 'hero')} extra={
                 <button className={styles.scrollCue} onClick={() => scrollTo(sectionOrder[1] ?? 'rsvp')} aria-label="Continue to invitation details">↓</button>
               }>
-                <p className={styles.invitationLine} style={{ ...a('welcome', 'themeLabel'), ...sx('welcome', 'themeLabel') }}>
+                <p className={styles.invitationLine} {...anchorProps('welcome', 'themeLabel', { ...sx('welcome', 'themeLabel') })}>
                   {t('invite.heading', 'Together with their families')}
                 </p>
                 <h1 className={styles.heading}>
-                  <span style={{ ...a('welcome', 'nameFirst'), ...sx('welcome', 'nameFirst') }}>{wedding.brideName}</span>
+                  <span {...anchorProps('welcome', 'nameFirst', { ...sx('welcome', 'nameFirst') })}>{wedding.brideName}</span>
                   <span className={styles.amp}>&amp;</span>
-                  <span style={{ ...a('welcome', 'nameSecond'), ...sx('welcome', 'nameSecond') }}>{wedding.groomName}</span>
+                  <span {...anchorProps('welcome', 'nameSecond', { ...sx('welcome', 'nameSecond') })}>{wedding.groomName}</span>
                 </h1>
-                <p className={styles.date} style={{ ...a('welcome', 'date'), ...sx('welcome', 'date') }}>{dateLabel}</p>
-                {showIslamicDate && <p className={styles.hijri} style={{ ...a('welcome', 'hijri'), ...sx('welcome', 'hijri') }}>{toHijriString(date)}</p>}
-                {countdown && <div className={styles.countdown} style={a('welcome', 'timer')}>
+                <p className={styles.date} {...anchorProps('welcome', 'date', { ...sx('welcome', 'date') })}>{dateLabel}</p>
+                {showIslamicDate && <p className={styles.hijri} {...anchorProps('welcome', 'hijri', { ...sx('welcome', 'hijri') })}>{toHijriString(date)}</p>}
+                {countdown && <div className={styles.countdown} {...anchorProps('welcome', 'timer')}>
                   {([['days', countdown.days], ['hours', countdown.hours], ['minutes', countdown.minutes], ['seconds', countdown.seconds]] as const)
                     .map(([label, value]) => <div className={styles.countUnit} key={label}>
                       <span className={styles.countNum} style={sx('welcome', 'timer')}>{String(value).padStart(2, '0')}</span>
                       <span className={styles.countLabel}>{label}</span>
                     </div>)}
                 </div>}
-                <div className={styles.body} style={{ ...a('welcome', 'venue'), ...sx('welcome', 'venue') }}>
+                <div className={styles.body} {...anchorProps('welcome', 'venue', { ...sx('welcome', 'venue') })}>
                   {wedding.venue}<br />{wedding.venueAddress}
                 </div>
               </StageSection>
             );
 
             if (code === 'walimah') return (
-              <StageSection key={code} code={code} {...overlayProps} seen={seen.has(code) || reduced} contentStyle={a('walimah', 'ceremonyContent')}>
-                <h2 className={styles.sectionTitle} style={{ ...a('walimah', 'title'), ...sx('walimah', 'title') }}>
+              <StageSection key={code} code={code} {...overlayProps} seen={seen.has(code) || reduced} contentProps={anchorProps('walimah', 'ceremonyContent')}>
+                <h2 className={styles.sectionTitle} {...anchorProps('walimah', 'title', { ...sx('walimah', 'title') })}>
                   {t('walimah.title', 'Our Wedding Celebration')}
                 </h2>
                 {customConfig?.['walimah.body']
-                  ? <div className={styles.body} style={{ ...a('walimah', 'body'), ...sx('walimah', 'body') }} dangerouslySetInnerHTML={{ __html: customConfig['walimah.body'] }} />
-                  : <div className={styles.body} style={{ ...a('walimah', 'body'), ...sx('walimah', 'body') }}>We would be delighted by your presence as we begin our life together.<br /><br />{dateLabel}<br />{wedding.venue}</div>}
+                  ? <div className={styles.body} {...anchorProps('walimah', 'body', { ...sx('walimah', 'body') })} dangerouslySetInnerHTML={{ __html: customConfig['walimah.body'] }} />
+                  : <div className={styles.body} {...anchorProps('walimah', 'body', { ...sx('walimah', 'body') })}>We would be delighted by your presence as we begin our life together.<br /><br />{dateLabel}<br />{wedding.venue}</div>}
               </StageSection>
             );
 
             if (code === 'rsvp' || code === 'itinerary' || code === 'wishes' || code === 'photobooth') return (
-              <StageSection key={code} code={code} {...overlayProps} seen={seen.has(code) || reduced} panelless contentStyle={a(code, `${code}Content`)}>{flowSlotsFor(code)}</StageSection>
+              <StageSection key={code} code={code} {...overlayProps} seen={seen.has(code) || reduced} panelless contentProps={anchorProps(code, `${code}Content`)}>{flowSlotsFor(code)}</StageSection>
             );
             return null;
           })}

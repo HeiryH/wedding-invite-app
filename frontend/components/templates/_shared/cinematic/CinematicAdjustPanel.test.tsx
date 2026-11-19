@@ -11,6 +11,69 @@ const CinematicAdjustPanel = (props: ComponentProps<typeof AdjustPanel>) =>
 
 describe('CinematicAdjustPanel', () => {
   beforeEach(() => localStorage.clear());
+  it('opens the group animator and keeps legacy effect pose controls out of the inspector', () => {
+    const onSceneSetAction = vi.fn();
+    const onAnimateLayer = vi.fn();
+    const onProgressChange = vi.fn();
+    const source = PAINTED_PROMISE_DIRECTION.effects[0];
+    const effect = { ...source, target: 'group' as const, targetId: 'layer-group:dais:portraits', trackId: 'dais' };
+    render(<CinematicAdjustPanel beats={PAINTED_PROMISE_BEATS} breakpoint="mobile" selectedBeat="dais"
+      progress={.31} mode="scene" layers={resolveCinematicWorld('t15', PAINTED_PROMISE_WORLD, 'mobile', {})}
+      sceneSets={PAINTED_PROMISE_SCENE_SETS.map((set) => set.id === 'dais' ? { ...set,
+        layerGroups: { mobile: [{ id: 'portraits', label: 'Portraits', memberIds: ['bride', 'groom'] }] },
+      } : set)} onSceneSetAction={onSceneSetAction}
+      direction={{ ...PAINTED_PROMISE_DIRECTION, effects: [effect] }} onDirectionChange={vi.fn()}
+      canAnimateLayer={() => true} onAnimateLayer={onAnimateLayer}
+      shippedLayerIds={[]} visibilitySets={PAINTED_PROMISE_VISIBILITY} tracks={PAINTED_PROMISE_SEQUENCE.tracks}
+      onSelectBeat={vi.fn()} onProgressChange={onProgressChange} onModeChange={vi.fn()}
+      onSelectLayer={vi.fn()} onLayersChange={vi.fn()} onResetLayer={vi.fn()} onResetWorld={vi.fn()}
+      onCameraChange={vi.fn()} onResetCamera={vi.fn()} onCopyCameraToOther={vi.fn()}
+      onVisibilityChange={vi.fn()} onResetVisibility={vi.fn()} onClose={vi.fn()} />);
+    const groomRow = screen.getByRole('button', { name: /^Seated groom/ }).closest('[data-scene-layer]')!;
+    const daisSection = groomRow.closest('section')!;
+    const dais = within(daisSection as HTMLElement);
+    expect(dais.getByRole('button', { name: 'Seek to Portraits' })).toBeEnabled();
+    fireEvent.click(dais.getByRole('button', { name: 'Hide Portraits' }));
+    expect(onSceneSetAction).toHaveBeenLastCalledWith(expect.objectContaining({
+      type: 'patch-layer-group', groupId: 'portraits', patch: { hidden: true },
+    }));
+    fireEvent.click(dais.getByRole('button', { name: 'Seek to Seated groom' }));
+    expect(onProgressChange).toHaveBeenLastCalledWith(expect.closeTo(.425));
+    fireEvent.click(dais.getByRole('button', { name: 'Collapse Bridal dais' }));
+    expect(dais.queryByRole('button', { name: 'Seek to Seated groom' })).toBeNull();
+    fireEvent.click(dais.getByRole('button', { name: 'Actions for Bridal dais' }));
+    fireEvent.click(dais.getByRole('button', { name: 'New group' }));
+    expect(dais.getByRole('button', { name: 'Collapse Bridal dais' })).toHaveAttribute('aria-expanded', 'true');
+    const chairRow = dais.getByRole('button', { name: /^Groom chair/ }).closest('[data-scene-layer]')!;
+    const chairCheckbox = within(chairRow as HTMLElement).getByRole('checkbox', { name: 'Include Groom chair in group' });
+    fireEvent.click(chairCheckbox);
+    expect(chairCheckbox).toBeChecked();
+    expect(within(groomRow as HTMLElement).queryByRole('checkbox')).toBeNull();
+    fireEvent.click(dais.getByRole('button', { name: 'Cancel' }));
+    expect(screen.getAllByRole('button', { name: /^Seated groom/ })).toHaveLength(1);
+    fireEvent.click(screen.getByRole('button', { name: 'Collapse Portraits' }));
+    expect(screen.queryByRole('button', { name: /^Seated groom/ })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Expand Portraits' }));
+    expect(screen.getByRole('button', { name: /^Seated groom/ })).toBeVisible();
+    fireEvent.click(screen.getByRole('button', { name: /^Portraits/ }));
+    const inspector = within(screen.getByRole('region', { name: 'Group inspector' }));
+    expect(inspector.queryByRole('tab', { name: 'Style' })).toBeNull();
+    fireEvent.change(inspector.getByRole('spinbutton', { name: 'Scale %' }), { target: { value: '125' } });
+    expect(onSceneSetAction).toHaveBeenLastCalledWith({
+      type: 'patch-layer-group', id: 'dais', breakpoint: 'mobile', groupId: 'portraits', patch: { scale: 1.25 },
+    });
+    fireEvent.click(inspector.getByRole('tab', { name: 'Animation' }));
+    fireEvent.click(inspector.getByRole('button', { name: 'Animate group' }));
+    expect(onAnimateLayer).toHaveBeenCalledWith(expect.objectContaining({ id: 'layer-group:dais:portraits' }));
+    fireEvent.click(inspector.getByText('Legacy group effects', { exact: true }));
+    expect(inspector.getByRole('checkbox', { name: 'Enabled' })).toBeChecked();
+    expect(inspector.queryByRole('button', { name: 'Add group effect' })).toBeNull();
+    expect(inspector.queryByRole('spinbutton', { name: 'xVw from' })).toBeNull();
+    expect(inspector.queryByRole('button', { name: /Edit (From|To) on canvas/ })).toBeNull();
+    fireEvent.click(inspector.getByRole('button', { name: 'Close group inspector' }));
+    expect(screen.queryByRole('region', { name: 'Group inspector' })).toBeNull();
+  });
+
   it('locks the current width and height without resizing when toggled', () => {
     const onLayersChange = vi.fn();
     const layers = resolveCinematicWorld('t15', PAINTED_PROMISE_WORLD, 'mobile', {}).map((layer) => layer.id === 'walkway' ? { ...layer, w: 30, h: 24 } : layer);
@@ -168,6 +231,8 @@ describe('CinematicAdjustPanel', () => {
   it('keeps track and full-story resets at distinct confirmed scopes', () => {
     const onResetTrack = vi.fn();
     const onResetSequence = vi.fn();
+    const onSelectTimingTrack = vi.fn();
+    const onClose = vi.fn();
     render(
       <CinematicAdjustPanel
         beats={PAINTED_PROMISE_BEATS} breakpoint="mobile" selectedBeat="dais" progress={.31}
@@ -180,11 +245,10 @@ describe('CinematicAdjustPanel', () => {
         onResetWorld={vi.fn()} onCameraChange={vi.fn()} onResetCamera={vi.fn()}
         onCopyCameraToOther={vi.fn()} onResetTrack={onResetTrack}
         onVisibilityChange={vi.fn()} onResetVisibility={vi.fn()}
-        onResetSequence={onResetSequence} onClose={vi.fn()}
+        onResetSequence={onResetSequence} onSelectTimingTrack={onSelectTimingTrack} onClose={onClose}
       />,
     );
     expect(screen.queryByRole('button', { name: 'Timing track actions' })).toBeNull();
-    expect(screen.queryByRole('button', { name: 'Close timing track editor' })).toBeNull();
     const timingHeader = screen.getByRole('button', { name: 'Go to appearance' }).parentElement!;
     expect(timingHeader).toHaveTextContent('Dais set');
     expect(screen.getByRole('button', { name: 'Go to appearance' }).querySelector('svg')).not.toBeNull();
@@ -202,7 +266,12 @@ describe('CinematicAdjustPanel', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Confirm reset entire story' }));
     expect(onResetSequence).toHaveBeenCalledOnce();
     fireEvent(window, new Event('preview-dismiss-inspectors'));
-    expect(screen.getByRole('region', { name: 'Timing track Dais set' })).toBeVisible();
+    const timingEditor = screen.getByRole('region', { name: 'Timing track Dais set' });
+    expect(timingEditor).toBeVisible();
+    fireEvent.click(within(timingEditor).getByRole('button', { name: 'Close timing track editor' }));
+    expect(screen.queryByRole('region', { name: 'Timing track Dais set' })).toBeNull();
+    expect(onSelectTimingTrack).toHaveBeenCalledExactlyOnceWith(undefined);
+    expect(onClose).not.toHaveBeenCalled();
   });
 
   it('selects director beats in Camera without duplicating preview reference controls', () => {
@@ -375,7 +444,7 @@ describe('CinematicAdjustPanel', () => {
       />,
     );
     fireEvent.click(screen.getByRole('button', { name: 'Delete moment' }));
-    expect(screen.getByRole('alert')).toHaveTextContent('RSVP envelope exclusive artwork or set');
+    expect(screen.getByRole('alert')).toHaveTextContent('RSVP guest book exclusive artwork or set');
     expect(screen.getByRole('alert')).toHaveTextContent('RSVP form availability interaction entry point');
     expect(screen.getByRole('alert')).toHaveTextContent(
       'Guests will lose this form or interaction entry point.',
@@ -693,11 +762,13 @@ describe('CinematicAdjustPanel', () => {
     expect(screen.getByRole('region', { name: 'Timing track RSVP form availability' }))
       .toBeInTheDocument();
     expect(screen.getByText(/Time spent inside the open form is not added/)).toBeInTheDocument();
+    const clip = PAINTED_PROMISE_SEQUENCE.tracks.find((track) => track.id === 'rsvp-availability')!.clip;
+    const start = Number(((clip.start + clip.end) / 2).toFixed(3));
     fireEvent.change(screen.getByRole('spinbutton', {
       name: 'Available from for RSVP form availability',
-    }), { target: { value: '82' } });
+    }), { target: { value: String(start * 100) } });
     expect(onTimingTrackChange).toHaveBeenCalledWith('rsvp-availability', {
-      clip: { start: .82, enterEnd: .82, exitStart: .855, end: .855 },
+      clip: { ...clip, start: expect.closeTo(start, 6), enterEnd: expect.closeTo(start, 6) },
     });
   });
 

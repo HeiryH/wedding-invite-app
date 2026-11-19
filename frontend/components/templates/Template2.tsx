@@ -93,7 +93,7 @@ export default function Template2({
 
     const overlayBreakpoint: Breakpoint = useBreakpoint(editor?.enabled ? editor.breakpoint : undefined);
     const overlayProps = { breakpoint: overlayBreakpoint, config: customConfig, editor };
-    const { a, tx, sx, ax } = useAnchors(customConfig, overlayBreakpoint, editor);
+    const { anchorProps, tx, sx, ax } = useAnchors(customConfig, overlayBreakpoint, editor);
     const NAV_ICONS: Record<SectionCode, string> = {
         welcome: '💍', walimah: '🕌', rsvp: '✉️',
         itinerary: '📋', wishes: '✨', photobooth: '📸',
@@ -280,7 +280,7 @@ export default function Template2({
                     </motion.div>
 
                     {/* You're Invited */}
-                    <div style={a('welcome', 'heading')}>
+                    <div {...anchorProps('welcome', 'heading')}>
                         <motion.p
                             {...hAnim}
                             className={`text-amber-700 text-sm uppercase tracking-widest mb-6 font-semibold ${alignClass(customConfig?.['invite.heading.align'])}`}
@@ -291,7 +291,7 @@ export default function Template2({
                     </div>
 
                     {/* Couple Names */}
-                    <div style={a('welcome', 'brideName')} data-seen="true">
+                    <div {...anchorProps('welcome', 'brideName')} data-seen="true">
                         <motion.h1
                             initial={Object.keys(hAnim.initial).length ? hAnim.initial : { opacity: 0, y: 20 }}
                             animate={Object.keys(hAnim.animate).length ? hAnim.animate : { opacity: 1, y: 0 }}
@@ -314,7 +314,7 @@ export default function Template2({
                         <span {...ax('welcome', 'connector')}>{tx('welcome', 'connector', '&')}</span>
                     </motion.div>
 
-                    <div style={a('welcome', 'groomName')} data-seen="true">
+                    <div {...anchorProps('welcome', 'groomName')} data-seen="true">
                         <motion.h1
                             initial={Object.keys(hAnim.initial).length ? hAnim.initial : { opacity: 0, y: 20 }}
                             animate={Object.keys(hAnim.animate).length ? hAnim.animate : { opacity: 1, y: 0 }}
@@ -326,7 +326,7 @@ export default function Template2({
                         </motion.h1>
                     </div>
 
-                    <div style={a('welcome', 'body')}>
+                    <div {...anchorProps('welcome', 'body')}>
                         <motion.p
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
@@ -337,7 +337,7 @@ export default function Template2({
                     </div>
 
                     {/* Wedding Details */}
-                    <div style={a('welcome', 'details')}>
+                    <div {...anchorProps('welcome', 'details')}>
                     <motion.div
                         initial={{ opacity: 0, y: 30 }}
                         animate={{ opacity: 1, y: 0 }}
@@ -384,7 +384,7 @@ export default function Template2({
                         {/* Countdown */}
                         <div
                             className="bg-gradient-to-r from-yellow-100 to-amber-100 rounded-2xl p-6"
-                            style={a('welcome', 'countdown')}
+                            {...anchorProps('welcome', 'countdown')}
                             data-seen="true"
                         >
                             <p className="text-sm text-amber-700 mb-2">Countdown</p>
@@ -431,7 +431,7 @@ export default function Template2({
                         transition={{ duration: 0.6 }}
                         className={`w-full max-w-2xl bg-white/80 backdrop-blur-sm rounded-3xl border-2 border-amber-200 p-8 ${alignClass(customConfig?.['walimah.body.align'])}`}
                     >
-                        <h2 className="text-3xl font-bold bg-gradient-to-r from-yellow-600 to-amber-600 bg-clip-text text-transparent mb-4" style={a('walimah', 'title')}>
+                        <h2 className="text-3xl font-bold bg-gradient-to-r from-yellow-600 to-amber-600 bg-clip-text text-transparent mb-4" {...anchorProps('walimah', 'title')}>
                             Ceremony Details
                         </h2>
                         <div
@@ -461,7 +461,7 @@ export default function Template2({
                             const iAlign = customConfig?.['walimah.body.align'] ?? 'left';
                             return (
                                 <>
-                                    <h2 className={`text-3xl font-bold bg-gradient-to-r from-yellow-600 to-amber-600 bg-clip-text text-transparent mb-6 ${alignClass(iAlign)}`} style={a('itinerary', 'title')}>
+                                    <h2 className={`text-3xl font-bold bg-gradient-to-r from-yellow-600 to-amber-600 bg-clip-text text-transparent mb-6 ${alignClass(iAlign)}`} {...anchorProps('itinerary', 'title')}>
                                         Schedule
                                     </h2>
                                     <ol className="space-y-3">
@@ -499,7 +499,7 @@ export default function Template2({
                     transition={{ duration: 0.6 }}
                     className="w-full max-w-2xl"
                 >
-                    <div className="text-center mb-8" style={a('rsvp', 'heading')}>
+                    <div className="text-center mb-8" {...anchorProps('rsvp', 'heading')}>
                         <h2 className="text-5xl font-bold bg-gradient-to-r from-yellow-600 to-amber-600 bg-clip-text text-transparent mb-2">
                             RSVP
                         </h2>
@@ -725,7 +725,7 @@ export default function Template2({
                     transition={{ duration: 0.6 }}
                     className="w-full max-w-6xl"
                 >
-                    <div className="text-center mb-12" style={a('wishes', 'heading')}>
+                    <div className="text-center mb-12" {...anchorProps('wishes', 'heading')}>
                         <h2 className="text-5xl font-bold bg-gradient-to-r from-yellow-600 to-amber-600 bg-clip-text text-transparent mb-2">
                             Wishes & Blessings
                         </h2>
@@ -833,7 +833,7 @@ export default function Template2({
                         transition={{ duration: 0.6 }}
                         className="w-full max-w-6xl"
                     >
-                        <div className="text-center mb-12" style={a('photobooth', 'heading')}>
+                        <div className="text-center mb-12" {...anchorProps('photobooth', 'heading')}>
                             <h2 className="text-5xl font-bold bg-gradient-to-r from-yellow-600 to-amber-600 bg-clip-text text-transparent mb-2">
                                 Photo Booth
                             </h2>

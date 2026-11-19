@@ -21,6 +21,7 @@ interface Props {
   editor?: EditorHandle;
   /** Use the sheet surface itself rather than stacking tinted, shadowed slot cards. */
   flatPanels?: boolean;
+  lockScroll?: boolean;
 }
 
 /**
@@ -37,7 +38,7 @@ interface Props {
  * inside them (`rsvpFlow` / `wishFlow`) decide which one actually renders, exactly as they did
  * when the steps were inline layers.
  */
-export default function SheetHost({ groups, slotProps, themeStyle, editor, flatPanels = false }: Props) {
+export default function SheetHost({ groups, slotProps, themeStyle, editor, flatPanels = false, lockScroll = true }: Props) {
   const { slotRegistry } = useEngine();
   const { openId, close } = useSheets();
   const seatingPreview = useContext(SeatingPreviewContext);
@@ -64,7 +65,7 @@ export default function SheetHost({ groups, slotProps, themeStyle, editor, flatP
   }, [close, seatingPreview, seatingSheet]);
 
   const dialogRef = useRef<HTMLDivElement>(null);
-  useDialogBehavior(dialogRef, Boolean(layers?.length), dismiss, dismissable);
+  useDialogBehavior(dialogRef, Boolean(layers?.length), dismiss, dismissable, lockScroll);
 
   return (
     <AnimatePresence>

@@ -1,0 +1,98 @@
+.lane {
+  display: grid;
+  gap: 8px;
+  padding: 10px 14px;
+  align-content: start;
+  color: var(--text-strong);
+  background: var(--surface-card);
+  border: 1px solid var(--border-default);
+  border-radius: 12px;
+  font-size: 12px;
+}
+.toolbar, .toolbar label, .scrubber {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.breakpoint { text-transform: capitalize; color: var(--text-muted); }
+.toolbar button, .toolbar select {
+  padding: 4px 8px;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-sm);
+  background: var(--surface-sunken);
+}
+.toolbar button:disabled, .point:disabled { opacity: .55; }
+.done { margin-left: auto; }
+.ruler {
+  margin: 0 10px;
+  position: relative;
+  height: 24px;
+  background: linear-gradient(var(--border-default), var(--border-default)) center / 100% 1px no-repeat;
+}
+.cursor { position: absolute; top: 0; bottom: 0; border-left: 2px solid #b48642; }
+.point {
+  position: absolute;
+  top: 50%;
+  width: 12px;
+  height: 12px;
+  transform: translate(-50%, -50%) rotate(45deg);
+  background: var(--surface-card);
+  border: 1px solid #b48642;
+  touch-action: none;
+  cursor: ew-resize;
+}
+.point[aria-pressed='true'] { background: #b48642; }
+.point:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
+.scrubber input { flex: 1; min-width: 80px; }
+.toolbar input[type='range'] { width: 86px; }
+
+.numeric { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 6px; }
+.numeric input { width: 70px; border: 1px solid var(--border-default); padding: 3px 4px; }
+
+.toolbar strong { flex-basis: 100%; }
+.scrubber { flex-wrap: nowrap; }
+.scrubber span { white-space: nowrap; }
+.scrubber input { min-width: 0; }
+
+.capture { min-width: 115px; }
+
+.textMotion[open] { display: grid; gap: 6px; }
+.textMotion summary { cursor: pointer; }
+
+.perspectiveTools { flex-basis: 100%; }
+.perspectiveTools[open] { display: grid; gap: 8px; }
+.perspectiveTools summary { cursor: pointer; }
+.perspectiveTools p { margin: 0; color: var(--text-muted); }
+.pinPad {
+  position: relative;
+  aspect-ratio: 4 / 3;
+  margin: 6px 8px;
+  background: var(--surface-sunken);
+  border: 1px solid var(--border-default);
+}
+.pinArtwork, .pinOutline {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+.pinArtwork {
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: contain;
+}
+.pinOutline polygon { fill: none; stroke: #b48642; stroke-width: 1; }
+.pinPad .pinHandle {
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  border: 2px solid #8c662c;
+  background: var(--surface-card);
+  touch-action: none;
+  cursor: grab;
+}

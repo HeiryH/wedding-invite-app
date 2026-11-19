@@ -425,3 +425,7 @@
   background: var(--gold-50);
   padding: 5px 6px;
 }
+
+.containerControls .control {
+  grid-template-columns: 90px minmax(0, 1fr) 54px;
+}

@@ -9,11 +9,12 @@ export interface CinematicMotion {
 export interface CinematicEffectPose {
   effectId: string;
   layerId: string;
+  memberIds?: string[];
   side: 'from' | 'to';
   motion: CinematicMotion;
 }
 export interface CinematicEffect {
-  id: string; label: string; enabled: boolean; trackId: string; target: 'layer' | 'world'; targetId: string;
+  id: string; label: string; enabled: boolean; trackId: string; target: 'layer' | 'world' | 'group'; targetId: string;
   kind: 'transform' | 'drift' | 'blur'; easing: CinematicEasing;
   from: CinematicMotion; to: CinematicMotion; amplitudeX: number; amplitudeY: number; frequency: number;
   desktop?: Partial<Omit<CinematicEffect, 'desktop'>>;
@@ -69,7 +70,7 @@ export function normalizeEffect(value: unknown): CinematicEffect | undefined {
   if (!object(value) || !text(value.id)) return undefined;
   const result: CinematicEffect = {
     id: text(value.id), label: text(value.label, 'Effect'), enabled: value.enabled !== false,
-    trackId: text(value.trackId), target: choose(value.target, ['layer', 'world'], 'layer'), targetId: text(value.targetId),
+    trackId: text(value.trackId), target: choose(value.target, ['layer', 'world', 'group'], 'layer'), targetId: text(value.targetId),
     kind: choose(value.kind, ['transform', 'drift', 'blur'], 'transform'),
     easing: choose(value.easing, ['linear', 'ease-in', 'ease-out', 'ease-in-out'], 'linear'),
     from: normalizeMotion(value.from), to: normalizeMotion(value.to),
@@ -106,7 +107,8 @@ export function resolveCinematicDirection(prefix: string, defaults: CinematicDir
   const memory = object(theme.memory) ? theme.memory : defaults.theme.memory;
   const anchors = Array.isArray(project.navigation.items) ? project.navigation.items : defaults.navigation;
   const beatPacing: CinematicPacing['beats'] = {};
-  if (object(pacing.beats)) for (const [id, value] of Object.entries(pacing.beats)) {
+  const storedBeats = object(pacing.beats) ? pacing.beats : defaults.pacing.beats;
+  for (const [id, value] of Object.entries(storedBeats)) {
     if (!object(value)) continue;
     beatPacing[id] = {
       ...(value.mobileVh !== undefined ? { mobileVh: number(value.mobileVh, 100, 1, 3000) } : {}),
@@ -168,6 +170,7 @@ export const effectEase = (value: number, easing: CinematicEasing) => easing ===
 export function sampleCinematicEffects(effects: CinematicEffect[], tracks: CinematicSequenceTrack[], progress: number, breakpoint: Breakpoint, pose?: Pick<CinematicEffectPose, 'effectId' | 'side'>) {
   const byId = new Map(tracks.map((track) => [track.id, track]));
   const layers = new Map<string, CinematicMotion>();
+  const groups = new Map<string, CinematicMotion>();
   let world = { ...MOTION_DEFAULT };
   for (const base of effects) {
     const effect = breakpoint === 'desktop' ? { ...base, ...base.desktop } : base;
@@ -181,13 +184,14 @@ export function sampleCinematicEffects(effects: CinematicEffect[], tracks: Cinem
       motion.x += Math.sin(phase * Math.PI * 2 * effect.frequency) * effect.amplitudeX;
       motion.y += Math.sin(phase * Math.PI * 2 * effect.frequency) * effect.amplitudeY;
     }
-    const existing = effect.target === 'world' ? world : layers.get(effect.targetId) ?? { ...MOTION_DEFAULT };
+    const targets = effect.target === 'group' ? groups : layers;
+    const existing = effect.target === 'world' ? world : targets.get(effect.targetId) ?? { ...MOTION_DEFAULT };
     const mixed = { x: existing.x + motion.x, y: existing.y + motion.y, xVw: existing.xVw + motion.xVw, yVh: existing.yVh + motion.yVh,
       scale: existing.scale * motion.scale, rotate: existing.rotate + motion.rotate, opacity: existing.opacity * motion.opacity, blur: Math.max(existing.blur, motion.blur) };
     if (effect.target === 'world') world = mixed;
-    else layers.set(effect.targetId, mixed);
+    else targets.set(effect.targetId, mixed);
   }
-  return { layers, world };
+  return { layers, groups, world };
 }
 
 export function interactionAvailable(interaction: CinematicInteraction, tracks: CinematicSequenceTrack[], progress: number) {

@@ -3,6 +3,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Icon } from '@/components/ui/Icon';
 import type { Wedding } from '@/lib/api';
+import AssetKeyframeLane, { type AssetKeyframeLaneProps } from '@/components/templates/_shared/cinematic/AssetKeyframeLane';
 import CinematicTimeline, { type CinematicTimelineAsset } from '@/components/templates/_shared/cinematic/CinematicTimeline';
 import CinematicReferenceRail, { type CinematicReferenceControls } from './CinematicReferenceRail';
 import styles from './PreviewPanel.module.css';
@@ -67,6 +68,8 @@ interface PreviewPanelProps {
     beats: CinematicResolvedBeat[];
     tracks: CinematicSequenceTrack[];
     selectedAsset?: CinematicTimelineAsset;
+    onAnimate?: () => void;
+    assetKeyframes?: AssetKeyframeLaneProps;
     selectedBeat?: string;
     editableBeats?: boolean;
     dirty?: boolean;
@@ -158,6 +161,10 @@ export function PreviewPanel({
   const resizeRef = useRef<{ y: number; height: number } | null>(null);
   const hasCinematicTimeline = Boolean(cinematicTimeline);
   const hasCinematicReference = Boolean(cinematicReference);
+  const keyframeControls = cinematicTimeline?.assetKeyframes;
+  const hasKeyframeControls = Boolean(keyframeControls);
+  const [stackKeyframeControls, setStackKeyframeControls] = useState(false);
+  const keyframePanelRef = useRef<HTMLDivElement>(null);
   // All tracks retains its user-sized dock; Focus hugs its rows instead of filling empty space.
   const openTimelineHeight = Math.min(maxTimelineHeight, timelineExpanded ? timelineView.allHeight : focusContentHeight);
   const timelineHeight = timelineView.collapsed ? 72 : openTimelineHeight;
@@ -205,18 +212,24 @@ export function PreviewPanel({
     const compute = () => {
       const rect = el.getBoundingClientRect();
       setMaxTimelineHeight(Math.max(148, Math.min(600, rect.height - 200)));
-      const fitW = (rect.width - (hasCinematicReference ? 140 : 80)) / iframeW;
+      const stack = rect.width < 620;
+      setStackKeyframeControls(stack);
+      const panel = keyframePanelRef.current;
+      const sideSpace = panel && !stack ? panel.offsetWidth + 20 : 0;
+      const bottomSpace = panel && stack ? panel.offsetHeight + 12 : 0;
+      const fitW = (rect.width - (hasCinematicReference ? 140 : hasKeyframeControls ? 32 : 80) - sideSpace) / iframeW;
       // Reserve the visible Story Timeline beneath the preview. All Tracks deliberately makes the
       // device smaller rather than letting editor chrome cover the invitation being directed.
-      const fitH = (rect.height - toolbarHeight - 32 - (hasCinematicTimeline ? timelineHeight + 40 : 24)) / iframeH;
+      const fitH = (rect.height - toolbarHeight - 32 - (hasCinematicTimeline ? timelineHeight + 40 : 24) - bottomSpace) / iframeH;
       const auto = Math.min(fitW, fitH, 1);
       if (auto > 0.05) setAutoZoom(Math.round(auto * 100));
     };
     compute();
     const ro = new ResizeObserver(compute);
     ro.observe(el);
+    if (keyframePanelRef.current) ro.observe(keyframePanelRef.current);
     return () => ro.disconnect();
-  }, [iframeW, iframeH, device, editorMode, hasCinematicTimeline, timelineHeight, hasCinematicReference, toolbarHeight]);
+  }, [iframeW, iframeH, device, editorMode, hasCinematicTimeline, timelineHeight, hasCinematicReference, toolbarHeight, hasKeyframeControls, stackKeyframeControls]);
 
   const changeZoom = (delta: number) => {
     const base = manualZoom ?? autoZoom;
@@ -479,8 +492,8 @@ export function PreviewPanel({
       {/* Device stage */}
       <div ref={stageRef} data-testid="preview-workspace" className={styles.workspace} style={{
         flex: 1, display: 'grid', placeItems: 'center',
-        padding: `${toolbarHeight + 32}px 56px ${cinematicTimeline ? timelineHeight + 40 : 24}px`,
-        overflow: 'hidden', minHeight: 0, minWidth: 0, cursor: panning ? 'grabbing' : 'grab', touchAction: panMode ? 'none' : 'auto',
+        padding: `${toolbarHeight + 32}px ${hasKeyframeControls ? 16 : 56}px ${cinematicTimeline ? timelineHeight + 40 : 24}px`,
+        overflow: hasKeyframeControls ? 'clip' : 'hidden', minHeight: 0, minWidth: 0, cursor: panning ? 'grabbing' : 'grab', touchAction: panMode ? 'none' : 'auto',
       }}
         onPointerDown={(event) => {
           if (event.button !== 0 || (!panMode && event.target !== event.currentTarget)) return;
@@ -503,6 +516,7 @@ export function PreviewPanel({
         onDoubleClick={(event) => { if (event.target === event.currentTarget || panMode) setViewOffset({ x: 0, y: 0 }); }}>
         {panMode && <div className={styles.panSurface} data-testid="preview-pan-surface" style={{ cursor: panning ? 'grabbing' : 'grab' }} />}
 
+        <div className={hasKeyframeControls ? styles.animationWorkspace : undefined} data-stack={stackKeyframeControls || undefined}>
         {/* Clip box sized exactly to the scaled iframe — no bezel, no padding. */}
         <div data-testid="preview-device-frame" style={{ position: 'relative', width: iframeW * zoom / 100, height: iframeH * zoom / 100, transform: `translate(${viewOffset.x}px, ${viewOffset.y}px)` }}>
         <div style={{
@@ -535,6 +549,11 @@ export function PreviewPanel({
         </div>
         {cinematicReference && <CinematicReferenceRail key={cinematicReference.beat.id} {...cinematicReference} />}
         </div>
+        {keyframeControls && <div className={styles.keyframeWindow} ref={keyframePanelRef}
+          onPointerDown={(event) => event.stopPropagation()} onDoubleClick={(event) => event.stopPropagation()}>
+          <AssetKeyframeLane {...keyframeControls} />
+        </div>}
+        </div>
       </div>
 
       {/* Cinematic timeline belongs to the canvas, not the property dock: it controls the view
@@ -553,6 +572,8 @@ export function PreviewPanel({
             onPointerMove={(event) => { if (resizeRef.current) resizeTimeline(resizeRef.current.height + resizeRef.current.y - event.clientY); }}
             onPointerUp={() => { resizeRef.current = null; }} onPointerCancel={() => { resizeRef.current = null; }}
             onKeyDown={(event) => { if (event.key === 'ArrowUp' || event.key === 'ArrowDown') { event.preventDefault(); resizeTimeline(openTimelineHeight + (event.key === 'ArrowUp' ? 20 : -20)); } }} />}
+          {!keyframeControls && cinematicTimeline.onAnimate && <button type="button" className={styles.animateAsset}
+            onClick={cinematicTimeline.onAnimate}>Animate asset</button>}
           <CinematicTimeline
             progress={cinematicTimeline.progress}
             beats={cinematicTimeline.beats}

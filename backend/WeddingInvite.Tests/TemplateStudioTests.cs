@@ -120,7 +120,7 @@ public class TemplateStudioTests
     }
 
     [Fact]
-    public async Task Client_assets_are_copied_to_template_storage_and_cinematic_chunks_stay_valid()
+    public async Task Client_assets_split_across_cinematic_chunks_are_copied_and_rechunked()
     {
         using var db = new TestDb();
         var root = Path.Combine(Path.GetTempPath(), "studio-assets-" + Guid.NewGuid());
@@ -130,16 +130,25 @@ public class TemplateStudioTests
         {
             var config = new TemplateConfigService(new TemplateConfigRepository(db.Context), new TemplateConfigDefaultRepository(db.Context), new EventRepository(db.Context));
             var studio = new TemplateStudioService(db.Context, config, new StudioEnvironment { WebRootPath = root });
-            var json = JsonSerializer.Serialize(new { layers = new { mobile = new { layers = new[] {
-                new { id = "art", label = "Custom art", group = "custom", space = "world",
-                    x = 50, y = 50, w = 20, opacity = 1, locked = true,
-                    src = "/uploads/63/art.png", text = new string('x', 5000) }
+            const int chunkSize = 3500;
+            const string upload = "/uploads/63/art.png";
+            const string partialUpload = "/uploads/63/art";
+            string SerializeProject(string text) => JsonSerializer.Serialize(new { layers = new { mobile = new { layers = new[] {
+                new { text, src = upload, id = "art", label = "Custom art", group = "custom", space = "world",
+                    x = 50, y = 50, w = 20, opacity = 1, locked = true }
             } } } });
+            var unpadded = SerializeProject("");
+            var splitAt = unpadded.IndexOf(upload, StringComparison.Ordinal) + partialUpload.Length;
+            var json = SerializeProject(new string('x', chunkSize - splitAt));
             const string project = "t7.layout.cinematic-project";
-            await studio.SaveAsync(7, new(0, new() {
+            var design = new Dictionary<string, string> {
                 [project] = JsonSerializer.Serialize(new { version = 1, chunks = 2, length = json.Length }),
-                [project + ".0"] = json[..3500], [project + ".1"] = json[3500..],
-            }, Sample));
+                [project + ".0"] = json[..chunkSize], [project + ".1"] = json[chunkSize..],
+            };
+            var prepared = TemplateConfigService.PrepareDefaultDesign(design);
+            Assert.EndsWith(partialUpload, prepared[project + ".0"]);
+            Assert.StartsWith(".png", prepared[project + ".1"]);
+            await studio.SaveAsync(7, new(0, design, Sample));
             await studio.PublishAsync(7, 1);
             var saved = await config.GetDefaultAsync(7);
             using var manifest = JsonDocument.Parse(saved[project]);
@@ -149,7 +158,7 @@ public class TemplateStudioTests
             var layer = parsed.RootElement.GetProperty("layers").GetProperty("mobile").GetProperty("layers")[0];
             var image = layer.GetProperty("src").GetString()!;
             Assert.StartsWith("/uploads/templates/studio-7/", image);
-            Assert.True(File.Exists(Path.Combine(root, image.TrimStart('/'))));
+            Assert.Equal(new byte[] { 1, 2, 3 }, await File.ReadAllBytesAsync(Path.Combine(root, image.TrimStart('/'))));
             Assert.False(layer.GetProperty("locked").GetBoolean());
         }
         finally { Directory.Delete(root, true); }

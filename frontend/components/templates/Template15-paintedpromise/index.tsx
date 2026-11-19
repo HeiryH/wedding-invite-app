@@ -7,7 +7,7 @@ import { useDialogBehavior } from '../_shared/hooks/useDialogBehavior';
 import TemplateNav, { type NavLayout } from '../_shared/nav/TemplateNav';
 import { MusicSlot } from '../_shared/slots/ChromeSlots';
 import { animateScrollIntoView } from '../_shared/animateScrollTo';
-import { useCallback, useEffect, useMemo, useRef, type CSSProperties } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import type { Wedding, Wish, Photo, ItineraryItem, SeatingTable, CreateWish } from '@/lib/api';
 import type { EditorHandle, Layer, SlotProps } from '../_shared/types';
 import { useReducedMotion } from '@/lib/useReducedMotion';
@@ -19,13 +19,16 @@ import { EngineProvider } from '../_shared/engine';
 import SheetHost from '../_shared/SheetHost';
 import { sampleCamera, useCinematicScroll } from '../_shared/cinematic/useCinematicScroll';
 import CinematicSceneLayers, { type CinematicLayerDecoration } from '../_shared/cinematic/CinematicSceneLayers';
+import ReceptionProp from './ReceptionProp';
+import { PAINTED_PROMISE_RECEPTION, RECEPTION_SPRITES, receptionPose, receptionPositionCorrection } from './data/reception';
 import CinematicPart from '../_shared/cinematic/CinematicPart';
-import { resolveCinematicScene } from '../_shared/cinematic/scene';
+import { resolveCinematicScene, type CinematicSceneEntry } from '../_shared/cinematic/scene';
 import CinematicCameraSurface from '../_shared/cinematic/CinematicCameraSurface';
 import { resolveCinematicCamera } from '../_shared/cinematic/cameraLayout';
 import { resolveCinematicWorld } from '../_shared/cinematic/world';
+import { assetAnchorTarget, assetClipPosition, assetPoseClip, keyframeTime, sampleAssetKeyframes, sampleTextGlitch, resolveAssetPose, type AssetAnchorOption, type AssetAnchorOffset, type ResolveAssetAnchor } from '../_shared/cinematic/assetKeyframes';
 import { sampleAssetAnimations } from '../_shared/cinematic/assetAnimations';
-import { resolveCinematicSceneSets } from '../_shared/cinematic/sceneSets';
+import { cinematicEffectGroup, cinematicGroupAnimationTarget, fitCinematicComposition, resolveCinematicSceneSets, type CinematicCompositionFrame } from '../_shared/cinematic/sceneSets';
 import { resolveCinematicProjectConfig } from '../_shared/cinematic/project';
 import { promoteLegacyCinematicVisibilityTracks, resolveCinematicVisibility } from '../_shared/cinematic/visibility';
 import { beatsFromSequence, resolveCinematicSequence, resolveCinematicTrackClip, visibilityFromSequence } from '../_shared/cinematic/sequence';
@@ -61,6 +64,23 @@ function PaintedPromise({ wedding, onRSVP, onSubmitWish, onUploadPhoto, wishes, 
   const schedule = useTimeouts();
   const reduced = useReducedMotion();
   const breakpoint = useBreakpoint(editor?.enabled ? editor.breakpoint : undefined);
+  const viewportRef = useRef<HTMLElement>(null);
+  const [measuredViewport, setMeasuredViewport] = useState<CinematicCompositionFrame>();
+  useEffect(() => {
+    const viewport = viewportRef.current;
+    if (!viewport) return;
+    const measure = () => {
+      const { clientWidth: width, clientHeight: height } = viewport;
+      if (width > 0 && height > 0) {
+        setMeasuredViewport((current) => current?.width === width && current.height === height ? current : { width, height });
+      }
+    };
+    measure();
+    if (typeof ResizeObserver === 'undefined') return;
+    const observer = new ResizeObserver(measure);
+    observer.observe(viewport);
+    return () => observer.disconnect();
+  }, []);
   const { rootRef, progress: rawProgress, seek: rawSeek } = useCinematicScroll<HTMLDivElement>(reduced);
   const editing = Boolean(editor?.enabled);
   const cinematicConfig = useMemo(() => resolveCinematicProjectConfig('t15', customConfig).config, [customConfig]);
@@ -72,8 +92,11 @@ function PaintedPromise({ wedding, onRSVP, onSubmitWish, onUploadPhoto, wishes, 
   const seek = (target: number) => rawSeek(mapCinematicProgress(target, pacing.points, true));
   const cameraLayout = useMemo(() => resolveCinematicCamera('t15', PAINTED_PROMISE_CAMERA, beats, breakpoint, cinematicConfig), [beats, breakpoint, cinematicConfig]);
   const camera = editing && editor?.cinematic?.cameraOverride ? editor.cinematic.cameraOverride : sampleCamera(progress, cameraLayout.timeline);
-  const layers = useMemo(() => resolveCinematicWorld('t15', PAINTED_PROMISE_WORLD, breakpoint, cinematicConfig,
+  const authoredLayers = useMemo(() => resolveCinematicWorld('t15', PAINTED_PROMISE_WORLD, breakpoint, cinematicConfig,
     { frames: direction.theme.memory.frames, programmeItems: itinerary.length }), [breakpoint, cinematicConfig, direction.theme.memory.frames, itinerary.length]);
+  const fontPreview = editing ? editor?.cinematic?.fontPreview : undefined;
+  const layers = useMemo(() => fontPreview ? authoredLayers.map((layer) => layer.id === fontPreview.layerId
+    ? { ...layer, fontFamily: fontPreview.fontFamily } : layer) : authoredLayers, [authoredLayers, fontPreview]);
   const sceneSets = useMemo(() => resolveCinematicSceneSets('t15', PAINTED_PROMISE_SCENE_SETS, cinematicConfig).sceneSets, [cinematicConfig]);
   const tracks = useMemo(() => promoteLegacyCinematicVisibilityTracks(sequence.tracks, resolveCinematicVisibility(
     't15', visibilityFromSequence(sequence), breakpoint, cinematicConfig,
@@ -82,7 +105,9 @@ function PaintedPromise({ wedding, onRSVP, onSubmitWish, onUploadPhoto, wishes, 
   const interaction = useDirectedInteractions({ definitions: direction.interactions, tracks, beats: sequence.beats, progress, seek, editing });
   const effectPose = editing ? editor?.cinematic?.effectPose : undefined;
   const effects = useMemo(() => sampleCinematicEffects(direction.effects, tracks, progress, breakpoint, effectPose), [direction.effects, tracks, progress, breakpoint, effectPose]);
-  const scene = resolveCinematicScene({ layers, sceneSets, tracks, progress, behaviors: {
+  const poseEdit = editing ? editor?.cinematic?.assetPoseEdit : undefined;
+  const scene = resolveCinematicScene({ layers, sceneSets, tracks, progress, breakpoint, assetPoseEdit: poseEdit,
+    reducedMotion: reduced, groupEffects: !reduced || effectPose ? effects.groups : undefined, behaviors: {
     background: (set) => tracksById.get(set.definition.timingTrackId ?? '')?.kind === 'effect' ? { opacity: 1, xVw: 0, yVh: 0, scale: 1 } : {},
   } });
   const setPresentation = new Map(scene.sets.map((set) => [set.definition.id, set.presentation.opacity]));
@@ -95,40 +120,333 @@ function PaintedPromise({ wedding, onRSVP, onSubmitWish, onUploadPhoto, wishes, 
     const surface = Math.max(0, ...record.returnSetIds.map((id) => setPresentation.get(id) ?? 0));
     record.revealSetIds.forEach((id) => setPresentation.set(id, Math.max(setPresentation.get(id) ?? 0, surface)));
   }
+  const receptionTable = PAINTED_PROMISE_RECEPTION
+    ? scene.entries.find(({ layer }) => layer.id === 'reception-table' && !layer.hidden)
+    : undefined;
+  const receptionProps = new Map(scene.entries.flatMap((entry) => {
+    const { id, behavior, space } = entry.layer;
+    if (!PAINTED_PROMISE_RECEPTION || space !== 'viewport' || entry.layer.parentId) return [];
+    const kind = id === 'rsvp-letter' && behavior === 'rsvp-envelope' ? 'rsvp-guest-book'
+      : receptionTable && id === 'wishes-book' && behavior === 'guest-book' ? 'wishes-envelope' : undefined;
+    const track = kind && tracksById.get(entry.sceneSet.timingTrackId ?? entry.sceneSet.id);
+    return kind && track ? [[id, { kind, clip: resolveCinematicTrackClip(track, tracksById) }] as const] : [];
+  }));
+  const tableLayer = receptionTable?.layer;
+  const tablePresentation = scene.sets.find((set) => set.definition.id === receptionTable?.sceneSet.id)?.presentation;
+  const tableTrack = tracksById.get(receptionTable?.sceneSet.timingTrackId ?? receptionTable?.sceneSet.id ?? '');
+  const tableExit = receptionTable?.sceneSet.exit ?? tableTrack?.exit;
+  const tableTiming = tableTrack && resolveCinematicTrackClip(tableTrack, tracksById);
+  const cameraFrame = (view: typeof camera, world: typeof effects.world) => ({
+    x: view.x + world.xVw + world.x, y: view.y + world.yVh + world.y,
+    scale: view.scale * world.scale, rotate: view.rotate + world.rotate,
+  });
+  const liveFrame = cameraFrame(camera, effects.world);
+  // Once the table begins sliding, keep its staging in the departure frame while
+  // the main camera moves on to the next beat.
+  const departureFrame = tableTiming && (tableExit?.kind === 'slide' || tableExit?.kind === 'fade-slide')
+    && progress > tableTiming.exitStart && progress <= tableTiming.end
+    ? cameraFrame(sampleCamera(tableTiming.exitStart, cameraLayout.timeline),
+      sampleCinematicEffects(direction.effects, tracks, tableTiming.exitStart, breakpoint, effectPose).world)
+    : undefined;
+  const receptionFrame = departureFrame ?? liveFrame;
+  const departureTransform = departureFrame && [
+    `rotate(${-liveFrame.rotate}deg)`, `scale(${1 / liveFrame.scale})`,
+    `translate(calc(var(--fvw, 100vw) * ${(departureFrame.x - liveFrame.x) / 100}), calc(var(--fsvh, 100svh) * ${(departureFrame.y - liveFrame.y) / 100}))`,
+    `scale(${departureFrame.scale})`, `rotate(${departureFrame.rotate}deg)`,
+  ].join(' ');
+  const tableSlideX = tablePresentation?.xVw ?? 0;
+  const tableSlideY = tablePresentation?.yVh ?? 0;
+  const tableOpacity = receptionTable
+    ? (setPresentation.get(receptionTable.sceneSet.id) ?? receptionTable.presentation.opacity) * receptionTable.layer.opacity : 0;
   scene.entries = scene.entries.map((entry) => {
     const independent = Boolean(entry.layer.timingTrackId || tracks.some((track) => track.target.type === 'layer' && track.target.id === entry.layer.id));
     const record = interaction.recordFor(entry.layer);
     const dismissed = record && interaction.phase(record.id) === 'dismissed' && record.returnMode !== 'stay';
+    if (receptionTable && receptionProps.has(entry.layer.id)) {
+      // Reception props use Layout Width throughout the table sequence.
+      return { ...entry, presentation: { ...entry.presentation, opacity: tableOpacity, scale: 1 } };
+    }
     return { ...entry, presentation: { ...entry.presentation, opacity: entry.layer.parentId ? entry.presentation.opacity : dismissed ? 0 : independent
       ? entry.presentation.opacity : setPresentation.get(entry.sceneSet.id) ?? entry.presentation.opacity } };
   });
   const infoRef = useRef<HTMLElement>(null);
-  useDialogBehavior(infoRef, Boolean(interaction.info), interaction.dismissInfo);
+  useDialogBehavior(infoRef, Boolean(interaction.info), interaction.dismissInfo, true, false);
   const t = useCallback((key: string, fallback: string) => configValue(customConfig, key, fallback), [customConfig]);
   const submitRsvp = async (data: TemplateRsvpSubmission) => { await onRSVP(data); schedule(interaction.close, 1100); };
   const slotProps: SlotProps = { wedding, t, wishes, photos, tables, itinerary, seatingEnabled, photoBoothEnabled,
     onRSVP: submitRsvp, onSubmitWish, onUploadPhoto, editing: false, config: customConfig, breakpoint };
-  const decorations: Record<string, CinematicLayerDecoration> = {};
-  for (const entry of scene.entries) {
+  const decorations: Record<string, CinematicLayerDecoration> = Object.create(null);
+  const entriesById = new Map(scene.entries.map((entry) => [entry.layer.id, entry]));
+  const viewport = measuredViewport ?? (editor?.frame && { width: editor.frame.w, height: editor.frame.svh });
+  const ratio = viewport ? viewport.width / viewport.height : breakpoint === 'mobile' ? .5 : 1.6;
+  const compositions = new Map(sceneSets.flatMap((set) => {
+    const reference = set.referenceFrames?.[breakpoint];
+    return reference && viewport ? [[set.id, fitCinematicComposition(reference, viewport)] as const] : [];
+  }));
+  const layerRatio = (entry: CinematicSceneEntry) => {
+    const composition = compositions.get(entry.sceneSet.id);
+    return composition ? composition.width / composition.height : ratio;
+  };
+  const isReceptionScenery = (entry: CinematicSceneEntry) => receptionTable && entry.layer.space === 'world' &&
+    (entry.sceneSet.id === receptionTable.sceneSet.id || entry.sceneSet.id === 'table-wishes');
+  const rotateScale = ({ x, y }: AssetAnchorOffset, scale: number, rotate: number, aspect = ratio) => {
+    const r = rotate * Math.PI / 180;
+    return { x: scale * (x * Math.cos(r) - y * Math.sin(r) / aspect),
+      y: scale * (x * aspect * Math.sin(r) + y * Math.cos(r)) };
+  };
+  const mapPoint = ({ x, y }: AssetAnchorOffset, origin: AssetAnchorOffset, translation: AssetAnchorOffset,
+    scale: number, rotate: number, inverse: boolean, aspect = ratio) => {
+    const offset = rotateScale({
+      x: x - origin.x - (inverse ? translation.x : 0),
+      y: y - origin.y - (inverse ? translation.y : 0),
+    }, inverse ? 1 / scale : scale, inverse ? -rotate : rotate, aspect);
+    return { x: origin.x + offset.x + (inverse ? 0 : translation.x),
+      y: origin.y + offset.y + (inverse ? 0 : translation.y) };
+  };
+  const mapLayerPoint = (point: AssetAnchorOffset, entry: CinematicSceneEntry, inverse = false) => {
+    const group = entry.groupTransform;
+    const frame = isReceptionScenery(entry) ? receptionFrame : liveFrame;
+    const world = (p: AssetAnchorOffset) => entry.layer.space === 'world'
+      ? mapPoint(p, { x: 50, y: 56 }, frame, frame.scale, frame.rotate, inverse) : p;
+    const composition = compositions.get(entry.sceneSet.id);
+    const composed = ({ x, y }: AssetAnchorOffset) => {
+      if (!composition || !viewport) return { x, y };
+      const sx = composition.width / viewport.width, sy = composition.height / viewport.height;
+      return { x: 50 + (x - 50) * (inverse ? 1 / sx : sx), y: 50 + (y - 50) * (inverse ? 1 / sy : sy) };
+    };
+    const grouped = (p: AssetAnchorOffset) => group
+      ? mapPoint(p, { x: group.centerX, y: group.centerY },
+        { x: group.x + group.slideX + (group.frameX ?? 0), y: group.y + group.slideY + (group.frameY ?? 0) },
+        group.scale, group.rotate, inverse, layerRatio(entry)) : p;
+    return inverse ? grouped(composed(world(point))) : world(composed(grouped(point)));
+  };
+  const anchorDependencies = (id: string) => {
+    const keyframes = entriesById.get(id)?.layer.keyframes ?? [];
+    const anchors = keyframes.map(({ pose }) => pose.anchor);
+    if (poseEdit?.layerId === id) anchors.push(poseEdit.pending?.anchor);
+    const ids = anchors.map(assetAnchorTarget).filter((id): id is string => Boolean(id));
+    if (receptionTable && receptionProps.has(id)) ids.push(receptionTable.layer.id);
+    return ids;
+  };
+  const dependsOn = (id: string, sourceId: string, seen = new Set<string>()): boolean => {
+    if (id === sourceId) return true;
+    if (seen.has(id)) return false;
+    seen.add(id);
+    return anchorDependencies(id).some((target) => dependsOn(target, sourceId, seen));
+  };
+  const decorate = (entry: CinematicSceneEntry) => {
+    if (decorations[entry.layer.id]) return;
     const record = interaction.recordFor(entry.layer);
     const motion = effects.layers.get(entry.layer.id);
-    const animation = entry.layer.animations?.length ? sampleAssetAnimations(entry.layer, tracks, progress, layers) : undefined;
+    const { layer, presentation } = entry;
+    const editingPose = poseEdit?.layerId === layer.id ? poseEdit : undefined;
+    const hasKeyframes = Boolean(layer.keyframes?.length);
+    const clip = (hasKeyframes || editingPose) ? assetPoseClip(layer, tracks, layers) : undefined;
+    const poseProgress = reduced && !editing && clip && progress >= clip.enterEnd && progress <= clip.exitStart
+      ? clip.enterEnd : progress;
+    const clipAt = clip ? assetClipPosition(poseProgress, clip) : 0;
+    // Match the animator ruler's precision so selecting a keyframe shows its saved anchor.
+    const at = editingPose ? keyframeTime(clipAt) : clipAt;
+    const animation = !hasKeyframes && entry.layer.animations?.length ? sampleAssetAnimations(entry.layer, tracks, progress, layers) : undefined;
+    const renderPart = (part: string, element: Parameters<typeof CinematicPart>[0]['element']) => (
+      <CinematicPart rootId={entry.layer.id} part={part} element={element}
+        entries={scene.entries} decorations={decorations} editor={editor} slotProps={slotProps}
+        boxClassName={styles.sceneLayer} imageClassName={styles.sceneLayerImage}
+        selectedClassName={styles.sceneLayerSelected} resizeHandleClassName={styles.sceneResizeHandle} />
+    );
+    const phase = record ? interaction.phase(record.id) : 'ready';
+    const available = Boolean(record && interaction.available(record) && phase === 'ready' && entry.presentation.opacity > .7);
+    const fire = () => { if (record) interaction.trigger(record); };
+    const reception = receptionProps.get(entry.layer.id);
+    const tableEntry = receptionTable && entriesById.get(receptionTable.layer.id);
+    const composedDock = reception && tableEntry &&
+      (compositions.has(entry.sceneSet.id) || compositions.has(tableEntry.sceneSet.id));
+    const receptionSlide = (() => {
+      if (!reception) return { x: 0, y: 0 };
+      if (!composedDock || !tableEntry) {
+        return rotateScale({ x: tableSlideX, y: tableSlideY }, receptionFrame.scale, receptionFrame.rotate);
+      }
+      const origin = mapLayerPoint(mapLayerPoint({ x: 50, y: 56 }, tableEntry), entry, true);
+      const shifted = mapLayerPoint(mapLayerPoint({ x: 50 + tableSlideX, y: 56 + tableSlideY }, tableEntry), entry, true);
+      return { x: shifted.x - origin.x, y: shifted.y - origin.y };
+    })();
+    const resolveLayerAnchor: ResolveAssetAnchor = (anchor) => {
+      const id = assetAnchorTarget(anchor);
+      const target = id ? entriesById.get(id) : undefined;
+      if (!target || target.layer.parentId || layer.parentId || dependsOn(target.layer.id, layer.id)) return;
+      const pointId = anchor.startsWith('point:') ? anchor.split(':')[2] : undefined;
+      const marker = target.layer.anchorPoints?.find((point) => point.id === pointId);
+      if (pointId && !marker) return;
+      decorate(target);
+      const visual = decorations[target.layer.id];
+      const ambient = visual.ambient;
+      const geometry = target.layer;
+      const group = target.groupTransform;
+      const transition = visual.suppressTransition ? undefined : target.presentation;
+      const aspect = layerRatio(target);
+      const imageHeight = geometry.w * aspect / (marker?.aspectRatio ?? geometry.aspectRatio ?? 1);
+      const boxHeight = geometry.h ?? imageHeight;
+      let markerOffset = { x: 0, y: 0 };
+      if (marker) {
+        const fit = geometry.fit ?? 'contain';
+        const heightScale = boxHeight / imageHeight;
+        const fitScale = fit === 'cover' ? Math.max(1, heightScale) : fit === 'contain' ? Math.min(1, heightScale) : 1;
+        const artworkHeight = fit === 'fill' ? boxHeight : imageHeight * fitScale;
+        markerOffset = rotateScale({
+          x: (marker.x - .5) * geometry.w * fitScale * (geometry.flipX ? -1 : 1),
+          y: (marker.y - .5) * artworkHeight,
+        }, (ambient?.scale ?? 1) * (transition?.scale ?? 1), geometry.rotation + (ambient?.rotate ?? 0), aspect);
+      }
+      const center = mapLayerPoint({
+        x: geometry.x + markerOffset.x + (ambient?.xVw ?? 0) + (ambient?.x ?? 0) * geometry.w / 100 +
+          (transition ? transition.xVw - (group?.slideX ?? 0) : 0),
+        y: geometry.y + markerOffset.y + (ambient?.yVh ?? 0) +
+          (ambient?.y ?? 0) * boxHeight / 100 +
+          (transition ? transition.yVh - (group?.slideY ?? 0) : 0),
+      }, target);
+      const point = mapLayerPoint(center, entry, true);
+      return { x: point.x - layer.x - receptionSlide.x, y: point.y - layer.y - receptionSlide.y };
+    };
+    const anchorOptions = (resolve: ResolveAssetAnchor, legacy?: AssetAnchorOffset): AssetAnchorOption[] =>
+      scene.entries.flatMap((target): AssetAnchorOption[] => {
+        if (target.layer.hidden || target.layer.parentId) return [];
+        const choices: Pick<AssetAnchorOption, 'id' | 'label'>[] = [
+          { id: `layer:${target.layer.id}`, label: target.layer.label },
+          ...(target.layer.anchorPoints ?? []).map(({ id, label }) => ({
+            id: `point:${target.layer.id}:${id}` as const, label: `${target.layer.label} · ${label}`,
+          })),
+        ];
+        return choices.flatMap((choice) => {
+          const offset = resolve(choice.id);
+          return offset ? [{ ...choice, ...offset }] : [];
+        });
+      }).concat(legacy ? [{ id: 'table', label: 'Reception table dock', ...legacy }] : []);
+    if (reception) {
+      const pose = receptionPose(progress, reception.clip, reduced);
+      const sprite = RECEPTION_SPRITES[reception.kind];
+      const docked = 1 - pose.lift;
+      let tableAnchor = { x: 0, y: 0 };
+      let correction = { x: 0, y: 0, xVw: 0, yVh: 0 };
+      if (receptionTable) {
+        const { layer: table, presentation: tableMotion } = receptionTable;
+        const worldScale = receptionFrame.scale;
+        const radians = receptionFrame.rotate * Math.PI / 180;
+        const cos = Math.cos(radians);
+        const sin = Math.sin(radians);
+        decorate(entriesById.get(table.id)!);
+        const tableDecoration = decorations[table.id];
+        const tableMotionOffset = tableDecoration.ambient;
+        const tableScale = tableDecoration.suppressTransition ? tableMotionOffset?.scale ?? 1 : 1;
+        const tableRadians = tableDecoration.suppressTransition ? (table.rotation + (tableMotionOffset?.rotate ?? 0)) * Math.PI / 180 : 0;
+        const seatX = table.w * (reception.kind === 'rsvp-guest-book' ? -.22 : .22);
+        const tableAspect = composedDock && tableEntry ? layerRatio(tableEntry) : ratio;
+        const seatY = -table.w * tableAspect * .18;
+        const localX = table.x - 50 + ((tableDecoration.suppressTransition ? tableMotionOffset?.xVw ?? 0 : tableMotion.xVw) - tableSlideX) +
+          tableScale * (seatX * Math.cos(tableRadians) - seatY * Math.sin(tableRadians) / tableAspect);
+        const localY = table.y - 56 + ((tableDecoration.suppressTransition ? tableMotionOffset?.yVh ?? 0 : tableMotion.yVh) - tableSlideY) +
+          tableScale * (seatX * tableAspect * Math.sin(tableRadians) + seatY * Math.cos(tableRadians));
+        const dockX = 50 + receptionFrame.x +
+          worldScale * (localX * cos - localY * sin / ratio);
+        const dockY = 56 + receptionFrame.y +
+          worldScale * (localX * ratio * sin + localY * cos);
+        const spriteRatio = sprite.height / sprite.width;
+        const dock = composedDock && tableEntry
+          ? mapLayerPoint(mapLayerPoint({ x: 50 + localX, y: 56 + localY }, tableEntry), entry, true)
+          : { x: dockX, y: dockY };
+        const contactOffset = entry.layer.w * layerRatio(entry) * spriteRatio * .4;
+        correction = receptionPositionCorrection({
+          layerId: entry.layer.id, effects: direction.effects, tracks: tracksById, clip: reception.clip,
+          breakpoint, progress, lift: pose.lift, editingEffectId: effectPose?.effectId,
+        });
+        tableAnchor = { x: dock.x - layer.x, y: dock.y - contactOffset - layer.y };
+      }
+      const resolveAnchor: ResolveAssetAnchor = (anchor) => anchor === 'table'
+        ? tableAnchor : resolveLayerAnchor(anchor);
+      const sampled = editingPose?.pending ?? sampleAssetKeyframes(layer.keyframes, at, resolveAnchor, motion);
+      const authored = sampled && resolveAssetPose(sampled, resolveAnchor);
+      const anchors = editingPose ? anchorOptions(resolveLayerAnchor, receptionTable ? tableAnchor : undefined) : undefined;
+      const ambient: CinematicLayerDecoration['ambient'] = authored ? {
+        opacity: authored.opacity ?? motion?.opacity, blur: authored.blur ?? motion?.blur,
+        xVw: authored.x, yVh: authored.y, rotate: authored.rotate, scale: authored.scale,
+      } : {
+        ...motion,
+        x: (motion?.x ?? 0) + correction.x,
+        y: (motion?.y ?? 0) + correction.y,
+        xVw: (motion?.xVw ?? 0) + correction.xVw + (animation?.x ?? 0) + tableAnchor.x * docked,
+        yVh: (motion?.yVh ?? 0) + correction.yVh + (animation?.y ?? 0) + tableAnchor.y * docked,
+        rotate: (motion?.rotate ?? 0) + (animation?.rotate ?? 0),
+        scale: (motion?.scale ?? 1) * (animation?.scale ?? 1),
+      };
+      decorations[layer.id] = {
+        suppressTransition: Boolean(authored),
+        interactive: available && pose.arrived && !editing,
+        children: <ReceptionProp kind={reception.kind} open={pose.open} arrived={pose.arrived}
+          artworkFrame={authored?.frame} surface={authored} editing={editing} available={available} fire={fire} />,
+        ambient: {
+          ...ambient,
+          xVw: (ambient.xVw ?? 0) + receptionSlide.x,
+          yVh: (ambient.yVh ?? 0) + receptionSlide.y,
+        },
+        poseSample: editingPose ? {
+          pose: { x: (ambient.xVw ?? 0) + (authored ? 0 : presentation.xVw),
+            y: (ambient.yVh ?? 0) + (authored ? 0 : presentation.yVh),
+            scale: ambient.scale ?? 1, rotate: ambient.rotate ?? 0,
+            opacity: sampled?.opacity, blur: sampled?.blur,
+            frame: authored?.frame ?? pose.open,
+            perspective: sampled?.perspective, contactShadow: sampled?.contactShadow, shadowSoftness: sampled?.shadowSoftness,
+            ...(sampled?.anchor ? { anchor: sampled.anchor, x: sampled.x, y: sampled.y } : {}),
+          },
+          appearance: { opacity: ambient.opacity, blur: ambient.blur },
+          anchors, frameCount: sprite.frames,
+        } : undefined,
+      };
+      return;
+    }
+    if (entry.layer.id === 'table-guest-book' && receptionProps.has('wishes-book')) {
+      decorations[entry.layer.id] = { visible: false };
+      return;
+    }
     const decoration = renderCinematicFunction(entry, {
       slotProps, theme: direction.theme, styles, editing, interaction: record, phase: record ? interaction.phase(record.id) : 'ready',
       available: Boolean(record && interaction.available(record) && entry.presentation.opacity > .7),
       focused: Boolean(record && interaction.focusId === record.id), fire: () => record && interaction.trigger(record),
       contentMotion: effects.layers.get(`${entry.layer.id}:content`), apiBase: API_BASE,
-      renderPart: (part, element) => <CinematicPart rootId={entry.layer.id} part={part} element={element}
-        entries={scene.entries} decorations={decorations} editor={editor} slotProps={slotProps}
-        boxClassName={styles.sceneLayer} imageClassName={styles.sceneLayerImage}
-        selectedClassName={styles.sceneLayerSelected} resizeHandleClassName={styles.sceneResizeHandle} />,
+      renderPart,
     });
-    decorations[entry.layer.id] = { ...decoration, ambient: animation ? { ...motion,
+    const shadowOpacity = layer.textEffects?.shadow?.opacity;
+    const sampled = editingPose?.pending ?? sampleAssetKeyframes(layer.keyframes, at, resolveLayerAnchor, { ...motion, shadowOpacity });
+    const textMotion = layer.kind === 'text' ? {
+      textReveal: reduced && !editing ? undefined : sampled?.textReveal,
+      revealAmount: sampled?.revealAmount,
+      shadowOpacity: sampled?.shadowOpacity,
+      burst: reduced && !editing ? undefined : sampleTextGlitch(layer.keyframes, at, editingPose?.pending),
+    } : undefined;
+    const authored = sampled && resolveAssetPose(sampled, resolveLayerAnchor);
+    const anchors = editingPose && !layer.parentId ? anchorOptions(resolveLayerAnchor) : undefined;
+    const ambient = authored ? {
+      opacity: authored.opacity ?? motion?.opacity, blur: authored.blur ?? motion?.blur,
+      xVw: authored.x, yVh: authored.y, scale: authored.scale, rotate: authored.rotate,
+    } : animation ? { ...motion,
       xVw: (motion?.xVw ?? 0) + animation.x, yVh: (motion?.yVh ?? 0) + animation.y,
       scale: (motion?.scale ?? 1) * animation.scale, rotate: (motion?.rotate ?? 0) + animation.rotate,
-    } : motion,
-      cssVars: entry.layer.parentId ? undefined : { '--cinematic-close-duration': `${record?.closeMs ?? 620}ms`, '--cinematic-open-duration': `${record?.openMs ?? 550}ms` } as CSSProperties };
+    } : motion;
+    // A saved table pose still rides the table's scene-set slide.
+    const displayMotion = authored && layer.id === tableLayer?.id ? {
+      ...ambient, xVw: authored.x + tableSlideX, yVh: authored.y + tableSlideY,
+    } : ambient;
+    decorations[layer.id] = { ...decoration, textMotion, surface: authored, ambient: displayMotion, suppressTransition: Boolean(authored),
+      frameTransform: isReceptionScenery(entry)
+        ? departureTransform ?? 'none' : undefined,
+      poseSample: editingPose ? { anchors, appearance: { opacity: ambient?.opacity, blur: ambient?.blur, shadowOpacity }, pose: (authored && sampled) ?? {
+        x: (ambient?.xVw ?? 0) + presentation.xVw - (layer.parentId ? 0 : entry.groupTransform?.slideX ?? 0),
+        y: (ambient?.yVh ?? 0) + presentation.yVh - (layer.parentId ? 0 : entry.groupTransform?.slideY ?? 0),
+        scale: (ambient?.scale ?? 1) * presentation.scale,
+        rotate: ambient?.rotate ?? 0,
+      } } : undefined,
+      cssVars: layer.parentId ? undefined : { '--cinematic-close-duration': `${record?.closeMs ?? 620}ms`, '--cinematic-open-duration': `${record?.openMs ?? 550}ms` } as CSSProperties };
+
   }
+  scene.entries.forEach(decorate);
   const theme = direction.theme;
   const themeStyle = {
     '--cinematic-ink': theme.ink, '--cinematic-secondary': theme.secondaryInk, '--cinematic-accent': theme.accent,
@@ -139,10 +457,10 @@ function PaintedPromise({ wedding, onRSVP, onSubmitWish, onUploadPhoto, wishes, 
     '--cinematic-track-desktop': `${pacing.heightVh}svh`, '--cinematic-track-mobile': `${pacing.heightVh}svh`,
   } as CSSProperties;
   const worldStyle = {
-    '--camera-x': `calc(var(--fvw, 100vw) * ${(camera.x + effects.world.xVw + effects.world.x) / 100})`,
-    '--camera-y': `calc(var(--fsvh, 100svh) * ${(camera.y + effects.world.yVh + effects.world.y) / 100})`,
+    '--camera-x': `calc(var(--fvw, 100vw) * ${liveFrame.x / 100})`,
+    '--camera-y': `calc(var(--fsvh, 100svh) * ${liveFrame.y / 100})`,
     opacity: effects.world.opacity,
-    '--camera-scale': camera.scale * effects.world.scale, '--camera-rotate': `${camera.rotate + effects.world.rotate}deg`, '--world-blur': `${effects.world.blur}px`,
+    '--camera-scale': liveFrame.scale, '--camera-rotate': `${liveFrame.rotate}deg`, '--world-blur': `${effects.world.blur}px`,
   } as CSSProperties;
   const anchors = direction.navigation.flatMap((anchor) => {
     const beat = sequence.beats.find((candidate) => candidate.id === anchor.targetId);
@@ -151,7 +469,34 @@ function PaintedPromise({ wedding, onRSVP, onSubmitWish, onUploadPhoto, wishes, 
     const story = anchor.target === 'beat' ? beat?.at : anchor.target === 'track-start' ? clip?.start : anchor.target === 'track-enter' ? clip?.enterEnd : clip?.end;
     return story === undefined ? [] : [{ ...anchor, at: mapCinematicProgress(story, pacing.points, true) }];
   });
-  const sceneProps = { entries: scene.entries, decorations, editor, slotProps, boxClassName: styles.sceneLayer,
+  const groupEdit = poseEdit && cinematicEffectGroup(sceneSets, layers, breakpoint, poseEdit.layerId);
+  if (groupEdit && !groupEdit.group.hidden && !groupEdit.set.hidden && !groupEdit.set.locked &&
+    !groupEdit.members.some((member) => member.locked)) {
+    const groupEntry = scene.entries.find(({ groupTransform }) => groupTransform?.editingPose);
+    const transform = groupEntry?.groupTransform;
+    if (transform?.editingPose && groupEntry) {
+      const { set, group, members } = groupEdit;
+      const target = cinematicGroupAnimationTarget(set, group, members[0]);
+      // A single selection box takes input while each member retains its own draw order.
+      const { centerX, centerY } = transform;
+      const layer = {
+        ...target, x: centerX + transform.slideX, y: centerY + transform.slideY,
+        w: Math.max(...members.map((member) => member.w + 2 * Math.abs(member.x - centerX))),
+        h: Math.max(...members.map((member) => (member.h ?? member.w * layerRatio(groupEntry) / (member.aspectRatio ?? 1)) +
+          2 * Math.abs(member.y - centerY))),
+        aspectRatio: undefined, rotation: 0, flipX: false, z: 1000, opacity: 1, locked: false,
+      };
+      scene.entries.push({ layer, sceneSet: set, presentation: { opacity: 1, scale: 1, xVw: 0, yVh: 0 } });
+      decorations[layer.id] = {
+        children: <span aria-hidden="true" />,
+        ambient: { xVw: transform.x + (transform.frameX ?? 0), yVh: transform.y + (transform.frameY ?? 0),
+          rotate: transform.rotate, scale: transform.scale },
+        poseSample: { pose: transform.editingPose, appearance: { opacity: transform.opacity, blur: transform.blur } },
+        frameTransform: isReceptionScenery(groupEntry) ? departureTransform ?? 'none' : undefined,
+      };
+    }
+  }
+  const sceneProps = { entries: scene.entries, decorations, compositions, editor, slotProps, boxClassName: styles.sceneLayer,
     imageClassName: styles.sceneLayerImage, selectedClassName: styles.sceneLayerSelected, resizeHandleClassName: styles.sceneResizeHandle };
   const sheetStyle = {
     '--slot-ink': theme.ink, '--slot-ink-soft': theme.ink, '--slot-ink-faint': theme.secondaryInk,
@@ -169,7 +514,7 @@ function PaintedPromise({ wedding, onRSVP, onSubmitWish, onUploadPhoto, wishes, 
   return <div ref={rootRef} className={styles.track} style={themeStyle} data-cinematic-template="painted-promise"
     data-cinematic-beats={beats.length} data-cinematic-paused={interaction.isOpen ? 'true' : 'false'} data-cinematic-progress={progress.toFixed(4)}>
     {anchors.map((anchor) => <span key={anchor.id} id={anchor.id} className={styles.anchor} style={{ top: `calc(${anchor.at * 100}% - var(--fsvh, 100svh) * ${anchor.at})` }} />)}
-    <main className={styles.viewport} data-cinematic-space="viewport" aria-label="Painted Promise wedding invitation">
+    <main ref={viewportRef} className={styles.viewport} data-cinematic-space="viewport" aria-label="Painted Promise wedding invitation">
       <CinematicSceneLayers {...sceneProps} space="viewport" />
       <div className={styles.world} data-cinematic-space="world" style={worldStyle}><CinematicSceneLayers {...sceneProps} space="world" /></div>
       {editing && editor?.cinematic?.mode !== 'scene' && <CinematicCameraSurface camera={camera}
@@ -177,8 +522,8 @@ function PaintedPromise({ wedding, onRSVP, onSubmitWish, onUploadPhoto, wishes, 
       {editing && editor?.cinematic?.referenceSrc && /* eslint-disable-next-line @next/next/no-img-element -- The reference overlay must share the camera canvas geometry and direct upload source. */
                                                      <img className={styles.referenceOverlay} src={editor.cinematic.referenceSrc} alt="" aria-hidden="true"
         style={{ opacity: editor.cinematic.referenceOpacity ?? .45, objectFit: editor.cinematic.referenceFit ?? 'contain' }} />}
-      <SheetHost groups={SHEETS} slotProps={slotProps} themeStyle={sheetStyle} flatPanels />
-      <ProgrammePopup slotProps={slotProps} artwork={layers.find((layer) => layer.behavior === 'programme-board')?.src || `${ROOT}/itinerary-v1/programme-board.png`}
+      <SheetHost groups={SHEETS} slotProps={slotProps} themeStyle={sheetStyle} flatPanels lockScroll={false} />
+      <ProgrammePopup slotProps={slotProps} artwork={layers.find((layer) => layer.behavior === 'programme-board')?.src || `${ROOT}/itinerary-v1/programme-board.webp`}
         title={layers.find((layer) => layer.behavior === 'programme-board')?.title} />
       {interaction.info && <div className={styles.infoBackdrop} style={{ '--cinematic-open-duration': `${interaction.info.openMs}ms` } as CSSProperties} onClick={(event) => { if (event.target === event.currentTarget) interaction.dismissInfo(); }}>
         <section ref={infoRef} tabIndex={-1} data-cinematic-info role="dialog" aria-modal="true" aria-label={interaction.info.infoTitle} className={styles.infoDialog}>

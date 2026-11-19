@@ -1,9 +1,10 @@
 'use client';
+import type { AnchorBinding } from '@/components/templates/_shared/hooks/useAnchors';
 import { useTimeouts } from '@/components/templates/_shared/hooks/useTimeouts';
 import WishBatch from '@/components/templates/_shared/WishBatch';
 import { configValue } from '@/components/templates/configValue';
 import { useGuestSubmission } from '@/components/templates/_shared/guest/useGuestSubmission';
-import { useState, type CSSProperties } from 'react';
+import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Wish, CreateWish } from '@/lib/api';
 import type { Breakpoint, EditorHandle } from '@/components/templates/_shared/types';
@@ -15,10 +16,10 @@ interface Props {
   onSubmitWish: (data: CreateWish) => Promise<void>;
   customConfig?: Record<string, string>;
   overlayProps: { breakpoint: Breakpoint; config?: Record<string, string>; editor?: EditorHandle };
-  a: (stageId: string, elementId: string, base?: CSSProperties) => CSSProperties;
+  anchorProps: AnchorBinding;
 }
 
-export default function WishesSection({ wishes, onSubmitWish, customConfig, overlayProps, a }: Props) {
+export default function WishesSection({ wishes, onSubmitWish, customConfig, overlayProps, anchorProps }: Props) {
   const schedule = useTimeouts();
   const submission = useGuestSubmission();
   const t = (key: string, fallback: string) => configValue(customConfig, key, fallback);
@@ -52,7 +53,7 @@ export default function WishesSection({ wishes, onSubmitWish, customConfig, over
         viewport={{ once: true, margin: '-80px' }}
         transition={{ duration: 0.8 }}
       >
-        <h2 className={styles.sectionTitle} style={a('wishes', 'title')}>
+        <h2 className={styles.sectionTitle} {...anchorProps('wishes', 'title')}>
           <span className={styles.titleDecor}>✦</span>
           Wishes
           <span className={styles.titleDecor}>✦</span>

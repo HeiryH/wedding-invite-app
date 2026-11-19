@@ -45,8 +45,8 @@ export default function CinematicPart({ rootId, part, element, entries, decorati
     if (layer.borderColor) vars['--frame-border-color'] = layer.borderColor;
     if (layer.borderWidth !== undefined) vars['--frame-border-width'] = `${layer.borderWidth}px`;
   }
-  return <CinematicSceneLayer {...props} editor={editable ? props.editor : undefined} ambient={decoration?.ambient} cssVars={vars}
+  return <CinematicSceneLayer {...props} editor={editable ? props.editor : undefined} ambient={decoration?.ambient} textMotion={decoration?.textMotion} poseSample={decoration?.poseSample} cssVars={vars}
     localElement={element as NonNullable<ComponentProps<typeof CinematicSceneLayer>['localElement']>}
     layer={{ ...layer, locked: layer.locked || ancestors.some((parent) => parent.locked) }}
-    visibility={entry.presentation.opacity} ancestorOpacity={ancestorOpacity} transition={entry.presentation} />;
+    visibility={entry.presentation.opacity} ancestorOpacity={ancestorOpacity} transition={decoration?.suppressTransition ? undefined : entry.presentation} />;
 }

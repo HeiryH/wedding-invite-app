@@ -33,9 +33,9 @@ export const T5_ASSETS = '/templates/t5';
  * nudge transform still composes with the parent's, since it's applied to the child's own element.
  */
 const anchor = (id: string, label: string, parent?: string, extra?: Partial<Layer>): Layer => ({
-  id, kind: 'anchor', label, parent,
+  id, kind: 'anchor', label, parent, groupableAnchor: !parent && id !== 'subtitle',
   x: 50, y: 50, w: 100, h: 20, s: 1, z: 1, order: 0,
-  chain: true, hidden: false, opacity: 1,
+  chain: true, hidden: false, opacity: 1, resizable: true,
   ...extra,
 });
 
@@ -54,6 +54,13 @@ const scrollVideo = (id: string, label: string, effect: Partial<Layer>): Layer =
 
 export const T5_STAGES: Record<string, StageDef> = {
   welcome: stage('welcome', 'Welcome', [
+    anchor('card', 'Welcome Card', undefined, {
+      containerStyle: true, fill: '#fffbf4', containerOpacity: 100 * 69 / 255,
+      containerBlur: 20, radius: 200, borderWidth: 1, borderColor: '#ffffff73',
+    }),
+    anchor('badge', 'Invitation Badge', undefined, { styleable: true, containerStyle: true }),
+    anchor('date', 'Welcome Date', undefined, { styleable: true }),
+    anchor('scroll', 'Scroll Cue', undefined, { styleable: true }),
     anchor('heading', 'Welcome Heading', undefined, { styleable: true }),
     anchor('firstName', 'First Name (position 1)', undefined, { styleable: true, animatable: true }),
     anchor('secondName', 'Second Name (position 2)', undefined, { styleable: true, animatable: true }),
@@ -74,14 +81,14 @@ export const T5_STAGES: Record<string, StageDef> = {
   ]),
   ceremony: stage('ceremony', 'Ceremony', [
     anchor('title', 'Ceremony Title', undefined, { styleable: true }),
-    anchor('card', 'Ceremony Card'),
+    anchor('card', 'Ceremony Card', undefined, { containerStyle: true }),
     // Sub-layers inside the glass card.
     anchor('body', 'Ceremony Text', 'card', { styleable: true }),
     anchor('names', 'Couple Names', 'card', { styleable: true }),
     // Date & location sit outside the glass card as their own rectangles (see Template5.tsx) —
     // previously un-anchored entirely.
-    anchor('date', 'Date Card', undefined, { styleable: true, animatable: true }),
-    anchor('location', 'Location Card', undefined, { styleable: true, animatable: true }),
+    anchor('date', 'Date Card', undefined, { styleable: true, animatable: true, containerStyle: true }),
+    anchor('location', 'Location Card', undefined, { styleable: true, animatable: true, containerStyle: true }),
   ]),
   itinerary: stage('itinerary', 'Itinerary', [
     anchor('title', 'Schedule Title', undefined, { styleable: true }),
@@ -109,6 +116,8 @@ export const T5_STAGES: Record<string, StageDef> = {
   ]),
 };
 
+T5_STAGES.countdown.editorGroup = 'welcome';
+
 const STAGES_BY_SECTION: Partial<Record<string, string[]>> = {
   welcome: ['welcome', 'countdown'],
   walimah: ['ceremony'],
@@ -120,4 +129,14 @@ const STAGES_BY_SECTION: Partial<Record<string, string[]>> = {
 
 export function t5StageIds(sections: string[]): string[] {
   return [...sections.flatMap((section) => STAGES_BY_SECTION[section] ?? []), 'footer'];
+}
+
+/** Match the shipped card geometry for each welcome presentation. */
+export function t5Stages(config?: Record<string, string>): Record<string, StageDef> {
+  if (!['minimal', 'ornate'].includes(config?.['invite.layout'] ?? '')) return T5_STAGES;
+  return {
+    ...T5_STAGES,
+    welcome: { ...T5_STAGES.welcome, layers: T5_STAGES.welcome.layers.map((layer) =>
+      layer.id === 'card' ? { ...layer, radius: 28 } : layer) },
+  };
 }

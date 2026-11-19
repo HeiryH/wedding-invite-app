@@ -1,4 +1,5 @@
 'use client';
+import type { AnchorBinding } from '@/components/templates/_shared/hooks/useAnchors';
 import { formatEventDate } from '@/lib/eventDateFormat';
 import { configValue } from '@/components/templates/configValue';
 import { Suspense, lazy, type CSSProperties } from 'react';
@@ -23,7 +24,7 @@ interface Props {
   showIslamicDate: boolean;
   onScrollDown: () => void;
   overlayProps: { breakpoint: Breakpoint; config?: Record<string, string>; editor?: EditorHandle };
-  a: (stageId: string, elementId: string, base?: CSSProperties) => CSSProperties;
+  anchorProps: AnchorBinding;
   tx: (stageId: string, elementId: string, fallback: string) => string;
   sx: (stageId: string, elementId: string) => CSSProperties;
   ax: (stageId: string, elementId: string) => { 'data-sl-idle'?: AnimIdleType; style?: CSSProperties };
@@ -38,7 +39,7 @@ export default function WelcomeSection({
   showIslamicDate,
   onScrollDown,
   overlayProps,
-  a,
+  anchorProps,
   tx,
   sx,
   ax,
@@ -74,7 +75,7 @@ export default function WelcomeSection({
 
       {/* Content */}
       <div className={styles.welcomeContent}>
-        <div style={a('welcome', 'greeting')}>
+        <div {...anchorProps('welcome', 'greeting')}>
           <motion.p
             className={`${styles.fireflyGreeting} ${alignClass(t('invite.heading.align', 'center'))}`}
             initial={{ opacity: 0 }}
@@ -85,7 +86,7 @@ export default function WelcomeSection({
           </motion.p>
         </div>
 
-        <div style={a('welcome', 'names')} data-seen="true">
+        <div {...anchorProps('welcome', 'names')} data-seen="true">
           <motion.h1
             className={`${styles.coupleNames} ${alignClass(t('invite.heading.align', 'center'))}`}
             style={{ ...headingStyle(customConfig ?? {}), ...sx('welcome', 'names') }}
@@ -99,7 +100,7 @@ export default function WelcomeSection({
           </motion.h1>
         </div>
 
-        <div style={a('welcome', 'message')}>
+        <div {...anchorProps('welcome', 'message')}>
           <motion.div
             className={styles.headingMessage}
             initial={{ opacity: 0, y: 16 }}
@@ -109,19 +110,19 @@ export default function WelcomeSection({
           />
         </div>
 
-        <div style={a('welcome', 'dateVenue')}>
+        <div {...anchorProps('welcome', 'dateVenue')}>
           <motion.div
             className={styles.dateVenue}
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 1.1, duration: 0.7 }}
           >
-            <div className={styles.dateDisplay} style={a('welcome', 'date')}>
+            <div className={styles.dateDisplay} {...anchorProps('welcome', 'date')}>
               <span className={styles.dateMain}>{dateStr}</span>
               {hijriStr && <span className={styles.dateHijri}>{hijriStr}</span>}
             </div>
             <div className={styles.venueDivider}>✦</div>
-            <div className={styles.venueDisplay} style={a('welcome', 'venue')}>
+            <div className={styles.venueDisplay} {...anchorProps('welcome', 'venue')}>
               <span className={styles.venueName}>{wedding.venue}</span>
               {wedding.venueAddress && (
                 <span className={styles.venueAddress}>{wedding.venueAddress}</span>
@@ -130,7 +131,7 @@ export default function WelcomeSection({
           </motion.div>
         </div>
 
-        <div style={a('welcome', 'inviteBody')}>
+        <div {...anchorProps('welcome', 'inviteBody')}>
           <motion.div
             className={styles.inviteBody}
             initial={{ opacity: 0 }}

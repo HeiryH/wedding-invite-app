@@ -1,6 +1,8 @@
 import type { Breakpoint, ObjectFit } from '../types';
 import { normalizeAssetAnimations, type CinematicAssetAnimation } from './assetAnimations';
+import { normalizeAssetKeyframes, normalizeCinematicAnchorPoints, type AssetKeyframe, type CinematicAnchorPoint } from './assetKeyframes';
 import type { CinematicSceneSetId, CinematicSceneSpace } from './sceneSets';
+import { normalizeTextEffects, type CinematicTextEffects } from './textEffects';
 import { expandCinematicParts, type CinematicPartsOptions } from './parts';
 
 /** @deprecated Group is retained as a storage alias while layers migrate to `sceneSetId`. */
@@ -25,6 +27,8 @@ export interface CinematicWorldLayer {
   timingTrackId?: string;
   interactionId?: string;
   animations?: CinematicAssetAnimation[];
+  keyframes?: AssetKeyframe[];
+  anchorPoints?: CinematicAnchorPoint[];
   src?: string;
   text?: string;
   color?: string;
@@ -34,6 +38,7 @@ export interface CinematicWorldLayer {
   textAlign?: 'left' | 'center' | 'right';
   lineHeight?: number;
   letterSpacing?: number;
+  textEffects?: CinematicTextEffects;
   rowGap?: number;
   columnGap?: number;
   /** Nested text box width, as a percentage of its containing block; unlike w, does not scale type. */
@@ -65,9 +70,9 @@ export interface CinematicWorldLayer {
 export type CinematicWorldGeometry = Pick<
   CinematicWorldLayer,
   'parentId' | 'part' | 'label' | 'group' | 'space' | 'kind' | 'src' | 'text' | 'color' | 'fontSize' | 'fontFamily' |
-  'fontWeight' | 'textAlign' | 'lineHeight' | 'letterSpacing' | 'rowGap' | 'columnGap' | 'textWidth' | 'shape' | 'fill' | 'radius' |
+  'fontWeight' | 'textAlign' | 'lineHeight' | 'letterSpacing' | 'textEffects' | 'rowGap' | 'columnGap' | 'textWidth' | 'shape' | 'fill' | 'radius' |
   'borderColor' | 'borderWidth' | 'x' | 'y' | 'w' | 'h' | 'lockAspect' | 'z' | 'rotation' | 'flipX' |
-  'hidden' | 'locked' | 'opacity' | 'fit' | 'behavior' | 'contentKey' | 'title' | 'titleSize' | 'timingTrackId' | 'interactionId' | 'aspectRatio' | 'animations'
+  'hidden' | 'locked' | 'opacity' | 'fit' | 'behavior' | 'contentKey' | 'title' | 'titleSize' | 'timingTrackId' | 'interactionId' | 'aspectRatio' | 'animations' | 'keyframes' | 'anchorPoints'
 >;
 
 type LayerDelta = Partial<CinematicWorldGeometry> & { id: string };
@@ -77,9 +82,9 @@ interface WorldLayout { layers?: StoredLayer[] }
 const OVERRIDABLE: (keyof CinematicWorldGeometry)[] = [
   'parentId', 'part',
   'label', 'group', 'space', 'kind', 'src', 'text', 'color', 'fontSize', 'fontFamily',
-  'fontWeight', 'textAlign', 'lineHeight', 'letterSpacing', 'rowGap', 'columnGap', 'textWidth', 'shape', 'fill', 'radius',
+  'fontWeight', 'textAlign', 'lineHeight', 'letterSpacing', 'textEffects', 'rowGap', 'columnGap', 'textWidth', 'shape', 'fill', 'radius',
   'borderColor', 'borderWidth', 'x', 'y', 'w', 'h', 'lockAspect', 'z', 'rotation', 'flipX', 'hidden',
-  'locked', 'opacity', 'fit', 'behavior', 'contentKey', 'title', 'titleSize', 'timingTrackId', 'interactionId', 'aspectRatio', 'animations',
+  'locked', 'opacity', 'fit', 'behavior', 'contentKey', 'title', 'titleSize', 'timingTrackId', 'interactionId', 'aspectRatio', 'animations', 'keyframes', 'anchorPoints',
 ];
 
 export const cinematicWorldKey = (prefix: string, breakpoint: Breakpoint) =>
@@ -147,7 +152,13 @@ export function resolveCinematicWorld(
       // A malformed layout must never take the invitation down; shipped defaults remain active.
     }
   }
-  return expandCinematicParts(layers, partsOptions).map((layer) => layer.animations === undefined ? layer : { ...layer, animations: normalizeAssetAnimations(layer.animations) }).sort((a, b) => a.z - b.z);
+  return expandCinematicParts(layers, partsOptions).map((layer) => ({
+    ...layer,
+    ...(layer.animations === undefined ? {} : { animations: normalizeAssetAnimations(layer.animations) }),
+    ...(layer.keyframes === undefined ? {} : { keyframes: normalizeAssetKeyframes(layer.keyframes) }),
+    ...(layer.textEffects === undefined ? {} : { textEffects: normalizeTextEffects(layer.textEffects) }),
+    ...(layer.anchorPoints === undefined ? {} : { anchorPoints: normalizeCinematicAnchorPoints(layer.anchorPoints) }),
+  })).sort((a, b) => a.z - b.z);
 }
 
 export function serializeCinematicWorld(
@@ -166,7 +177,8 @@ export function serializeCinematicWorld(
     const delta: LayerDelta = { id: layer.id };
     let changed = false;
     for (const key of OVERRIDABLE) {
-      if (layer[key] !== base[key]) {
+      const structured = key === 'keyframes' || key === 'textEffects';
+      if (layer[key] !== base[key] && (!structured || JSON.stringify(layer[key]) !== JSON.stringify(base[key]))) {
         (delta as Record<string, unknown>)[key] = layer[key];
         changed = true;
       }

@@ -153,7 +153,27 @@ public class TemplateStudioService(AppDbContext db, ITemplateConfigService confi
         var pattern = new Regex(@"/uploads/[^\s""'()<>\\]+", RegexOptions.Compiled);
         var root = Path.GetFullPath(environment?.WebRootPath ?? "wwwroot");
         var replacements = new Dictionary<string, string>(StringComparer.Ordinal);
-        foreach (var url in design.Values.SelectMany(value => pattern.Matches(value).Select(m => m.Value)).Distinct())
+        // An upload URL can cross a transport chunk boundary. Scan the assembled projects.
+        var projects = new Dictionary<string, (int Version, string Text)>(StringComparer.Ordinal);
+        var standaloneKeys = new List<string>();
+        foreach (var (key, value) in design)
+        {
+            var project = TemplateConfigPolicy.CinematicProjectBaseKey(key);
+            if (project == null)
+            {
+                standaloneKeys.Add(key);
+                continue;
+            }
+            if (key != project) continue;
+
+            using var manifest = JsonDocument.Parse(value);
+            var count = manifest.RootElement.GetProperty("chunks").GetInt32();
+            var text = string.Concat(Enumerable.Range(0, count).Select(i => design[$"{project}.{i}"]));
+            projects.Add(project, (manifest.RootElement.GetProperty("version").GetInt32(), text));
+        }
+
+        var values = standaloneKeys.Select(key => design[key]).Concat(projects.Values.Select(project => project.Text));
+        foreach (var url in values.SelectMany(value => pattern.Matches(value).Select(m => m.Value)).Distinct(StringComparer.Ordinal))
         {
             var relative = Uri.UnescapeDataString(url).TrimStart('/');
             var source = Path.GetFullPath(Path.Combine(root, relative));
@@ -169,21 +189,19 @@ public class TemplateStudioService(AppDbContext db, ITemplateConfigService confi
             replacements[url] = destination;
         }
         if (replacements.Count == 0) return design;
-        // Replacing paths can change chunk lengths: unpack whole cinematic projects before
-        // editing, then use capture's rechunking so manifests remain internally consistent.
-        var projects = design.Keys.Select(TemplateConfigPolicy.CinematicProjectBaseKey).Where(x => x != null).Distinct().ToList();
-        foreach (var project in projects)
+        string ReplaceUploads(string text) =>
+            pattern.Replace(text, match => replacements.GetValueOrDefault(match.Value, match.Value));
+
+        // Asset paths can change chunk lengths. Let the design capture code rechunk updated projects.
+        foreach (var (project, document) in projects)
         {
-            using var manifest = JsonDocument.Parse(design[project!]);
-            var count = manifest.RootElement.GetProperty("chunks").GetInt32();
-            var text = string.Concat(Enumerable.Range(0, count).Select(i => design[$"{project}.{i}"]));
-            foreach (var (url, target) in replacements) text = text.Replace(url, target, StringComparison.Ordinal);
+            var text = ReplaceUploads(document.Text);
+            if (text == document.Text) continue;
             foreach (var key in design.Keys.Where(k => k.StartsWith(project + ".", StringComparison.Ordinal)).ToList()) design.Remove(key);
-            design[project!] = JsonSerializer.Serialize(new { version = manifest.RootElement.GetProperty("version").GetInt32(), chunks = 1, length = text.Length });
-            design[$"{project}.0"] = text;
+            design[project] = JsonSerializer.Serialize(new { version = document.Version, chunks = 1, length = text.Length });
+            design[project + ".0"] = text;
         }
-        foreach (var key in design.Keys.Where(k => TemplateConfigPolicy.CinematicProjectBaseKey(k) == null).ToList())
-            foreach (var (url, target) in replacements) design[key] = design[key].Replace(url, target, StringComparison.Ordinal);
+        foreach (var key in standaloneKeys) design[key] = ReplaceUploads(design[key]);
         return TemplateConfigService.PrepareDefaultDesign(design);
     }
 

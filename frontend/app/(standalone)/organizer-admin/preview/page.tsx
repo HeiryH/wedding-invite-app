@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import TemplateWrapper from '@/components/templates/TemplateWrapper';
 import { Wedding, Wish, Photo, ItineraryItem, SeatingTable } from '@/lib/api';
+import { normalizeAssetPose, type AssetPose } from '@/components/templates/_shared/cinematic/assetKeyframes';
 import type { FrameViewport } from '@/components/templates/_shared/types';
 import FrameViewportVars from '@/components/templates/_shared/FrameViewportVars';
 import ViewportProbe from '@/components/dev/ViewportProbe';
@@ -33,16 +34,7 @@ interface PreviewPayload {
     breakpoint: 'mobile' | 'desktop';
     selectedStage?: string;
     selectedLayer?: string;
-    cinematic?: {
-      effectPose?: import('@/components/templates/_shared/cinematic/direction').CinematicEffectPose;
-      progress: number;
-      beatId?: string;
-      mode: 'scene' | 'camera-compose' | 'camera-beat';
-      cameraOverride?: { x: number; y: number; scale: number; rotate: number };
-      referenceSrc?: string;
-      referenceOpacity?: number;
-      referenceFit?: 'contain' | 'cover' | 'fill';
-    };
+    cinematic?: import('@/components/templates/_shared/types').EditorHandle['cinematic'];
     /** @deprecated superseded by `frame`. Kept so a `preview_draft_v2` written by an older build
      *  still pins the reveal frame instead of silently falling back to the template's own 390×844
      *  constants — see the derivation below. */
@@ -65,6 +57,7 @@ function scrollPreview(request: ScrollRequest) {
 }
 
 export default function PreviewPage() {
+  const [assetPoseDraft, setAssetPoseDraft] = useState<{ session: string; pose: AssetPose }>();
   const [payload, setPayload] = useState<PreviewPayload | null>(null);
   const loadedRef = useRef(false);
   const templateIdRef = useRef<number | undefined>(undefined);
@@ -125,6 +118,12 @@ export default function PreviewPage() {
         }
       }
 
+      if (event.data?.type === 'PREVIEW_ASSET_POSE_DRAFT' && event.source === window.parent) {
+        const { draft } = event.data;
+        const pose = normalizeAssetPose(draft?.pose);
+        if (pose && typeof draft.session === 'string') setAssetPoseDraft({ session: draft.session, pose });
+      }
+
       if (event.data?.type === 'PREVIEW_SCROLL') {
         // A section id is exact; the fraction is the legacy fallback and lands only roughly,
         // which matters now that Template 7's ceremony spans several full-height stages.
@@ -179,6 +178,10 @@ export default function PreviewPage() {
     );
   }
 
+  const cinematic = payload.editor?.cinematic;
+  const assetPoseEdit = cinematic?.assetPoseEdit;
+  const draftPose = assetPoseEdit && assetPoseDraft?.session === assetPoseEdit.session ? assetPoseDraft?.pose : undefined;
+
   // Back-compat: a payload from an older build (or a stale localStorage draft) may only carry the
   // flat frameW/frameH. Derive a FrameViewport from them so downstream consumers (Stage's reveal
   // pin, --f* vars) never have to know about the old shape.
@@ -222,7 +225,7 @@ export default function PreviewPage() {
                       breakpoint: payload.editor.breakpoint,
                       selectedStage: payload.editor.selectedStage,
                       selectedLayer: payload.editor.selectedLayer,
-                      cinematic: payload.editor.cinematic,
+                      cinematic: cinematic && { ...cinematic, assetPoseEdit: assetPoseEdit && { ...assetPoseEdit, pending: draftPose } },
                       frameW: payload.editor.frameW,
                       frameH: payload.editor.frameH,
                       frame,

@@ -10,20 +10,20 @@ describe('directed interactions', () => {
   it('opens, closes on its configured duration and resets only after rewinding', () => {
     vi.useFakeTimers(); vi.spyOn(window, 'scrollTo').mockImplementation(() => {});
     const record = { ...defaults.interactions.find((record) => record.id === 'rsvp')!, closeMs: 100 };
-    const args = { definitions: [record], tracks: sequence.tracks, beats: sequence.beats, progress: .825, seek: vi.fn(), editing: false };
+    const args = { definitions: [record], tracks: sequence.tracks, beats: sequence.beats, progress: .8, seek: vi.fn(), editing: false };
     const { result, rerender } = renderHook((props) => useDirectedInteractions(props), { initialProps: args, wrapper: SheetsProvider });
-    act(() => result.current.trigger(record)); expect(result.current.isOpen).toBe(true); expect(document.body.style.position).toBe('fixed');
+    act(() => result.current.trigger(record)); expect(result.current.isOpen).toBe(true); expect(document.documentElement.style.overflow).toBe('hidden');
     act(() => result.current.close()); expect(result.current.phase('rsvp')).toBe('closing');
     // Scrolling/re-rendering must not restart the closing timer.
-    act(() => vi.advanceTimersByTime(60)); rerender({ ...args, progress: .826 });
+    act(() => vi.advanceTimersByTime(60)); rerender({ ...args, progress: .801 });
     act(() => vi.advanceTimersByTime(45)); expect(result.current.phase('rsvp')).toBe('dismissed');
-    expect(document.body.style.position).toBe('');
+    expect(document.documentElement.style.overflow).toBe('');
     rerender({ ...args, progress: .1 }); act(() => vi.advanceTimersByTime(1));
     expect(result.current.phase('rsvp')).toBe('ready');
   });
   it('retargets actions without leaving the original prop clickable', () => {
     const record = { ...defaults.interactions[1], triggerLayerId: 'groom' };
-    const { result } = renderHook(() => useDirectedInteractions({ definitions: [record], tracks: sequence.tracks, beats: sequence.beats, progress: .825, seek: vi.fn(), editing: false }), { wrapper: SheetsProvider });
+    const { result } = renderHook(() => useDirectedInteractions({ definitions: [record], tracks: sequence.tracks, beats: sequence.beats, progress: .8, seek: vi.fn(), editing: false }), { wrapper: SheetsProvider });
     expect(result.current.recordFor(world.find((layer) => layer.id === 'rsvp-letter')!)).toBeUndefined();
     expect(result.current.recordFor(world.find((layer) => layer.id === 'groom')!)?.id).toBe('rsvp');
   });
@@ -42,11 +42,11 @@ describe('directed interactions', () => {
     const { result } = renderHook(() => useDirectedInteractions({ definitions: [record], tracks: [], beats: [], progress: .7, seek, editing: false }), { wrapper: SheetsProvider });
     act(() => result.current.trigger(record));
     expect(result.current.isOpen).toBe(true);
-    expect(document.body.style.position).toBe('fixed');
+    expect(document.documentElement.style.overflow).toBe('hidden');
     act(() => result.current.close());
     act(() => vi.advanceTimersByTime(record.closeMs + 1));
     expect(result.current.isOpen).toBe(false);
-    expect(document.body.style.position).toBe('');
+    expect(document.documentElement.style.overflow).toBe('');
     act(() => result.current.trigger(record));
     expect(result.current.isOpen).toBe(true);
     expect(seek).not.toHaveBeenCalled();

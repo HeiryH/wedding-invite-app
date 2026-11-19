@@ -14,8 +14,8 @@ export const layoutKey = (prefix: string, bp: Breakpoint, stage: StageId) =>
  *  (_shared/authoring/flatten.ts), which needs the same field list to diff a breakpoint's
  *  resolved layers against each other. */
 export const OVERRIDABLE: (keyof Layer)[] = [
-  'x', 'y', 'w', 'h', 's', 'z', 'order', 'chain', 'hidden', 'opacity', 'depth', 'textScale',
-  'accentColor', 'containerMinHeight', 'containerPadding', 'containerOpacity', 'contentGap', 'contentAlignY', 'contentAlign',
+  'groupOffsetX', 'groupOffsetY', 'x', 'y', 'w', 'h', 's', 'z', 'order', 'chain', 'hidden', 'opacity', 'depth', 'textScale',
+  'accentColor', 'containerMinHeight', 'containerPadding', 'containerOpacity', 'containerBlur', 'contentGap', 'contentAlignY', 'contentAlign',
   'rotation', 'flipX', 'flipY', 'locked', 'deleted', 'overflowMode',
   'color', 'fill', 'fontSize', 'fontWeight', 'lineHeight', 'radius', 'text', 'src', 'shape', 'label',
   'anim', 'animDur', 'animOut', 'animOutDur',
@@ -74,7 +74,7 @@ export const isStageCanvasLayer = (layer: Layer) =>
   Boolean(layer.canvasAnchor) || ['img', 'shape', 'text', 'video', 'water'].includes(layer.kind);
 
 export function canGroupLayer(layer: Layer): boolean {
-  return !layer.parent && layer.kind !== 'anchor' && layer.presentation !== 'sheet';
+  return !layer.parent && (layer.kind !== 'anchor' || layer.groupableAnchor === true) && layer.presentation !== 'sheet';
 }
 
 function resolveGroups(groups: LayerGroup[] | undefined, layers: Layer[]): LayerGroup[] {
@@ -282,10 +282,16 @@ export function moveLayerGroup(layers: Layer[], group: LayerGroup, x: number, y:
   const mixed = members.some(isStageCanvasLayer) && members.some((layer) => !isStageCanvasLayer(layer));
   const dx = x - (group.x ?? 0);
   const dy = y - (group.y ?? 0);
-  return layers.map((layer) => group.memberIds.includes(layer.id)
-    ? { ...layer, x: layer.x + dx / (mixed && isStageCanvasLayer(layer) ? artScale.x : 1),
-      y: layer.y + dy / (mixed && isStageCanvasLayer(layer) ? artScale.y : 1) }
-    : layer);
+  return layers.map((layer) => {
+    if (!group.memberIds.includes(layer.id)) return layer;
+    if (layer.kind === 'anchor') {
+      return { ...layer,
+        groupOffsetX: ((layer.groupOffsetX ?? 0) + dx) || undefined,
+        groupOffsetY: ((layer.groupOffsetY ?? 0) + dy) || undefined };
+    }
+    const scale = mixed && isStageCanvasLayer(layer) ? artScale : { x: 1, y: 1 };
+    return { ...layer, x: layer.x + dx / scale.x, y: layer.y + dy / scale.y };
+  });
 }
 
 /** Apply a canvas edit to a regular layer or to an entire group. */

@@ -11,38 +11,29 @@ describe('layer effects and canvas poses', () => {
   const effect = direction.effects.find((item) => item.id === 'ring-motion')!;
   const ring = layers.find((item) => item.id === effect.targetId)!;
   const props = { value: direction, onChange: vi.fn(), breakpoint: 'mobile' as const, layers, sets: [], beats: sequence.beats,
-    tracks: sequence.tracks, onPreview: vi.fn(), onAddEffectTrack: vi.fn(), standalone: true };
+    tracks: sequence.tracks, onPreview: vi.fn(), standalone: true };
 
-  it('shows only the selected layer effects, with explicit pose controls', () => {
-    const edit = vi.fn(), change = vi.fn();
-    render(<DirectorSettings {...props} effectScope={ring.id} onEditPose={edit} onChange={change} pose={{ effectId: effect.id, side: 'from' }} />);
+  it('manages saved layer effects without editing their poses', () => {
+    const change = vi.fn();
+    render(<DirectorSettings {...props} effectScope={ring.id} onChange={change} />);
     const options = within(screen.getByLabelText('Effect')).getAllByRole('option').map((node) => node.textContent);
     expect(options).toEqual(['Select effect', 'Ring fitting']);
     expect(screen.queryByRole('tablist', { name: 'Story settings' })).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Edit To on canvas' }));
-    expect(edit).toHaveBeenLastCalledWith({ effectId: effect.id, side: 'to' });
-    fireEvent.change(screen.getByLabelText('xVw from'), { target: { value: '20' } });
-    expect(change.mock.calls.at(-1)![0].effects.find((item: { id: string }) => item.id === effect.id).from.xVw).toBe(20);
-    fireEvent.click(screen.getByRole('button', { name: 'Done editing pose' }));
-    expect(edit).toHaveBeenLastCalledWith();
+    expect(screen.getByText('Use Animate asset to edit motion.')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /edit .* on canvas|add layer effect|add drift/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('spinbutton')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Effect easing')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Enabled' }));
+    expect(change.mock.calls.at(-1)![0].effects.find((item: { id: string }) => item.id === effect.id))
+      .toEqual({ ...effect, enabled: false });
   });
 
-  it('adds a layer-owned effect and its dedicated timing track', () => {
-    const change = vi.fn(), addTrack = vi.fn();
-    render(<DirectorSettings {...props} effectScope={ring.id} onChange={change} onAddEffectTrack={addTrack} />);
-    fireEvent.click(screen.getByRole('button', { name: 'Add layer effect' }));
-    const added = change.mock.calls.at(-1)![0].effects.at(-1);
-    expect(added).toMatchObject({ target: 'layer', targetId: ring.id, trackId: added.id });
-    expect(addTrack).toHaveBeenCalledWith(added.id, added.label);
-  });
-
-  it('writes desktop endpoints without overwriting shared movement', () => {
+  it('can disable a saved effect on desktop while retaining shared movement', () => {
     const change = vi.fn();
     render(<DirectorSettings {...props} breakpoint="desktop" effectScope={ring.id} onChange={change} />);
-    fireEvent.change(screen.getByLabelText('xVw from'), { target: { value: '24' } });
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Enabled' }));
     const edited = change.mock.calls.at(-1)![0].effects.find((item: { id: string }) => item.id === effect.id);
-    expect(edited.from.xVw).toBe(8);
-    expect(edited.desktop.from.xVw).toBe(24);
+    expect(edited).toEqual({ ...effect, desktop: { ...effect.desktop, enabled: false } });
   });
 
   it('keeps layer movements out of Advanced and preserves legacy content effects', () => {
@@ -51,6 +42,9 @@ describe('layer effects and canvas poses', () => {
     expect(options).not.toContain('Ring fitting');
     expect(options).toContain('Memory background blur');
     expect(options).toContain('RSVP paper lift');
+    const panel = within(screen.getByRole('tabpanel', { name: 'Effects' }));
+    expect(panel.queryByRole('spinbutton')).not.toBeInTheDocument();
+    expect(panel.queryByRole('button', { name: 'Add effect' })).not.toBeInTheDocument();
   });
 
   it('samples exactly the chosen endpoint without changing normal guest playback', () => {
@@ -62,6 +56,27 @@ describe('layer effects and canvas poses', () => {
     expect(sampleCinematicEffects(saved.effects, sequence.tracks, 0, 'desktop').layers.get(ring.id)?.xVw).toBe(32);
     expect(sampleCinematicEffects(saved.effects, sequence.tracks, 0, 'mobile').layers.get(ring.id)?.xVw).toBe(8);
     expect(sampleCinematicEffects([effect], sequence.tracks, .05, 'mobile').layers.get(ring.id)?.xVw).not.toBe(8);
+  });
+
+  it('routes a group member’s canvas pose controls to the group effect', () => {
+    const post = vi.spyOn(window, 'postMessage').mockImplementation(() => undefined);
+    const targetId = 'layer-group:dais:portraits';
+    const groupEffect = { ...effect, target: 'group' as const, targetId };
+    const pose = { effectId: effect.id, layerId: targetId, side: 'to' as const, motion: effect.to, memberIds: [ring.id, 'other'] };
+    const sampled = sampleCinematicEffects([groupEffect], sequence.tracks, 0, 'mobile', pose);
+    expect(sampled.groups.get(targetId)).toMatchObject(effect.to);
+    expect(sampled.layers.size).toBe(0);
+    render(<CinematicSceneLayer layer={ring} visibility={0} editor={{ enabled: true, breakpoint: 'mobile',
+      cinematic: { mode: 'scene', progress: 0, effectPose: pose } }}
+      boxClassName="box" imageClassName="image" selectedClassName="selected" resizeHandleClassName="handle" />);
+    const member = screen.getByRole('button', { name: 'Edit Wedding ring' });
+    fireEvent.click(member);
+    fireEvent.keyDown(member, { key: 'ArrowRight' });
+    expect(post).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({
+      type: 'PREVIEW_CINEMATIC_EFFECT_POSE_EDIT', layerId: targetId, side: 'to',
+      patch: { xVw: effect.to.xVw + .5, yVh: effect.to.yVh },
+    }), window.location.origin);
+    post.mockRestore();
   });
 
   it('routes pose nudges to the effect, not base layout, even at a faded endpoint', () => {

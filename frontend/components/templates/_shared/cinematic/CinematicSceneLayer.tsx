@@ -8,11 +8,18 @@ import { fontVar } from '@/lib/fonts/registry';
 import type { CinematicWorldLayer, CinematicWorldGeometry } from './world';
 import { resizeCinematicLayer } from './world';
 import type { CinematicEffectPose, CinematicMotion } from './direction';
+import type { CinematicCompositionFrame } from './sceneSets';
+import type { AssetAnchorOption, AssetPose, AssetPoseAppearance } from './assetKeyframes';
+import CinematicText, { hasTextPaint, type CinematicTextMotion } from './CinematicText';
+import { useAssetSurface, type AssetSurface } from './useAssetSurface';
+import { textBoxStyle } from './textEffects';
 import { frameW } from '../frameViewport';
 
 interface Props {
   layer: CinematicWorldLayer;
   cssVars?: CSSProperties;
+  composition?: CinematicCompositionFrame;
+  poseSample?: { pose: AssetPose; appearance?: AssetPoseAppearance; anchors?: AssetAnchorOption[]; frameCount?: number };
   editor?: EditorHandle;
   visibility?: number;
   /** DOM ancestors already apply their fades visually; include them only for hit testing. */
@@ -30,6 +37,8 @@ interface Props {
     opacity?: number;
     blur?: number;
   };
+  textMotion?: CinematicTextMotion;
+  surface?: AssetSurface;
   className?: string;
   boxClassName: string;
   imageClassName: string;
@@ -45,7 +54,7 @@ interface Props {
 
 interface DragState {
   pointerId: number;
-  mode: 'move' | 'resize';
+  mode: 'move' | 'resize' | 'rotate';
   startX: number;
   startY: number;
   rectW: number;
@@ -59,26 +68,66 @@ interface DragState {
   inverse?: { a: number; b: number; c: number; d: number };
   pose?: CinematicEffectPose;
   screenWidth?: number;
+  asset?: { pose: AssetPose; session: string; centerX: number; centerY: number };
 }
 
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
 
 /** One directly-manipulable piece of a continuous Cinematic world. */
 export default function CinematicSceneLayer({
-  layer, cssVars, editor, visibility = 1, ancestorOpacity = 1, transition, ambient, className, boxClassName, imageClassName,
+  layer, cssVars, composition, poseSample, editor, visibility = 1, ancestorOpacity = 1, transition, ambient, textMotion, surface, className, boxClassName, imageClassName,
   selectedClassName, resizeHandleClassName, children, slotProps, interactive = false, localElement,
 }: Props) {
-  const selected = Boolean(editor?.enabled && editor.selectedLayer === layer.id);
   const editable = Boolean(editor?.enabled && editor.cinematic?.mode === 'scene');
-  const pose = editable && editor?.cinematic?.effectPose?.layerId === layer.id ? editor.cinematic.effectPose : undefined;
+  const poseEdit = editable ? editor?.cinematic?.assetPoseEdit : undefined;
+  const asset = poseEdit?.layerId === layer.id && poseSample ? poseEdit : undefined;
+  const session = asset?.session;
+  const effectPose = editor?.cinematic?.effectPose;
+  const pose = editable && (effectPose?.layerId === layer.id || effectPose?.memberIds?.includes(layer.id)) ? effectPose : undefined;
+  const selected = Boolean(asset || (editor?.enabled && (editor.selectedLayer === layer.id || pose?.memberIds)));
   // An endpoint must stay visible/editable even when its appearance track fades out there.
   if (pose) { visibility = 1; transition = undefined; ambient = { ...ambient, opacity: 1 }; }
-  const canHit = !layer.hidden && (Boolean(pose) || layer.opacity * visibility * (ambient?.opacity ?? 1) * ancestorOpacity > .02);
+  if (asset) visibility = 1;
+  const canHit = !layer.hidden && (Boolean(pose || asset) || layer.opacity * visibility * (ambient?.opacity ?? 1) * ancestorOpacity > .02);
   const dragRef = useRef<DragState | null>(null);
   const suppressClickRef = useRef(false);
   const rafRef = useRef(0);
   const pendingPatchRef = useRef<Partial<CinematicWorldGeometry> | null>(null);
   const pendingPoseRef = useRef<{ effectId: string; layerId: string; side: 'from' | 'to'; patch: Partial<CinematicMotion> } | null>(null);
+
+  const pendingAssetRef = useRef<{ session: string; pose: AssetPose } | null>(null);
+  const boxRef = useRef<HTMLDivElement>(null);
+  const percentX = ambient?.x ?? 0, percentY = ambient?.y ?? 0;
+  const sample = poseSample?.pose;
+  const { ref: surfaceRef, style: surfaceStyle } = useAssetSurface<HTMLImageElement>(surface);
+  const samplePerspective = sample?.perspective && JSON.stringify(sample.perspective);
+  const sampleContactShadow = sample?.contactShadow, sampleShadowSoftness = sample?.shadowSoftness;
+  const poseWidth = (composition?.width ?? (typeof window === 'undefined' ? 1 : frameW())) || 1;
+  const poseHeight = composition?.height ?? editor?.frame?.h ?? (typeof window === 'undefined' ? 1 : window.innerHeight);
+  const sampleX = sample?.x, sampleY = sample?.y, sampleScale = sample?.scale, sampleRotate = sample?.rotate;
+  const visualOpacity = poseSample?.appearance?.opacity, visualBlur = poseSample?.appearance?.blur;
+  const visualShadowOpacity = poseSample?.appearance?.shadowOpacity;
+  const sampleTextReveal = sample?.textReveal, sampleRevealAmount = sample?.revealAmount, sampleShadowOpacity = sample?.shadowOpacity;
+  const glitchIntensity = sample?.glitch?.intensity, glitchSplit = sample?.glitch?.split, glitchDuration = sample?.glitch?.duration;
+  const sampleOpacity = sample?.opacity, sampleBlur = sample?.blur;
+  const sampleFrame = sample?.frame, samplePaper = sample?.paper, sampleAnchor = sample?.anchor;
+  const anchorSnapshot = poseSample?.anchors && JSON.stringify(poseSample.anchors);
+  const frameCount = poseSample?.frameCount;
+  useEffect(() => {
+    if (!session || sampleX === undefined || sampleY === undefined || sampleScale === undefined || sampleRotate === undefined) return;
+    const box = boxRef.current;
+    const x = sampleX + percentX * (box?.offsetWidth ?? 0) / poseWidth;
+    const y = sampleY + percentY * (box?.offsetHeight ?? 0) / (poseHeight || 1);
+    window.parent.postMessage({
+      type: 'PREVIEW_ASSET_POSE_SAMPLE', session, layerId: layer.id,
+      pose: { x, y, scale: sampleScale, rotate: sampleRotate, opacity: sampleOpacity, blur: sampleBlur, frame: sampleFrame, paper: samplePaper, anchor: sampleAnchor,
+        perspective: samplePerspective && JSON.parse(samplePerspective), contactShadow: sampleContactShadow, shadowSoftness: sampleShadowSoftness,
+        textReveal: sampleTextReveal, revealAmount: sampleRevealAmount, shadowOpacity: sampleShadowOpacity,
+        glitch: glitchIntensity === undefined ? undefined : { intensity: glitchIntensity, split: glitchSplit, duration: glitchDuration } },
+      appearance: { opacity: visualOpacity, blur: visualBlur, shadowOpacity: visualShadowOpacity },
+      anchors: anchorSnapshot && JSON.parse(anchorSnapshot), frameCount,
+    }, window.location.origin);
+  }, [session, layer.id, sampleX, sampleY, sampleScale, sampleRotate, sampleOpacity, sampleBlur, visualOpacity, visualBlur, visualShadowOpacity, samplePerspective, sampleContactShadow, sampleShadowSoftness, sampleTextReveal, sampleRevealAmount, sampleShadowOpacity, glitchIntensity, glitchSplit, glitchDuration, sampleFrame, samplePaper, sampleAnchor, anchorSnapshot, frameCount, percentX, percentY, poseHeight, poseWidth]);
 
   const postSelection = useCallback((layerId: string | undefined) => {
     if (!editable || !canHit) return;
@@ -100,6 +149,9 @@ export default function CinematicSceneLayer({
     pendingPatchRef.current = null;
     const posePatch = pendingPoseRef.current;
     pendingPoseRef.current = null;
+    const assetPatch = pendingAssetRef.current;
+    pendingAssetRef.current = null;
+    if (assetPatch) window.parent.postMessage({ type: 'PREVIEW_ASSET_POSE_EDIT', layerId: layer.id, ...assetPatch }, window.location.origin);
     if (posePatch) window.parent.postMessage({ type: 'PREVIEW_CINEMATIC_EFFECT_POSE_EDIT', ...posePatch }, window.location.origin);
     if (patch) {
       window.parent.postMessage(
@@ -122,17 +174,19 @@ export default function CinematicSceneLayer({
     if (!editable || !canHit) return;
     event.stopPropagation();
     ensureSelected();
-    if (layer.locked) return;
+    if (layer.locked || (poseEdit && !asset) || event.button !== 0) return;
     const artwork = event.currentTarget.closest<HTMLElement>('[data-cinematic-layer]') ?? event.currentTarget;
-    const frame = localElement ? artwork : artwork.closest<HTMLElement>('[data-cinematic-space]');
+    const frame = localElement ? artwork : artwork.closest<HTMLElement>('[data-cinematic-composition], [data-cinematic-space]');
     const rect = frame?.getBoundingClientRect();
     if (!rect || rect.width === 0 || rect.height === 0) return;
+    const grouped = artwork.closest('[data-cinematic-group-transform], [data-cinematic-composition]');
     let inverse: DragState['inverse'];
-    if ((localElement || pose) && typeof DOMMatrix !== 'undefined') {
+    if ((localElement || pose || grouped || asset) && typeof DOMMatrix !== 'undefined') {
       // Convert screen pointer motion back through the camera and all transformed parents.
       // The child's individual translate lives before its own rotate/scale, so exclude itself.
       let matrix = new DOMMatrix();
       for (let node = artwork.parentElement; node; node = node.parentElement) {
+        if (pose?.memberIds && node.hasAttribute('data-cinematic-group-transform')) continue;
         const style = getComputedStyle(node);
         const scale = style.scale === 'none' ? [1, 1] : style.scale.split(' ').map(Number);
         const rotation = Number.parseFloat(style.rotate) || 0;
@@ -143,13 +197,20 @@ export default function CinematicSceneLayer({
       const result = matrix.inverse();
       if ([result.a, result.b, result.c, result.d].every(Number.isFinite)) inverse = result;
     }
+    const bounds = artwork.getBoundingClientRect();
+    const initialPose = sample && {
+      ...sample,
+      x: sample.x + percentX * artwork.offsetWidth / poseWidth,
+      y: sample.y + percentY * artwork.offsetHeight / (poseHeight || 1),
+    };
+    if (asset) artwork.setPointerCapture(event.pointerId);
     dragRef.current = {
       pointerId: event.pointerId,
       mode,
       startX: event.clientX,
       startY: event.clientY,
-      rectW: inverse ? artwork.offsetWidth : localElement ? rect.width / (layer.w / 100) : rect.width,
-      rectH: inverse ? artwork.offsetHeight : localElement ? rect.height / ((layer.h ?? layer.w) / 100) : rect.height,
+      rectW: inverse ? (grouped && !localElement ? frame?.offsetWidth ?? rect.width : artwork.offsetWidth) : localElement ? rect.width / (layer.w / 100) : rect.width,
+      rectH: inverse ? (grouped && !localElement ? frame?.offsetHeight ?? rect.height : artwork.offsetHeight) : localElement ? rect.height / ((layer.h ?? layer.w) / 100) : rect.height,
       layerX: layer.x,
       layerY: layer.y,
       layerW: layer.w,
@@ -158,7 +219,9 @@ export default function CinematicSceneLayer({
       moved: false,
       inverse,
       pose,
-      screenWidth: artwork.getBoundingClientRect().width,
+      screenWidth: bounds.width,
+      asset: asset && initialPose ? { pose: initialPose, session: asset.session,
+        centerX: bounds.left + bounds.width / 2, centerY: bounds.top + bounds.height / 2 } : undefined,
     };
   };
 
@@ -176,15 +239,31 @@ export default function CinematicSceneLayer({
       if (Math.abs(event.clientX - drag.startX) >= Math.abs(event.clientY - drag.startY)) dy = 0;
       else dx = 0;
     }
+    if (drag.asset) {
+      const { pose: initial, session, centerX, centerY } = drag.asset;
+      const localX = drag.inverse ? drag.inverse.a * screenX + drag.inverse.c * screenY : screenX;
+      const localY = drag.inverse ? drag.inverse.b * screenX + drag.inverse.d * screenY : screenY;
+      const radius = Math.hypot(drag.startX - centerX, drag.startY - centerY) || 1;
+      const angle = (x: number, y: number) => Math.atan2(y - centerY, x - centerX);
+      const deltaAngle = angle(event.clientX, event.clientY) - angle(drag.startX, drag.startY);
+      const rotation = Math.atan2(Math.sin(deltaAngle), Math.cos(deltaAngle)) * 180 / Math.PI;
+      const next = drag.mode === 'resize'
+        ? { ...initial, scale: clamp(initial.scale * Math.hypot(event.clientX - centerX, event.clientY - centerY) / radius, .05, 10) }
+        : drag.mode === 'rotate' ? { ...initial, rotate: initial.rotate + rotation }
+        : { ...initial, x: initial.x + (dx === 0 ? 0 : localX / poseWidth * 100),
+          y: initial.y + (dy === 0 ? 0 : localY / (poseHeight || 1) * 100) };
+      pendingAssetRef.current = { session, pose: next };
+      if (!rafRef.current) rafRef.current = requestAnimationFrame(flushPatch);
+      return;
+    }
     if (drag.pose) {
       const x = drag.inverse ? drag.inverse.a * screenX + drag.inverse.c * screenY : screenX;
       const y = drag.inverse ? drag.inverse.b * screenX + drag.inverse.d * screenY : screenY;
-      const frameHeight = editor?.frame?.h ?? window.innerHeight;
       const patch = drag.mode === 'resize'
         ? { scale: clamp(drag.pose.motion.scale * (1 + screenX * 2 / (drag.screenWidth || 1)), .05, 10) }
-        : { xVw: drag.pose.motion.xVw + (event.shiftKey && dx === 0 ? 0 : x / frameW() * 100),
-            yVh: drag.pose.motion.yVh + (event.shiftKey && dy === 0 ? 0 : y / frameHeight * 100) };
-      pendingPoseRef.current = { effectId: drag.pose.effectId, layerId: layer.id, side: drag.pose.side, patch };
+        : { xVw: drag.pose.motion.xVw + (event.shiftKey && dx === 0 ? 0 : x / poseWidth * 100),
+            yVh: drag.pose.motion.yVh + (event.shiftKey && dy === 0 ? 0 : y / poseHeight * 100) };
+      pendingPoseRef.current = { effectId: drag.pose.effectId, layerId: drag.pose.layerId, side: drag.pose.side, patch };
       if (!rafRef.current) rafRef.current = requestAnimationFrame(flushPatch);
       return;
     }
@@ -215,11 +294,19 @@ export default function CinematicSceneLayer({
   };
 
   const keyDown = (event: ReactKeyboardEvent<HTMLDivElement>) => {
-    if (!editable || !canHit || layer.locked) return;
+    if (!editable || !canHit || layer.locked || (poseEdit && !asset)) return;
     const step = event.shiftKey ? 2 : 0.5;
+    if (asset && sample && ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(event.key)) {
+      event.preventDefault();
+      event.stopPropagation();
+      window.parent.postMessage({ type: 'PREVIEW_ASSET_POSE_EDIT', layerId: layer.id, session: asset.session,
+        pose: { ...sample, x: sample.x + percentX * event.currentTarget.offsetWidth / poseWidth + (event.key === 'ArrowLeft' ? -step : event.key === 'ArrowRight' ? step : 0),
+          y: sample.y + percentY * event.currentTarget.offsetHeight / (poseHeight || 1) + (event.key === 'ArrowUp' ? -step : event.key === 'ArrowDown' ? step : 0) } }, window.location.origin);
+      return;
+    }
     if (pose && ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(event.key)) {
       event.preventDefault(); event.stopPropagation();
-      window.parent.postMessage({ type: 'PREVIEW_CINEMATIC_EFFECT_POSE_EDIT', effectId: pose.effectId, layerId: layer.id, side: pose.side,
+      window.parent.postMessage({ type: 'PREVIEW_CINEMATIC_EFFECT_POSE_EDIT', effectId: pose.effectId, layerId: pose.layerId, side: pose.side,
         patch: { xVw: pose.motion.xVw + (event.key === 'ArrowLeft' ? -step : event.key === 'ArrowRight' ? step : 0),
           yVh: pose.motion.yVh + (event.key === 'ArrowUp' ? -step : event.key === 'ArrowDown' ? step : 0) } }, window.location.origin);
       return;
@@ -247,7 +334,12 @@ export default function CinematicSceneLayer({
   const ambientYVh = (ambient?.yVh ?? 0) + (transition?.yVh ?? 0);
   const ambientScale = (ambient?.scale ?? 1) * (transition?.scale ?? 1);
   const ambientRotate = ambient?.rotate ?? 0;
+  const textEffects = layer.kind === 'text' ? layer.textEffects : undefined;
+  const hasGlyphEffects = hasTextPaint(textEffects) || Boolean(textMotion?.textReveal || textMotion?.burst);
+  const boxPaint = textBoxStyle(textEffects?.box);
   if (localElement) {
+    const textOverride = layer.kind === 'text' && layer.text ? resolveBindings(layer.text, slotProps) : undefined;
+    const richHtml = (localElement.props as { dangerouslySetInnerHTML?: { __html: string } }).dangerouslySetInnerHTML;
     const localStyle: CSSProperties = {
       ...localElement.props.style,
       // Individual transform properties compose with authored transforms (paper lift, centering,
@@ -272,12 +364,13 @@ export default function CinematicSceneLayer({
       ...(layer.lineHeight ? { lineHeight: layer.lineHeight } : {}),
       ...(layer.letterSpacing === undefined ? {} : { letterSpacing: `${layer.letterSpacing}em` }),
       ...(layer.fill ? { background: layer.fill } : {}),
+      ...boxPaint,
       ...(layer.radius === undefined ? {} : { borderRadius: layer.radius }),
       ...(layer.borderColor && layer.part !== 'frames' ? { borderColor: layer.borderColor } : {}),
       ...(layer.borderWidth === undefined || layer.part === 'frames' ? {} : { borderWidth: layer.borderWidth, borderStyle: 'solid' } as CSSProperties),
       filter: ambient?.blur ? `blur(${ambient.blur}px)` : localElement.props.style?.filter,
       outline: selected ? '2px solid #b48642' : undefined, outlineOffset: selected ? 3 : undefined,
-      pointerEvents: !canHit ? 'none' : editable ? 'auto' : localElement.props.style?.pointerEvents, touchAction: editable ? 'none' : undefined,
+      pointerEvents: !canHit || (poseEdit && !asset) ? 'none' : editable ? 'auto' : localElement.props.style?.pointerEvents, touchAction: editable ? 'none' : undefined,
       cursor: editable ? layer.locked ? 'not-allowed' : 'move' : undefined,
       ...cssVars,
     };
@@ -287,8 +380,14 @@ export default function CinematicSceneLayer({
       ...(layer.src && layer.kind === 'img' && localElement.type === 'img' ? { src: layer.src } : {}),
       ...(layer.src && layer.kind === 'img' && localElement.type === 'figure' ? { children: /* eslint-disable-next-line @next/next/no-img-element -- Editable scene artwork must retain the generated element geometry and direct layer source. */
                                                                                             <img src={layer.src} alt="Selected memory artwork" style={{ width: '100%', height: '100%', objectFit: layer.fit ?? 'cover' }} /> } : {}),
-      ...(layer.kind === 'text' && layer.text ? { children: resolveBindings(layer.text, slotProps), dangerouslySetInnerHTML: undefined } : {}),
+      ...(hasGlyphEffects ? {
+        children: <CinematicText effects={textEffects} motion={textMotion} richHtml={textOverride === undefined ? richHtml : undefined}>
+          {textOverride ?? localElement.props.children}
+        </CinematicText>,
+        dangerouslySetInnerHTML: undefined,
+      } : textOverride === undefined ? {} : { children: textOverride, dangerouslySetInnerHTML: undefined }),
       ...{
+        ...(asset ? { ref: boxRef } : {}),
         'data-cinematic-layer': layer.id, 'data-cinematic-parent': layer.parentId, 'data-effect-pose': pose?.side,
         role: editable ? 'button' : undefined, tabIndex: editable && canHit ? 0 : undefined,
         'aria-hidden': !canHit || undefined,
@@ -318,13 +417,14 @@ export default function CinematicSceneLayer({
     opacity: layer.opacity * visibility * (ambient?.opacity ?? 1),
     filter: ambient?.blur ? `blur(${ambient.blur}px)` : undefined,
     transform: `translate(-50%, -50%) translate(${ambientX}%, ${ambientY}%) translate(calc(var(--fvw, 100vw) * ${ambientXVw / 100}), calc(var(--fvh, 100vh) * ${ambientYVh / 100})) scale(${ambientScale}) rotate(${layer.rotation + ambientRotate}deg) scaleX(${layer.flipX ? -1 : 1})`,
-    pointerEvents: (editable || interactive) && canHit ? 'auto' : 'none',
+    pointerEvents: (!poseEdit || asset) && (editable || interactive) && canHit ? 'auto' : 'none',
     touchAction: editable ? 'none' : 'auto',
     ...cssVars,
   };
 
   return (
     <div
+      ref={boxRef}
       className={`${boxClassName} ${className ?? ''} ${selected ? selectedClassName : ''}`}
       style={boxStyle}
       data-cinematic-layer={layer.id}
@@ -360,9 +460,11 @@ export default function CinematicSceneLayer({
           border: layer.borderWidth ? `${layer.borderWidth}px solid ${layer.borderColor ?? '#4a3a32'}` : undefined,
           borderRadius: layer.radius ? `${layer.radius}px` : undefined,
           boxSizing: 'border-box', padding: layer.borderWidth ? '0.25em 0.45em' : undefined,
-          pointerEvents: 'none',
+          pointerEvents: 'none', ...boxPaint,
         }}>
-          {resolveBindings(layer.text, slotProps)}
+          {hasGlyphEffects
+            ? <CinematicText effects={textEffects} motion={textMotion}>{resolveBindings(layer.text, slotProps)}</CinematicText>
+            : resolveBindings(layer.text, slotProps)}
         </div>
       ) : layer.kind === 'shape' ? (
         <div style={{
@@ -374,16 +476,22 @@ export default function CinematicSceneLayer({
       ) : layer.src ? (
         /* eslint-disable-next-line @next/next/no-img-element */
         <img
+          ref={surfaceRef}
           src={layer.src}
           alt=""
           className={imageClassName}
-          style={{ objectFit: layer.fit ?? 'contain', height: layer.h === undefined ? 'auto' : '100%' }}
+          style={{ objectFit: layer.fit ?? 'contain', height: layer.h === undefined ? 'auto' : '100%', ...surfaceStyle }}
           draggable={false}
         />
       ) : null)}
-      {selected && !layer.locked && (
+      {asset && !layer.locked && <span aria-hidden="true" data-asset-rotate-handle
+        style={{ position: 'absolute', bottom: 'calc(100% + 6px)', left: '50%', translate: '-50% 0', width: 14, height: 14, zIndex: 3,
+          background: '#fff', border: '2px solid #b48642', borderRadius: '50%', cursor: 'grab', touchAction: 'none' }}
+        onPointerDown={(event) => beginDrag(event, 'rotate')} />}
+      {selected && !layer.locked && (!poseEdit || asset) && (
         <span
           className={resizeHandleClassName}
+          style={asset ? { left: 'calc(100% + 4px)', top: 'calc(100% + 4px)', right: 'auto', bottom: 'auto', zIndex: 3 } : undefined}
           aria-hidden="true"
           onPointerDown={(event) => beginDrag(event, 'resize')}
         />

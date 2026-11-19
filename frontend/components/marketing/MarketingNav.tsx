@@ -22,6 +22,7 @@ export function MarketingNav({ links, open, onOpenChange, ctaRef, ctaLabel, onCt
   useEffect(() => {
     const onEscape = (event: KeyboardEvent) => {
       if (event.key !== 'Escape' || !open) return;
+      if (event.target instanceof Element && event.target.closest('dialog[open]')) return;
       onOpenChange(false);
       triggerRef.current?.focus();
     };
@@ -70,7 +71,7 @@ export function MarketingNav({ links, open, onOpenChange, ctaRef, ctaLabel, onCt
                 ))}
               </div>
             )}
-            <button ref={ctaRef} className={`mkt-btn ${styles.cta}`} type="button" onClick={onCtaClick}>
+            <button ref={ctaRef} className={`mkt-btn ${styles.cta}`} type="button" aria-haspopup="dialog" onClick={onCtaClick}>
               {ctaLabel}
             </button>
           </nav>

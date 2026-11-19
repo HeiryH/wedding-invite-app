@@ -1,6 +1,6 @@
 import type { Breakpoint } from '../types';
 import type { CinematicEngine } from './registry';
-import { cinematicSceneSetsKey, resolveCinematicSceneSets, serializeCinematicSceneSets, type CinematicSceneSet } from './sceneSets';
+import { cinematicSceneSetsKey, isCinematicSceneSetId, resolveCinematicSceneSets, serializeCinematicSceneSets, type CinematicLayerGroup, type CinematicSceneSet } from './sceneSets';
 import { resolveCinematicProjectConfig, updateCinematicProjectValue } from './project';
 import { cinematicWorldKey, resolveCinematicWorld, serializeCinematicWorld } from './world';
 import { cinematicSequenceKey, resolveCinematicSequence, resolveCinematicTrackClip, serializeCinematicSequence, type CinematicSequenceTrack } from './sequence';
@@ -10,12 +10,17 @@ import { cinematicDescendantIds } from './parts';
 
 export type SceneSetAction =
   | { type: 'create'; id: string; label: string; space: CinematicSceneSet['space']; memberIds?: string[] }
-  | { type: 'patch'; id: string; patch: Partial<Pick<CinematicSceneSet, 'label' | 'space' | 'locked' | 'hidden' | 'opacity' | 'enter' | 'exit' | 'loop'>> }
+  | { type: 'patch'; id: string; patch: Partial<Pick<CinematicSceneSet, 'label' | 'space' | 'locked' | 'hidden' | 'opacity' | 'enter' | 'exit' | 'loop' | 'referenceFrames'>> }
   | { type: 'duplicate'; id: string; copyId: string }
   | { type: 'reorder'; id: string; direction: -1 | 1 }
   | { type: 'delete'; id: string; moveTo?: string }
   | { type: 'move-layer'; layerId: string; setId: string }
   | { type: 'move-set'; id: string; breakpoint: Breakpoint; dx: number; dy: number }
+  | { type: 'save-layer-group'; id: string; breakpoint: Breakpoint; group: CinematicLayerGroup }
+  | { type: 'patch-layer-group'; id: string; breakpoint: Breakpoint; groupId: string;
+      patch: Partial<Omit<CinematicLayerGroup, 'id' | 'memberIds'>> }
+  | { type: 'remove-layer-group'; id: string; breakpoint: Breakpoint; groupId: string }
+  | { type: 'move-layer-group'; id: string; breakpoint: Breakpoint; groupId: string; dx: number; dy: number }
   | { type: 'timing'; id: string; trackId?: string };
 
 export function nextSceneSetId(label: string, ids: string[]): string {
@@ -74,6 +79,37 @@ export function editCinematicSceneSets(
     if (!members.length || members.some((layer) => layer.locked) || (!action.dx && !action.dy)) return config;
     worlds[action.breakpoint] = world.map((layer) => members.includes(layer)
       ? { ...layer, x: layer.x + action.dx, y: layer.y + action.dy } : layer);
+  } else if (action.type === 'save-layer-group' || action.type === 'patch-layer-group' || action.type === 'remove-layer-group' || action.type === 'move-layer-group') {
+    const bp = action.breakpoint;
+    const set = original!;
+    const groups = set.layerGroups?.[bp] ?? [];
+    const world = worlds[bp];
+    const eligible = world.filter((layer) => !layer.parentId && layer.group === set.id && layer.space === set.space);
+    const groupId = action.type === 'save-layer-group' ? action.group.id : action.groupId;
+    const previous = groups.find((group) => group.id === groupId);
+    if (action.type === 'save-layer-group') {
+      const label = action.group.label.trim().slice(0, 64);
+      const members = [...new Set(action.group.memberIds)];
+      if (!isCinematicSceneSetId(groupId) || !label || members.length < 2 || members.some((id) => !eligible.some((layer) => layer.id === id) ||
+        groups.some((group) => group.id !== groupId && group.memberIds.includes(id)))) return config;
+      const group = { ...action.group, ...previous, id: groupId, label, memberIds: members };
+      const next = previous ? groups.map((item) => item === previous ? group : item) : [...groups, group];
+      sets = sets.map((item) => item === set ? { ...item, layerGroups: { ...set.layerGroups, [bp]: next } } : item);
+    } else if (!previous) {
+      return config;
+    } else if (action.type === 'patch-layer-group') {
+      const next = groups.map((group) => group === previous ? { ...group, ...action.patch } : group);
+      sets = sets.map((item) => item === set ? { ...item, layerGroups: { ...set.layerGroups, [bp]: next } } : item);
+    } else if (action.type === 'remove-layer-group') {
+      sets = sets.map((item) => item === set ? { ...item, layerGroups: { ...set.layerGroups,
+        [bp]: groups.filter((group) => group.id !== groupId) } } : item);
+    } else {
+      const members = eligible.filter((layer) => previous.memberIds.includes(layer.id));
+      if (members.length < 2 || members.some((layer) => layer.locked) ||
+        !Number.isFinite(action.dx) || !Number.isFinite(action.dy) || (!action.dx && !action.dy)) return config;
+      worlds[bp] = world.map((layer) => members.includes(layer)
+        ? { ...layer, x: layer.x + action.dx, y: layer.y + action.dy } : layer);
+    }
   } else if (action.type === 'patch') {
     sets = sets.map((set) => set.id === action.id ? { ...set, ...action.patch } : set);
     if (action.patch.space) {
@@ -112,6 +148,12 @@ export function editCinematicSceneSets(
       worlds[bp] = worlds[bp].map((layer) => moved.has(layer.id)
         ? { ...layer, group: destination.id, space: destination.space } : layer);
     }
+    sets = sets.map((set) => {
+      if (!set.layerGroups || set.id === destination.id) return set;
+      return { ...set, layerGroups: Object.fromEntries(Object.entries(set.layerGroups).map(([bp, groups]) =>
+        [bp, groups.map((group) => ({ ...group, memberIds: group.memberIds.filter((id) => id !== action.layerId) }))
+          .filter((group) => group.memberIds.length >= 2)])) };
+    });
   } else if (action.type === 'delete') {
     const destination = action.moveTo ? sets.find((set) => set.id === action.moveTo && set.id !== action.id) : undefined;
     if (action.moveTo && (!destination || destination.locked)) return config;
@@ -157,7 +199,11 @@ export function editCinematicSceneSets(
     const trackId = groupTrack ? nextSceneSetId(`${action.copyId}-timing`, tracks.map((track) => track.id)) : undefined;
     sets = [...sets, { ...original!, id: action.copyId, label: `${original!.label} copy`,
       z: Math.max(0, ...sets.map((set) => set.z)) + 10, system: false,
-      timingTrackId: trackId }];
+      timingTrackId: trackId, layerGroups: original!.layerGroups && Object.fromEntries(
+        Object.entries(original!.layerGroups).map(([bp, groups]) => [bp, groups.map((group) => ({
+          ...group, memberIds: group.memberIds.flatMap((id) => copiedIds.get(id) ?? []),
+        }))]),
+      ) }];
     for (const bp of ['mobile', 'desktop'] as const) {
       worlds[bp] = [...worlds[bp], ...worlds[bp].filter((layer) => layer.group === action.id)
         .map((layer) => ({ ...layer, id: copiedIds.get(layer.id)!, group: action.copyId,

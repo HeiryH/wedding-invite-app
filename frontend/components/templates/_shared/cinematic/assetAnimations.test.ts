@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { assetAnimationWindow, compileAssetAnimationTracks, normalizeAssetAnimations, retimeAssetAnimation, sampleAssetAnimations, type CinematicAssetAnimation } from './assetAnimations';
+import { assetAnimationWindow, compileAssetAnimationTracks, convertAssetAnimations, convertAssetEffect, normalizeAssetAnimations, retimeAssetAnimation, sampleAssetAnimations, type CinematicAssetAnimation } from './assetAnimations';
+import { assetClipPosition, assetPoseClip, sampleAssetKeyframes } from './assetKeyframes';
+import { MOTION_DEFAULT, type CinematicEffect } from './direction';
 import type { CinematicWorldLayer } from './world';
 import { resolveCinematicWorld, serializeCinematicWorld, cinematicWorldKey } from './world';
 import type { CinematicSequenceTrack } from './sequence';
@@ -71,6 +73,61 @@ describe('in-between asset animations', () => {
     expect(normalized[0]).toMatchObject({ start: 0, end: 1, x: 0, scale: .05 });
     expect(normalizeAssetAnimations('bad')).toEqual([]);
   });
+  it('reproduces legacy easing and holds when converting simple moves', () => {
+    const animated = { ...layer, animations: [
+      { ...move('out', 0, .4, 14), rotate: 8, scale: 1.2, easing: 'ease-in-out' as const },
+      move('return', .6, 1, 0),
+    ] };
+    const points = convertAssetAnimations(animated, [track], [animated]);
+    expect(points).toHaveLength(4);
+    const clip = assetPoseClip(animated, [track], [animated]);
+    for (const progress of [.1, .2, .25, .38, .5, .68, .8, .9]) {
+      const legacy = sampleAssetAnimations(animated, [track], progress, [animated]);
+      const converted = sampleAssetKeyframes(points, assetClipPosition(progress, clip))!;
+      expect(converted.x).toBeCloseTo(legacy.x, 2);
+      expect(converted.rotate).toBeCloseTo(legacy.rotate, 2);
+      expect(converted.scale).toBeCloseTo(legacy.scale, 3);
+    }
+  });
+
+  it('preserves legacy playback for overlapping moves, cuts, reception props, and spatial entrances', () => {
+    const animated = { ...layer, animations: [move('one', 0, .5, 10)] };
+    const overlap = { ...animated, animations: [...animated.animations, move('two', .3, .9, 20)] };
+    const cut = { ...animated, animations: [move('cut', .2, .2, 10)] };
+    const reception = { ...animated, behavior: 'rsvp-envelope' };
+    expect(convertAssetAnimations(overlap, [track], [overlap])).toBeUndefined();
+    expect(convertAssetAnimations(cut, [track], [cut])).toBeUndefined();
+    expect(convertAssetAnimations(reception, [track], [reception])).toBeUndefined();
+    expect(convertAssetAnimations(animated, [{ ...track, enter: { kind: 'slide', easing: 'linear' } }], [animated])).toBeUndefined();
+  });
+
+  it('transfers an aligned effect with opacity and blur and preserves independently timed effects', () => {
+    const clip = { ...track, clip: { start: .1, enterEnd: .3, exitStart: .8, end: .9 } };
+    const effect: CinematicEffect = { id: 'effect', label: 'Effect', enabled: true, trackId: clip.id,
+      target: 'layer', targetId: layer.id, kind: 'transform', easing: 'linear',
+      from: { ...MOTION_DEFAULT, xVw: -10, opacity: .2, blur: 8 },
+      to: MOTION_DEFAULT, amplitudeX: 0, amplitudeY: 0, frequency: 1 };
+    const points = convertAssetEffect(layer, [clip], [layer], effect);
+    expect(points?.map((point) => point.at)).toEqual([0, .25]);
+    const middle = sampleAssetKeyframes(points, .125);
+    expect(middle).toMatchObject({ x: -5, blur: 4 });
+    expect(middle?.opacity).toBeCloseTo(.6);
+    expect(convertAssetEffect(layer, [clip], [layer], { ...effect, kind: 'drift' })).toBeUndefined();
+    const separate = { ...clip, id: 'separate', clip: { start: .15, enterEnd: .25, exitStart: .5, end: .65 } };
+    expect(convertAssetEffect(layer, [clip, separate], [layer], { ...effect, trackId: separate.id })).toBeUndefined();
+  });
+
+  it('converts the combined frame offsets of a compatible group effect', () => {
+    const clip = { ...track, clip: { start: .1, enterEnd: .34567, exitStart: .8, end: .9 } };
+    const effect: CinematicEffect = { id: 'group-effect', label: 'Group effect', enabled: true, trackId: clip.id,
+      target: 'group', targetId: layer.id, kind: 'transform', easing: 'linear',
+      from: { ...MOTION_DEFAULT, x: 45, xVw: 25, y: -30, yVh: -15 },
+      to: { ...MOTION_DEFAULT, x: 76, xVw: -74 }, amplitudeX: 0, amplitudeY: 0, frequency: 1 };
+    const points = convertAssetEffect(layer, [clip], [layer], effect);
+    expect(points?.map(({ at, pose }) => [at, pose.x, pose.y])).toEqual([[0, 70, -45], [.3071, 2, 0]]);
+    expect(convertAssetEffect(layer, [clip], [layer], { ...effect, from: { ...effect.from, x: 500 } })).toBeUndefined();
+  });
+
   it('copies animation chains with a duplicated scene set using the new layer identity', () => {
     const engine = CINEMATIC_ENGINES[15];
     const source = engine.world.find((layer) => layer.id === 'programme-board')!;

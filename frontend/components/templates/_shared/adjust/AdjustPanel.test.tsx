@@ -1,3 +1,4 @@
+import { T5_STAGES } from '../../Template5-dreamingfloral/data/t5Stages';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { StrictMode, useState } from 'react';
 import { describe, expect, it, vi } from 'vitest';
@@ -182,4 +183,34 @@ describe('Roman Garden grouping compatibility', () => {
     fireEvent.click(screen.getByRole('checkbox', { name: `Select ${second} for grouping` }));
     expect(screen.getByRole('button', { name: 'Group selected' })).toBeEnabled();
   });
+});
+
+it('groups Dreaming Floral Sky names and saves their shared offset independently of their own nudges', () => {
+  const onLayoutChange = vi.fn();
+  function Workspace() {
+    const [config, setConfig] = useState<Record<string, string>>({});
+    const [selectedLayer, setSelectedLayer] = useState<string>();
+    return <AdjustPanel stages={T5_STAGES} keyPrefix="t5" stageIds={['welcome']}
+      breakpoint="mobile" config={config} groupMotion classicGroups selectedStage="welcome"
+      selectedLayer={selectedLayer} onSelectStage={vi.fn()} onSelectLayer={setSelectedLayer} onClose={vi.fn()}
+      onLayoutChange={(key, value) => {
+        setConfig((previous) => ({ ...previous, [key]: value }));
+        onLayoutChange(key, value);
+      }} />;
+  }
+  render(<Workspace />);
+  fireEvent.click(screen.getByRole('button', { name: 'Select layers to group' }));
+  fireEvent.click(screen.getByRole('checkbox', { name: 'Select First Name (position 1) for grouping' }));
+  fireEvent.click(screen.getByRole('checkbox', { name: 'Select Second Name (position 2) for grouping' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Group selected' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Layer group' }));
+  fireEvent.change(screen.getByRole('slider', { name: 'Group X' }), { target: { value: '10' } });
+  const moved = JSON.parse(onLayoutChange.mock.lastCall![1]);
+  expect(moved.layers).toEqual([
+    { id: 'firstName', groupOffsetX: 10 }, { id: 'secondName', groupOffsetX: 10 },
+  ]);
+  fireEvent.change(screen.getByLabelText('Loop'), { target: { value: 'float' } });
+  expect(JSON.parse(onLayoutChange.mock.lastCall![1]).groups[0].animIdle).toBe('float');
+  fireEvent.click(screen.getByRole('button', { name: 'Ungroup' }));
+  expect(JSON.parse(onLayoutChange.mock.lastCall![1])).toEqual({ layers: moved.layers });
 });

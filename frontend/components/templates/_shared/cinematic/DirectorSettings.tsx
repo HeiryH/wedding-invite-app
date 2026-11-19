@@ -3,9 +3,9 @@
 import { useId, useState } from 'react';
 import type { Breakpoint } from '../types';
 import type { CinematicWorldLayer } from './world';
-import type { CinematicSceneSet } from './sceneSets';
+import { cinematicGroupTargetId, type CinematicSceneSet } from './sceneSets';
 import type { CinematicSequenceBeat, CinematicSequenceTrack } from './sequence';
-import { MOTION_DEFAULT, normalizeEffect, normalizeInteraction, type CinematicDirection, type CinematicEffect, type CinematicInteraction, type CinematicMotion } from './direction';
+import { normalizeInteraction, type CinematicDirection, type CinematicEffect, type CinematicInteraction } from './direction';
 import { nextSceneSetId } from './sceneSetEditing';
 import { CURATED_FONTS } from '@/lib/fonts/registry';
 import { EditorActions, ConfirmEditorAction } from './EditorActions';
@@ -19,35 +19,45 @@ function NumberField({ label, value, onChange, min = 0, max = 3000, step = 1 }: 
     onChange={(event) => { if (event.target.value !== '') onChange(Number(event.target.value)); }} /></label>;
 }
 
-export default function DirectorSettings({ value, onChange, breakpoint, layers, sets, beats, tracks, onPreview, onAddEffectTrack, standalone = false,
-  effectScope, pose, onEditPose, selectedEffectTrackId }: {
+export default function DirectorSettings({ value, onChange, breakpoint, layers, sets, beats, tracks, onPreview, standalone = false,
+  effectScope, groupScope = false, selectedEffectTrackId }: {
   selectedEffectTrackId?: string;
   /** A layer id for its inspector, or __world for the Advanced panel. */
   effectScope?: string;
-  pose?: { effectId: string; side: 'from' | 'to' };
-  onEditPose?: (pose?: { effectId: string; side: 'from' | 'to' }) => void;
+  groupScope?: boolean;
   standalone?: boolean;
   value: CinematicDirection; onChange: (value: CinematicDirection) => void; breakpoint: Breakpoint;
   layers: CinematicWorldLayer[]; sets: CinematicSceneSet[]; beats: CinematicSequenceBeat[]; tracks: CinematicSequenceTrack[];
-  onPreview: (trackId: string) => void; onAddEffectTrack: (id: string, label: string) => void;
+  onPreview: (trackId: string) => void;
 }) {
   const [tab, setTab] = useWorkspacePreference('einvite.cinematic.advanced-tab.v1', 'effects', decodeDirectorTab);
   const tabsId = useId();
   const tabs = ['effects', 'interactions', 'pacing', 'navigation', 'memories', 'theme'];
   const [effectId, setEffectId] = useState(value.effects.find((item) => item.trackId === selectedEffectTrackId)?.id ?? value.effects[0]?.id ?? '');
   const [interactionId, setInteractionId] = useState(value.interactions[0]?.id ?? '');
-  const scopedEffects = value.effects.filter((item) => !effectScope || (effectScope === '__world'
-    ? item.target === 'world' || item.targetId.includes(':') : item.target === 'layer' && item.targetId === effectScope));
-  const selectedEffect = scopedEffects.find((effect) => effect.id === effectId) ?? scopedEffects[0];
+  const scopedEffects = value.effects
+    .map((item) => breakpoint === 'desktop' ? { ...item, ...item.desktop } : item)
+    .filter((item) => !effectScope || (effectScope === '__world'
+    ? item.target === 'world' || (item.target === 'layer' && item.targetId.includes(':')) : item.target === (groupScope ? 'group' : 'layer') && item.targetId === effectScope));
+  const effect = scopedEffects.find((item) => item.id === effectId) ?? scopedEffects[0];
   const layerScope = Boolean(effectScope && effectScope !== '__world');
-  const effect = selectedEffect && breakpoint === 'desktop' ? { ...selectedEffect, ...selectedEffect.desktop } : selectedEffect;
+  const scopedLayer = layerScope && !groupScope ? layers.find((layer) => layer.id === effectScope) : undefined;
+  const parentSet = scopedLayer && sets.find((set) => set.id === scopedLayer.group);
+  const parentGroup = scopedLayer && parentSet?.layerGroups?.[breakpoint]?.find((group) => group.memberIds.includes(scopedLayer.id));
+  const groupMoves = parentGroup && parentSet && (Boolean(parentGroup.keyframes?.length) ||
+    parentGroup.animations?.some((animation) => animation.enabled) ||
+    value.effects.some((item) => {
+      const resolved = breakpoint === 'desktop' ? { ...item, ...item.desktop } : item;
+      return resolved.enabled && resolved.target === 'group' &&
+        resolved.targetId === cinematicGroupTargetId(parentSet.id, parentGroup.id) &&
+        tracks.some((track) => track.id === resolved.trackId);
+    }));
   const selectedInteraction = value.interactions.find((record) => record.id === interactionId);
   const changeEffect = (patch: Partial<CinematicEffect>) => {
-    if (patch.enabled === false || patch.trackId !== undefined) onEditPose?.();
     onChange({ ...value, effects: value.effects.map((candidate) => {
-    if (candidate.id !== selectedEffect?.id) return candidate;
-    return breakpoint === 'desktop' ? { ...candidate, desktop: { ...candidate.desktop, ...patch } } : { ...candidate, ...patch };
-  }) });
+      if (candidate.id !== effect?.id) return candidate;
+      return breakpoint === 'desktop' ? { ...candidate, desktop: { ...candidate.desktop, ...patch } } : { ...candidate, ...patch };
+    }) });
   };
   const changeInteraction = (patch: Partial<CinematicInteraction>) => onChange({ ...value, interactions: value.interactions.map((record) => record.id === interactionId ? { ...record, ...patch } : record) });
   const trackOptions = tracks.map((track) => <option key={track.id} value={track.id}>{track.label}</option>);
@@ -59,7 +69,8 @@ export default function DirectorSettings({ value, onChange, breakpoint, layers, 
     })} />{set.label}</label>)}</div>;
   const Container = standalone ? 'section' : 'details';
   return <Container className={`${styles.directorSettings} ${standalone ? styles.directorStandalone : ''}`}>
-    {layerScope ? <><h3>Movement & effects</h3><p className={styles.note}>Each effect has its own timeline track. From and To are offsets from this layer’s Layout position.</p></> : standalone ? <><h3>Story settings</h3><p className={styles.note}>World effects and overall story settings. Edit layer movements in the layer’s Animation tab.</p></> : <summary>Story settings</summary>}
+    {layerScope ? <p className={styles.note}>Use {groupScope ? 'Animate group' : 'Animate asset'} to edit motion.</p>
+      : standalone ? <><h3>Story settings</h3><p className={styles.note}>World effects and overall story settings.</p></> : <summary>Story settings</summary>}
     {!layerScope && <div role="tablist" aria-label="Story settings" className={styles.directorTabs}>
       {tabs.map((id, index) => <button key={id} type="button" role="tab"
         id={`${tabsId}-${id}`} aria-controls={`${tabsId}-panel`} tabIndex={tab === id ? 0 : -1}
@@ -73,59 +84,27 @@ export default function DirectorSettings({ value, onChange, breakpoint, layers, 
     </div>}
     <section role={layerScope ? undefined : 'tabpanel'} id={`${tabsId}-panel`} aria-labelledby={layerScope ? undefined : `${tabsId}-${tab}`} className={styles.directorFields}>
       {(layerScope || tab === 'effects') && <>
-        <label>Effect<select aria-label="Effect" value={selectedEffect?.id ?? ''} onChange={(event) => { onEditPose?.(); setEffectId(event.target.value); }}>
+        {scopedEffects.length > 0 && <label>Effect<select aria-label="Effect" value={effect?.id ?? ''} onChange={(event) => setEffectId(event.target.value)}>
           <option value="">Select effect</option>{scopedEffects.map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}
-        </select></label>
-        <button type="button" onClick={() => {
-          const id = nextSceneSetId('effect', [...value.effects.map((item) => item.id), ...tracks.map((item) => item.id)]);
-          const item = normalizeEffect({ id, label: layerScope ? `${layers.find((layer) => layer.id === effectScope)?.label ?? 'Layer'} movement` : 'New effect', trackId: id,
-            target: effectScope === '__world' ? 'world' : 'layer', targetId: layerScope ? effectScope : layers[0]?.id, from: MOTION_DEFAULT, to: MOTION_DEFAULT })!;
-          onChange({ ...value, effects: [...value.effects, item] }); onAddEffectTrack(id, item.label); setEffectId(id);
-        }}>{layerScope ? 'Add layer effect' : 'Add effect'}</button>
+        </select></label>}
         {effect && <>
           {!tracks.some((track) => track.id === effect.trackId) && <p role="status">This effect’s timing track is missing. Choose a track to enable its movement.</p>}
-          {effect.target === 'layer' && !layers.some((layer) => layer.id === effect.targetId.split(':')[0] && !layer.hidden) && <p role="status">The target layer is missing or hidden.</p>}
-          <p>{breakpoint === 'desktop' ? 'Editing desktop movement. Use shared movement to remove this override.' : 'Editing shared movement. Desktop can override it.'}</p>
+          {effect.target === 'layer' && !layers.some((layer) => (layer.id === effect.targetId || layer.id === effect.targetId.split(':')[0]) && !layer.hidden) && <p role="status">The target layer is missing or hidden.</p>}
+          <p>{breakpoint === 'desktop' ? 'Changes here apply to desktop.' : 'Changes here apply to both devices unless desktop has an override.'}</p>
           <label>Name<input value={effect.label} onChange={(event) => changeEffect({ label: event.target.value })} /></label>
           <label className={styles.directorCheck}><input type="checkbox" checked={effect.enabled} onChange={(event) => changeEffect({ enabled: event.target.checked })} />Enabled</label>
-          <label>Effect type<select aria-label="Effect type" value={effect.kind} onChange={(event) => changeEffect({ kind: event.target.value as CinematicEffect['kind'] })}>
-            <option value="transform">Movement</option><option value="drift">Drift and oscillation</option><option value="blur">Blur</option>
-          </select></label>
+          {!effect.enabled && <p role="status">This effect is off. Its timing track is kept for reuse.
+            {groupMoves && parentGroup && ` The layer still follows the “${parentGroup.label}” group’s animation.`}</p>}
           <label>Timing track<select aria-label="Effect timing track" value={effect.trackId} onChange={(event) => changeEffect({ trackId: event.target.value })}>{trackOptions}</select></label>
-          {!effectScope && <label>Apply to<select aria-label="Effect target" value={effect.target === 'world' ? '__world' : effect.targetId} onChange={(event) => changeEffect({
-            target: event.target.value === '__world' ? 'world' : 'layer', targetId: event.target.value === '__world' ? '' : event.target.value,
-          })}><option value="__world">Entire world</option>{layerOptions}{layers.filter((layer) => layer.behavior === 'rsvp-envelope').map((layer) => <option key={`${layer.id}:content`} value={`${layer.id}:content`}>{layer.label} · paper</option>)}</select></label>}
-          <label>Easing<select aria-label="Effect easing" value={effect.easing} onChange={(event) => changeEffect({ easing: event.target.value as CinematicEffect['easing'] })}>
-            {['linear', 'ease-in', 'ease-out', 'ease-in-out'].map((id) => <option key={id}>{id}</option>)}
-          </select></label>
-          {layerScope && onEditPose && <>
-            <div className={styles.sceneSetActions}>
-              {(['from', 'to'] as const).map((side) => <button key={side} type="button" disabled={!effect.enabled || !tracks.some((track) => track.id === effect.trackId)}
-                aria-pressed={pose?.effectId === effect.id && pose.side === side}
-                onClick={() => onEditPose({ effectId: effect.id, side })}>Edit {side === 'from' ? 'From' : 'To'} on canvas</button>)}
-            </div>
-            {pose?.effectId === effect.id && <div role="status" className={styles.timingEditor}>
-              <strong>Editing {pose.side === 'from' ? 'From' : 'To'} pose</strong>
-              <p className={styles.note}>Drag the artwork to move this pose. Drag its corner to scale it. Layout stays unchanged. Use the numbers below for rotation and other properties.</p>
-              <button type="button" onClick={() => onEditPose()}>Done editing pose</button>
-            </div>}
-          </>}
-          <div className={styles.motionGrid}><strong>Property</strong><strong>From</strong><strong>To</strong>
-            {(Object.keys(MOTION_DEFAULT) as (keyof CinematicMotion)[]).map((key) => <div key={key} className={styles.motionRow}>
-              <span>{({ x: 'X (% of layer)', y: 'Y (% of layer)', xVw: 'X (% of screen)', yVh: 'Y (% of screen)', scale: 'Scale', rotate: 'Rotation', opacity: 'Opacity', blur: 'Blur (px)' })[key]}</span>
-              {(['from', 'to'] as const).map((side) => <input key={side} type="number" aria-label={`${key} ${side}`} step={key === 'scale' || key === 'opacity' ? .05 : .5}
-                value={effect[side][key]} onChange={(event) => changeEffect({ [side]: { ...effect[side], [key]: Number(event.target.value) } })} />)}
-            </div>)}
-          </div>
-          {effect.kind === 'drift' && <><NumberField label="Drift X" value={effect.amplitudeX} min={-100} max={100} step={.1} onChange={(amplitudeX) => changeEffect({ amplitudeX })} />
-            <NumberField label="Drift Y" value={effect.amplitudeY} min={-100} max={100} step={.1} onChange={(amplitudeY) => changeEffect({ amplitudeY })} />
-            <NumberField label="Oscillation cycles" value={effect.frequency} max={20} step={.1} onChange={(frequency) => changeEffect({ frequency })} /></>}
           <div className={styles.sceneSetActions}>
-            <button type="button" onClick={() => { onEditPose?.(); onPreview(effect.trackId); }}>Preview effect</button>
-            {breakpoint === 'desktop' && <button type="button" onClick={() => onChange({ ...value, effects: value.effects.map((item) => item.id === effect.id ? { ...item, desktop: undefined } : item) })}>Use shared movement</button>}
-            <EditorActions key={effect.id} label="Effect actions"><ConfirmEditorAction label="Delete effect"
+            <button type="button" disabled={!effect.enabled || !tracks.some((track) => track.id === effect.trackId)}
+              onClick={() => onPreview(effect.trackId)}>Preview effect</button>
+            {breakpoint === 'desktop' && <button type="button" onClick={() => onChange({ ...value, effects: value.effects.map((item) => item.id === effect.id ? { ...item, desktop: undefined } : item) })}>Clear desktop override</button>}
+          </div>
+          <div className={styles.sceneSetActions}>
+            <ConfirmEditorAction key={effect.id} label="Delete effect" reveal
               description={`Remove only “${effect.label}”. Its target artwork and other effects remain.`}
-              onConfirm={() => { onEditPose?.(); onChange({ ...value, effects: value.effects.filter((item) => item.id !== effect.id) }); setEffectId(''); }} /></EditorActions>
+              onConfirm={() => { onChange({ ...value, effects: value.effects.filter((item) => item.id !== effect.id) }); setEffectId(''); }} />
           </div>
         </>}
       </>}

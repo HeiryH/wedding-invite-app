@@ -28,7 +28,7 @@ export const TEMPLATE_CAPABILITIES: Readonly<Record<number, Readonly<TemplateCap
   2: { ...classic, sectionOrder: 'dom', music: 'shared' },
   3: { ...classic, sectionOrder: 'dom', music: 'shared' },
   4: { ...classic, sectionOrder: 'partial', music: 'shared' },
-  5: { ...classic, sectionOrder: 'dom', music: 'legacy' },
+  5: { ...classic, sectionOrder: 'dom', music: 'legacy', sharedNavigation: true },
   6: { ...classic, sectionOrder: 'dom', seating: true, music: 'legacy' },
   7: { ...stage, coupleGallery: true },
   8: { ...classic, editor: 'none', sectionOrder: 'fixed', prototype: true },

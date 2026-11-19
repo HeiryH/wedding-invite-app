@@ -3,7 +3,6 @@
 import Link from 'next/link';
 
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { motion, useReducedMotion } from 'framer-motion';
 import { parseEventTypes } from '@/lib/eventTypes';
 import { templateService, Template, landingService, LandingDto, LandingItemDto } from '@/lib/api';
@@ -11,6 +10,8 @@ import { TemplatePreview } from '@/components/templates/TemplatePreview';
 import { MarketingNav } from '@/components/marketing/MarketingNav';
 import { TemplateMarquee } from '@/components/marketing/TemplateMarquee';
 import { Wordmark } from '@/components/marketing/Wordmark';
+import { TemplatePicker } from '@/components/marketing/TemplatePicker';
+import styles from './Home.module.css';
 import { InviteSteps } from '@/components/marketing/InviteSteps';
 import { LANDING_CONTENT_DEFAULTS, DEFAULT_STORY_ITEMS, DEFAULT_PRICING_ITEMS, DEFAULT_MIDDLE_SECTIONS, LandingDefaultItem } from '@/lib/landing/defaults';
 import { LANDING_MENU_KEY, LANDING_MENU_SECTIONS, readLandingMenu } from '@/lib/landing/menu';
@@ -34,15 +35,14 @@ const CTA_CORNER_GAP = 24;
 const MENU_CTA_LABEL = 'Try for free';
 const CTA_ANCHORS = {
   hero: { label: 'Create Now', fontSize: 21 },
-  explore: { label: 'View all designs', fontSize: 17 },
   bottom: { label: 'Make your first invite', fontSize: 19 },
 } as const;
 type CtaAnchor = keyof typeof CTA_ANCHORS;
-type CtaStop = CtaAnchor | 'corner' | 'cornerLeft' | 'menu';
-const CTA_ANCHOR_STOPS: CtaAnchor[] = ['hero', 'explore', 'bottom'];
+type CtaStop = CtaAnchor | 'corner' | 'menu';
+const CTA_ANCHOR_STOPS: CtaAnchor[] = ['hero', 'bottom'];
 
 function ctaWeights(stop: CtaStop): Record<CtaStop, number> {
-  return { hero: Number(stop === 'hero'), explore: Number(stop === 'explore'), bottom: Number(stop === 'bottom'), corner: Number(stop === 'corner'), cornerLeft: Number(stop === 'cornerLeft'), menu: Number(stop === 'menu') };
+  return { hero: Number(stop === 'hero'), bottom: Number(stop === 'bottom'), corner: Number(stop === 'corner'), menu: Number(stop === 'menu') };
 }
 
 export default function HomePage() {
@@ -51,9 +51,9 @@ export default function HomePage() {
   const [menuOpen, setMenuOpen] = useState(false);
   const menuOpenRef = useRef(false);
   const scheduleCta = useRef<(() => void) | null>(null);
-  const router = useRouter();
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const pickerDialog = useRef<HTMLDialogElement>(null);
   const heroCtaRef = useRef<HTMLButtonElement>(null);
-  const exploreCtaRef = useRef<HTMLAnchorElement>(null);
   const bottomCtaRef = useRef<HTMLButtonElement>(null);
   const menuCtaRef = useRef<HTMLButtonElement>(null);
   const floatingCtaRef = useRef<HTMLButtonElement>(null);
@@ -74,7 +74,6 @@ export default function HomePage() {
     const update = (now: number) => {
       frame = 0;
       const heroButton = heroCtaRef.current;
-      const exploreLink = exploreCtaRef.current;
       const bottomButton = bottomCtaRef.current;
       const menuButton = menuCtaRef.current;
       const floating = floatingCtaRef.current;
@@ -85,7 +84,6 @@ export default function HomePage() {
 
       const anchors = {
         hero: heroButton.getBoundingClientRect(),
-        explore: exploreLink?.getBoundingClientRect(),
         bottom: bottomButton?.getBoundingClientRect(),
       };
       const viewportHeight = window.innerHeight;
@@ -93,19 +91,10 @@ export default function HomePage() {
       const lowerEdge = viewportHeight - CTA_CORNER_GAP;
       const inView = (box?: DOMRect) => !!box && box.top >= CTA_CORNER_GAP && box.bottom <= lowerEdge;
 
-      const exploreTop = 300;
-      const exploreBottom = viewportHeight - 20;
-      const exploreInView =
-        !!anchors.explore &&
-        anchors.explore.top >= exploreTop &&
-        anchors.explore.bottom <= exploreBottom;
-
-      const pastExplore = !!anchors.explore && anchors.explore.top < exploreTop;
       const nextTarget: CtaStop = menuOpenRef.current ? 'menu'
         : anchors.hero.bottom > heroStart ? 'hero'
-        : exploreInView ? 'explore'
         : inView(anchors.bottom) ? 'bottom'
-        : pastExplore ? 'cornerLeft' : 'corner';
+        : 'corner';
 
       if (target === undefined || reduceMotion) {
         target = nextTarget;
@@ -126,19 +115,16 @@ export default function HomePage() {
         const destination = ctaWeights(target);
         weights = {
           hero: from.hero + (destination.hero - from.hero) * eased,
-          explore: from.explore + (destination.explore - from.explore) * eased,
           bottom: from.bottom + (destination.bottom - from.bottom) * eased,
           corner: from.corner + (destination.corner - from.corner) * eased,
-          cornerLeft: from.cornerLeft + (destination.cornerLeft - from.cornerLeft) * eased,
           menu: from.menu + (destination.menu - from.menu) * eased,
         };
         animating = elapsed < 1;
         if (animating) frame = requestAnimationFrame(update);
       }
 
-      const showFloating = animating || target === 'corner' || target === 'cornerLeft';
+      const showFloating = animating || target === 'corner';
       heroButton.style.visibility = !showFloating && target === 'hero' ? '' : 'hidden';
-      if (exploreLink) exploreLink.style.visibility = !showFloating && target === 'explore' ? '' : 'hidden';
       if (bottomButton) bottomButton.style.visibility = !showFloating && target === 'bottom' ? '' : 'hidden';
       menuButton.style.visibility = !showFloating && target === 'menu' ? 'visible' : 'hidden';
       floating.style.visibility = showFloating ? 'visible' : 'hidden';
@@ -148,7 +134,7 @@ export default function HomePage() {
       const cornerY = viewportHeight - CTA_CORNER_GAP - CTA_ICON_SIZE;
       const menuWeight = weights.menu;
       const menuBox = menuButton.getBoundingClientRect();
-      let x = cornerX + (CTA_CORNER_GAP - cornerX) * weights.cornerLeft + (menuBox.left - cornerX) * menuWeight;
+      let x = cornerX + (menuBox.left - cornerX) * menuWeight;
       let y = cornerY + (menuBox.top - cornerY) * menuWeight;
       let width = CTA_ICON_SIZE + (menuBox.width - CTA_ICON_SIZE) * menuWeight;
       let height = CTA_ICON_SIZE + (menuBox.height - CTA_ICON_SIZE) * menuWeight;
@@ -173,8 +159,8 @@ export default function HomePage() {
       floating.style.height = `${height}px`;
       floating.style.zIndex = target === 'menu' || menuWeight > 0 ? '101' : '90';
       floating.inert = target === 'menu' || menuWeight > 0;
-      const lightWeight = weights.hero + weights.explore;
-      const iconWeight = weights.corner + weights.cornerLeft;
+      const lightWeight = weights.hero;
+      const iconWeight = weights.corner;
       const lightSurface = `color-mix(in srgb, var(--mkt-card) ${lightWeight / (lightWeight + iconWeight || 1) * 100}%, transparent)`;
       const pillSurface = `color-mix(in srgb, var(--mkt-cta-gold) ${menuWeight / (1 - weights.bottom || 1) * 100}%, ${lightSurface})`;
       floating.style.background = `color-mix(in srgb, var(--mkt-ink) ${weights.bottom * 100}%, ${pillSurface})`;
@@ -215,7 +201,11 @@ export default function HomePage() {
     landingService.get().then(setLanding).catch(() => {});
   }, []);
 
-  const startFunnel = () => router.push('/personalise/picker');
+  useEffect(() => {
+    if (pickerOpen) pickerDialog.current?.showModal();
+  }, [pickerOpen]);
+
+  const startFunnel = () => setPickerOpen(true);
 
   // CMS helpers: scalar content with fallback, and repeatable items by section.
   // `||` (not `??`) so a saved-but-empty override still falls back to the live default
@@ -224,7 +214,7 @@ export default function HomePage() {
   const itemsOf = (sectionKey: string, fallback: LandingDefaultItem[]): LandingDefaultItem[] => {
     const rows = (landing?.items ?? []).filter((i) => i.sectionKey === sectionKey && i.isActive).sort((a, b) => a.sortOrder - b.sortOrder);
     return rows.length > 0
-      ? rows.map((r: LandingItemDto) => ({ title: r.title, body: r.body, meta: r.meta, price: r.price, features: r.features, cta: r.cta, ctaHref: r.ctaHref, highlighted: r.highlighted }))
+      ? rows.map((r: LandingItemDto) => ({ title: r.title, body: r.body, imageUrl: r.imageUrl, meta: r.meta, price: r.price, features: r.features, cta: r.cta, ctaHref: r.ctaHref, highlighted: r.highlighted }))
       : fallback;
   };
 
@@ -269,7 +259,7 @@ export default function HomePage() {
                     </Link>
                   ))}
                 </div>
-                <div style={{ textAlign: 'center', marginTop: 36 }}><Link ref={exploreCtaRef} href="/personalise/picker" className="mkt-btn" style={{ display: 'inline-block', padding: '14px 32px', fontSize: 17, color: 'var(--mkt-ink)', textDecoration: 'none' }}>View all designs</Link></div>
+                <div style={{ textAlign: 'center', marginTop: 36 }}><button type="button" className="mkt-btn" onClick={startFunnel} aria-haspopup="dialog" style={{ padding: '14px 32px', fontSize: 17 }}>View all designs</button></div>
               </div>
             </section>
           )}
@@ -311,22 +301,33 @@ export default function HomePage() {
             <div style={{ maxWidth: 1040, margin: '0 auto' }}>
               <h2 style={{ fontFamily: 'var(--mkt-serif)', fontWeight: 700, fontSize: 'clamp(34px, 5vw, 44px)', lineHeight: 1, margin: 0 }}>{c('stories.title')}</h2>
               <p style={{ fontFamily: 'var(--mkt-sans)', fontSize: 16, color: 'var(--mkt-muted)', marginTop: 8 }}>{c('stories.subtitle')}</p>
-              {templates.length > 0 && (
-                <div style={{ marginTop: 22, display: 'flex', gap: 16, overflowX: 'auto', paddingBottom: 6 }}>
-                  {templates.slice(0, 6).map((t) => (
-                    <div key={t.templateId} style={{ flex: 'none', width: 150, borderRadius: 18, overflow: 'hidden', border: '3px solid var(--mkt-ink)', boxShadow: '0 10px 22px rgba(23,19,13,.18)' }}>
-                      <TemplatePreview templateCode={t.templateCode} thumbnailUrl={t.thumbnailUrl} aspect="390 / 700" />
-                    </div>
-                  ))}
-                </div>
-              )}
-              <div style={{ marginTop: 22, display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 16 }}>
-                {quotes.map((q, i) => (
-                  <div key={i} className="mkt-card" style={{ padding: 20 }}>
-                    <div style={{ fontFamily: 'var(--mkt-serif)', fontStyle: 'italic', fontSize: 18, lineHeight: 1.5, color: '#2a231a' }}>“{q.body}”</div>
-                    <div style={{ fontFamily: 'var(--mkt-sans)', fontWeight: 500, fontSize: 14, color: 'var(--mkt-gold)', marginTop: 10 }}>{q.meta}</div>
-                  </div>
-                ))}
+              <div className={styles.stories}>
+                {quotes.map((story, i) => {
+                  const templateName = story.title?.trim();
+                  const template = templates.find((design) =>
+                    design.templateCode === templateName || design.templateName.toLowerCase() === templateName?.toLowerCase(),
+                  );
+                  const imageUrl = story.imageUrl?.trim() || template?.thumbnailUrl;
+                  const hasPreview = Boolean(imageUrl || template);
+                  return (
+                    <article key={i} className={styles.story} data-has-preview={hasPreview}>
+                      {hasPreview && (
+                        <div className={styles.storyVisual}>
+                          <div className={styles.storyPreview}>
+                            <TemplatePreview templateCode={template?.templateCode ?? (templateName || 'Invitation')} thumbnailUrl={imageUrl} aspect="390 / 700" />
+                          </div>
+                        </div>
+                      )}
+                      <div className={styles.storyCopy}>
+                        <blockquote className={styles.storyQuote}>“{story.body}”</blockquote>
+                        <footer className={styles.storyAttribution}>
+                          <span>{story.meta}</span>
+                          {templateName && <span className={styles.storyTemplate}>Template used <strong>{template?.templateName ?? templateName}</strong></span>}
+                        </footer>
+                      </div>
+                    </article>
+                  );
+                })}
               </div>
             </div>
           </section>
@@ -352,7 +353,7 @@ export default function HomePage() {
                   <div style={{ fontFamily: 'var(--mkt-sans)', fontSize: 13, color: 'var(--mkt-muted)' }}>{c('about.stat2.label')}</div>
                 </div>
               </div>
-              <button ref={bottomCtaRef} className="mkt-btn mkt-btn-dark" onClick={startFunnel} style={{ width: '100%', height: 60, marginTop: 26, fontSize: 19 }}>
+              <button ref={bottomCtaRef} className="mkt-btn mkt-btn-dark" onClick={startFunnel} aria-haspopup="dialog" style={{ width: '100%', height: 60, marginTop: 26, fontSize: 19 }}>
                 Make your first invite
               </button>
             </div>
@@ -382,7 +383,7 @@ export default function HomePage() {
         <div style={{ marginTop: 'clamp(32px, 5vw, 56px)' }}>
           {templates.length > 0 && <TemplateMarquee templates={templates} />}
         </div>
-        <button ref={heroCtaRef} className="mkt-btn" onClick={startFunnel} style={{ marginTop: 'clamp(28px, 4vw, 44px)', width: 212, height: 68, fontSize: 21 }}>
+        <button ref={heroCtaRef} className="mkt-btn" onClick={startFunnel} aria-haspopup="dialog" style={{ marginTop: 'clamp(28px, 4vw, 44px)', width: 212, height: 68, fontSize: 21 }}>
           Create Now
         </button>
       </section>
@@ -392,6 +393,7 @@ export default function HomePage() {
         ref={floatingCtaRef}
         className="mkt-btn"
         onClick={startFunnel}
+        aria-haspopup="dialog"
         aria-label="Create now"
         style={{
           position: 'fixed', left: 0, top: 0, zIndex: 90, padding: 0,
@@ -431,6 +433,20 @@ export default function HomePage() {
           {MENU_CTA_LABEL}
         </span>
       </button>
+
+      {pickerOpen && (
+        <dialog
+          ref={pickerDialog}
+          className={styles.pickerDialog}
+          aria-label="Invitation design picker"
+          onClose={() => setPickerOpen(false)}
+          onClick={(event) => {
+            if (event.target === event.currentTarget) event.currentTarget.close();
+          }}
+        >
+          <TemplatePicker onClose={() => pickerDialog.current?.close()} />
+        </dialog>
+      )}
 
       {/* ── Footer (always shown) ────────────────────────────────────────── */}
       <footer id="footer" style={{ background: 'var(--mkt-ink)', padding: 'clamp(28px, 4vw, 44px) clamp(20px, 5vw, 72px)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16 }}>

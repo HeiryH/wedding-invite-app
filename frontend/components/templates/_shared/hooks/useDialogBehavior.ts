@@ -2,18 +2,22 @@
 import { useEffect, useRef, type RefObject } from 'react';
 
 const dialogs: HTMLElement[] = [];
+let scrollLocks = 0;
 let originalOverflow = '';
 const focusable = 'button:not(:disabled),a[href],input:not(:disabled),select:not(:disabled),textarea:not(:disabled),[tabindex]:not([tabindex="-1"])';
 
 /** Shared modal keyboard/focus/scroll behavior; presentation remains owned by each template. */
-export function useDialogBehavior(ref: RefObject<HTMLElement | null>, open: boolean, onDismiss: () => void, modal = true) {
+export function useDialogBehavior(ref: RefObject<HTMLElement | null>, open: boolean, onDismiss: () => void, modal = true, lockScroll = true) {
   const dismiss = useRef(onDismiss);
   useEffect(() => { dismiss.current = onDismiss; }, [onDismiss]);
   useEffect(() => {
     const dialog = ref.current;
     if (!open || !modal || !dialog) return;
     const previous = document.activeElement;
-    if (!dialogs.length) { originalOverflow = document.body.style.overflow; document.body.style.overflow = 'hidden'; }
+    if (lockScroll && scrollLocks++ === 0) {
+      originalOverflow = document.body.style.overflow;
+      document.body.style.overflow = 'hidden';
+    }
     dialogs.push(dialog);
     const controls = () => [...dialog.querySelectorAll<HTMLElement>(focusable)].filter((el) => !el.closest('[hidden],[aria-hidden="true"]') && getComputedStyle(el).display !== 'none' && getComputedStyle(el).visibility !== 'hidden');
     const timer = requestAnimationFrame(() => (controls()[0] ?? dialog).focus({ preventScroll: true }));
@@ -32,8 +36,8 @@ export function useDialogBehavior(ref: RefObject<HTMLElement | null>, open: bool
       cancelAnimationFrame(timer); window.removeEventListener('keydown', keydown, true);
       const wasTop = dialogs.at(-1) === dialog;
       const index = dialogs.lastIndexOf(dialog); if (index >= 0) dialogs.splice(index, 1);
-      if (!dialogs.length) document.body.style.overflow = originalOverflow;
+      if (lockScroll && --scrollLocks === 0) document.body.style.overflow = originalOverflow;
       if (wasTop && previous instanceof HTMLElement && previous.isConnected) previous.focus({ preventScroll: true });
     };
-  }, [ref, open, modal]);
+  }, [ref, open, modal, lockScroll]);
 }

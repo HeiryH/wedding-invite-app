@@ -47,7 +47,7 @@ describe('cinematic director data', () => {
     expect(sampleCinematicEffects(defaults.effects, sequence.tracks, 1, 'mobile').world.blur).toBe(8);
   });
   it('keeps automatic pacing linear and maps camera holds in both directions', () => {
-    const automatic = cinematicPacingNodes(sequence.beats, defaults.pacing, 'mobile', sequence.beats.length);
+    const automatic = cinematicPacingNodes(sequence.beats, { ...defaults.pacing, beats: {} }, 'mobile', sequence.beats.length);
     expect(automatic.heightVh).toBe(1350);
     for (let at = 0; at <= 1; at += .02) expect(mapCinematicProgress(at, automatic.points)).toBeCloseTo(at);
     const held = cinematicPacingNodes(sequence.beats, { ...defaults.pacing, beats: { groom: { holdVh: 100, mobileVh: 150 } } }, 'mobile', sequence.beats.length);
@@ -59,9 +59,10 @@ describe('cinematic director data', () => {
   });
   it('does not allow actions to bypass deleted availability tracks', () => {
     const rsvp = defaults.interactions.find((record) => record.id === 'rsvp')!;
-    expect(interactionAvailable(rsvp, sequence.tracks, .825)).toBe(true);
-    expect(interactionAvailable(rsvp, [], .825)).toBe(false);
-    expect(interactionAvailable({ ...rsvp, enabled: false }, sequence.tracks, .825)).toBe(false);
+    const start = sequence.tracks.find((track) => track.id === rsvp.availabilityTrackId)!.clip.start;
+    expect(interactionAvailable(rsvp, sequence.tracks, start)).toBe(true);
+    expect(interactionAvailable(rsvp, [], start)).toBe(false);
+    expect(interactionAvailable({ ...rsvp, enabled: false }, sequence.tracks, start)).toBe(false);
     expect(interactionAvailable({ ...rsvp, availabilityTrackId: '' }, [], .1)).toBe(true);
   });
   it('round trips beat reference replacement, removal, opacity and fit', () => {

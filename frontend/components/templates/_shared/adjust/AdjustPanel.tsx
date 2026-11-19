@@ -232,10 +232,27 @@ export default function AdjustPanel({
   const slotIdCounter = useRef(0);
 
   const def = stages[selectedStage];
-  const { layers, groups, bgFit, bgPosition, bgScale, bgSrc } = useMemo(
-    () => resolveStage(keyPrefix, def, breakpoint, config),
-    [keyPrefix, def, breakpoint, config],
-  );
+  const activeLayout = useMemo(() => resolveStage(keyPrefix, def, breakpoint, config),
+    [keyPrefix, def, breakpoint, config]);
+  const { layers, groups, bgFit, bgPosition, bgScale, bgSrc } = activeLayout;
+  const editorStageIds = useMemo(() => stageIds.filter((id) =>
+    (stages[id].editorGroup ?? id) === (def.editorGroup ?? def.id)), [stageIds, stages, def]);
+  // Resolve each displayed section once, including sections sharing an editor tab.
+  const sectionLayouts = useMemo(() => new Map(editorStageIds.map((id) => {
+    const resolved = id === def.id ? activeLayout : resolveStage(keyPrefix, stages[id], breakpoint, config);
+    const rows = [...resolved.layers].sort((a, b) => b.z - a.z).filter((layer) =>
+      appearsInFormLayout(layer, inlineFormSheet(keyPrefix, id, config)));
+    const ids = new Set(rows.map((layer) => layer.id));
+    const children = new Map<string, Layer[]>();
+    for (const layer of rows) {
+      if (layer.parent && ids.has(layer.parent)) {
+        const siblings = children.get(layer.parent) ?? [];
+        siblings.push(layer);
+        children.set(layer.parent, siblings);
+      }
+    }
+    return [id, { ...resolved, children, roots: rows.filter((layer) => !layer.parent || !ids.has(layer.parent)) }] as const;
+  })), [editorStageIds, keyPrefix, stages, breakpoint, config, def.id, activeLayout]);
   const bgState: StageBg = useMemo(
     () => ({ bgFit, bgPosition, bgScale, bgSrc }),
     [bgFit, bgPosition, bgScale, bgSrc],
@@ -251,17 +268,6 @@ export default function AdjustPanel({
   // A layer with a `parent` present in this stage renders indented under it. `parent` is a
   // shipped structural field (T5's countdown/ceremony groups), never part of a saved delta.
   const idSet = useMemo(() => new Set(layerRows.map((l) => l.id)), [layerRows]);
-  const childrenOf = useMemo(() => {
-    const m = new Map<string, Layer[]>();
-    for (const l of layerRows) {
-      if (l.parent && idSet.has(l.parent)) {
-        const arr = m.get(l.parent) ?? [];
-        arr.push(l);
-        m.set(l.parent, arr);
-      }
-    }
-    return m;
-  }, [layerRows, idSet]);
   const roots = layerRows.filter((l) => !l.parent || !idSet.has(l.parent));
   const groupScope = layoutKey(keyPrefix, breakpoint, def.id);
   const groupByMember = new Map(groups.flatMap((group) => group.memberIds.map((id) => [id, group] as const)));
@@ -269,6 +275,8 @@ export default function AdjustPanel({
   const pickedIds = new Set(pickingGroup ? groupSelection.ids : []);
   const selectedGroup = current && groupByMember.get(current.id);
   const activeGroup = groupMotion ? groups.find((group) => group.id === selectedLayer) : undefined;
+
+  const anchorGroup = activeGroup && layers.some((layer) => layer.kind === 'anchor' && activeGroup.memberIds.includes(layer.id));
 
   const commit = useCallback(
     (nextLayers: Layer[], nextBg: StageBg = bgState) => {
@@ -316,12 +324,17 @@ export default function AdjustPanel({
   const groupable = (layer: Layer) => canGroupLayer(layer) && planeOf(layer) !== undefined;
   const groupIssue = (ids: string[]) => {
     const selected = new Set(ids);
+    if (keyPrefix === 't5' && def.id === 'welcome' && selected.has('card') &&
+      layers.some((layer) => layer.kind === 'anchor' && selected.has(layer.id) && !['card', 'badge'].includes(layer.id))) {
+      return 'The Welcome Card already moves its contents. Select the card or the elements inside it.';
+    }
     const planes = new Set(layers.filter((layer) => selected.has(layer.id)).map(planeOf));
     if (planes.has(undefined) || (classicGroups && planes.size > 1)) {
       return 'Select layers from the same part of this section.';
     }
     // Each rendering plane keeps its own stacking order.
     for (const plane of planes) {
+      if (plane === 'anchors') continue;
       const stack = layers.filter((layer) => appearsInFormLayout(layer, inlineSheet) &&
         canGroupLayer(layer) && planeOf(layer) === plane);
       const positions = stack.flatMap((layer, index) => selected.has(layer.id) ? [index] : []);
@@ -332,6 +345,7 @@ export default function AdjustPanel({
   };
   const canJoin = (ids: string[]) => !groupIssue(ids);
   const pickedLayers = roots.filter((layer) => pickedIds.has(layer.id) && groupable(layer) && !groupByMember.has(layer.id));
+  const availableGroupLayers = roots.filter((layer) => groupable(layer) && !groupByMember.has(layer.id));
   const selectionIssue = pickedLayers.length < 2
     ? 'Select at least two layers.'
     : groupIssue(pickedLayers.map((layer) => layer.id));
@@ -436,7 +450,7 @@ export default function AdjustPanel({
   };
 
   const resetStage = () => {
-    onLayoutChange(layoutKey(keyPrefix, breakpoint, def.id), '');
+    editorStageIds.forEach((id) => onLayoutChange(layoutKey(keyPrefix, breakpoint, id), ''));
     onSelectLayer(undefined);
     flash('Stage reset to defaults');
   };
@@ -445,7 +459,12 @@ export default function AdjustPanel({
     const other: Breakpoint = breakpoint === 'mobile' ? 'desktop' : 'mobile';
     // Re-serialize against the OTHER breakpoint's defaults — the same absolute geometry is a
     // different delta over there, and writing this breakpoint's delta verbatim would be wrong.
-    onLayoutChange(layoutKey(keyPrefix, other, def.id), serializeStage(def, other, layers, bgState, groups));
+    editorStageIds.forEach((id) => {
+      const source = stages[id];
+      const resolved = resolveStage(keyPrefix, source, breakpoint, config);
+      onLayoutChange(layoutKey(keyPrefix, other, id),
+        serializeStage(source, other, resolved.layers, resolved, resolved.groups));
+    });
     flash(`Copied to ${other}`);
   };
 
@@ -559,10 +578,9 @@ export default function AdjustPanel({
     [def, breakpoint],
   );
 
-  const dirty = Boolean(config[layoutKey(keyPrefix, breakpoint, def.id)]);
+  const dirty = editorStageIds.some((id) => Boolean(config[layoutKey(keyPrefix, breakpoint, id)]));
   const isImage = current?.kind === 'img';
-  // Anchors are existing DOM elements, not overlay art: they can't be resized (only nudged), so
-  // the panel shows a reduced, transform-only control set for them.
+  // DOM anchors opt into box controls only when their template implements real reflow sizing.
   const isAnchor = current?.kind === 'anchor';
   // …but a *slot piece* is a different animal. An anchor nested (at any depth) under a
   // `kind:'slot'` layer is rendered by that slot's own `Piece`/`HeroPiece` wrapper, which builds
@@ -629,7 +647,7 @@ export default function AdjustPanel({
   // to override. sheetTrigger (the RSVP/wish "open the sheet" button — SheetTriggerSlot.tsx) reads
   // the exact same field set text does (color/font/border/radius/shadow), so it gets the tab too
   // rather than a bespoke button-only control set.
-  const canStyle = current?.kind === 'text' || current?.slot === 'sheetTrigger' || Boolean(current?.styleable);
+  const canStyle = Boolean(current?.containerStyle) || current?.kind === 'text' || current?.slot === 'sheetTrigger' || Boolean(current?.styleable);
   // Detail selection is sticky across rows, but sheet forms have Text/Container instead of the
   // generic Style/Animation pair. Falling back to Layout avoids landing in a hidden stale tab.
   const activeDetailTab = hasFormStyle
@@ -645,17 +663,28 @@ export default function AdjustPanel({
   };
 
   // ── a single layer row (optionally a sub-layer) ────────────────────────────
-  const renderRow = (l: Layer, depth: number) => {
-    const kids = childrenOf.get(l.id);
+  const renderRow = (l: Layer, depth: number, source = def) => {
+    const local = source.id === def.id;
+    const sourceLayout = sectionLayouts.get(source.id)!;
+    const kids = sourceLayout.children.get(l.id);
+    const patchRow = (patch: Partial<Layer>) => {
+      if (local) {
+        patchLayer(l.id, patch);
+      } else {
+        const nextLayers = sourceLayout.layers.map((layer) => layer.id === l.id ? { ...layer, ...patch } : layer);
+        onLayoutChange(layoutKey(keyPrefix, breakpoint, source.id),
+          serializeStage(source, breakpoint, nextLayers, sourceLayout, sourceLayout.groups));
+      }
+    };
     const hasKids = !!kids?.length;
     const isOpen = !collapsed.has(l.id) || l.id === selectedParent;
     // A locked layer can't be reordered by drag any more than it can be dragged on canvas — the
     // lock/hide/select/delete-block affordances are still reachable by clicking (not dragging).
-    const draggable = l.kind !== 'anchor' && !l.locked;
+    const draggable = local && l.kind !== 'anchor' && !l.locked;
     return (
-      <div key={l.id}>
+      <div key={`${source.id}:${l.id}`}>
         <div
-          className={`${styles.row} ${l.id === selectedLayer ? styles.rowActive : ''} ${dragId === l.id ? styles.rowDragging : ''} ${l.locked ? styles.rowLocked : ''}`}
+          className={`${styles.row} ${local && l.id === selectedLayer ? styles.rowActive : ''} ${dragId === l.id ? styles.rowDragging : ''} ${l.locked ? styles.rowLocked : ''}`}
           style={depth ? { marginLeft: depth * 16 } : undefined}
           data-layer-row={l.id}
           draggable={draggable}
@@ -668,7 +697,7 @@ export default function AdjustPanel({
           onDragOver={draggable && dragId ? (e) => e.preventDefault() : undefined}
           onDrop={draggable && dragId ? (e) => { e.preventDefault(); reorder(dragId, l.id); setDragId(null); } : undefined}
         >
-          {pickingGroup && groupable(l) && !groupByMember.has(l.id) && (
+          {local && pickingGroup && groupable(l) && !groupByMember.has(l.id) && (
             <input
               type="checkbox"
               aria-label={`Select ${nameOf(l)} for grouping`}
@@ -690,38 +719,52 @@ export default function AdjustPanel({
           )}
           <button
             className={`${styles.name} ${l.hidden ? styles.nameHidden : ''}`}
-            onClick={() => selectLayer(l.id)}
+            onClick={() => {
+              if (local) selectLayer(l.id);
+              else {
+                setPopover(null);
+                setGroupSelection(undefined);
+                onSelectStage(source.id);
+                onSelectLayer(l.id);
+              }
+            }}
           >
             {nameOf(l)}
           </button>
           <button
             className={`${styles.iconBtn} ${l.locked ? styles.iconBtnLocked : styles.iconBtnOff}`}
-            onClick={() => patchLayer(l.id, { locked: !l.locked })}
+            onClick={() => patchRow({ locked: !l.locked })}
             title={l.locked ? 'Unlock — allow canvas click/drag again' : 'Lock — protect from accidental canvas click/drag'}
           >
             <Icon name={l.locked ? 'lock' : 'unlock'} size={14} />
           </button>
           <button
             className={`${styles.iconBtn} ${l.hidden ? styles.iconBtnOff : ''}`}
-            onClick={() => patchLayer(l.id, { hidden: !l.hidden })}
+            onClick={() => patchRow({ hidden: !l.hidden })}
             title={l.hidden ? 'Show' : 'Hide'}
             aria-label={l.hidden ? 'Show' : 'Hide'}
           >
             <Icon name={l.hidden ? 'eye-off' : 'eye'} size={14} />
           </button>
         </div>
-        {hasKids && isOpen && kids!.map((c) => renderRow(c, depth + 1))}
+        {hasKids && isOpen && kids!.map((c) => renderRow(c, depth + 1, source))}
       </div>
     );
   };
 
-  const renderGroup = (group: LayerGroup) => {
-    const members = roots.filter((layer) => groupByMember.get(layer.id)?.id === group.id);
-    const isOpen = !collapsed.has(group.id) || selectedGroup?.id === group.id;
-    const canDrop = draggedLayer && canMoveInto(draggedLayer, group);
+  const renderGroup = (group: LayerGroup, source = def) => {
+    const local = source.id === def.id;
+    const resolved = sectionLayouts.get(source.id)!;
+    const members = resolved.roots.filter((layer) => group.memberIds.includes(layer.id));
+    const isOpen = !collapsed.has(group.id) || (local && selectedGroup?.id === group.id);
+    const canDrop = local && draggedLayer && canMoveInto(draggedLayer, group);
+    const saveSourceGroups = (nextGroups: LayerGroup[]) => onGroupLayoutChange(
+      layoutKey(keyPrefix, breakpoint, source.id),
+      serializeStage(source, breakpoint, resolved.layers, resolved, nextGroups),
+    );
     return (
       <div key={group.id}>
-        <div className={`${styles.row} ${activeGroup?.id === group.id ? styles.rowActive : ''} ${canDrop ? styles.groupDrop : ''}`}
+        <div className={`${styles.row} ${local && activeGroup?.id === group.id ? styles.rowActive : ''} ${canDrop ? styles.groupDrop : ''}`}
           aria-label={`Group ${group.label}`}
           onDragOver={canDrop ? (event) => { event.preventDefault(); event.dataTransfer.dropEffect = 'move'; } : undefined}
           onDrop={canDrop ? (event) => {
@@ -734,24 +777,32 @@ export default function AdjustPanel({
             aria-label={`${isOpen ? 'Collapse' : 'Expand'} ${group.label}`}
             aria-expanded={isOpen}
             onClick={() => {
-              if (selectedGroup?.id === group.id) onSelectLayer(undefined);
+              if (local && selectedGroup?.id === group.id) onSelectLayer(undefined);
               if (!isOpen || !collapsed.has(group.id)) toggleCollapse(group.id);
             }}
           >{isOpen ? '▾' : '▸'}</button>
           {groupMotion
-            ? <button className={styles.name} onClick={() => selectLayer(group.id)}>{group.label}</button>
+            ? <button className={styles.name} onClick={() => {
+                if (local) selectLayer(group.id);
+                else {
+                  setGroupSelection(undefined);
+                  setPopover(null);
+                  onSelectStage(source.id);
+                  onSelectLayer(group.id);
+                }
+              }}>{group.label}</button>
             : <span className={styles.name}>{group.label}</span>}
           <button className={styles.iconBtn} aria-label={`Rename ${group.label}`} onClick={() => setRenameGroupId(group.id)}>
             Rename
           </button>
-          <button className={styles.btn} onClick={() => saveGroups(groups.filter((item) => item.id !== group.id))}>Ungroup</button>
+          <button className={styles.btn} onClick={() => saveSourceGroups(resolved.groups.filter((item) => item.id !== group.id))}>Ungroup</button>
         </div>
         {renameGroupId === group.id && (
           <form className={styles.btnRow} onSubmit={(e) => {
             e.preventDefault();
             const label = String(new FormData(e.currentTarget).get('label') ?? '').trim();
             if (!label) return;
-            if (label !== group.label) saveGroups(groups.map((item) => item.id === group.id ? { ...item, label } : item));
+            if (label !== group.label) saveSourceGroups(resolved.groups.map((item) => item.id === group.id ? { ...item, label } : item));
             setRenameGroupId(undefined);
           }}>
             <input className={styles.select} name="label" aria-label="Group name" defaultValue={group.label} required maxLength={64} />
@@ -759,7 +810,7 @@ export default function AdjustPanel({
             <button className={styles.btn} type="button" onClick={() => setRenameGroupId(undefined)}>Cancel</button>
           </form>
         )}
-        {isOpen && members.map((layer) => renderRow(layer, 1))}
+        {isOpen && members.map((layer) => renderRow(layer, 1, source))}
       </div>
     );
   };
@@ -798,8 +849,10 @@ export default function AdjustPanel({
                   onChange={(x) => updateActiveGroup(activeGroup, { x })} />
                 <Slider label="Group Y" value={activeGroup.y ?? 0} min={-200} max={200} step={0.5}
                   onChange={(y) => updateActiveGroup(activeGroup, { y })} />
+                {anchorGroup && <p className={styles.note}>These page elements support a shared loop alongside their existing entrance and exit.</p>}
                 {!canJoin(activeGroup.memberIds) && <p className={styles.note}>Group animation requires adjacent layers in each stack.</p>}
                 <fieldset disabled={!canJoin(activeGroup.memberIds)} className={styles.groupAnimationControls}>
+                {!anchorGroup && <>
                 <label>
                   Entrance
                   <select className={styles.select} value={activeGroup.anim ?? 'none'}
@@ -816,6 +869,7 @@ export default function AdjustPanel({
                     {ANIM_OUT_OPTIONS.map((type) => <option key={type} value={type}>{ANIM_OUT_LABELS[type]}</option>)}
                   </select>
                 </label>
+                </>}
                 <label>
                   Loop
                   <select className={styles.select} value={activeGroup.animIdle ?? 'none'}
@@ -1156,7 +1210,7 @@ export default function AdjustPanel({
                       and as tall as its content. These give it one, which is how you narrow a
                       single line so it wraps without touching its neighbours. Unlike Scale, the
                       type doesn't shrink with it. */}
-                  {isSlotPiece && (
+                  {(isSlotPiece || current.resizable) && (
                     <>
                       <Slider
                         label="Width"
@@ -1168,7 +1222,7 @@ export default function AdjustPanel({
                       <Slider
                         label="Height"
                         value={current.boxH ?? 0}
-                        min={0} max={16} step={0.25}
+                        min={0} max={current.resizable ? 80 : 16} step={0.25}
                         onChange={(v) => patchLayer(current.id, { boxH: v <= 0 ? undefined : v })}
                         title="Height in em (tracks the piece's own type size) — 0 is auto, as tall as the content"
                       />
@@ -1176,7 +1230,7 @@ export default function AdjustPanel({
                           word too wide for the box, which otherwise overflows it. Hidden for a
                           curved piece: SVG text on a path is one unbreakable run, so neither this
                           nor Width can wrap it — CurvedText shrinks it onto the arc instead. */}
-                      {(!current.textShape || current.textShape === 'flat') && (
+                      {isSlotPiece && (!current.textShape || current.textShape === 'flat') && (
                       <div className={styles.btnRow}>
                         <button
                           className={`${styles.btn} ${current.boxBreakWord ? '' : styles.btnGhost}`}
@@ -1457,7 +1511,7 @@ export default function AdjustPanel({
                 <Slider label="Width" value={current.borderWidth ?? 0} min={0} max={12} step={0.5} onChange={set('borderWidth')} />
                 <div className={styles.control} style={{ gridTemplateColumns: '54px 1fr' }}>
                   <span>Color</span>
-                  <input type="color" value={current.borderColor ?? '#2b2a28'} onChange={(e) => patchLayer(current.id, { borderColor: e.target.value })} />
+                  <input type="color" value={current.borderColor?.slice(0, 7) ?? '#2b2a28'} onChange={(e) => patchLayer(current.id, { borderColor: e.target.value })} />
                 </div>
                 <Slider label="Radius" value={current.radius ?? 0} min={0} max={60} step={1} onChange={set('radius')} />
                 <div className={styles.label}>Size</div>
@@ -1477,6 +1531,26 @@ export default function AdjustPanel({
               </>
             ) : activeDetailTab === 'style' && canStyle ? (
               <>
+                {current.containerStyle && <div className={styles.containerControls}>
+                  <div className={styles.control}>
+                    <span>Background</span>
+                    <input type="color" aria-label="Background color"
+                      value={current.fill?.slice(0, 7) ?? '#fffbf4'}
+                      onChange={(event) => patchLayer(current.id, { fill: event.target.value })} />
+                  </div>
+                  <Slider label="Background opacity" value={current.containerOpacity ?? 27} min={0} max={100} step={1} onChange={(containerOpacity) => patchLayer(current.id, { containerOpacity, fill: current.fill ?? '#fffbf4' })} />
+                  <Slider label="Blur" value={current.containerBlur ?? 20} min={0} max={60} step={1} onChange={set('containerBlur')} />
+                  <Slider label="Border width" value={current.borderWidth ?? 0} min={0} max={12} step={0.5} onChange={set('borderWidth')} />
+                  <div className={styles.control}>
+                    <span>Border color</span>
+                    <input type="color" aria-label="Border color" value={current.borderColor?.slice(0, 7) ?? '#ffffff'}
+                      onChange={(event) => patchLayer(current.id, { borderColor: event.target.value, borderWidth: current.borderWidth ?? 1 })} />
+                  </div>
+                  <Slider label="Corner radius" value={current.radius ?? 0} min={0} max={300} step={1} onChange={set('radius')} />
+                  <Slider label="Padding" value={current.containerPadding ?? 16} min={0} max={80} step={1} onChange={set('containerPadding')} />
+                </div>}
+                {(!current.containerStyle || current.styleable) && <>
+
                 <div className={styles.control} style={{ gridTemplateColumns: '54px 1fr' }}>
                   <span>Font</span>
                   <select
@@ -1560,7 +1634,7 @@ export default function AdjustPanel({
                       <span>Color</span>
                       <input
                         type="color"
-                        value={current.borderColor ?? '#000000'}
+                        value={current.borderColor?.slice(0, 7) ?? '#000000'}
                         onChange={(e) => patchLayer(current.id, { borderColor: e.target.value })}
                       />
                     </div>
@@ -1645,6 +1719,7 @@ export default function AdjustPanel({
                     )}
                   </>
                 )}
+                </>}
               </>
             ) : !isAnchor || isSlotPiece ? (
               <>
@@ -1779,13 +1854,14 @@ export default function AdjustPanel({
 
         <div className={styles.label} style={{ marginTop: hasThemeCard ? undefined : 0 }}>Stage</div>
         <div className={styles.tabs}>
-          {stageIds.map((id) => (
+          {stageIds.filter((id) => !stages[id].editorGroup).map((id) => (
             <button
               key={id}
-              className={`${styles.tab} ${id === selectedStage ? styles.tabActive : ''}`}
+              className={`${styles.tab} ${id === (def.editorGroup ?? selectedStage) ? styles.tabActive : ''}`}
               onClick={() => {
                 // Scrolling the preview to this stage is the parent's job now — the stage lives in
                 // the preview iframe, which this panel (in the parent tree) can't reach directly.
+                setGroupSelection(undefined);
                 onSelectStage(id);
                 onSelectLayer(undefined);
               }}
@@ -1804,9 +1880,18 @@ export default function AdjustPanel({
               <button className={styles.btn} onClick={() => setGroupSelection(undefined)}>Cancel selection</button>
             </>
           ) : (
-            <button className={styles.btn} onClick={() => setGroupSelection({ scope: groupScope, ids: [] })}>Select layers to group</button>
+            <button className={styles.btn} disabled={availableGroupLayers.length < 2}
+              aria-describedby={availableGroupLayers.length < 2 ? 'group-availability' : undefined}
+              onClick={() => setGroupSelection({ scope: groupScope, ids: [] })}>Select layers to group</button>
           )}
         </div>
+        {!pickingGroup && availableGroupLayers.length < 2 && (
+          <p className={styles.note} id="group-availability">
+            Grouping needs two ungrouped layers in {def.label}.
+            {roots.some((layer) => layer.kind === 'anchor' && !groupable(layer)) && ' Some built-in elements use individual controls.'}
+          </p>
+        )}
+        {pickingGroup && editorStageIds.length > 1 && <p className={styles.note}>Grouping in {def.label}. Each section keeps its own group.</p>}
         {pickingGroup && <p className={styles.note} role="status">{selectionIssue ?? `${pickedLayers.length} layers selected.`}</p>}
         {current && selectedGroup && (
           <div className={styles.btnRow}>
@@ -1825,12 +1910,18 @@ export default function AdjustPanel({
           </select>
         )}
         <div className={styles.layers} ref={layersRef}>
-          {roots.map((layer) => {
-            const group = groupByMember.get(layer.id);
-            if (!group) return renderRow(layer, 0);
-            return roots.find((member) => groupByMember.get(member.id)?.id === group.id) === layer
-              ? renderGroup(group)
-              : null;
+          {editorStageIds.map((id) => {
+            const source = stages[id];
+            const resolved = sectionLayouts.get(id)!;
+            const members = new Map(resolved.groups.flatMap((group) => group.memberIds.map((member) => [member, group] as const)));
+            const renderedGroups = new Set<string>();
+            return <div key={id}>{resolved.roots.map((layer) => {
+              const group = members.get(layer.id);
+              if (!group) return renderRow(layer, 0, source);
+              if (renderedGroups.has(group.id)) return null;
+              renderedGroups.add(group.id);
+              return renderGroup(group, source);
+            })}</div>;
           })}
           {draggedLayer && groupByMember.has(draggedLayer.id) && (
             <div className={styles.groupDrop} onDragOver={(event) => { event.preventDefault(); event.dataTransfer.dropEffect = 'move'; }}

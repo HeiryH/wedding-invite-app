@@ -1,13 +1,13 @@
 'use client';
 
-import { useRef, type CSSProperties, type ReactNode } from 'react';
+import { useRef, type HTMLAttributes, type ReactNode } from 'react';
 import type { SectionCode } from '@/lib/templateUtils';
 import type { Breakpoint, EditorHandle } from '@/components/templates/_shared/types';
 import { PropLayer } from './PropLayer';
 import SectionOverlay from './SectionOverlay';
 import styles from './Template12.module.css';
 
-export function StageSection({ code, children, extra, breakpoint, config, editor, panelless, contentStyle, seen }: {
+export function StageSection({ code, children, extra, breakpoint, config, editor, panelless, contentProps, seen }: {
   code: SectionCode;
   children: ReactNode;
   extra?: ReactNode;
@@ -16,7 +16,7 @@ export function StageSection({ code, children, extra, breakpoint, config, editor
   editor?: EditorHandle;
   panelless?: boolean;
   /** Group-layer transform/visibility applied to the complete editable content block. */
-  contentStyle?: CSSProperties;
+  contentProps?: HTMLAttributes<HTMLDivElement>;
   /** Shared reveal state; starts false on reload so entrance animation has a painted start. */
   seen: boolean;
 }) {
@@ -26,7 +26,7 @@ export function StageSection({ code, children, extra, breakpoint, config, editor
     <section ref={sectionRef} id={code} data-stage={code} data-seen={seen} className={styles.section}>
       <PropLayer section={code} breakpoint={breakpoint} config={config} editor={editor} />
       <SectionOverlay stageId={code} breakpoint={breakpoint} config={config} editor={editor} />
-      <div className={panelless ? styles.flowZone : styles.panel} data-depth={0.22} style={contentStyle}>{children}</div>
+      <div className={panelless ? styles.flowZone : styles.panel} data-depth={0.22} {...contentProps}>{children}</div>
       {extra}
     </section>
   );

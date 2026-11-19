@@ -104,6 +104,11 @@ export type StageId = string;
 export type SlotId = string;
 
 export interface Layer {
+  /** Opt-in for top-level responsive elements rendered by the Classic anchor hook. */
+  groupableAnchor?: boolean;
+  /** Group movement in invitation-frame units, independent of the element's own nudge. */
+  groupOffsetX?: number;
+  groupOffsetY?: number;
   /** Stable within a stage. Overrides merge by this, so never renumber existing ids. */
   id: string;
   kind: LayerKind;
@@ -180,10 +185,12 @@ export interface Layer {
   accentColor?: string;
   /** kind 'slot' only. Minimum height of the rendered form/content container in px. */
   containerMinHeight?: number;
-  /** kind 'slot' only. Inner padding of the rendered form/content container in px. */
+  /** Editable container. Inner padding of the rendered form/content container in px. */
   containerPadding?: number;
   /** Background alpha as a percentage. An omitted value inherits the template surface. */
   containerOpacity?: number;
+  /** Backdrop blur in pixels for an editable DOM container. */
+  containerBlur?: number;
   /** kind 'slot' only. Space between the block's own stacked pieces (title/prompt/button/…), in
    *  `em` of the block's base size so it tracks Text Size. A composite slot reads it as
    *  `--slot-gap`; a single-element slot has nothing to space and ignores it. */
@@ -415,6 +422,10 @@ export interface Layer {
    * per-element config styling. Read via `useAnchors`' `sx()`.
    */
   styleable?: boolean;
+  /** Plain DOM anchor supports a responsive width and an optional height in em. */
+  resizable?: boolean;
+  /** Plain DOM anchor exposes its painted container through the Style controls. */
+  containerStyle?: boolean;
   /**
    * Structural (never persisted), kind 'anchor' only: this anchor's call site wraps its content
    * with the idle-animation-aware nested element (`data-seen` + `data-sl-idle`), so the Adjust
@@ -429,6 +440,8 @@ export interface Layer {
 
 export interface StageDef {
   id: StageId;
+  /** Related physical sections share one Adjust tab while retaining their storage keys. */
+  editorGroup?: string;
   /** Nav/Adjust-panel label. */
   label: string;
   /** Background image path (relative to the asset root). Empty ⇒ no background layer. */
@@ -587,6 +600,8 @@ export interface EditorHandle {
    * this is a playhead through one world rather than selection inside one discrete stage. */
   cinematic?: {
     effectPose?: import('./cinematic/direction').CinematicEffectPose;
+    assetPoseEdit?: import('./cinematic/assetKeyframes').AssetPoseEdit;
+    fontPreview?: { layerId: string; fontFamily: string };
     progress: number;
     beatId?: string;
     mode: 'scene' | 'camera-compose' | 'camera-beat';

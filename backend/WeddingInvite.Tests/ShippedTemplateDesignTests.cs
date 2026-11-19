@@ -128,6 +128,70 @@ public class ShippedTemplateDesignTests
         finally { if (File.Exists(path)) File.Delete(path); }
     }
 
+    [Fact]
+    public async Task Studio_export_and_design_import_round_trip_breakpoint_keyframes()
+    {
+        using var source = new TestDb();
+        using var destination = new TestDb();
+        const int templateId = 15;
+        const string key = "t15.layout.cinematic-project";
+        foreach (var db in new[] { source, destination })
+        {
+            db.Context.Templates.Add(new Template {
+                TemplateId = templateId, TemplateName = "Painted Promise", TemplateCode = "painted-promise",
+                ComponentPath = "Template15", Tier = "PRO", IsPremium = true
+            });
+            await db.Context.SaveChangesAsync();
+        }
+        object World(int count) => new { layers = new[] { new {
+            id = "rsvp-letter",
+            keyframes = Enumerable.Range(0, count).Select(index => new {
+                id = $"point-{index}", at = index / (count - 1d), easing = "linear",
+                pose = new { x = index, y = -index, scale = 1.25, rotate = 8, frame = 1, paper = 0.5, anchor = "table" }
+            })
+        } } };
+        var document = JsonSerializer.Serialize(new { version = 1, layers = new { mobile = World(45), desktop = World(2) } });
+        var config = new Dictionary<string, string>();
+        var offset = 0;
+        var chunks = 0;
+        while (offset < document.Length)
+        {
+            var length = Math.Min(3500, document.Length - offset);
+            config[$"{key}.{chunks++}"] = document.Substring(offset, length);
+            offset += length;
+        }
+        Assert.True(chunks > 1);
+        config[key] = JsonSerializer.Serialize(new { version = 1, chunks, length = document.Length });
+        var sourceConfig = Config(source, new());
+        var studio = new TemplateStudioService(source.Context, sourceConfig);
+        var draft = await studio.SaveAsync(templateId, new(0, config, JsonSerializer.SerializeToElement(new { })));
+        var published = await studio.PublishAsync(templateId, draft.Version);
+        var sourceBundles = new TemplateDesignService(new TemplateRepository(source.Context), new TemplateConfigDefaultRepository(source.Context), sourceConfig);
+        var exporter = new TemplateStudioExportService(source.Context, studio, sourceConfig, sourceBundles);
+        var archive = await exporter.ExportAsync(templateId, published.Version);
+
+        var destinationDefaults = new TemplateConfigDefaultRepository(destination.Context);
+        var importer = new TemplateDesignService(new TemplateRepository(destination.Context), destinationDefaults, Config(destination, new()));
+        var result = await importer.ImportAsync(new MemoryStream(archive), false);
+        Assert.Single(result.Applied);
+        var saved = await destinationDefaults.GetByTemplateIdAsync(templateId);
+        using var manifest = JsonDocument.Parse(saved[key]);
+        var content = string.Concat(Enumerable.Range(0, manifest.RootElement.GetProperty("chunks").GetInt32())
+            .Select(index => saved[$"{key}.{index}"]));
+        Assert.Equal(content.Length, manifest.RootElement.GetProperty("length").GetInt32());
+        using var expected = JsonDocument.Parse(document);
+        using var imported = JsonDocument.Parse(content);
+        Assert.True(JsonElement.DeepEquals(expected.RootElement, imported.RootElement));
+        var layers = imported.RootElement.GetProperty("layers");
+        foreach (var (breakpoint, count) in new[] { ("mobile", 45), ("desktop", 2) })
+        {
+            var points = layers.GetProperty(breakpoint).GetProperty("layers")[0].GetProperty("keyframes");
+            Assert.Equal(count, points.GetArrayLength());
+            Assert.Equal(1, points[count - 1].GetProperty("at").GetDouble());
+            Assert.Equal("table", points[0].GetProperty("pose").GetProperty("anchor").GetString());
+        }
+    }
+
     private class AssetStore(Dictionary<string, string> config, string url, byte[] data) : ITemplateShippedDesignStore
     {
         public Task<Dictionary<string, string>> GetAsync(int id) => Task.FromResult(new Dictionary<string, string>(config));

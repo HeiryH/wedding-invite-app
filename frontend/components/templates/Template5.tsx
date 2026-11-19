@@ -13,7 +13,9 @@ import { useGuestSubmission } from '@/components/templates/_shared/guest/useGues
 import { guestLimit, normalizeRsvp, validatedPhoto } from '@/components/templates/_shared/guest/rules';
 import type { TemplateRsvpSubmission, PhotoUploadSubmission, TemplateWishSubmission } from '@/components/templates/guestContracts';
 
-import { Fragment, useContext, useState, useEffect, useMemo, useRef, type CSSProperties, type ReactNode } from 'react';
+import TemplateNav from './_shared/nav/TemplateNav';
+import { useScrollSection } from './_shared/nav/useScrollSection';
+import { Fragment, useContext, useState, useEffect, useMemo, useRef, type ReactNode } from 'react';
 import { useCountdownToDate as useCountdown } from './_shared/hooks/useCountdownToDate';
 import { SeatingPreviewContext } from './_shared/slots/preview';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -58,10 +60,10 @@ interface RSVPModalProps {
   seatingEnabled: boolean;
   tables: SeatingTable[];
   t: (key: string, fallback: string) => string;
-  subtitleStyle: CSSProperties;
+  subtitleProps: ReturnType<ReturnType<typeof useAnchors>['anchorProps']>;
 }
 
-function RSVPModal({ wedding, onRSVP, onClose, seatingEnabled, tables, t, subtitleStyle }: RSVPModalProps) {
+function RSVPModal({ wedding, onRSVP, onClose, seatingEnabled, tables, t, subtitleProps }: RSVPModalProps) {
   const {
     step: rsvpStep,
     setStep: setRsvpStep,
@@ -151,7 +153,7 @@ function RSVPModal({ wedding, onRSVP, onClose, seatingEnabled, tables, t, subtit
           <div className={styles.modalHeader}>
             <div>
               <h2 className={styles.modalTitle}>RSVP</h2>
-              <p className={styles.modalSubtitle} style={subtitleStyle}>
+              <p className={styles.modalSubtitle} {...subtitleProps}>
                 {t('rsvp.subtitle', "We'd love to celebrate with you")}
               </p>
             </div>
@@ -400,7 +402,7 @@ export default function Template5({
   const overlayBreakpoint: Breakpoint = useBreakpoint(editor?.enabled ? editor.breakpoint : undefined);
   const overlayProps = { breakpoint: overlayBreakpoint, config: customConfig, editor };
   // `a(stageId, elementId, baseStyle?)` merges an anchor nudge onto an existing DOM element.
-  const { a, tx, sx, ax } = useAnchors(customConfig, overlayBreakpoint, editor);
+  const { anchorProps, tx, sx, ax, cx } = useAnchors(customConfig, overlayBreakpoint, editor);
 
   const brideFirst = t('general.brideFirst', 'true') !== 'false';
   const firstName  = brideFirst ? wedding.brideName  : wedding.groomName;
@@ -428,7 +430,6 @@ export default function Template5({
   const previewSeating = useContext(SeatingPreviewContext);
   const showRsvp = rsvpOpen || previewRsvp || Boolean(previewSeating);
   const [envelopeOpen, setEnvelopeOpen] = useState(false);
-  const [activeNavSection, setActiveNavSection] = useState<string>('welcome');
 
   const [wishData, setWishData] = useState({ guestName: '', message: '' });
   const [wishSide, setWishSide] = useState<'Bride' | 'Groom'>('Bride');
@@ -458,6 +459,7 @@ export default function Template5({
   const ceremonyRef = useRef<HTMLElement>(null);
   const wishesRef = useRef<HTMLElement>(null);
   const photosRef = useRef<HTMLElement>(null);
+  const itineraryRef = useRef<HTMLElement>(null);
 
   const weddingDate = new Date(wedding.weddingDate);
   const countdown = useCountdown(weddingDate);
@@ -502,14 +504,9 @@ export default function Template5({
   const secondColor  = brideFirst ? groomColor  : brideColor;
   const secondShadow = brideFirst ? groomShadow : brideShadow;
 
-const NAV_EMOJIS: Record<string, string> = {
-    welcome: '💍',
-    ceremony: '🗓️',
-    rsvp: '✉️',
-    wishes: '✨',
-    photos: '📸',
+  const navigationIcons: Record<string, string> = {
+    welcome: '💍', walimah: '🗓️', itinerary: '🕒', rsvp: '✉️', wishes: '✨', photobooth: '📸',
   };
-
   const rawOrder = t('section.order', 'welcome,walimah,itinerary,rsvp,wishes,photobooth');
   const hasItinerary = itinerary.length > 0;
   const sectionOrder = useMemo(() => resolveSectionOrder(rawOrder, true, hasItinerary, photoBoothEnabled),
@@ -520,8 +517,10 @@ const NAV_EMOJIS: Record<string, string> = {
     rsvp: { id: 'rsvp', label: t('nav.rsvp', 'RSVP'), ref: envelopeSectionRef },
     wishes: { id: 'wishes', label: t('nav.wishes', 'Wishes'), ref: wishesRef },
     photobooth: { id: 'photos', label: t('nav.photos', 'Photos'), ref: photosRef },
+    itinerary: { id: 'itinerary', label: 'Programme', ref: itineraryRef },
   };
-  const navItems = sectionOrder.flatMap((code) => code === 'itinerary' ? [] : [navBySection[code]]);
+  const navItems = sectionOrder.map((code) => ({ ...navBySection[code], code }));
+  const activeNavSection = useScrollSection({ sectionIds: navItems.map((item) => item.id) });
 
   const scrollToSection = (ref: React.RefObject<HTMLElement | HTMLDivElement | null>, id?: string) => {
     if (id === 'rsvp' && envelopeWrapperRef.current) {
@@ -533,31 +532,6 @@ const NAV_EMOJIS: Record<string, string> = {
     }
     ref.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
-
-  useEffect(() => {
-    const refs = [
-      { id: 'welcome', ref: welcomeRef },
-      { id: 'ceremony', ref: ceremonyRef },
-      { id: 'rsvp', ref: envelopeSectionRef },
-      { id: 'wishes', ref: wishesRef },
-      ...(photoBoothEnabled ? [{ id: 'photos', ref: photosRef }] : []),
-    ];
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            const matched = refs.find((r) => r.ref.current === entry.target);
-            if (matched) setActiveNavSection(matched.id);
-          }
-        });
-      },
-      { threshold: 0.4 }
-    );
-
-    refs.forEach(({ ref }) => { if (ref.current) observer.observe(ref.current); });
-    return () => observer.disconnect();
-  }, [photoBoothEnabled, sectionOrder]);
 
   // The envelope's scroll-scrub + chromakey effect (GSAP ScrollTrigger + canvas) lives in the
   // shared, template-neutral ScrollVideoLayer — see t5Stages.ts's `envelope` stage for why this
@@ -680,20 +654,23 @@ const NAV_EMOJIS: Record<string, string> = {
           animate={{ opacity: 1, letterSpacing: '0.25em' }}
           transition={{ delay: 0.3, duration: 1 }}
           className={styles.inviteLabel}
+          {...anchorProps('welcome', 'badge', { ...sx('welcome', 'badge'), ...cx('welcome', 'badge') })}
         >
           You&apos;re invited
         </motion.p>
 
+        <div className={styles.welcomeCardFrame} {...anchorProps('welcome', 'card')}>
         {layout === 'minimal' ? (
           <motion.div
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 1, ease: 'easeOut' }}
             className={styles.invitationContentMinimal}
+            style={cx('welcome', 'card')}
           >
             <p className={styles.minimalHeading}
-              style={a('welcome', 'heading', headingStyle)}>{heading}</p>
-            <div style={a('welcome', 'firstName')} data-seen="true">
+              {...anchorProps('welcome', 'heading', headingStyle)}>{heading}</p>
+            <div {...anchorProps('welcome', 'firstName')} data-seen="true">
               <motion.h1
                 initial={{ opacity: 0, y: 16 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -707,13 +684,13 @@ const NAV_EMOJIS: Record<string, string> = {
             <div className={styles.minimalRule} />
             <p
               className={styles.minimalAmpersand}
-              style={{ color: ampersandColor || undefined, ...sx('welcome', 'connector') }}
+              {...anchorProps('welcome', 'connector', { color: ampersandColor || undefined, ...sx('welcome', 'connector') })}
               data-seen="true"
             >
               <span {...ax('welcome', 'connector')}>{tx('welcome', 'connector', 'and')}</span>
             </p>
             <div className={styles.minimalRule} />
-            <div style={a('welcome', 'secondName')} data-seen="true">
+            <div {...anchorProps('welcome', 'secondName')} data-seen="true">
               <motion.h1
                 initial={{ opacity: 0, y: 16 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -729,10 +706,11 @@ const NAV_EMOJIS: Record<string, string> = {
               animate={{ opacity: 1 }}
               transition={{ delay: 0.7, duration: 0.8 }}
               className={styles.minimalDate}
+              {...anchorProps('welcome', 'date', sx('welcome', 'date'))}
             >
               {formatEventDate(weddingDate, 'en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}
             </motion.p>
-            <div className={styles.scrollCue}>
+            <div className={styles.scrollCue} {...anchorProps('welcome', 'scroll', sx('welcome', 'scroll'))}>
               <span>scroll</span>
               <span className={styles.scrollCueArrow}>↓</span>
             </div>
@@ -743,7 +721,9 @@ const NAV_EMOJIS: Record<string, string> = {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 1, ease: 'easeOut' }}
             className={styles.invitationContentOrnate}
+            style={cx('welcome', 'card')}
           >
+            <div className={styles.welcomeHeadingFrame} {...anchorProps('welcome', 'heading')}>
             <motion.svg viewBox={`0 ${vbTop} 500 ${vbH}`} width="100%" style={{ maxWidth: 500, overflow: 'visible' }}>
               <defs>
                 <filter id="arc-bloom-o" x="-15%" y="-50%" width="130%" height="200%">
@@ -763,13 +743,14 @@ const NAV_EMOJIS: Record<string, string> = {
               <path d={arcPath} fill="none" stroke="rgba(255,253,248,0.30)" strokeWidth="24" strokeLinecap="round" />
               <text fill={headingStyle.color || headingColor || 'rgba(255,255,255,0.9)'}
                 filter={headingShadow !== 'none' ? 'url(#text-shadow-o)' : undefined}
-                style={a('welcome', 'heading', {
+                style={{
                   fontFamily: 'PlayfairDisplay, serif', fontSize: '1.75rem', letterSpacing: '0.3em',
                   transformBox: 'fill-box', transformOrigin: 'center', ...headingStyle,
-                })}>
+                }}>
                 <textPath href="#path-o" startOffset="50%" textAnchor="middle">{heading}</textPath>
               </text>
             </motion.svg>
+            </div>
 
             <div className={styles.ornateFlourish}>
               <div className={styles.ornateLine} />
@@ -779,20 +760,22 @@ const NAV_EMOJIS: Record<string, string> = {
               <div className={styles.ornateLine} />
             </div>
 
-            <div style={a('welcome', 'firstName')} data-seen="true">
+            <div {...anchorProps('welcome', 'firstName')} data-seen="true">
               <motion.h1 initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.2, duration: 0.9 }} className={styles.ornateName}
                 style={{ color: firstColor || undefined, textShadow: firstShadow || undefined, ...sx('welcome', 'firstName') }}>
                 <span {...ax('welcome', 'firstName')}>{firstName}</span>
               </motion.h1>
             </div>
+            <div {...anchorProps('welcome', 'connector')} data-seen="true">
             <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }}
               transition={{ delay: 0.5, duration: 0.8 }} className={styles.ornateAmpersand}
               style={{ color: ampersandColor || undefined, ...sx('welcome', 'connector') }}
               data-seen="true">
               <span {...ax('welcome', 'connector')}>{tx('welcome', 'connector', '&')}</span>
             </motion.p>
-            <div style={a('welcome', 'secondName')} data-seen="true">
+            </div>
+            <div {...anchorProps('welcome', 'secondName')} data-seen="true">
               <motion.h1 initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.4, duration: 0.9 }} className={styles.ornateName}
                 style={{ color: secondColor || undefined, textShadow: secondShadow || undefined, ...sx('welcome', 'secondName') }}>
@@ -808,6 +791,7 @@ const NAV_EMOJIS: Record<string, string> = {
               <div className={styles.ornateLine} />
             </div>
 
+            <div {...anchorProps('welcome', 'date')} className={styles.welcomeDateFrame}>
             <motion.svg viewBox="0 0 500 72" width="100%"
               initial={{ opacity: 0 }} animate={{ opacity: 1 }}
               transition={{ delay: 0.7, duration: 0.8 }} style={{ maxWidth: 400, overflow: 'visible' }}>
@@ -823,15 +807,16 @@ const NAV_EMOJIS: Record<string, string> = {
               <path id="dateCurve-o" d="M 80,0 A 250,250 0 0,0 420,0" fill="transparent" />
               <path d="M 80,0 A 250,250 0 0,0 420,0" fill="none" stroke="rgba(255,251,244,0.15)" strokeWidth="40" strokeLinecap="round" />
               <path d="M 80,0 A 250,250 0 0,0 420,0" fill="none" stroke="rgba(255,253,248,0.30)" strokeWidth="28" strokeLinecap="round" />
-              <text fill="rgba(255,255,255,0.9)" filter="url(#date-text-shadow-o)"
-                style={{ fontFamily: 'PlayfairDisplay, serif', fontSize: '1.75em', letterSpacing: '0.25em' }}>
+              <text fill={sx('welcome', 'date').color || 'rgba(255,255,255,0.9)'} filter="url(#date-text-shadow-o)"
+                style={{ fontFamily: 'PlayfairDisplay, serif', fontSize: '1.75em', letterSpacing: '0.25em', ...sx('welcome', 'date') }}>
                 <textPath href="#dateCurve-o" startOffset="50%" textAnchor="middle">
                   {formatEventDate(weddingDate, 'en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}
                 </textPath>
               </text>
             </motion.svg>
+            </div>
 
-            <div className={styles.scrollCue}>
+            <div className={styles.scrollCue} {...anchorProps('welcome', 'scroll', sx('welcome', 'scroll'))}>
               <span>scroll</span>
               <span className={styles.scrollCueArrow}>↓</span>
             </div>
@@ -843,7 +828,9 @@ const NAV_EMOJIS: Record<string, string> = {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 1, ease: 'easeOut' }}
             className={styles.invitationContent}
+            style={cx('welcome', 'card')}
           >
+            <div className={styles.welcomeHeadingFrame} {...anchorProps('welcome', 'heading')}>
             <motion.svg viewBox={`0 ${vbTop} 500 ${vbH}`} width="100%" style={{ maxWidth: 500, overflow: 'visible', transform: 'translateY(20px)' }}>
               <defs>
                 <filter id="arc-bloom" x="-15%" y="-50%" width="130%" height="200%">
@@ -875,18 +862,19 @@ const NAV_EMOJIS: Record<string, string> = {
               <text
                 fill={headingStyle.color || headingColor || 'rgba(255,255,255,0.9)'}
                 filter={headingShadow !== 'none' ? 'url(#text-shadow)' : undefined}
-                style={a('welcome', 'heading', {
+                style={{
                   fontFamily: 'PlayfairDisplay, serif', fontSize: '2rem', letterSpacing: '0.3em',
                   transformBox: 'fill-box', transformOrigin: 'center', ...headingStyle,
-                })}
+                }}
               >
                 <textPath href="#path" startOffset="50%" textAnchor="middle">
                   {heading}
                 </textPath>
               </text>
             </motion.svg>
+            </div>
 
-            <div style={a('welcome', 'firstName')} data-seen="true">
+            <div {...anchorProps('welcome', 'firstName')} data-seen="true">
               <motion.h1
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -898,6 +886,7 @@ const NAV_EMOJIS: Record<string, string> = {
               </motion.h1>
             </div>
 
+            <div {...anchorProps('welcome', 'connector')} data-seen="true">
             <motion.p
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -908,8 +897,9 @@ const NAV_EMOJIS: Record<string, string> = {
             >
               <span {...ax('welcome', 'connector')}>{tx('welcome', 'connector', '&')}</span>
             </motion.p>
+            </div>
 
-            <div style={a('welcome', 'secondName')} data-seen="true">
+            <div {...anchorProps('welcome', 'secondName')} data-seen="true">
               <motion.h1
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -921,6 +911,7 @@ const NAV_EMOJIS: Record<string, string> = {
               </motion.h1>
             </div>
 
+            <div {...anchorProps('welcome', 'date')} className={styles.welcomeDateFrame}>
             <motion.svg
               viewBox="0 0 500 72"
               width="100%"
@@ -950,38 +941,40 @@ const NAV_EMOJIS: Record<string, string> = {
                 fill="none" stroke="rgba(255,253,248,0.30)"
                 strokeWidth="28" strokeLinecap="round" /> */}
               <text
-                fill="rgba(255,255,255,0.9)"
+                fill={sx('welcome', 'date').color || 'rgba(255,255,255,0.9)'}
                 filter="url(#date-text-shadow)"
-                style={{ fontFamily: 'PlayfairDisplay, serif', fontSize: '2em', letterSpacing: '0.25em' }}
+                style={{ fontFamily: 'PlayfairDisplay, serif', fontSize: '2em', letterSpacing: '0.25em', ...sx('welcome', 'date') }}
               >
                 <textPath href="#dateCurve" startOffset="50%" textAnchor="middle">
                   {formatEventDate(weddingDate, 'en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}
                 </textPath>
               </text>
             </motion.svg>
+            </div>
 
-            <div className={styles.scrollCue}>
+            <div className={styles.scrollCue} {...anchorProps('welcome', 'scroll', sx('welcome', 'scroll'))}>
               <span>scroll</span>
               <span className={styles.scrollCueArrow}>↓</span>
             </div>
           </motion.div>
         )}
+        </div>
       </section>
 
       {/* ── Countdown Timer ──────────────────────────────────────────── */}
       <section id="countdown" className={styles.countdownSection}>
         <SectionOverlay stageId="countdown" {...overlayProps} />
-        <p className={styles.countdownLabel} style={a('countdown', 'label', { color: cdLabelColor || undefined, ...sx('countdown', 'label') })}>
+        <p className={styles.countdownLabel} {...anchorProps('countdown', 'label', { color: cdLabelColor || undefined, ...sx('countdown', 'label') })}>
           {t('invite.countdown_prefix', 'Counting down to our special day')}
         </p>
-        <div className={styles.countdownGrid} style={a('countdown', 'grid')}>
+        <div className={styles.countdownGrid} {...anchorProps('countdown', 'grid')}>
           {[
             { val: countdown.days,    label: 'Days',  anchor: 'blk-days' },
             { val: countdown.hours,   label: 'Hours', anchor: 'blk-hours' },
             { val: countdown.minutes, label: 'Min',   anchor: 'blk-min' },
             { val: countdown.seconds, label: 'Sec',   anchor: 'blk-sec' },
           ].map(({ val, label, anchor }) => (
-            <div key={label} className={styles.countdownBlock} style={a('countdown', anchor)}>
+            <div key={label} className={styles.countdownBlock} {...anchorProps('countdown', anchor)}>
               <span className={styles.countdownNumber} style={{ color: cdNumColor || undefined, ...sx('countdown', 'grid') }}>
                 {String(val).padStart(2, '0')}
               </span>
@@ -995,19 +988,19 @@ const NAV_EMOJIS: Record<string, string> = {
     walimah: (
       <section ref={ceremonyRef} id="ceremony" className={styles.sectionCeremony}>
         <SectionOverlay stageId="ceremony" {...overlayProps} />
-        <p className={styles.ceremonyTitle} style={a('ceremony', 'title', { color: cerTitleColor || undefined, textShadow: cerTitleShadow || undefined, ...sx('ceremony', 'title') })}>{t('walimah.title', 'Walimatul Urus')}</p>
+        <p className={styles.ceremonyTitle} {...anchorProps('ceremony', 'title', { color: cerTitleColor || undefined, textShadow: cerTitleShadow || undefined, ...sx('ceremony', 'title') })}>{t('walimah.title', 'Walimatul Urus')}</p>
 
         {/* Glassmorphism card: walimah body + couple names */}
-        <div className={styles.ceremonyCard} style={a('ceremony', 'card')}>
+        <div className={styles.ceremonyCard} {...anchorProps('ceremony', 'card', cx('ceremony', 'card'))}>
           {customConfig?.['walimah.body'] && (
             <div
               className={styles.walimahBody}
-              style={a('ceremony', 'body', { color: walimahBodyColor || undefined, ...sx('ceremony', 'body') })}
+              {...anchorProps('ceremony', 'body', { color: walimahBodyColor || undefined, ...sx('ceremony', 'body') })}
               dangerouslySetInnerHTML={{ __html: customConfig['walimah.body'] }}
             />
           )}
           {(wedding.brideName || wedding.groomName) && (
-            <p className={styles.ceremonyCoupleNames} style={a('ceremony', 'names', { color: cerNamesColor || undefined, textShadow: cerNamesShadow || undefined, ...sx('ceremony', 'names') })}>
+            <p className={styles.ceremonyCoupleNames} {...anchorProps('ceremony', 'names', { color: cerNamesColor || undefined, textShadow: cerNamesShadow || undefined, ...sx('ceremony', 'names') })}>
               {firstName} <br /> &amp; <br /> {secondName}
             </p>
           )}
@@ -1025,7 +1018,7 @@ const NAV_EMOJIS: Record<string, string> = {
             onClick={() => showAddToCalendar && setCalendarOpen(true)}
             role={showAddToCalendar ? 'button' : undefined}
             tabIndex={showAddToCalendar ? 0 : undefined}
-            style={a('ceremony', 'date')}
+            {...anchorProps('ceremony', 'date', cx('ceremony', 'date'))}
             data-seen="true"
           >
             <p className={styles.dateText} style={{ color: dateColor || undefined, ...sx('ceremony', 'date') }}>
@@ -1044,7 +1037,7 @@ const NAV_EMOJIS: Record<string, string> = {
             onClick={() => showVenueMap && setMapExpanded((v) => !v)}
             role={showVenueMap ? 'button' : undefined}
             tabIndex={showVenueMap ? 0 : undefined}
-            style={a('ceremony', 'location')}
+            {...anchorProps('ceremony', 'location', cx('ceremony', 'location'))}
             data-seen="true"
           >
             <p className={styles.locationLabel} style={{ color: venueColor || undefined, ...sx('ceremony', 'location') }}>
@@ -1122,6 +1115,7 @@ const NAV_EMOJIS: Record<string, string> = {
     itinerary: (
           <motion.section
             id="itinerary"
+            ref={itineraryRef}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 1.3, duration: 0.9 }}
@@ -1130,10 +1124,10 @@ const NAV_EMOJIS: Record<string, string> = {
             <SectionOverlay stageId="itinerary" {...overlayProps} />
             <div className={styles.aturcaraCard}>
               <p className={styles.aturcaraTitle}
-                style={a('itinerary', 'title', { color: itTitleColor || undefined, ...sx('itinerary', 'title') })}>
+                {...anchorProps('itinerary', 'title', { color: itTitleColor || undefined, ...sx('itinerary', 'title') })}>
                 {t('itinerary.title', 'Aturcara Majlis')}
               </p>
-              <div style={a('itinerary', 'items')}>
+              <div {...anchorProps('itinerary', 'items')}>
                 {itinerary.map((item) => (
                   <div key={item.itineraryItemId} className={styles.itineraryRow}>
                     <div className={styles.itineraryTime} style={scheduleItemStyle}>{item.detail}</div>
@@ -1213,9 +1207,9 @@ const NAV_EMOJIS: Record<string, string> = {
       <section ref={wishesRef} id="wishes" className={styles.sectionWishes}>
         <SectionOverlay stageId="wishes" {...overlayProps} />
         <div className={styles.sectionContainer}>
-          <div className={styles.sectionHeader} style={a('wishes', 'header')}>
+          <div className={styles.sectionHeader} {...anchorProps('wishes', 'header')}>
             <h2 className={styles.sectionHeading} style={{ color: secHeadColor || undefined, textShadow: secHeadShadow || undefined, ...sx('wishes', 'header') }}>{t('wish.title', 'Wishes & Blessings')}</h2>
-            <p className={styles.sectionSubheading} style={a('wishes', 'prompt', { color: wishPromptColor || undefined, ...sx('wishes', 'prompt') })}>
+            <p className={styles.sectionSubheading} {...anchorProps('wishes', 'prompt', { color: wishPromptColor || undefined, ...sx('wishes', 'prompt') })}>
               {t('wish.prompt', 'Leave a heartfelt message for the happy couple')}
             </p>
           </div>
@@ -1317,7 +1311,7 @@ const NAV_EMOJIS: Record<string, string> = {
         <section ref={photosRef} id="photos" className={styles.sectionPhotos}>
           <SectionOverlay stageId="photos" {...overlayProps} />
           <div className={styles.sectionContainer}>
-            <div className={styles.sectionHeader} style={a('photos', 'header')}>
+            <div className={styles.sectionHeader} {...anchorProps('photos', 'header')}>
               <h2 className={styles.sectionHeading} style={{ color: secHeadColor || undefined, textShadow: secHeadShadow || undefined, ...sx('photos', 'header') }}>Photo Booth</h2>
               <p className={styles.sectionSubheading}>Share your favourite moments 📸</p>
             </div>
@@ -1544,41 +1538,23 @@ const NAV_EMOJIS: Record<string, string> = {
         } : undefined}
       />
 
-      {/* ── Side Navigation ──────────────────────────────────────────── */}
-      <nav className={styles.sideNav}>
-        <motion.div
-          initial={{ opacity: 0, y: 50 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.6, duration: 0.6, ease: 'easeOut' }}
-          className={styles.sideNavList}
-        >
-          {navItems.map((item) => {
-            const isActive = activeNavSection === item.id;
-            return (
-              <motion.button
-                key={item.id}
-                onClick={() => scrollToSection(item.ref, item.id)}
-                whileHover={{ scale: 1.06 }}
-                whileTap={{ scale: 0.9 }}
-                className={`${styles.sideNavBtn} ${isActive ? styles.sideNavBtnActive : ''}`}
-              >
-                <span className={styles.sideNavEmoji}>{NAV_EMOJIS[item.id] ?? '•'}</span>
-                <span className={styles.sideNavTooltip}>{item.label}</span>
-                {item.id === 'wishes' && wishes.length > 0 && (
-                  <span className={styles.sideNavBadge} />
-                )}
-              </motion.button>
-            );
-          })}
-        </motion.div>
-      </nav>
+      <TemplateNav
+        className={styles.sideNav}
+        items={navItems.map((item) => ({
+          id: item.code, label: item.label, icon: navigationIcons[item.code],
+          badge: item.code === 'wishes' && wishes.length > 0,
+        }))}
+        active={navItems.find((item) => item.id === activeNavSection)?.code ?? 'welcome'}
+        config={{ 'nav.content': 'icons', ...customConfig }}
+        onNav={(code) => { const item = navBySection[code as SectionCode]; if (item) scrollToSection(item.ref, item.id); }}
+      />
 
       {sectionOrder.map((code) => <Fragment key={code}>{sections[code]}</Fragment>)}
 
       {/* ── Footer ───────────────────────────────────────────────────── */}
       <footer id="footer" className={styles.footer}>
         <SectionOverlay stageId="footer" {...overlayProps} />
-        <p style={a('footer', 'tagline', { color: footerColor || undefined, ...sx('footer', 'tagline') })}>
+        <p {...anchorProps('footer', 'tagline', { color: footerColor || undefined, ...sx('footer', 'tagline') })}>
           {t('footer.tagline', 'Made with love for our special day')}
         </p>
       </footer>
@@ -1630,7 +1606,7 @@ const NAV_EMOJIS: Record<string, string> = {
             seatingEnabled={seatingEnabled}
             tables={tables}
             t={t}
-            subtitleStyle={a('envelope', 'subtitle', { color: t('rsvp.subtitle.color', '') || undefined, ...sx('envelope', 'subtitle') })}
+            subtitleProps={anchorProps('envelope', 'subtitle', { color: t('rsvp.subtitle.color', '') || undefined, ...sx('envelope', 'subtitle') })}
           />
         )}
       </AnimatePresence>
