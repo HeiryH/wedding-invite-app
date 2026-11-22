@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { captureLivePreview, previewPixelCrop } from './captureLivePreview';
+import { captureLivePreview, convertThumbnailToWebP, previewPixelCrop } from './captureLivePreview';
 
 describe('live preview pixels', () => {
   const rect = { left: 100, top: 100, right: 300, bottom: 450, width: 200, height: 350 };
@@ -30,9 +30,9 @@ describe('live preview pixels', () => {
     HTMLVideoElement.prototype.requestVideoFrameCallback = callback => setTimeout(() => callback(0, {} as VideoFrameCallbackMetadata), 0) as unknown as number;
     HTMLVideoElement.prototype.cancelVideoFrameCallback = id => clearTimeout(id);
     vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue({ drawImage: draw } as unknown as CanvasRenderingContext2D);
-    vi.spyOn(HTMLCanvasElement.prototype, 'toBlob').mockImplementation(callback => {
+    vi.spyOn(HTMLCanvasElement.prototype, 'toBlob').mockImplementation((callback, mimeType) => {
       expect(stop).toHaveBeenCalled();
-      callback(new Blob(['png'], { type: 'image/png' }));
+      callback(new Blob(['capture'], { type: mimeType }));
     });
   });
   afterEach(() => { target.remove(); vi.restoreAllMocks(); vi.unstubAllGlobals(); });
@@ -43,8 +43,29 @@ describe('live preview pixels', () => {
     expect(track.cropTo).toHaveBeenCalledWith('preview-only');
     expect(draw).toHaveBeenCalledWith(expect.any(HTMLVideoElement), 0, 0, 400, 700, 0, 0, 400, 700);
     expect(result.width).toBe(400); expect(result.height).toBe(700);
+    expect(result.blob.type).toBe('image/png');
+    expect(HTMLCanvasElement.prototype.toBlob).toHaveBeenCalledWith(expect.any(Function), 'image/png');
     expect(stop).toHaveBeenCalled();
     expect(document.querySelector('video')).toBeNull();
+  });
+
+  it('encodes the captured PNG at its original dimensions and rejects a PNG fallback', async () => {
+    const png = new Blob(['png'], { type: 'image/png' });
+    const bitmap = { width: 400, height: 700, close: vi.fn() };
+    vi.stubGlobal('createImageBitmap', vi.fn().mockResolvedValue(bitmap));
+    const encoder = vi.mocked(HTMLCanvasElement.prototype.toBlob);
+    encoder.mockImplementationOnce(function (this: HTMLCanvasElement, callback, mimeType) {
+      expect([this.width, this.height]).toEqual([400, 700]);
+      callback(new Blob(['webp'], { type: mimeType }));
+    });
+    await expect(convertThumbnailToWebP(png)).resolves.toMatchObject({ type: 'image/webp' });
+    expect(createImageBitmap).toHaveBeenCalledWith(png);
+    expect(draw).toHaveBeenCalledWith(bitmap, 0, 0);
+    expect(encoder).toHaveBeenCalledWith(expect.any(Function), 'image/webp', 0.94);
+    expect(bitmap.close).toHaveBeenCalledOnce();
+    vi.mocked(HTMLCanvasElement.prototype.toBlob).mockImplementationOnce(callback =>
+      callback(png));
+    await expect(convertThumbnailToWebP(png)).rejects.toThrow('could not encode a WebP thumbnail');
   });
 
   it('converts preview CSS coordinates to native pixels on a verified current-tab fallback', async () => {

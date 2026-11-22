@@ -7,7 +7,7 @@ import { sectionArrangement, moveIndependentSection } from '@/components/templat
 import { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { getUser } from '@/lib/auth';
-import { templateStudioService, type StudioState } from '@/lib/api/templateStudio.service';
+import { StudioDraftSessionExpired, templateStudioService, type StudioState } from '@/lib/api/templateStudio.service';
 import { studioSample } from './studioSample';
 import { LiveThumbnailCapture } from './LiveThumbnailCapture';
 import { downloadBlob, getImageUrl } from '@/lib/utils';
@@ -42,10 +42,11 @@ import AdjustPanel from '@/components/templates/_shared/adjust/AdjustPanel';
 import { TEMPLATE_ENGINES, sectionAnchorId } from '@/components/templates/_shared/registry';
 import { receptionArtworkFrame } from '@/components/templates/Template15-paintedpromise/data/reception';
 import CinematicAdjustPanel from '@/components/templates/_shared/cinematic/CinematicAdjustPanel';
-import { resolveCinematicTrackClip } from '@/components/templates/_shared/cinematic/sequence';
-import { assetClipPosition, assetPoseClip, clampPoseValue, keyframeTime, MAX_ASSET_KEYFRAMES, moveAssetKeyframe, normalizeAssetAnchor, normalizeAssetPose, openAssetKeyframeTime, supportsAssetKeyframes, type AssetAnchorOption, type AssetKeyframe, type AssetPose, type AssetPoseAppearance } from '@/components/templates/_shared/cinematic/assetKeyframes';
-import { compileAssetAnimationTracks, convertAssetAnimations, convertAssetEffect, retimeAssetAnimation, NEUTRAL_ASSET_MOTION } from '@/components/templates/_shared/cinematic/assetAnimations';
+import { assetClipPosition, assetPoseClip, clampPoseValue, keyframeTime, MAX_ASSET_KEYFRAMES, moveAssetKeyframe, normalizeAssetAnchor, normalizeAssetAnchorTransform, normalizeAssetPose, openAssetKeyframeTime, rebaseAssetAnchor, supportsAssetKeyframes, type AssetAnchorOption, type AssetKeyframe, type AssetPose, type AssetPoseAppearance } from '@/components/templates/_shared/cinematic/assetKeyframes';
+import { convertAssetAnimations, convertAssetEffect } from '@/components/templates/_shared/cinematic/assetAnimations';
 import { resolveCinematicDirection, saveCinematicDirection } from '@/components/templates/_shared/cinematic/direction';
+import { deleteEffectTrack, effectTrackUsage } from '@/components/templates/_shared/cinematic/effectTrackEditing';
+import { resolveCinematicScrollStops } from '@/components/templates/_shared/cinematic/scrollStops';
 import { CINEMATIC_ENGINES, type CinematicEditorMode } from '@/components/templates/_shared/cinematic/registry';
 import { cinematicWorldKey, resolveCinematicWorld, serializeCinematicWorld, type CinematicWorldGeometry, type CinematicWorldLayer } from '@/components/templates/_shared/cinematic/world';
 import { cinematicAncestors, cinematicEditorLayers } from '@/components/templates/_shared/cinematic/parts';
@@ -54,7 +55,7 @@ import { cinematicEffectGroup, cinematicGroupAnimationTarget, resolveCinematicSc
 import { editCinematicSceneSets, type SceneSetAction } from '@/components/templates/_shared/cinematic/sceneSetEditing';
 import {
   migrateCinematicConfigToProject, resetCinematicProjectConfig,
-  resolveCinematicProjectConfig, updateCinematicProjectValue,
+  resolveCinematicProjectConfig, updateCinematicProjectValue, writeCinematicProject,
 } from '@/components/templates/_shared/cinematic/project';
 import {
   cinematicVisibilityKey, promoteLegacyCinematicVisibilityTracks,
@@ -884,6 +885,7 @@ export default function CustomizationWorkspace({ masterTemplateId }: { masterTem
   const master = masterTemplateId !== undefined;
   const [studio, setStudio] = useState<StudioState | null>(null);
   const [studioError, setStudioError] = useState('');
+  const [studioSessionExpired, setStudioSessionExpired] = useState(false);
   const [studioNotice, setStudioNotice] = useState('');
   const [studioBusy, setStudioBusy] = useState(false);
   const [captureOpen, setCaptureOpen] = useState(false);
@@ -1008,9 +1010,12 @@ export default function CustomizationWorkspace({ masterTemplateId }: { masterTem
 
   // Stage and Cinematic share this parent shell (preview, undo/save, breakpoints), but remain
   // separate editing models. Stage edits isolated StageDefs; Cinematic directs beats in one world.
+  const cinematicEngine = wedding?.templateId ? CINEMATIC_ENGINES[wedding.templateId] : undefined;
+  const effectTracks = useMemo(() => cinematicEngine
+    ? effectTrackUsage(cinematicEngine, draftConfig, itinerary.length)
+    : undefined, [cinematicEngine, draftConfig, itinerary.length]);
   const layout = useMemo(() => {
     const id = wedding?.templateId;
-    const cinematicEngine = id ? CINEMATIC_ENGINES[id] : undefined;
     if (cinematicEngine) {
       const project = resolveCinematicProjectConfig(cinematicEngine.keyPrefix, draftConfig);
       const sequence = resolveCinematicSequence(
@@ -1069,7 +1074,7 @@ export default function CustomizationWorkspace({ masterTemplateId }: { masterTem
       }
     }
     return null;
-  }, [wedding?.templateId, wedding?.templateStagesJson, sectionOrder, draftConfig, itinerary.length, photoBoothEnabled]);
+  }, [cinematicEngine, wedding?.templateId, wedding?.templateStagesJson, sectionOrder, draftConfig, itinerary.length, photoBoothEnabled]);
 
   const canAdjust = isPro && !!layout;
   const stageIds = layout?.family === 'stage' ? layout.stageIds : [];
@@ -1108,6 +1113,10 @@ export default function CustomizationWorkspace({ masterTemplateId }: { masterTem
   const cinematicTimelineTracks = useMemo(() => layout?.family === 'cinematic'
     ? promoteLegacyCinematicVisibilityTracks(layout.sequence.tracks, cinematicVisibilitySets)
     : [], [layout, cinematicVisibilitySets]);
+  const cinematicScrollStops = useMemo(() => layout?.family === 'cinematic' ? resolveCinematicScrollStops(
+    layout.direction.pacing.stops, layout.direction.interactions, cinematicTimelineTracks, cinematicWorldLayers,
+    layout.sceneSets, previewBreakpoint,
+  ) : [], [layout, cinematicTimelineTracks, cinematicWorldLayers, previewBreakpoint]);
   const canAnimateLayer = (layer: CinematicWorldLayer) => layout?.family === 'cinematic' && layout.keyPrefix === 't15' &&
     supportsAssetKeyframes(layer) && !layer.hidden && !layer.locked &&
     !cinematicAncestors(layer, cinematicWorldLayers).some((parent) => parent.hidden || parent.locked) &&
@@ -1154,13 +1163,10 @@ export default function CustomizationWorkspace({ masterTemplateId }: { masterTem
     const pose = normalizeAssetPose({ ...currentAssetPose, ...patch });
     if (pose) setAssetPoseDraft({ session: assetSession, pose });
   };
-  const cinematicAnimationTracks = useMemo(() => compileAssetAnimationTracks(cinematicWorldLayers, cinematicTimelineTracks), [cinematicWorldLayers, cinematicTimelineTracks]);
   const cinematicDisplayTracks = useMemo(() => {
-    const visible = new Set(cinematicEditorLayers(cinematicWorldLayers).map((layer) => layer.id));
-    return [...cinematicTimelineTracks, ...cinematicAnimationTracks].filter((track) =>
-      (track.target.type !== 'layer' || visible.has(track.target.id)) &&
-      (!track.assetAnimation || visible.has(track.assetAnimation.layerId)));
-  }, [cinematicTimelineTracks, cinematicAnimationTracks, cinematicWorldLayers]);
+    const layerIds = new Set(cinematicEditorLayers(cinematicWorldLayers).map((layer) => layer.id));
+    return cinematicTimelineTracks.filter((track) => track.target.type !== 'layer' || layerIds.has(track.target.id));
+  }, [cinematicTimelineTracks, cinematicWorldLayers]);
   const selectedCinematicAsset = useMemo(() => {
     if (layout?.family !== 'cinematic' || !selectedLayer) return undefined;
     const layer = cinematicWorldLayers.find((candidate) => candidate.id === selectedLayer);
@@ -1330,12 +1336,6 @@ export default function CustomizationWorkspace({ masterTemplateId }: { masterTem
   }, [layout, previewBreakpoint, handleCinematicSequenceChange, handleCinematicLayoutChange]);
 
   const patchCinematicTrack = useCallback((id: string, patch: Partial<CinematicSequenceTrack>) => {
-    const animation = cinematicAnimationTracks.find((track) => track.id === id)?.assetAnimation;
-    if (animation) {
-      if (patch.clip) handleCinematicWorldChange(cinematicWorldLayers.map((layer) => layer.id === animation.layerId
-        ? retimeAssetAnimation(layer, animation.animationId, patch.clip!, cinematicTimelineTracks, cinematicWorldLayers) : layer));
-      return;
-    }
     handleCinematicTracksChange(cinematicTimelineTracks.map((track) => track.id === id ? {
       ...track,
       ...patch,
@@ -1345,17 +1345,10 @@ export default function CustomizationWorkspace({ masterTemplateId }: { masterTem
       exit: patch.exit ? { ...track.exit, ...patch.exit } : track.exit,
       timing: patch.timing ? { ...track.timing, ...patch.timing } as CinematicSequenceTrack['timing'] : track.timing,
     } : track));
-  }, [cinematicAnimationTracks, cinematicWorldLayers, handleCinematicWorldChange, cinematicTimelineTracks, handleCinematicTracksChange]);
+  }, [cinematicTimelineTracks, handleCinematicTracksChange]);
 
   const resetCinematicTrack = useCallback((id: string) => {
     if (!layout || layout.family !== 'cinematic') return;
-    const animation = cinematicAnimationTracks.find((track) => track.id === id)?.assetAnimation;
-    if (animation) {
-      handleCinematicWorldChange(cinematicWorldLayers.map((layer) => layer.id === animation.layerId ? { ...layer,
-        animations: layer.animations?.map((item) => item.id === animation.animationId ? { ...item, ...NEUTRAL_ASSET_MOTION } : item),
-      } : layer));
-      return;
-    }
     const shipped = layout.sequenceDefinition.tracks.find((track) => track.id === id);
     handleCinematicTracksChange(cinematicTimelineTracks.map((track) => {
       if (track.id !== id) return track;
@@ -1368,7 +1361,7 @@ export default function CustomizationWorkspace({ masterTemplateId }: { masterTem
         exit: { kind: 'fade' as const, easing: 'ease-in' as const },
       };
     }));
-  }, [layout, cinematicAnimationTracks, cinematicWorldLayers, handleCinematicWorldChange, cinematicTimelineTracks, handleCinematicTracksChange]);
+  }, [layout, cinematicTimelineTracks, handleCinematicTracksChange]);
 
   const resetCinematicSequence = useCallback(() => {
     if (!layout || layout.family !== 'cinematic') return;
@@ -1598,11 +1591,13 @@ export default function CustomizationWorkspace({ masterTemplateId }: { masterTem
   const seekAsset = (at: number) => {
     if (poseClip) handleCinematicProgressChange(poseClip.start + keyframeTime(at) * (poseClip.end - poseClip.start));
   };
-  const commitAssetKeyframes = (keyframes: AssetKeyframe[] | undefined, breakpoint = previewBreakpoint) => {
+  const commitAssetKeyframes = (keyframes: AssetKeyframe[] | undefined, breakpoint = previewBreakpoint, clearLegacyMoves = false) => {
     if (layout?.family !== 'cinematic' || !activeAsset) return;
+    // Older conversions left the source moves in place, ready to play again once the last keyframe disappeared.
+    const motionPatch = clearLegacyMoves ? { keyframes, animations: [] } : { keyframes };
     if (activeAssetGroup) {
       handleSceneSetAction({ type: 'patch-layer-group', id: activeAssetGroup.set.id, breakpoint,
-        groupId: activeAssetGroup.group.id, patch: { keyframes } });
+        groupId: activeAssetGroup.group.id, patch: motionPatch });
       discardAssetPose();
       return;
     }
@@ -1612,7 +1607,7 @@ export default function CustomizationWorkspace({ masterTemplateId }: { masterTem
     );
     const target = source.find((layer) => layer.id === activeAsset.id);
     if (!target || target.locked || !supportsAssetKeyframes(target)) return;
-    const layers = source.map((layer) => layer === target ? { ...layer, keyframes } : layer);
+    const layers = source.map((layer) => layer === target ? { ...layer, ...motionPatch } : layer);
     const key = cinematicWorldKey(layout.keyPrefix, breakpoint);
     const value = serializeCinematicWorld(layout.world, breakpoint, layers);
     const nextConfig = updateCinematicProjectValue(layout.keyPrefix, draftConfig, key, value);
@@ -1870,7 +1865,12 @@ export default function CustomizationWorkspace({ masterTemplateId }: { masterTem
           anchors: Array.isArray(anchors) ? anchors.flatMap((option) => {
             const id = normalizeAssetAnchor(option?.id);
             return id && typeof option.label === 'string' && Number.isFinite(option.x) && Number.isFinite(option.y)
-              ? [{ id, label: option.label, x: option.x, y: option.y }] : [];
+              ? [{ id, label: option.label, x: option.x, y: option.y,
+                transform: normalizeAssetAnchorTransform(option.transform),
+                aspect: Number.isFinite(option.aspect) && option.aspect > 0 ? option.aspect : undefined,
+                pivotY: Number.isFinite(option.pivotY) ? option.pivotY : undefined,
+                blur: Number.isFinite(option.blur) ? Math.max(0, option.blur) : undefined,
+              }] : [];
           }) : undefined,
         });
         return;
@@ -2051,7 +2051,10 @@ export default function CustomizationWorkspace({ masterTemplateId }: { masterTem
 
   const showStudioError = (error: unknown) => {
     setStudioNotice('');
-    setStudioError((error as { response?: { data?: { message?: string } } })?.response?.data?.message ?? 'Could not complete this action. Please try again.');
+    const expired = error instanceof StudioDraftSessionExpired;
+    setStudioSessionExpired(expired);
+    const response = (error as { response?: { data?: { message?: string; title?: string } } })?.response?.data;
+    setStudioError(expired ? error.message : response?.message ?? response?.title ?? 'Could not complete this action. Please try again.');
   };
 
   const applyMaster = (template: Template, state: StudioState) => {
@@ -2806,7 +2809,9 @@ export default function CustomizationWorkspace({ masterTemplateId }: { masterTem
           disabled={studioBusy || saving} onBusyChange={setCaptureOpen}
           onApplied={() => { setStudioError(''); setStudioNotice('Thumbnail updated. The picker now uses your captured image.'); }} />
         <Button variant="primary" tone="brand" size="sm" disabled={!studio?.version || isDirty || studioBusy || saving || captureOpen} onClick={publishMaster}>Publish master</Button>
-        {(studioError || studioNotice) && <div role={studioError ? 'alert' : 'status'} style={{ width: '100%', color: studioError ? 'var(--danger)' : 'var(--text-muted)', fontSize: 13 }}>{studioError || studioNotice}</div>}
+        {(studioError || studioNotice) && <div role={studioError ? 'alert' : 'status'} style={{ width: '100%', color: studioError ? 'var(--danger)' : 'var(--text-muted)', fontSize: 13 }}>{studioError || studioNotice}{studioError && studioSessionExpired && (
+          <> <a href="/login" target="_blank" rel="noopener noreferrer">Open sign-in</a></>
+        )}</div>}
       </div>}
 
       {/* ── Body: Editor panel | Preview panel ── */}
@@ -2947,6 +2952,11 @@ export default function CustomizationWorkspace({ masterTemplateId }: { masterTem
             progress: cinematicProgress,
             beats: cinematicBeats,
             tracks: cinematicDisplayTracks,
+            scrollStops: cinematicScrollStops,
+            onScrollStopsChange: (stops) => setDraftConfig((previous) => {
+              const { project } = resolveCinematicProjectConfig(layout.keyPrefix, previous);
+              return writeCinematicProject(layout.keyPrefix, previous, { ...project, pacing: { ...project.pacing, stops } });
+            }),
             selectedAsset: selectedCinematicTimelineItem,
             onAnimate: animatableLayer ? () => showAssetAnimator(animatableLayer) : undefined,
             assetKeyframes: activeAsset ? {
@@ -2961,7 +2971,9 @@ export default function CustomizationWorkspace({ masterTemplateId }: { masterTem
               baseAnchorLabel: activeAsset.space === 'world' ? 'World' : 'Viewport',
               pending: Boolean(pendingAssetPose),
               legacyMotion: Boolean(existingAssetMotion),
-              onConvert: existingAssetMotion?.keyframes ? () => commitAssetKeyframes(existingAssetMotion.keyframes) : undefined,
+              hasLegacyMoves: Boolean(activeAsset.animations?.some((move) => move.enabled)),
+              onConvert: existingAssetMotion?.keyframes
+                ? () => commitAssetKeyframes(existingAssetMotion.keyframes, previewBreakpoint, Boolean(activeAsset.animations?.length)) : undefined,
               onSeek: seekAsset, onPatch: patchAssetPose, onCapture: captureAssetKeyframe,
               onDiscard: discardAssetPose, onDone: closeAssetAnimator, onRetime: retimeAssetPoint,
               onAnchor: (anchor) => {
@@ -2970,18 +2982,27 @@ export default function CustomizationWorkspace({ masterTemplateId }: { masterTem
                 const previous = origins?.find((option) => option.id === currentAssetPose.anchor);
                 const next = origins?.find((option) => option.id === anchor);
                 if (anchor && !next) return;
-                patchAssetPose({
-                  anchor,
-                  x: currentAssetPose.x + (previous?.x ?? 0) - (next?.x ?? 0),
-                  y: currentAssetPose.y + (previous?.y ?? 0) - (next?.y ?? 0),
-                });
+                patchAssetPose(rebaseAssetAnchor(currentAssetPose, previous, next, anchor,
+                  currentAssetPose.anchorTransform ? next?.transform : currentAssetPose.anchorTransform));
+              },
+              onFollowAnchorTransform: (follow) => {
+                const anchor = currentAssetPose?.anchor;
+                if (!currentAssetPose || !anchor) return;
+                const frame = currentAssetSample?.anchors?.find((option) => option.id === anchor);
+                if (!frame || (follow && !frame.transform)) return;
+                patchAssetPose(rebaseAssetAnchor(currentAssetPose, frame, frame, anchor, follow ? frame.transform : follow));
               },
               onEasing: (easing) => commitAssetKeyframes(activeAsset.keyframes?.map((point) =>
                 point.id === selectedAssetPoint?.id ? { ...point, easing } : point)),
-              onDelete: () => commitAssetKeyframes(activeAsset.keyframes?.filter((point) => point.id !== selectedAssetPoint?.id)),
+              onDelete: () => {
+                if (!selectedAssetPoint) return;
+                const remaining = activeAsset.keyframes?.filter((point) => point.id !== selectedAssetPoint.id) ?? [];
+                commitAssetKeyframes(remaining, previewBreakpoint, !remaining.length && Boolean(activeAsset.animations?.length));
+              },
               onCopyKeyframe: selectedAssetPoint && activeAssetTrack ? () => setCopiedAssetPoint({ track: activeAssetTrack, point: selectedAssetPoint }) : undefined,
               onPasteKeyframe: copiedPointOnTrack ? () => insertAssetPointCopy(copiedPointOnTrack, poseAt) : undefined,
-              onDuplicate: duplicateAssetPoint, onReset: () => commitAssetKeyframes(undefined),
+              onDuplicate: duplicateAssetPoint,
+              onReset: () => commitAssetKeyframes(undefined, previewBreakpoint, Boolean(activeAsset.animations?.length)),
               onCopy: !activeAssetGroup || canCopyGroupAnimation ? () => commitAssetKeyframes(activeAsset.keyframes, otherAssetBreakpoint) : undefined,
             } : undefined,
             selectedBeat: activeCinematicBeat?.id,
@@ -2991,7 +3012,7 @@ export default function CustomizationWorkspace({ masterTemplateId }: { masterTem
               if (pendingAssetPose) return;
               handleCinematicProgressChange(poseClip ? clampPoseValue(progress, poseClip.start, poseClip.end) : progress);
             },
-            onBeatMove: (id, progress) => {
+            onBeatMove: activeAsset ? undefined : (id, progress) => {
               patchCinematicBeat(id, { at: progress });
               setSelectedCinematicBeat(id);
               setCinematicProgress(progress);
@@ -3001,8 +3022,8 @@ export default function CustomizationWorkspace({ masterTemplateId }: { masterTem
             onTrackSelect: activeAsset ? undefined : (id) => {
               setCinematicTimingSelectionRequest((request) => request + 1);
               setSelectedCinematicTimingTrack(id);
-              setSelectedLayer(cinematicAnimationTracks.find((track) => track.id === id)?.assetAnimation?.layerId ??
-                (layout?.family === 'cinematic' ? layout.direction.effects.find((effect) => effect.trackId === id && effect.target === 'layer')?.targetId : undefined));
+              setSelectedLayer(effectTracks?.has(id) ? undefined :
+                layout.direction.effects.find((effect) => effect.trackId === id && effect.target === 'layer')?.targetId);
               setCinematicMode('scene');
             },
             onClearSelection: activeAsset ? undefined : () => {
@@ -3143,7 +3164,7 @@ export default function CustomizationWorkspace({ masterTemplateId }: { masterTem
                 visibilitySets={cinematicVisibilitySets}
                 tracks={cinematicTimelineTracks}
                 selectedTimingTrack={selectedCinematicTimingTrack}
-                selectedAnimationTrack={cinematicAnimationTracks.some((track) => track.id === selectedCinematicTimingTrack) || layout.direction.effects.some((effect) => effect.trackId === selectedCinematicTimingTrack && effect.target === 'layer')}
+                selectedAnimationTrack={layout.direction.effects.some((effect) => effect.trackId === selectedCinematicTimingTrack && effect.target === 'layer')}
                 timingSelectionRequest={cinematicTimingSelectionRequest}
                 onSelectBeat={(id) => {
                   const beat = cinematicBeats.find((candidate) => candidate.id === id);
@@ -3187,6 +3208,12 @@ export default function CustomizationWorkspace({ masterTemplateId }: { masterTem
                 onCameraChange={patchCinematicCamera}
                 onTimingTrackChange={patchCinematicTrack}
                 onResetTrack={resetCinematicTrack}
+                effectTracks={effectTracks}
+                onDeleteEffectTrack={(id) => {
+                  if (!cinematicEngine) return;
+                  setDraftConfig((previous) => deleteEffectTrack(cinematicEngine, previous, id, itinerary.length));
+                  setSelectedCinematicTimingTrack((current) => current === id ? undefined : current);
+                }}
                 onMakeTimingIndependent={makeCinematicLayerTimingIndependent}
                 onRelinkTiming={relinkCinematicLayerTiming}
                 onCreateTimingSet={createCinematicAssetTimingSet}
@@ -3195,7 +3222,7 @@ export default function CustomizationWorkspace({ masterTemplateId }: { masterTem
                 onDeleteTimingSet={deleteCinematicAssetTimingSet}
                 onSelectTimingTrack={(id) => {
                   setSelectedCinematicTimingTrack(id);
-                  if (id) setSelectedLayer(cinematicAnimationTracks.find((track) => track.id === id)?.assetAnimation?.layerId);
+                  if (id) setSelectedLayer(undefined);
                 }}
                 onCreateBeat={createCinematicBeat}
                 onRenameBeat={(id, label) => patchCinematicBeat(id, { label })}

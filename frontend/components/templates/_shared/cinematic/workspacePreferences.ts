@@ -19,8 +19,8 @@ export function useWorkspacePreference<T>(key: string, initial: T, decode: (valu
   }, [key, ready, value]);
   return [value, setValue, ready] as const;
 }
-export type TimelineFilter = 'all' | 'motion' | 'set' | 'asset' | 'text' | 'effect' | 'interaction';
-const filters: TimelineFilter[] = ['all', 'motion', 'set', 'asset', 'text', 'effect', 'interaction'];
+export type TimelineFilter = 'all' | 'set' | 'asset' | 'text' | 'effect' | 'interaction';
+const filters: TimelineFilter[] = ['all', 'set', 'asset', 'text', 'effect', 'interaction'];
 export interface TimelineControlsPreference { zoom: number; filter: TimelineFilter; collapsedKinds: Exclude<TimelineFilter, 'all'>[]; hiddenTracks: string[]; lockedTracks: string[]; scrollLeft: number; scrollTop: number }
 export const DEFAULT_TIMELINE_CONTROLS: TimelineControlsPreference = { zoom: 1, filter: 'all', collapsedKinds: [], hiddenTracks: [], lockedTracks: [], scrollLeft: 0, scrollTop: 0 };
 const ids = (value: unknown): string[] => Array.isArray(value) ? [...new Set(value.filter((id): id is string => typeof id === 'string' && id.length <= 240))].slice(0, 500) : [];

@@ -29,9 +29,22 @@ export interface CinematicInteraction {
 export interface CinematicAnchor {
   id: string; label: string; target: 'beat' | 'track-start' | 'track-enter' | 'track-end'; targetId: string;
 }
+export const SCROLL_STOP_EASINGS: readonly CinematicEasing[] = ['linear', 'ease-in', 'ease-out', 'ease-in-out'];
+
+export interface CinematicScrollStop {
+  id: string;
+  label: string;
+  at: number;
+  easing: CinematicEasing;
+  durationMs: number;
+  interactionId?: string;
+  visibilityLayerId?: string;
+}
+
 export interface CinematicPacing {
   mobileVh: number; desktopVh: number;
   beats: Record<string, { mobileVh?: number; desktopVh?: number; holdVh?: number }>;
+  stops?: CinematicScrollStop[];
 }
 export interface CinematicMemoryLayout {
   frames: number; maxPhotos: number; columns: number; gap: number; tilt: number;
@@ -103,6 +116,21 @@ export function resolveCinematicDirection(prefix: string, defaults: CinematicDir
   const effectSource = Array.isArray(project.effects.items) ? project.effects.items : defaults.effects;
   const interactionSource = Array.isArray(project.interactions.items) ? project.interactions.items : defaults.interactions;
   const pacing = project.pacing;
+  const stopSource = Array.isArray(pacing.stops) ? pacing.stops : defaults.pacing.stops ?? [];
+  const stopIds = new Set<string>();
+  const stops = stopSource.flatMap((value): CinematicScrollStop[] => {
+    if (!object(value)) return [];
+    const id = text(value.id);
+    if (!id || stopIds.has(id)) return [];
+    stopIds.add(id);
+    return [{
+      id, label: text(value.label, 'Scroll stop'), at: number(value.at, 0, 0, 1),
+      easing: choose(value.easing, SCROLL_STOP_EASINGS, 'ease-out'),
+      durationMs: Math.round(number(value.durationMs, 280, 0, 1000)),
+      ...(typeof value.interactionId === 'string' && value.interactionId ? { interactionId: value.interactionId } : {}),
+      ...(typeof value.visibilityLayerId === 'string' && value.visibilityLayerId ? { visibilityLayerId: value.visibilityLayerId } : {}),
+    }];
+  });
   const theme = project.theme;
   const memory = object(theme.memory) ? theme.memory : defaults.theme.memory;
   const anchors = Array.isArray(project.navigation.items) ? project.navigation.items : defaults.navigation;
@@ -130,7 +158,7 @@ export function resolveCinematicDirection(prefix: string, defaults: CinematicDir
       }
       return [interaction];
     }),
-    pacing: { mobileVh: number(pacing.mobileVh, defaults.pacing.mobileVh, 300, 30000), desktopVh: number(pacing.desktopVh, defaults.pacing.desktopVh, 300, 30000), beats: beatPacing },
+    pacing: { mobileVh: number(pacing.mobileVh, defaults.pacing.mobileVh, 300, 30000), desktopVh: number(pacing.desktopVh, defaults.pacing.desktopVh, 300, 30000), beats: beatPacing, stops },
     navigation: anchors.flatMap((value) => object(value) && /^[a-zA-Z][\w-]{0,79}$/.test(text(value.id)) ? [{
       id: text(value.id), label: text(value.label, text(value.id)),
       target: choose(value.target, ['beat', 'track-start', 'track-enter', 'track-end'], 'beat'), targetId: text(value.targetId),

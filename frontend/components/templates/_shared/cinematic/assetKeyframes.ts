@@ -14,6 +14,8 @@ export interface AssetPose {
   frame?: number;
   paper?: number;
   anchor?: AssetAnchor;
+  anchorTransform?: AssetAnchorTransform | false;
+  anchorBlur?: number;
   textReveal?: TextReveal;
   revealAmount?: number;
   shadowOpacity?: number;
@@ -50,8 +52,22 @@ export function assetAnchorTarget(anchor?: AssetAnchor) {
   return anchor && anchor !== 'table' ? anchor.split(':')[1] : undefined;
 }
 export type AssetAnchorOffset = Pick<AssetPose, 'x' | 'y'>;
-export type AssetAnchorOption = AssetAnchorOffset & { id: AssetAnchor; label: string };
-export type ResolveAssetAnchor = (anchor: AssetAnchor) => AssetAnchorOffset | undefined;
+export type AssetAnchorTransform = Pick<AssetPose, 'scale' | 'rotate'>;
+export type AssetAnchorFrame = AssetAnchorOffset & {
+  transform?: AssetAnchorTransform;
+  aspect?: number;
+  pivotY?: number;
+  blur?: number;
+};
+export type AssetAnchorOption = AssetAnchorFrame & { id: AssetAnchor; label: string };
+export type ResolveAssetAnchor = (anchor: AssetAnchor) => AssetAnchorFrame | undefined;
+type SampledAssetPose = AssetPose & { inheritedBlur?: number };
+
+export function normalizeAssetAnchorTransform(value: unknown): AssetAnchorTransform | undefined {
+  if (!value || typeof value !== 'object') return;
+  const { scale, rotate } = value as AssetAnchorTransform;
+  if (Number.isFinite(scale) && scale >= 1e-6 && scale <= 1e6 && Number.isFinite(rotate)) return { scale, rotate };
+}
 
 export function normalizeAssetAnchor(value: unknown): AssetAnchor | undefined {
   return value === 'table' || (typeof value === 'string' && /^(?:layer:[\w-]{1,120}|point:[\w-]{1,120}:[\w-]{1,80})$/.test(value))
@@ -106,11 +122,13 @@ export function moveAssetKeyframe(points: AssetKeyframe[], id: string, at: numbe
 
 export function normalizeAssetPose(value: unknown): AssetPose | undefined {
   if (!value || typeof value !== 'object') return;
-  const { x, y, scale, rotate, opacity, blur, frame, paper, anchor, textReveal, revealAmount, shadowOpacity, glitch, contactShadow, shadowSoftness } = value as AssetPose;
+  const { x, y, scale, rotate, opacity, blur, frame, paper, anchor, anchorTransform, anchorBlur,
+    textReveal, revealAmount, shadowOpacity, glitch, contactShadow, shadowSoftness } = value as AssetPose;
   if (![x, y, scale, rotate].every(Number.isFinite)) return;
   const burst = normalizeTextGlitch(glitch);
   const perspective = normalizeAssetPerspective((value as AssetPose).perspective);
   const referencedAnchor = normalizeAssetAnchor(anchor);
+  const reference = anchorTransform === false ? false : normalizeAssetAnchorTransform(anchorTransform);
   return {
     x: clampPoseValue(x, -500, 500), y: clampPoseValue(y, -500, 500),
     scale: clampPoseValue(scale, .05, 10), rotate: clampPoseValue(rotate, -3600, 3600),
@@ -126,6 +144,8 @@ export function normalizeAssetPose(value: unknown): AssetPose | undefined {
     ...(Number.isFinite(contactShadow) ? { contactShadow: clampPoseValue(contactShadow!) } : {}),
     ...(Number.isFinite(shadowSoftness) ? { shadowSoftness: clampPoseValue(shadowSoftness!, 0, 16) } : {}),
     ...(referencedAnchor ? { anchor: referencedAnchor } : {}),
+    ...(referencedAnchor && reference !== undefined ? { anchorTransform: reference } : {}),
+    ...(referencedAnchor && Number.isFinite(anchorBlur) ? { anchorBlur: clampPoseValue(anchorBlur!) } : {}),
   };
 }
 
@@ -157,13 +177,47 @@ export function assetClipPosition(progress: number, clip: { start: number; end: 
   return clip.end > clip.start ? clampPoseValue((progress - clip.start) / (clip.end - clip.start)) : Number(progress >= clip.end);
 }
 
-export function resolveAssetPose(pose: AssetPose, resolveAnchor?: ResolveAssetAnchor): AssetPose {
-  const { anchor, ...local } = pose;
-  const origin = anchor && resolveAnchor?.(anchor);
-  return origin ? { ...local, x: local.x + origin.x, y: local.y + origin.y } : local;
+function anchorDelta(reference: AssetPose['anchorTransform'], origin?: AssetAnchorFrame): AssetAnchorTransform {
+  if (!reference || !origin?.transform) return { scale: 1, rotate: 0 };
+  return { scale: origin.transform.scale / reference.scale, rotate: origin.transform.rotate - reference.rotate };
 }
 
-export function sampleAssetKeyframes(frames: AssetKeyframe[] | undefined, at: number, resolveAnchor?: ResolveAssetAnchor, appearance?: AssetPoseAppearance): AssetPose | undefined {
+function applyAnchorTransform({ x, y }: AssetAnchorOffset, { scale, rotate }: AssetAnchorTransform, aspect: number) {
+  const radians = rotate * Math.PI / 180;
+  const cos = Math.cos(radians), sin = Math.sin(radians);
+  return { x: scale * (x * cos - y * sin / aspect), y: scale * (x * aspect * sin + y * cos) };
+}
+
+export function assetAnchorLocalDelta(pose: AssetPose, delta: AssetAnchorOffset, origin?: AssetAnchorFrame) {
+  const { scale, rotate } = anchorDelta(pose.anchorTransform, origin);
+  return applyAnchorTransform(delta, { scale: 1 / scale, rotate: -rotate }, origin?.aspect ?? 1);
+}
+
+export function resolveAssetPose(pose: SampledAssetPose, resolveAnchor?: ResolveAssetAnchor): SampledAssetPose {
+  const { anchor, anchorTransform, anchorBlur, ...local } = pose;
+  const origin = anchor && resolveAnchor?.(anchor);
+  if (!origin) return anchorBlur === undefined ? local : { ...local, inheritedBlur: 0 };
+  const delta = anchorDelta(anchorTransform, origin);
+  const pivotY = origin.pivotY ?? 0;
+  const offset = applyAnchorTransform({ x: pose.x, y: pose.y - pivotY }, delta, origin.aspect ?? 1);
+  return { ...local, x: offset.x + origin.x, y: offset.y + origin.y + pivotY,
+    scale: pose.scale * delta.scale, rotate: pose.rotate + delta.rotate,
+    ...(anchorBlur === undefined ? {} : { inheritedBlur: (origin.blur ?? 0) * anchorBlur }),
+  };
+}
+
+/** Keep the visible pose fixed when changing anchor or reference at the playhead. */
+export function rebaseAssetAnchor(pose: AssetPose, previous: AssetAnchorFrame | undefined, next: AssetAnchorFrame | undefined,
+  anchor: AssetAnchor | undefined, reference: AssetPose['anchorTransform']): AssetPose {
+  const display = resolveAssetPose(pose, () => previous);
+  const rebased = { ...pose, anchor, anchorTransform: reference, anchorBlur: anchor ? pose.anchorBlur : undefined };
+  const delta = anchorDelta(reference, next);
+  const pivotY = next?.pivotY ?? 0;
+  const offset = assetAnchorLocalDelta(rebased, { x: display.x - (next?.x ?? 0), y: display.y - (next?.y ?? 0) - pivotY }, next);
+  return { ...rebased, x: offset.x, y: offset.y + pivotY, scale: display.scale / delta.scale, rotate: display.rotate - delta.rotate };
+}
+
+export function sampleAssetKeyframes(frames: AssetKeyframe[] | undefined, at: number, resolveAnchor?: ResolveAssetAnchor, appearance?: AssetPoseAppearance): SampledAssetPose | undefined {
   if (!frames?.length) return;
   const nextIndex = frames.findIndex((point) => point.at > at + 1e-8);
   const from = nextIndex < 0 ? frames.at(-1)! : frames[Math.max(0, nextIndex - 1)];
@@ -177,9 +231,17 @@ export function sampleAssetKeyframes(frames: AssetKeyframe[] | undefined, at: nu
   const to = frames[nextIndex];
   const t = easeAmount((at - from.at) / (to.at - from.at), from.easing);
   // Interpolate in the common frame when the anchor changes, staying anchor-relative otherwise.
-  const sameAnchor = from.pose.anchor === to.pose.anchor;
-  const a = sameAnchor ? from.pose : resolveAssetPose(from.pose, resolveAnchor);
-  const b = sameAnchor ? to.pose : resolveAssetPose(to.pose, resolveAnchor);
+  const anchor = from.pose.anchor;
+  const sameAnchor = anchor === to.pose.anchor;
+  const fromReference = from.pose.anchorTransform, toReference = to.pose.anchorTransform;
+  const reference = fromReference && toReference ? fromReference
+    : fromReference !== undefined || toReference !== undefined ? false : undefined;
+  const origin = sameAnchor && anchor && (fromReference || toReference) ? resolveAnchor?.(anchor) : undefined;
+  const inSampleSpace = (pose: AssetPose): SampledAssetPose => {
+    if (!sameAnchor) return resolveAssetPose(pose, resolveAnchor);
+    return origin && pose.anchorTransform !== reference ? rebaseAssetAnchor(pose, origin, origin, anchor, reference) : pose;
+  };
+  const a = inSampleSpace(from.pose), b = inSampleSpace(to.pose);
   const mix = (x: number, y: number) => x + (y - x) * t;
   const optional = (x?: number, y?: number) => x === undefined || y === undefined ? x ?? y : mix(x, y);
   return {
@@ -194,8 +256,18 @@ export function sampleAssetKeyframes(frames: AssetKeyframe[] | undefined, at: nu
     perspective: interpolateAssetPerspective(a.perspective, b.perspective, t),
     contactShadow: a.contactShadow === undefined && b.contactShadow === undefined ? undefined : mix(a.contactShadow ?? 0, b.contactShadow ?? 0),
     shadowSoftness: a.shadowSoftness === undefined && b.shadowSoftness === undefined ? undefined : mix(a.shadowSoftness ?? 4, b.shadowSoftness ?? 4),
-    anchor: sameAnchor ? a.anchor : undefined,
+    anchor: sameAnchor ? anchor : undefined,
+    anchorTransform: sameAnchor ? reference : undefined,
+    anchorBlur: sameAnchor && (a.anchorBlur !== undefined || b.anchorBlur !== undefined)
+      ? mix(a.anchorBlur ?? 0, b.anchorBlur ?? 0) : undefined,
+    inheritedBlur: !sameAnchor && (a.inheritedBlur !== undefined || b.inheritedBlur !== undefined)
+      ? mix(a.inheritedBlur ?? 0, b.inheritedBlur ?? 0) : undefined,
   };
+}
+
+export function assetPoseBlur(pose: SampledAssetPose | undefined, ownBlur?: number) {
+  const own = pose?.blur ?? ownBlur;
+  return pose?.inheritedBlur ? Math.hypot(own ?? 0, pose.inheritedBlur) : own;
 }
 
 /** A glitch is a one-shot event whose duration is measured on the clip ruler. */
@@ -210,6 +282,7 @@ export function sampleTextGlitch(frames: AssetKeyframe[] | undefined, at: number
 
 export function supportsAssetKeyframes(layer: CinematicWorldLayer) {
   return Boolean(layer.parentId) || (layer.kind === undefined || layer.kind === 'img' || layer.kind === 'shape' || layer.kind === 'text' ||
+    layer.behavior === 'programme-board' ||
     (layer.id === 'rsvp-letter' && layer.behavior === 'rsvp-envelope') ||
     (layer.id === 'wishes-book' && layer.behavior === 'guest-book'));
 }

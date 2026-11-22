@@ -9,7 +9,7 @@ import type { CinematicWorldLayer, CinematicWorldGeometry } from './world';
 import { resizeCinematicLayer } from './world';
 import type { CinematicEffectPose, CinematicMotion } from './direction';
 import type { CinematicCompositionFrame } from './sceneSets';
-import type { AssetAnchorOption, AssetPose, AssetPoseAppearance } from './assetKeyframes';
+import { assetAnchorLocalDelta, type AssetAnchorOption, type AssetPose, type AssetPoseAppearance } from './assetKeyframes';
 import CinematicText, { hasTextPaint, type CinematicTextMotion } from './CinematicText';
 import { useAssetSurface, type AssetSurface } from './useAssetSurface';
 import { textBoxStyle } from './textEffects';
@@ -111,6 +111,9 @@ export default function CinematicSceneLayer({
   const glitchIntensity = sample?.glitch?.intensity, glitchSplit = sample?.glitch?.split, glitchDuration = sample?.glitch?.duration;
   const sampleOpacity = sample?.opacity, sampleBlur = sample?.blur;
   const sampleFrame = sample?.frame, samplePaper = sample?.paper, sampleAnchor = sample?.anchor;
+  const sampleAnchorTransform = sample?.anchorTransform && JSON.stringify(sample.anchorTransform);
+  const sampleAnchorBlur = sample?.anchorBlur;
+  const anchorFrame = poseSample?.anchors?.find(({ id }) => id === sampleAnchor);
   const anchorSnapshot = poseSample?.anchors && JSON.stringify(poseSample.anchors);
   const frameCount = poseSample?.frameCount;
   useEffect(() => {
@@ -121,13 +124,14 @@ export default function CinematicSceneLayer({
     window.parent.postMessage({
       type: 'PREVIEW_ASSET_POSE_SAMPLE', session, layerId: layer.id,
       pose: { x, y, scale: sampleScale, rotate: sampleRotate, opacity: sampleOpacity, blur: sampleBlur, frame: sampleFrame, paper: samplePaper, anchor: sampleAnchor,
+        anchorTransform: sampleAnchorTransform && JSON.parse(sampleAnchorTransform), anchorBlur: sampleAnchorBlur,
         perspective: samplePerspective && JSON.parse(samplePerspective), contactShadow: sampleContactShadow, shadowSoftness: sampleShadowSoftness,
         textReveal: sampleTextReveal, revealAmount: sampleRevealAmount, shadowOpacity: sampleShadowOpacity,
         glitch: glitchIntensity === undefined ? undefined : { intensity: glitchIntensity, split: glitchSplit, duration: glitchDuration } },
       appearance: { opacity: visualOpacity, blur: visualBlur, shadowOpacity: visualShadowOpacity },
       anchors: anchorSnapshot && JSON.parse(anchorSnapshot), frameCount,
     }, window.location.origin);
-  }, [session, layer.id, sampleX, sampleY, sampleScale, sampleRotate, sampleOpacity, sampleBlur, visualOpacity, visualBlur, visualShadowOpacity, samplePerspective, sampleContactShadow, sampleShadowSoftness, sampleTextReveal, sampleRevealAmount, sampleShadowOpacity, glitchIntensity, glitchSplit, glitchDuration, sampleFrame, samplePaper, sampleAnchor, anchorSnapshot, frameCount, percentX, percentY, poseHeight, poseWidth]);
+  }, [session, layer.id, sampleX, sampleY, sampleScale, sampleRotate, sampleOpacity, sampleBlur, visualOpacity, visualBlur, visualShadowOpacity, samplePerspective, sampleContactShadow, sampleShadowSoftness, sampleTextReveal, sampleRevealAmount, sampleShadowOpacity, glitchIntensity, glitchSplit, glitchDuration, sampleFrame, samplePaper, sampleAnchor, sampleAnchorTransform, sampleAnchorBlur, anchorSnapshot, frameCount, percentX, percentY, poseHeight, poseWidth]);
 
   const postSelection = useCallback((layerId: string | undefined) => {
     if (!editable || !canHit) return;
@@ -247,11 +251,12 @@ export default function CinematicSceneLayer({
       const angle = (x: number, y: number) => Math.atan2(y - centerY, x - centerX);
       const deltaAngle = angle(event.clientX, event.clientY) - angle(drag.startX, drag.startY);
       const rotation = Math.atan2(Math.sin(deltaAngle), Math.cos(deltaAngle)) * 180 / Math.PI;
+      const translation = assetAnchorLocalDelta(initial, { x: dx === 0 ? 0 : localX / poseWidth * 100,
+        y: dy === 0 ? 0 : localY / (poseHeight || 1) * 100 }, anchorFrame);
       const next = drag.mode === 'resize'
         ? { ...initial, scale: clamp(initial.scale * Math.hypot(event.clientX - centerX, event.clientY - centerY) / radius, .05, 10) }
         : drag.mode === 'rotate' ? { ...initial, rotate: initial.rotate + rotation }
-        : { ...initial, x: initial.x + (dx === 0 ? 0 : localX / poseWidth * 100),
-          y: initial.y + (dy === 0 ? 0 : localY / (poseHeight || 1) * 100) };
+        : { ...initial, x: initial.x + translation.x, y: initial.y + translation.y };
       pendingAssetRef.current = { session, pose: next };
       if (!rafRef.current) rafRef.current = requestAnimationFrame(flushPatch);
       return;
@@ -299,9 +304,13 @@ export default function CinematicSceneLayer({
     if (asset && sample && ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(event.key)) {
       event.preventDefault();
       event.stopPropagation();
+      const delta = assetAnchorLocalDelta(sample, {
+        x: event.key === 'ArrowLeft' ? -step : event.key === 'ArrowRight' ? step : 0,
+        y: event.key === 'ArrowUp' ? -step : event.key === 'ArrowDown' ? step : 0,
+      }, anchorFrame);
       window.parent.postMessage({ type: 'PREVIEW_ASSET_POSE_EDIT', layerId: layer.id, session: asset.session,
-        pose: { ...sample, x: sample.x + percentX * event.currentTarget.offsetWidth / poseWidth + (event.key === 'ArrowLeft' ? -step : event.key === 'ArrowRight' ? step : 0),
-          y: sample.y + percentY * event.currentTarget.offsetHeight / (poseHeight || 1) + (event.key === 'ArrowUp' ? -step : event.key === 'ArrowDown' ? step : 0) } }, window.location.origin);
+        pose: { ...sample, x: sample.x + percentX * event.currentTarget.offsetWidth / poseWidth + delta.x,
+          y: sample.y + percentY * event.currentTarget.offsetHeight / (poseHeight || 1) + delta.y } }, window.location.origin);
       return;
     }
     if (pose && ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(event.key)) {

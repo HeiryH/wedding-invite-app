@@ -448,8 +448,6 @@
 
 .row + .row { border-top: 1px solid color-mix(in srgb, var(--border-subtle) 58%, transparent); }
 
-.motionRow .rowLabel { padding-left: 14px; }
-
 .cameraRow {
   min-height: 42px;
   position: sticky;
@@ -985,3 +983,68 @@
 @media (prefers-reduced-motion: reduce) {
   .beatName { transition: none; }
 }
+
+.addScrollStop { align-self: start; pointer-events: auto; }
+
+.scrollStopEditor {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  flex-shrink: 0;
+  gap: 6px 10px;
+  padding: 7px 12px;
+  background: var(--surface-sunken);
+  border-bottom: 1px solid var(--border-default);
+  font-size: 11px;
+}
+
+.scrollStopEditor label {
+  display: grid;
+  gap: 3px;
+}
+
+.scrollStopEditor input,
+.scrollStopEditor select {
+  box-sizing: border-box;
+  min-height: 24px;
+  max-width: 140px;
+  padding: 2px 5px;
+  color: var(--text-strong);
+  background: var(--surface-card);
+  border: 1px solid var(--border-default);
+  border-radius: 4px;
+}
+
+.scrollStopEditor input[type='number'] { width: 65px; }
+.scrollStopStatus { flex-basis: 100%; color: var(--text-muted); }
+
+.scrollStopMarker {
+  position: absolute;
+  top: 50%;
+  z-index: 5;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  transform: translate(-50%, -50%);
+  border: 0;
+  background: transparent;
+  color: var(--brand);
+  cursor: pointer;
+}
+
+.scrollStopMarker::after {
+  content: '';
+  display: block;
+  box-sizing: border-box;
+  width: 9px;
+  height: 12px;
+  margin: auto;
+  border: 2px solid currentColor;
+  border-radius: 3px;
+  background: var(--surface-card);
+}
+
+.scrollStopMarker[data-inactive] { color: var(--text-muted); }
+.scrollStopMarker[data-inactive]::after { border-style: dashed; }
+.scrollStopMarker[aria-pressed='true']::after,
+.scrollStopMarker:hover::after { background: currentColor; }

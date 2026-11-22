@@ -5,6 +5,7 @@ import Template15 from './index';
 import { PAINTED_PROMISE_SEQUENCE } from './data/cinematic';
 import { PAINTED_PROMISE_DIRECTION } from './data/direction';
 import { cinematicSequenceKey } from '../_shared/cinematic/sequence';
+import { cinematicCameraKey } from '../_shared/cinematic/cameraLayout';
 import { cinematicSceneSetsKey } from '../_shared/cinematic/sceneSets';
 import { cinematicWorldKey } from '../_shared/cinematic/world';
 import { cinematicPacingNodes, mapCinematicProgress } from '../_shared/cinematic/direction';
@@ -181,6 +182,86 @@ it.each(['mobile', 'desktop'] as const)('renders saved transform and artwork key
   expect(offsets[2]).toBeCloseTo(offsets[1], 8);
 });
 
+it.each([undefined, 1, 0])('handles docked blur inheritance (%s) without writing computed blur into keyframes', (anchorBlur) => {
+  viewport.breakpoint = 'mobile';
+  const closedPose = { x: 0, y: 0, scale: 1, rotate: 0, anchor: 'table', frame: 0, anchorBlur };
+  const customConfig = {
+    [cinematicSequenceKey('t15')]: JSON.stringify({ version: PAINTED_PROMISE_SEQUENCE.version, tracks: [
+      { id: 'table', clip: { start: .74, enterEnd: .76, exitStart: .95, end: .98 } },
+      { id: 'memory-background-blur', clip: { start: .89, enterEnd: .91, exitStart: 1, end: 1 } },
+    ] }),
+    [cinematicWorldKey('t15', 'mobile')]: JSON.stringify({ layers: [
+      { id: 'rsvp-letter', keyframes: [{ id: 'rest-book', at: 0, easing: 'linear', pose: closedPose }] },
+      { id: 'wishes-book', keyframes: [{ id: 'rest-envelope', at: 0, easing: 'linear', pose: { ...closedPose, blur: 6 } }] },
+    ] }),
+  };
+  const props = { wedding: { weddingId: 15, weddingDate: '2027-01-15' } as Wedding, wishes: [], photos: [],
+    photoBoothEnabled: true, onRSVP: vi.fn(), onSubmitWish: vi.fn(), customConfig };
+  const editor = { enabled: true, breakpoint: 'mobile' as const, cinematic: { mode: 'scene' as const, progress: .85 } };
+  const { container, rerender } = render(<Template15 {...props} editor={editor} />);
+  const layer = (id: string) => container.querySelector<HTMLElement>(`[data-cinematic-layer="${id}"]`)!;
+  const world = container.querySelector<HTMLElement>('[data-cinematic-space="world"]')!;
+  expect(layer('rsvp-letter').style.filter).toBe('');
+  expect(layer('wishes-book')).toHaveStyle({ filter: 'blur(6px)' });
+
+  const postMessage = vi.spyOn(window, 'postMessage').mockImplementation(() => {});
+  rerender(<Template15 {...props} editor={{ ...editor, cinematic: { ...editor.cinematic, progress: .92,
+    assetPoseEdit: { layerId: 'wishes-book', session: 'envelope-blur' } } }} />);
+  expect(world.style.getPropertyValue('--world-blur')).toBe('8px');
+  expect(layer('rsvp-letter').style.filter).toBe(anchorBlur === 0 ? '' : 'blur(8px)');
+  expect(layer('wishes-book')).toHaveStyle({ filter: anchorBlur === 0 ? 'blur(6px)' : 'blur(10px)' });
+  expect(postMessage).toHaveBeenCalledWith(expect.objectContaining({
+    type: 'PREVIEW_ASSET_POSE_SAMPLE', layerId: 'wishes-book', pose: expect.objectContaining({ anchorBlur, blur: 6 }),
+    appearance: expect.objectContaining({ blur: 6 }),
+  }), window.location.origin);
+});
+
+it('keeps a closed guest book at its final table spot through a camera zoom and the table exit', () => {
+  viewport.breakpoint = 'mobile';
+  const pacing = cinematicPacingNodes(PAINTED_PROMISE_SEQUENCE.beats, PAINTED_PROMISE_DIRECTION.pacing,
+    'mobile', PAINTED_PROMISE_SEQUENCE.beats.length);
+  const customConfig = {
+    [cinematicSequenceKey('t15')]: JSON.stringify({ version: PAINTED_PROMISE_SEQUENCE.version, tracks: [{
+      id: 'table', clip: { start: .74, enterEnd: .76, exitStart: .95, end: .98 },
+    }] }),
+    [cinematicCameraKey('t15', 'mobile')]: JSON.stringify({ frames: [
+      { id: 'rsvp-letter', scale: 2 }, { id: 'wishes-book', scale: 2 }, { id: 'memory-wall', scale: .5 },
+    ] }),
+    [cinematicWorldKey('t15', 'mobile')]: JSON.stringify({ layers: [{
+      id: 'rsvp-letter', keyframes: [{ id: 'rest', at: 1, easing: 'linear',
+        pose: { x: 40, y: 3, scale: 1.5, rotate: -20, frame: 0, anchor: 'table' } }],
+    }] }),
+  };
+  const props = { wedding: { weddingId: 15, weddingDate: '2027-01-15' } as Wedding, wishes: [], photos: [],
+    photoBoothEnabled: true, onRSVP: vi.fn(), onSubmitWish: vi.fn(), customConfig };
+  const view = render(<Template15 {...props} />);
+  const seek = (at: number) => {
+    viewport.progress = mapCinematicProgress(at, pacing.points, true);
+    view.rerender(<Template15 {...props} />);
+  };
+  const layer = (id: string) => view.container.querySelector<HTMLElement>(`[data-cinematic-layer="${id}"]`)!;
+  const book = () => layer('rsvp-letter');
+  const table = () => layer('reception-table');
+  const worldScale = () => Number(view.container.querySelector<HTMLElement>('[data-cinematic-space="world"]')!
+    .style.getPropertyValue('--camera-scale'));
+  const bookScale = () => Number(book().style.transform.match(/scale\(([^)]+)\)/)?.[1]);
+  const bookX = () => Number(book().style.transform.match(/calc\(var\(--fvw, 100vw\) \* ([^)]+)\)/)?.[1]);
+
+  seek(.81);
+  const startCameraScale = worldScale();
+  expect(bookScale()).toBeCloseTo(1.5);
+  seek(.93);
+  expect(worldScale()).toBeLessThan(startCameraScale);
+  expect(bookScale()).toBeCloseTo(1.5 * worldScale() / startCameraScale);
+  seek(.95);
+  const startOfSlideX = bookX();
+  seek(.96);
+  expect(bookX()).toBeLessThan(startOfSlideX);
+  expect(book().style.opacity).toEqual(table().style.opacity);
+  seek(.981);
+  expect(book()).toHaveStyle({ opacity: 0 });
+});
+
 it('keeps the selected keyframe anchor near its rounded time and excludes circular anchors', () => {
   viewport.breakpoint = 'mobile';
   const shape = { kind: 'shape', x: 50, y: 56, w: 10, h: 10, z: 30,
@@ -214,7 +295,9 @@ it('keeps the selected keyframe anchor near its rounded time and excludes circul
   expect(postMessage).toHaveBeenCalledWith(expect.objectContaining({
     type: 'PREVIEW_ASSET_POSE_SAMPLE',
     pose: expect.objectContaining({ anchor: 'layer:anchor-chair', x: 4, y: -2 }),
-    anchors: expect.arrayContaining([{ id: 'layer:anchor-chair', label: 'Anchor chair', x: 25, y: 0 }]),
+    anchors: expect.arrayContaining([expect.objectContaining({
+      id: 'layer:anchor-chair', label: 'Anchor chair', x: 25, y: 0, transform: { scale: 2, rotate: 0 },
+    })]),
   }), window.location.origin);
   const sample = postMessage.mock.calls.find(([message]) => message.type === 'PREVIEW_ASSET_POSE_SAMPLE')?.[0];
   const anchorIds = sample.anchors.map((anchor: { id: string }) => anchor.id);
@@ -236,7 +319,8 @@ it('fits a scene set uniformly and resolves a named anchor through the target ro
         anchorPoints: [{ id: 'finger', label: 'Fingertip', x: 1, y: .5, aspectRatio: 1 }],
         keyframes: [{ id: 'rotate', at: 0, easing: 'linear', pose: { x: 0, y: 0, scale: 2, rotate: 90 } }] },
       { ...shape, id: 'ring', label: 'Ring', kind: 'shape',
-        keyframes: [{ id: 'fit', at: 0, easing: 'linear', pose: { x: 0, y: 0, scale: 1, rotate: 0, anchor: 'point:hand:finger' } }] },
+        keyframes: [{ id: 'fit', at: 0, easing: 'linear', pose: { x: 0, y: 0, scale: 1, rotate: 0, anchor: 'point:hand:finger',
+          anchorTransform: { scale: 1, rotate: 0 } } }] },
     ] }),
   };
   const props = { wedding: { weddingId: 15, weddingDate: '2027-01-15' } as Wedding, wishes: [], photos: [],
@@ -248,9 +332,50 @@ it('fits a scene set uniformly and resolves a named anchor through the target ro
   const composition = ring.closest<HTMLElement>('[data-cinematic-composition]');
   expect(composition).toHaveStyle({ width: '400px', height: '800px' });
   expect(ring.style.transform).toContain('var(--fvh, 100vh) * 0.1');
+  expect(ring.style.transform).toContain('scale(2) rotate(90deg)');
   rerender(<Template15 {...props} editor={{ ...editor, frame: { ...editor.frame, w: 360, h: 900, svh: 900 } }} />);
   expect(composition).toHaveStyle({ width: '360px', height: '720px' });
   expect(ring.style.transform).toContain('var(--fvh, 100vh) * 0.1');
+});
+
+it('moves the Programme board with keyframes while keeping the entrance and programme action', () => {
+  viewport.breakpoint = 'mobile';
+  const pacing = cinematicPacingNodes(PAINTED_PROMISE_SEQUENCE.beats, PAINTED_PROMISE_DIRECTION.pacing,
+    'mobile', PAINTED_PROMISE_SEQUENCE.beats.length);
+  const track = {
+    id: 'programme', enter: { kind: 'fade-slide', easing: 'linear', direction: 'down', distance: 10 },
+  };
+  const customConfig = {
+    [cinematicSequenceKey('t15')]: JSON.stringify({ version: PAINTED_PROMISE_SEQUENCE.version, tracks: [track] }),
+    [cinematicWorldKey('t15', 'mobile')]: JSON.stringify({ layers: [{
+      id: 'programme-board', keyframes: [{ id: 'start', at: 0, easing: 'linear', pose: { x: 10, y: 0, scale: 1, rotate: 0 } }],
+    }] }),
+  };
+  const props = { wedding: { weddingId: 15, weddingDate: '2027-01-15' } as Wedding, wishes: [], photos: [],
+    photoBoothEnabled: false, onRSVP: vi.fn(), onSubmitWish: vi.fn(), customConfig };
+  viewport.progress = mapCinematicProgress(.57, pacing.points, true);
+  const { container, rerender, unmount } = render(<Template15 {...props} />);
+  const board = container.querySelector<HTMLElement>('[data-cinematic-layer="programme-board"]')!;
+  expect(board.style.transform).toMatch(/100vw\) \* 0\.1/);
+  expect(board.style.transform).toMatch(/100vh\) \* 0\.0[45]/);
+
+  viewport.progress = mapCinematicProgress(.65, pacing.points, true);
+  rerender(<Template15 {...props} />);
+  const prototype = HTMLDialogElement.prototype;
+  const previousShow = Object.getOwnPropertyDescriptor(prototype, 'showModal');
+  const previousClose = Object.getOwnPropertyDescriptor(prototype, 'close');
+  Object.defineProperty(prototype, 'showModal', { configurable: true, value(this: HTMLDialogElement) { this.open = true; } });
+  Object.defineProperty(prototype, 'close', { configurable: true, value(this: HTMLDialogElement) { this.open = false; } });
+  try {
+    fireEvent.click(screen.getByRole('button', { name: 'View programme' }));
+    expect(screen.getByRole('dialog', { name: 'Programme' })).toBeVisible();
+  } finally {
+    unmount();
+    if (previousShow) Object.defineProperty(prototype, 'showModal', previousShow);
+    else Reflect.deleteProperty(prototype, 'showModal');
+    if (previousClose) Object.defineProperty(prototype, 'close', previousClose);
+    else Reflect.deleteProperty(prototype, 'close');
+  }
 });
 
 it('plays group keyframes on each member and previews a pending group pose without replacing member animation', () => {

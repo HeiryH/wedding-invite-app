@@ -1,5 +1,6 @@
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { StudioDraftSessionExpired } from '@/lib/api/templateStudio.service';
 import CustomizationWorkspace from './CustomizationWorkspace';
 
 const mocks = vi.hoisted(() => ({
@@ -9,9 +10,10 @@ const mocks = vi.hoisted(() => ({
 }));
 vi.mock('next/navigation', () => ({ useRouter: () => ({ push: mocks.push }) }));
 vi.mock('@/lib/auth', () => ({ getUser: () => ({ role: 'SUPER_ADMIN', tier: 'BASIC', weddingId: 32 }) }));
-vi.mock('@/lib/api/templateStudio.service', () => ({ templateStudioService: {
-  get: mocks.get, save: mocks.save, publish: mocks.publish, restore: mocks.restore, export: mocks.export,
-} }));
+vi.mock('@/lib/api/templateStudio.service', async (original) => ({
+  ...await original<typeof import('@/lib/api/templateStudio.service')>(),
+  templateStudioService: { get: mocks.get, save: mocks.save, publish: mocks.publish, restore: mocks.restore, export: mocks.export },
+}));
 vi.mock('@/lib/utils', async (original) => ({ ...await original<typeof import('@/lib/utils')>(), downloadBlob: mocks.download }));
 vi.mock('@/lib/api', () => ({
   templateService: { getById: mocks.getTemplate },
@@ -100,6 +102,23 @@ describe('master editor adapter', () => {
     await waitFor(() => expect(mocks.publish).toHaveBeenCalledWith(7, 1));
     await screen.findByText('Master published. Template previews and inherited invitation settings now use this design.');
     confirm.mockRestore();
+  });
+
+  it('keeps unsaved edits available when the Studio session expires', async () => {
+    mocks.save.mockRejectedValueOnce(new StudioDraftSessionExpired());
+    render(<CustomizationWorkspace masterTemplateId={7} />);
+    await screen.findByText('Roman Garden · Master');
+    fireEvent.change(screen.getByDisplayValue('Grand Ballroom'), { target: { value: 'Sample garden' } });
+    fireEvent.click(screen.getAllByRole('button', { name: 'Save draft' })[0]);
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Your Studio session expired');
+    expect(screen.getByRole('link', { name: 'Open sign-in' })).toHaveAttribute('target', '_blank');
+    expect(screen.getByDisplayValue('Sample garden')).toBeVisible();
+    expect(mocks.push).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getAllByRole('button', { name: 'Save draft' })[0]);
+    await screen.findByText('Draft saved. Published invitations are unchanged.');
+    expect(mocks.save.mock.calls[1][3].wedding.venue).toBe('Sample garden');
   });
 
   it('shows save conflicts without writing any event data', async () => {

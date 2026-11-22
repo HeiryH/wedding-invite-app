@@ -33,10 +33,23 @@ export interface CapturePreviewSnapshot {
   scrollY: number;
 }
 
+export class StudioDraftSessionExpired extends Error {
+  constructor() {
+    super('Your Studio session expired. Sign in in a new tab, then retry Save draft here.');
+    this.name = 'StudioDraftSessionExpired';
+  }
+}
+
 export const templateStudioService = {
   get: async (id: number): Promise<StudioState> => (await apiClient.get(`/template/${id}/studio`)).data,
-  save: async (id: number, version: number, config: Record<string, string>, sample: StudioSample): Promise<StudioState> =>
-    (await apiClient.put(`/template/${id}/studio/draft`, { version, config, sample })).data,
+  save: async (id: number, version: number, config: Record<string, string>, sample: StudioSample): Promise<StudioState> => {
+    const response = await apiClient.put<StudioState>(`/template/${id}/studio/draft`, { version, config, sample }, {
+      // The global 401 handler navigates away. Keep unsaved Studio changes in memory while signing in.
+      validateStatus: (status) => (status >= 200 && status < 300) || status === 401,
+    });
+    if (response.status === 401) throw new StudioDraftSessionExpired();
+    return response.data;
+  },
   publish: async (id: number, version: number): Promise<StudioState> =>
     (await apiClient.post(`/template/${id}/studio/publish`, { version })).data,
   restore: async (id: number, version: number, revision: number): Promise<StudioState> =>

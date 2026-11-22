@@ -1,10 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { PAINTED_PROMISE_DIRECTION as defaults } from '../../Template15-paintedpromise/data/direction';
-import { PAINTED_PROMISE_SEQUENCE as sequence } from '../../Template15-paintedpromise/data/cinematic';
+import { PAINTED_PROMISE_WORLD as world, PAINTED_PROMISE_SCENE_SETS as sets, PAINTED_PROMISE_SEQUENCE as sequence } from '../../Template15-paintedpromise/data/cinematic';
 import { cinematicPacingNodes, mapCinematicProgress, normalizeEffect, normalizeInteraction, resolveCinematicDirection, sampleCinematicEffects, saveCinematicDirection, interactionAvailable } from './direction';
 import { readCinematicProject, updateCinematicProjectValue } from './project';
-import { cinematicWorldKey } from './world';
-import { beatsFromSequence, resolveCinematicSequence, serializeCinematicSequence, cinematicSequenceKey } from './sequence';
+import { cinematicWorldKey, resolveCinematicWorld } from './world';
+import { resolveCinematicScrollStops } from './scrollStops';
+import { cinematicTrackPresentation, beatsFromSequence, resolveCinematicSequence, serializeCinematicSequence, cinematicSequenceKey } from './sequence';
 import { CINEMATIC_ENGINES } from './registry';
 import { editCinematicSceneSets } from './sceneSetEditing';
 
@@ -56,6 +57,39 @@ describe('cinematic director data', () => {
     expect((points[1].scroll - points[0].scroll) * (held.heightVh - 100)).toBeCloseTo(100);
     expect(mapCinematicProgress((points[0].scroll + points[1].scroll) / 2, held.points)).toBe(points[0].story);
     for (const at of [.1, .6, .9]) expect(mapCinematicProgress(mapCinematicProgress(at, held.points, true), held.points)).toBeCloseTo(at);
+  });
+  it('keeps linked stops inside the tappable window, including single-beat poses', () => {
+    const layers = resolveCinematicWorld('t15', world, 'mobile', {});
+    const resolve = (tracks = sequence.tracks) => resolveCinematicScrollStops(defaults.pacing.stops, defaults.interactions, tracks, layers, sets, 'mobile');
+    const original = resolve();
+    expect(original.every(({ active }) => active)).toBe(true);
+    expect(original[0].at).toBeCloseTo(.7975);
+    expect(original[1].at).toBeCloseTo(.8375);
+    const shifted = sequence.tracks.map((track) => track.id === 'rsvp'
+      ? { ...track, clip: { start: .78, enterEnd: .8, exitStart: .84, end: .86 } } : track);
+    expect(resolve(shifted)[0].at).toBeCloseTo(.8025);
+    const narrowed = shifted.map((track) => track.id === 'rsvp-availability'
+      ? { ...track, clip: { start: .83, enterEnd: .83, exitStart: .83, end: .83 } } : track);
+    expect(resolve(narrowed)[0]).toMatchObject({ at: .83, active: true });
+    expect(resolve(narrowed.filter(({ id }) => id !== 'rsvp-availability'))[0].active).toBe(false);
+  });
+  it('keeps the envelope stop ahead of the table fade that disables it', () => {
+    const layers = resolveCinematicWorld('t15', world, 'mobile', {});
+    const tracks = sequence.tracks.map((track) => track.id === 'wishes' || track.id === 'wishes-availability'
+      ? { ...track, clip: { start: .82, enterEnd: .84, exitStart: .92, end: .94 } } : track);
+    const table = tracks.find(({ id }) => id === 'table')!;
+    const stop = resolveCinematicScrollStops(defaults.pacing.stops, defaults.interactions, tracks, layers, sets, 'mobile')[1];
+    expect(stop.active).toBe(true);
+    expect(stop.at).toBeGreaterThan(.84);
+    expect(stop.at).toBeLessThan(.88);
+    expect(cinematicTrackPresentation(stop.at, table, tracks).opacity).toBeGreaterThan(.7);
+    expect(cinematicTrackPresentation(.88, table, tracks).opacity).toBeLessThan(.7);
+  });
+  it('round trips explicit scroll stops and preserves deleting them all', () => {
+    for (const stops of [defaults.pacing.stops!.slice(1), []]) {
+      const edited = { ...defaults, pacing: { ...defaults.pacing, stops } };
+      expect(resolveCinematicDirection('t15', defaults, saveCinematicDirection('t15', {}, edited)).pacing.stops).toEqual(stops);
+    }
   });
   it('does not allow actions to bypass deleted availability tracks', () => {
     const rsvp = defaults.interactions.find((record) => record.id === 'rsvp')!;

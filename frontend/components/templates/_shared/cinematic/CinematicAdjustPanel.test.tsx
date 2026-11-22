@@ -11,6 +11,37 @@ const CinematicAdjustPanel = (props: ComponentProps<typeof AdjustPanel>) =>
 
 describe('CinematicAdjustPanel', () => {
   beforeEach(() => localStorage.clear());
+  it('opens and closes scene set properties beside the preview', () => {
+    const onSceneSetAction = vi.fn();
+    const props: ComponentProps<typeof AdjustPanel> = {
+      beats: PAINTED_PROMISE_BEATS, selectedBeat: 'ring', breakpoint: 'mobile', mode: 'scene', progress: 0,
+      layers: PAINTED_PROMISE_WORLD, shippedLayerIds: [], visibilitySets: PAINTED_PROMISE_VISIBILITY,
+      tracks: PAINTED_PROMISE_SEQUENCE.tracks, onSceneSetAction, onSelectBeat: vi.fn(), onProgressChange: vi.fn(),
+      onModeChange: vi.fn(), onSelectLayer: vi.fn(), onLayersChange: vi.fn(), onResetLayer: vi.fn(),
+      onResetWorld: vi.fn(), onCameraChange: vi.fn(), onResetCamera: vi.fn(), onCopyCameraToOther: vi.fn(),
+      onVisibilityChange: vi.fn(), onResetVisibility: vi.fn(), onClose: vi.fn(),
+    };
+    const { rerender } = render(<CinematicAdjustPanel {...props} />);
+    const manager = within(screen.getByRole('region', { name: 'Scene set manager' }));
+    fireEvent.click(manager.getByRole('button', { name: 'Expand scene sets' }));
+    fireEvent.click(manager.getByRole('button', { name: 'Manage Cloud backdrop' }));
+    const floating = within(screen.getByLabelText('Floating adjustment window'));
+    expect(floating.getByRole('region', { name: 'Scene set properties Cloud backdrop' })).toBeVisible();
+    expect(manager.queryByRole('region', { name: 'Scene set properties Cloud backdrop' })).toBeNull();
+
+    fireEvent.click(manager.getByRole('button', { name: 'Manage Programme' }));
+    const properties = within(floating.getByRole('region', { name: 'Scene set properties Programme' }));
+    fireEvent.blur(properties.getByRole('textbox', { name: 'Name' }), { target: { value: 'Order of events' } });
+    expect(onSceneSetAction).toHaveBeenCalledWith({ type: 'patch', id: 'programme', patch: { label: 'Order of events' } });
+    fireEvent.click(properties.getByRole('button', { name: 'Close scene set properties' }));
+    expect(screen.queryByLabelText('Floating adjustment window')).toBeNull();
+
+    fireEvent.click(manager.getByRole('button', { name: 'Manage Programme' }));
+    rerender(<CinematicAdjustPanel {...props} selectedLayer="groom" />);
+    expect(screen.queryByRole('region', { name: 'Scene set properties Programme' })).toBeNull();
+    expect(screen.getByRole('region', { name: 'Object inspector' })).toBeVisible();
+  });
+
   it('opens the group animator and keeps legacy effect pose controls out of the inspector', () => {
     const onSceneSetAction = vi.fn();
     const onAnimateLayer = vi.fn();
@@ -226,6 +257,37 @@ describe('CinematicAdjustPanel', () => {
     expect(screen.getByRole('region', { name: 'Timing track Dais set' })).toBeVisible();
     fireEvent.click(screen.getByRole('tab', { name: 'Advanced' }));
     expect(screen.getByRole('tab', { name: 'Theme' })).toHaveAttribute('aria-selected', 'true');
+  });
+
+  it('guards and confirms effect clip removal from the timing inspector', () => {
+    const onDeleteEffectTrack = vi.fn();
+    const props: ComponentProps<typeof AdjustPanel> = {
+      beats: PAINTED_PROMISE_BEATS, breakpoint: 'mobile', selectedBeat: 'ring', progress: 0, mode: 'scene',
+      layers: PAINTED_PROMISE_WORLD, shippedLayerIds: [], visibilitySets: PAINTED_PROMISE_VISIBILITY,
+      tracks: PAINTED_PROMISE_SEQUENCE.tracks, selectedTimingTrack: 'groom-hand-motion',
+      onSelectBeat: vi.fn(), onProgressChange: vi.fn(), onModeChange: vi.fn(), onSelectLayer: vi.fn(),
+      onLayersChange: vi.fn(), onResetLayer: vi.fn(), onResetWorld: vi.fn(), onCameraChange: vi.fn(),
+      onResetCamera: vi.fn(), onCopyCameraToOther: vi.fn(), onVisibilityChange: vi.fn(),
+      onResetVisibility: vi.fn(), onClose: vi.fn(), onDeleteEffectTrack,
+    };
+    const { rerender } = render(<CinematicAdjustPanel {...props} />);
+    expect(screen.queryByRole('button', { name: 'Delete track' })).toBeNull();
+    const effect = PAINTED_PROMISE_DIRECTION.effects.find((item) => item.trackId === 'groom-hand-motion')!;
+    const effects = { mobile: [effect], desktop: [effect] };
+    rerender(<CinematicAdjustPanel {...props} effectTracks={new Map([['groom-hand-motion', {
+      dependencies: ['Navigation · Welcome'], effects,
+    }]])} />);
+    expect(screen.getByRole('button', { name: 'Delete track' })).toBeDisabled();
+    expect(screen.getByText('Navigation · Welcome')).toBeVisible();
+
+    rerender(<CinematicAdjustPanel {...props} effectTracks={new Map([['groom-hand-motion', { dependencies: [], effects }]])} />);
+    const editor = within(screen.getByRole('region', { name: 'Timing track Groom hand movement' }));
+    expect(editor.getByRole('button', { name: 'Open layer effects' })).toBeVisible();
+    fireEvent.click(editor.getByRole('button', { name: 'Delete track' }));
+    expect(editor.getByRole('alert')).toHaveTextContent('Groom hand entrance will stop running');
+    expect(onDeleteEffectTrack).not.toHaveBeenCalled();
+    fireEvent.click(editor.getByRole('button', { name: 'Confirm delete track' }));
+    expect(onDeleteEffectTrack).toHaveBeenCalledExactlyOnceWith('groom-hand-motion');
   });
 
   it('keeps track and full-story resets at distinct confirmed scopes', () => {

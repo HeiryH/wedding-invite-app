@@ -33,12 +33,13 @@ export default function DirectorSettings({ value, onChange, breakpoint, layers, 
   const [tab, setTab] = useWorkspacePreference('einvite.cinematic.advanced-tab.v1', 'effects', decodeDirectorTab);
   const tabsId = useId();
   const tabs = ['effects', 'interactions', 'pacing', 'navigation', 'memories', 'theme'];
-  const [effectId, setEffectId] = useState(value.effects.find((item) => item.trackId === selectedEffectTrackId)?.id ?? value.effects[0]?.id ?? '');
   const [interactionId, setInteractionId] = useState(value.interactions[0]?.id ?? '');
   const scopedEffects = value.effects
     .map((item) => breakpoint === 'desktop' ? { ...item, ...item.desktop } : item)
     .filter((item) => !effectScope || (effectScope === '__world'
     ? item.target === 'world' || (item.target === 'layer' && item.targetId.includes(':')) : item.target === (groupScope ? 'group' : 'layer') && item.targetId === effectScope));
+  const [effectId, setEffectId] = useState(() =>
+    scopedEffects.find((item) => item.trackId === selectedEffectTrackId)?.id ?? scopedEffects[0]?.id ?? '');
   const effect = scopedEffects.find((item) => item.id === effectId) ?? scopedEffects[0];
   const layerScope = Boolean(effectScope && effectScope !== '__world');
   const scopedLayer = layerScope && !groupScope ? layers.find((layer) => layer.id === effectScope) : undefined;

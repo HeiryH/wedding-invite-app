@@ -27,7 +27,14 @@ export const PAINTED_PROMISE_DIRECTION: CinematicDirection = {
     interaction('rsvp', 'RSVP form', 'rsvp-letter', 'rsvp', { availabilityTrackId: 'rsvp-availability', resetTrackId: 'rsvp-reset-window', returnSetIds: ['table'], revealSetIds: ['table-wishes'] }),
     interaction('wish', 'Best Wishes form', 'wishes-book', 'wish', { availabilityTrackId: 'wishes-availability', resetTrackId: 'wishes-reset-window', returnSetIds: ['table'] }),
   ],
-  pacing: { mobileVh: 1250, desktopVh: 1150, beats: PAINTED_PROMISE_RECEPTION ? { 'rsvp-letter': { holdVh: 40 }, 'wishes-book': { holdVh: 40 } } : {} },
+  pacing: {
+    mobileVh: 1250, desktopVh: 1150,
+    beats: PAINTED_PROMISE_RECEPTION ? { 'rsvp-letter': { holdVh: 40 }, 'wishes-book': { holdVh: 40 } } : {},
+    stops: PAINTED_PROMISE_RECEPTION ? [
+      { id: 'rsvp-stop', label: 'RSVP guest book', at: .7975, easing: 'ease-out', durationMs: 280, interactionId: 'rsvp', visibilityLayerId: 'reception-table' },
+      { id: 'wishes-stop', label: 'Best Wishes envelope', at: .8375, easing: 'ease-out', durationMs: 280, interactionId: 'wish', visibilityLayerId: 'reception-table' },
+    ] : [],
+  },
   navigation: [
     { id: 'welcome', label: 'Welcome', target: 'track-start', targetId: 'welcome' },
     { id: 'walimah', label: 'Walimah', target: 'beat', targetId: 'walimah' },

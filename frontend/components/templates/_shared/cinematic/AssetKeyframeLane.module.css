@@ -49,6 +49,7 @@
 
 .numeric { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 6px; }
 .numeric input { width: 70px; border: 1px solid var(--border-default); padding: 3px 4px; }
+.anchorInheritance { display: grid; gap: 6px; margin-top: 6px; }
 
 .toolbar strong { flex-basis: 100%; }
 .scrubber { flex-wrap: nowrap; }

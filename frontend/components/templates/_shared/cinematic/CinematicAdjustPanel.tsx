@@ -16,11 +16,11 @@ import {
 import { cinematicSetOpacity, type CinematicVisibilitySet } from './visibility';
 import { applyCinematicSceneSets, cinematicGroupAnimationTarget, cinematicGroupCenter, type CinematicLayerGroup as LayerGroup, type CinematicSceneSet } from './sceneSets';
 import type { SceneSetAction } from './sceneSetEditing';
-import SceneSetManager from './SceneSetManager';
+import SceneSetManager, { SceneSetProperties } from './SceneSetManager';
 import AnchorPointEditor from './AnchorPointEditor';
 import CinematicLayerGroups from './CinematicLayerGroups';
-import AssetAnimationEditor from './AssetAnimationEditor';
 import TextStyleEditor from './TextStyleEditor';
+import type { EffectTrackUsage } from './effectTrackEditing';
 import DirectorSettings from './DirectorSettings';
 import CinematicRichText from './CinematicRichText';
 import { EditorActions, ConfirmEditorAction } from './EditorActions';
@@ -71,6 +71,8 @@ interface Props {
   onCameraChange: (patch: Partial<CameraState>) => void;
   onTimingTrackChange?: (id: string, patch: Partial<CinematicSequenceTrack>) => void;
   onResetTrack?: (id: string) => void;
+  effectTracks?: ReadonlyMap<string, EffectTrackUsage>;
+  onDeleteEffectTrack?: (id: string) => void;
   onMakeTimingIndependent?: (layerId: string) => void;
   onRelinkTiming?: (layerId: string, sourceTrackId?: string) => void;
   onCreateTimingSet?: (label: string, layerIds: string[]) => string | undefined;
@@ -214,11 +216,12 @@ function TransitionEditor({ phase, track, onChange, onPreview }: {
   );
 }
 
-function TimingTrackEditor({ track, onChange, onPreview, help }: {
+function TimingTrackEditor({ track, onChange, onPreview, help, hideEffectHelp }: {
   track: CinematicSequenceTrack;
   onChange?: (id: string, patch: Partial<CinematicSequenceTrack>) => void;
   onPreview?: (track: CinematicSequenceTrack, phase: TransitionPhase) => void;
   help?: string;
+  hideEffectHelp?: boolean;
 }) {
   const availability = track.kind === 'interaction';
   const patchClip = (field: keyof CinematicSequenceClip, raw: number) => {
@@ -263,7 +266,7 @@ function TimingTrackEditor({ track, onChange, onPreview, help }: {
           ))}
         </div>
       </details>
-      {track.kind === 'effect' && <p className={styles.note}>This track sets the effect’s scroll range. Edit its movement, blur and easing in Story settings → Effects.</p>}
+      {track.kind === 'effect' && !hideEffectHelp && <p className={styles.note}>This track sets the effect’s scroll range. Edit its movement, blur and easing in Story settings → Effects.</p>}
       {!availability && track.kind !== 'effect' && (
         <div className={styles.transitionGrid}>
           <TransitionEditor phase="enter" track={track} onChange={onChange} onPreview={onPreview} />
@@ -283,7 +286,7 @@ export default function CinematicAdjustPanel({
   onSelectLayer, canAnimateLayer, onAnimateLayer, onLayersChange, onResetWorld,
   onResetLayer,
   onCameraChange, onResetCamera, onCopyCameraToOther,
-  onTimingTrackChange, onResetTrack, onMakeTimingIndependent, onRelinkTiming,
+  onTimingTrackChange, onResetTrack, effectTracks, onDeleteEffectTrack, onMakeTimingIndependent, onRelinkTiming,
   onCreateTimingSet, onRenameTimingSet, onDuplicateTimingSet, onDeleteTimingSet,
   onSelectTimingTrack,
   onCreateBeat, onRenameBeat, onDuplicateBeat, onDeleteBeat, onRestoreBeat,
@@ -311,6 +314,10 @@ export default function CinematicAdjustPanel({
     if (selectedLayer || selectedTimingTrack || popover === 'add' || mode !== 'scene') setSelectedLayerGroup(undefined);
   }, [selectedLayer, selectedTimingTrack, popover, mode]);
   const [selectedSceneSet, setSelectedSceneSet] = useState<string>();
+  const [sceneSetOpen, setSceneSetOpen] = useState(false);
+  useEffect(() => {
+    if (selectedLayer || selectedTimingTrack || selectedLayerGroup || popover === 'add' || mode !== 'scene') setSceneSetOpen(false);
+  }, [selectedLayer, selectedTimingTrack, selectedLayerGroup, popover, mode]);
   const [collapsedSceneSets, setCollapsedSceneSets] = useState<string[]>([]);
   const [draggedSetLayer, setDraggedSetLayer] = useState<string>();
   const [animationLayerId, setAnimationLayerId] = useState<string>();
@@ -348,7 +355,7 @@ export default function CinematicAdjustPanel({
     workspaceScroll.current[key] = value;
     if (sidebarReady) setSidebarPreferences((current) => current.scroll[key] === value ? current : { ...current, scroll: { ...current.scroll, [key]: value } });
   };
-  const floatingScrollKey = selectedLayerGroup && !inspecting ? `group-inspector-${groupTab}` : inspecting ? `inspector-${inspectorTab}` : 'timing-inspector';
+  const floatingScrollKey = sceneSetOpen ? 'scene-set-inspector' : selectedLayerGroup && !inspecting ? `group-inspector-${groupTab}` : inspecting ? `inspector-${inspectorTab}` : 'timing-inspector';
   useLayoutEffect(() => {
     if (floatingRef.current) floatingRef.current.scrollTop = workspaceScroll.current[floatingScrollKey] ?? sidebarPreferences.scroll[floatingScrollKey] ?? 0;
   // eslint-disable-next-line react-hooks/exhaustive-deps -- Restore floating properties independently of sidebar navigation.
@@ -391,6 +398,13 @@ export default function CinematicAdjustPanel({
     track.kind === 'set' && track.target.type === 'set');
   const selectedTimingSet = tracks.find((track) => track.id === selectedTimingSetId &&
     track.target.type !== 'layer');
+  const selectedEffectTrack = selectedTimingSet && effectTracks?.get(selectedTimingSet.id);
+  const effectTrackDependencies = selectedEffectTrack?.dependencies ?? [];
+  const selectedEffects = selectedEffectTrack?.effects[breakpoint] ?? [];
+  const activeEffectNames = selectedEffectTrack
+    ? [...new Set([...selectedEffectTrack.effects.mobile, ...selectedEffectTrack.effects.desktop]
+      .filter((effect) => effect.enabled).map(({ label }) => label))] : [];
+  const showTimingInspector = selectedEffectTrack && !inspecting;
   const timingSetLayers = selectedTimingSet?.target.type === 'group'
     ? editorLayers.filter((layer) => layer.group === selectedTimingSet.target.id) : [];
   const timingSetAnimationLayer = timingSetLayers.find((layer) => layer.id === animationLayerId) ?? timingSetLayers.find((layer) => !layer.parentId) ?? timingSetLayers[0];
@@ -675,6 +689,23 @@ export default function CinematicAdjustPanel({
                   </EditorActions>
   ) : null;
 
+  const selectSceneSet = (id: string | undefined) => {
+    setSelectedSceneSet(id);
+    setSceneSetOpen(Boolean(id));
+    if (!id) return;
+    setPopover(null);
+    setSelectedLayerGroup(undefined);
+    setSelectedTimingSetId(undefined);
+    onSelectTimingTrack?.(undefined);
+    onSelectLayer(undefined);
+  };
+  const activeSceneSet = sceneSetOpen ? setById.get(selectedSceneSet ?? '') : undefined;
+  const sceneSetInspector = activeSceneSet && onSceneSetAction && (
+    <SceneSetProperties key={`${activeSceneSet.id}:${breakpoint}`} active={activeSceneSet}
+      breakpoint={breakpoint} previewFrame={previewFrame} sets={availableSets} layers={layers} tracks={tracks}
+      onSelect={selectSceneSet} onAction={onSceneSetAction} />
+  );
+
   const timingInspector = selectedTimingSet ? (
               <section className={styles.setEditor} aria-label={`Timing track ${selectedTimingSet.label}`}>
                 <div className={styles.setEditorHeader}>
@@ -699,25 +730,62 @@ export default function CinematicAdjustPanel({
                 </div>
                 <TimingTrackEditor track={selectedTimingSet} onChange={onTimingTrackChange}
                   onPreview={previewTrackTransition}
-                  help={selectedTimingSet.kind === 'interaction'
+                  hideEffectHelp={Boolean(selectedEffectTrack)}
+                  help={selectedEffectTrack
+                    ? 'Effect timing places an effect on the story’s scroll range.'
+                    : selectedTimingSet.kind === 'interaction'
                     ? 'This marker is an entry window. Opening RSVP or Best Wishes pauses the scene; the guest decides how long the form stays open.'
                     : `${linkedAssetCount(selectedTimingSet.id)} assets follow this clip. Moving it moves every linked asset.`} />
+                {selectedEffectTrack && <>
+                  {selectedEffects.length > 0 ? <ul className={styles.effectTrackUses}>
+                    {selectedEffects.map((effect) => <li key={effect.id}>
+                      <strong>{effect.label}</strong>{effect.enabled ? '' : ' · Off'}
+                      <div>{effect.target === 'world' || (effect.target === 'layer' && effect.targetId.includes(':'))
+                        ? 'Configure in Advanced → Effects.'
+                        : effect.target === 'group' ? 'Configure in the group’s Animation → Legacy group effects.'
+                          : 'Configure in the layer’s Animation → Legacy layer effects.'}</div>
+                      {effect.target === 'layer' && !effect.targetId.includes(':') && layers.some(({ id }) => id === effect.targetId) &&
+                        <button type="button" className={styles.timingLinkButton} onClick={() => {
+                          setInspectorTab('animation');
+                          setPopover(null);
+                          onSelectLayer(effect.targetId);
+                        }}>Open layer effects</button>}
+                    </li>)}
+                  </ul> : <p className={styles.note}>{effectTrackDependencies.length
+                    ? 'This track is used by the controls below.'
+                    : 'No effect on this breakpoint uses this track.'}</p>}
+                  {(breakpoint === 'mobile' ? selectedEffectTrack.effects.desktop : selectedEffectTrack.effects.mobile)
+                    .some((effect) => effect.enabled) && <p className={styles.note}>
+                      Also check {breakpoint === 'mobile' ? 'Desktop' : 'Mobile'} for effects using this track.
+                    </p>}
+                  {effectTrackDependencies.length > 0 && <ul className={styles.effectTrackUses}>
+                    {effectTrackDependencies.map((dependency) => <li key={dependency}>{dependency}</li>)}
+                  </ul>}
+                </>}
                 {timingSetAnimationLayer && <>
                   {timingSetLayers.length > 1 && <label className={styles.compactField}>Animate asset<select aria-label="Asset to animate" value={timingSetAnimationLayer.id} onChange={(event) => setAnimationLayerId(event.target.value)}>
                     {timingSetLayers.map((layer) => <option key={layer.id} value={layer.id}>{layer.label}</option>)}
                   </select></label>}
                   {canAnimateLayer?.(timingSetAnimationLayer) && <button type="button" className={styles.timingLinkButton}
                     onClick={() => onAnimateLayer?.(timingSetAnimationLayer)}>Open keyframes</button>}
-                  {!timingSetAnimationLayer.keyframes?.length && !!timingSetAnimationLayer.animations?.length &&
-                    <AssetAnimationEditor layer={timingSetAnimationLayer} tracks={tracks} layers={layers}
-                    disabled={timingSetAnimationLayer.locked || setById.get(timingSetAnimationLayer.group)?.locked}
-                    onChange={(animations) => patchLayer(timingSetAnimationLayer.id, { animations })}
-                    onSelectTrack={onSelectTimingTrack} onPreview={(track) => previewTrackTransition(track, 'enter')} />}
                 </>}
-                {(onResetTrack || selectedTimingSet.target.type === 'set') && <div key={selectedTimingSet.id} className={styles.timingTrackActions} role="group" aria-label="Timing track actions">
+                {(onResetTrack || selectedEffectTrack && onDeleteEffectTrack || selectedTimingSet.target.type === 'set') && <div key={selectedTimingSet.id} className={styles.timingTrackActions} role="group" aria-label="Timing track actions">
                 {onResetTrack && (
                   <div className={styles.setActions}>
                     <ConfirmEditorAction label="Reset track" description="Restore this track’s template timing, or its full-story defaults if custom. Assets that follow this track are affected; unrelated tracks and layer placement stay unchanged." onConfirm={() => onResetTrack(selectedTimingSet.id)} />
+                  </div>
+                )}
+                {selectedEffectTrack && onDeleteEffectTrack && (
+                  <div className={styles.setActions}>
+                    <ConfirmEditorAction label="Delete track" reveal disabled={effectTrackDependencies.length > 0}
+                      description={activeEffectNames.length
+                        ? `Remove “${selectedTimingSet.label}” on mobile and desktop. ${activeEffectNames.join(', ')} will stop running wherever they use this track. You can choose another timing track in the effect settings.`
+                        : `Remove “${selectedTimingSet.label}” from the Story timeline on mobile and desktop.`}
+                      onConfirm={() => {
+                        onDeleteEffectTrack(selectedTimingSet.id);
+                        setSelectedTimingSetId(undefined);
+                      }} />
+                    {effectTrackDependencies.length > 0 && <p className={styles.note}>Change the references above before deleting this track.</p>}
                   </div>
                 )}
                 {selectedTimingSet.target.type === 'set' && (
@@ -1155,11 +1223,6 @@ export default function CinematicAdjustPanel({
                     <summary>Legacy layer effects</summary>
                     {layerEffects}
                   </details>}
-                {!activeLayer.keyframes?.length && !!activeLayer.animations?.length &&
-                  <AssetAnimationEditor layer={activeLayer} tracks={tracks} layers={layers}
-                  disabled={activeLayer.locked || setById.get(activeLayer.group)?.locked}
-                  onChange={(animations) => patchLayer(activeLayer.id, { animations })}
-                  onSelectTrack={onSelectTimingTrack} onPreview={(track) => previewTrackTransition(track, 'enter')} />}
                 </div>
               </>
             ) : null}
@@ -1301,8 +1364,8 @@ export default function CinematicAdjustPanel({
 
         {mode === 'scene' && (
           <>
-            {onSceneSetAction && <SceneSetManager breakpoint={breakpoint} previewFrame={previewFrame} sets={availableSets} layers={layers} tracks={tracks}
-              selectedId={selectedSceneSet} onSelect={setSelectedSceneSet} onAction={onSceneSetAction} />}
+            {onSceneSetAction && <SceneSetManager sets={availableSets} layers={layers}
+              selectedId={sceneSetOpen ? selectedSceneSet : undefined} onSelect={selectSceneSet} onAction={onSceneSetAction} />}
             <section className={styles.layerBrowser} aria-label="Scene layer browser" data-active={timingSelectionMode || popover === 'add'}>
             <div ref={layerBrowserHeaderRef} className={styles.layerBrowserHeader}>
               <div className={styles.label}>Scene layers · front to back</div>
@@ -1523,10 +1586,10 @@ export default function CinematicAdjustPanel({
         )}
 
       </div>
-      {sidebarTab === 'editing' && mode === 'scene' && (groupInspector || inspector || selectedTimingSet) && (
+      {sidebarTab === 'editing' && mode === 'scene' && (sceneSetInspector || groupInspector || inspector || selectedTimingSet) && (
         <div ref={floatingRef} className={styles.floatingInspector} aria-label="Floating adjustment window"
           onScroll={(event) => rememberScroll(floatingScrollKey, event.currentTarget.scrollTop)}>
-          {groupInspector ?? inspector ?? timingInspector}
+          {sceneSetInspector || (showTimingInspector ? timingInspector : groupInspector ?? inspector ?? timingInspector)}
         </div>
       )}
       {direction && onDirectionChange && <>

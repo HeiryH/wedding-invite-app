@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { templateService } from '@/lib/api';
 import { Button } from '@/components/ui/Button';
-import { captureLivePreview, type LivePreviewImage } from './captureLivePreview';
+import { captureLivePreview, convertThumbnailToWebP, type LivePreviewImage } from './captureLivePreview';
 import styles from './CaptureThumbnailDialog.module.css';
 
 function errorMessage(error: unknown) {
@@ -64,7 +64,8 @@ export function LiveThumbnailCapture({ templateId, getPreviewElement, disabled, 
     if (!image || saving) return;
     setSaving(true); setError('');
     try {
-      await templateService.uploadThumbnail(templateId, image.blob, 'studio-preview.png');
+      const webp = await convertThumbnailToWebP(image.blob);
+      await templateService.uploadThumbnail(templateId, webp, 'studio-preview.webp');
       if (url.current) URL.revokeObjectURL(url.current);
       url.current = null; setImage(null); onApplied();
     } catch (e) { setError(errorMessage(e)); }

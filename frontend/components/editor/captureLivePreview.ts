@@ -1,4 +1,23 @@
 export interface LivePreviewImage { blob: Blob; width: number; height: number }
+const thumbnailMimeType = 'image/webp';
+
+export async function convertThumbnailToWebP(png: Blob): Promise<Blob> {
+  const image = await createImageBitmap(png);
+  try {
+    const canvas = document.createElement('canvas');
+    canvas.width = image.width;
+    canvas.height = image.height;
+    const context = canvas.getContext('2d');
+    if (!context) throw new Error('Could not prepare the thumbnail for WebP conversion.');
+    context.drawImage(image, 0, 0);
+    return await new Promise<Blob>((resolve, reject) => canvas.toBlob(value => {
+      if (value?.type === thumbnailMimeType) resolve(value);
+      else reject(new Error('This browser could not encode a WebP thumbnail. Use Chrome or Edge and try again.'));
+    }, thumbnailMimeType, 0.94));
+  } finally {
+    image.close();
+  }
+}
 type Rect = Pick<DOMRect, 'left' | 'top' | 'right' | 'bottom' | 'width' | 'height'>;
 type CaptureTrack = MediaStreamTrack & {
   cropTo?: (target: unknown) => Promise<void>;
@@ -104,7 +123,10 @@ export async function captureLivePreview(target: HTMLElement, signal?: AbortSign
     ctx.drawImage(video, crop.x, crop.y, crop.width, crop.height, 0, 0, crop.width, crop.height);
     // Sharing ends as soon as the cropped pixels have been copied; review is a local image.
     stop();
-    const blob = await new Promise<Blob>((resolve, reject) => canvas.toBlob(value => value ? resolve(value) : reject(new Error('Could not create the thumbnail image.')), 'image/png'));
+    const blob = await new Promise<Blob>((resolve, reject) => canvas.toBlob(value => {
+      if (value) resolve(value);
+      else reject(new Error('Could not create the thumbnail image.'));
+    }, 'image/png'));
     return { blob, width: crop.width, height: crop.height };
   } finally {
     stop(); signal?.removeEventListener('abort', stop);

@@ -47,6 +47,23 @@ describe('CinematicTimeline', () => {
     view.rerender(<CinematicTimeline {...props} collapsed={false} />);
     expect(screen.queryByRole('slider', { name: 'Scrub story' })).not.toBeInTheDocument();
   });
+  it('adds a scroll stop at the playhead and detaches timing when a linked stop is moved', () => {
+    const stop = { id: 'rsvp-stop', label: 'RSVP guest book', at: .8,
+      interactionId: 'rsvp', easing: 'ease-out' as const, durationMs: 280 };
+    const onScrollStopsChange = vi.fn();
+    const { onChange } = renderTimeline({ scrollStops: [{ stop, at: .81, active: true }], onScrollStopsChange });
+    fireEvent.click(screen.getByRole('button', { name: 'Add scroll stop at playhead' }));
+    expect(onScrollStopsChange).toHaveBeenLastCalledWith([stop, expect.objectContaining({ at: .4 })]);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Edit RSVP guest book scroll stop at 81.0%' }));
+    expect(onChange).toHaveBeenLastCalledWith(.81);
+    fireEvent.change(screen.getByLabelText('Easing'), { target: { value: 'ease-in-out' } });
+    expect(onScrollStopsChange).toHaveBeenLastCalledWith([{ ...stop, easing: 'ease-in-out' }]);
+    fireEvent.click(screen.getByRole('button', { name: 'Move to playhead' }));
+    expect(onScrollStopsChange).toHaveBeenLastCalledWith([{ ...stop, at: .4, interactionId: undefined, visibilityLayerId: undefined }]);
+    fireEvent.click(screen.getByRole('button', { name: 'Remove' }));
+    expect(onScrollStopsChange).toHaveBeenLastCalledWith([]);
+  });
   it('includes the selected layer’s dedicated effects in its focused timeline', () => {
     const select = vi.fn();
     renderTimeline({ selectedAsset: { id: 'welcome-ring', label: 'Wedding ring', trackId: 'welcome-ring', effectTrackIds: ['ring-motion'] }, onTrackSelect: select });
@@ -83,54 +100,14 @@ describe('CinematicTimeline', () => {
     expect(screen.queryByRole('region', { name: 'Timeline tracks' })).toBeNull();
     expect(screen.getByRole('button', { name: 'Expand timeline' })).toBeVisible();
   });
-  it('shows only the selected object’s motion bars in focus view, even with shared timing', () => {
-    const parent = PAINTED_PROMISE_SEQUENCE.tracks.find((track) => track.id === 'programme')!;
-    const motion = (id: string) => ({ ...parent, id: `motion-${id}`, label: `${id} move`, kind: 'effect' as const,
-      assetAnimation: { layerId: id, animationId: 'move', sourceTrackId: parent.id } });
-    renderTimeline({ tracks: [parent, motion('board'), motion('other')], selectedAsset: { id: 'board', label: 'Board', trackId: parent.id } });
-    expect(screen.getByTestId('timeline-clip-motion-board')).toBeInTheDocument();
-    expect(screen.queryByTestId('timeline-clip-motion-other')).toBeNull();
-  });
-  it('groups editable in-between bars under their source and exposes a dedicated filter', () => {
-    const parent = { ...PAINTED_PROMISE_SEQUENCE.tracks.find((track) => track.id === 'dais')!, id: 'parent' };
-    const motion = { ...parent, id: 'move', label: 'Board · Move left', kind: 'effect' as const,
-      assetAnimation: { layerId: 'board', animationId: 'left', sourceTrackId: parent.id, startLimit: .2, endLimit: .8 },
-      clip: { start: .25, enterEnd: .35, exitStart: .35, end: .35 } };
-    const ambient = { ...parent, id: 'ambient', label: 'Cloud drift', kind: 'effect' as const };
-    const { container } = render(<CinematicTimeline progress={.3} beats={beats} tracks={[parent, ambient, motion]} expanded
-      onExpandedChange={vi.fn()} onChange={vi.fn()} onTrackClipChange={vi.fn()} />);
-    const clips = [...container.querySelectorAll('[data-testid^="timeline-clip-"]')].map((node) => node.getAttribute('data-testid'));
-    expect(clips).toEqual(['timeline-clip-parent', 'timeline-clip-move', 'timeline-clip-ambient']);
-    expect(screen.getByRole('button', { name: 'Move start of Board · Move left' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Move end of Board · Move left' })).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Scene set' }));
-    expect(screen.getByTestId('timeline-clip-move')).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'In-between animations' }));
-    expect(screen.queryByTestId('timeline-clip-parent')).toBeNull();
-    expect(screen.queryByTestId('timeline-clip-ambient')).toBeNull();
-    expect(screen.getByTestId('timeline-clip-move')).toBeInTheDocument();
-  });
-
-  it('keeps a visually moved animation inside the source interval without shortening its duration', () => {
-    const track = { ...PAINTED_PROMISE_SEQUENCE.tracks[0], id: 'motion', label: 'Board move', kind: 'effect' as const,
-      assetAnimation: { layerId: 'board', animationId: 'move', startLimit: .2, endLimit: .8 },
-      clip: { start: .2, enterEnd: .3, exitStart: .3, end: .3 } };
-    const onTrackClipChange = vi.fn();
-    renderTimeline({ expanded: true, tracks: [track], onTrackClipChange });
-    fireEvent.keyDown(screen.getByRole('button', { name: 'Move timing clip for Board move' }), { key: 'ArrowLeft', shiftKey: true });
-    const next = onTrackClipChange.mock.calls[0][1];
-    expect(next.start).toBeCloseTo(.2); expect(next.end).toBeCloseTo(.3);
-  });
-
-  it('resizes in-between moves with two boundaries without a stale inner handle preventing shortening', () => {
-    const track = { ...PAINTED_PROMISE_SEQUENCE.tracks[0], id: 'motion', label: 'Board move', kind: 'effect' as const,
-      assetAnimation: { layerId: 'board', animationId: 'move' }, clip: { start: .2, enterEnd: .5, exitStart: .5, end: .5 } };
-    const onTrackClipChange = vi.fn();
-    renderTimeline({ expanded: true, tracks: [track], onTrackClipChange,
-      selectedAsset: { id: track.id, label: track.label, trackId: track.id, sourceTrackId: track.id, editableTrackId: track.id, timingStatus: 'independent' } });
-    expect(screen.queryByRole('button', { name: 'Move fully visible of Board move' })).toBeNull();
-    fireEvent.keyDown(screen.getByRole('button', { name: 'Move end of Board move' }), { key: 'ArrowLeft', altKey: true });
-    expect(onTrackClipChange).toHaveBeenCalledWith(track.id, { start: .2, enterEnd: .499, exitStart: .499, end: .499 });
+  it('restores the timeline when the saved filter came from the old animation editor', () => {
+    localStorage.setItem('einvite.cinematic.timeline-controls.v1', JSON.stringify({
+      filter: 'motion', collapsedKinds: ['motion'], zoom: 1,
+    }));
+    renderTimeline({ expanded: true });
+    expect(screen.getByRole('button', { name: 'All' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByTestId('timeline-clip-programme')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /In-between animations/ })).toBeNull();
   });
 
   it('scrubs directly from the sticky camera rail without moving camera beats', () => {
@@ -390,6 +367,44 @@ describe('CinematicTimeline', () => {
       start: .31, enterEnd: .355, exitStart: .625, end: .685,
     });
     expect(screen.queryByText('Full dais')).toBeInTheDocument();
+  });
+
+  it('Shift-drags the selected camera beat in Scene mode and commits only on release', () => {
+    const onBeatMove = vi.fn();
+    const { onChange } = renderTimeline({ selectedBeat: 'groom', onBeatMove });
+    const marker = screen.getByRole('button', { name: 'Go to Groom close-up' });
+    const rail = marker.parentElement!;
+    vi.spyOn(rail, 'getBoundingClientRect').mockReturnValue({
+      left: 20, right: 1020, top: 0, bottom: 26, width: 1000, height: 26, x: 20, y: 0,
+      toJSON: () => ({}),
+    });
+    const setPointerCapture = vi.fn();
+    Object.assign(marker, { setPointerCapture, hasPointerCapture: vi.fn(() => true), releasePointerCapture: vi.fn() });
+    const start = { pointerId: 1, button: 0, clientX: 424 };
+
+    fireEvent.pointerDown(marker, start);
+    fireEvent.pointerMove(marker, { ...start, clientX: 474 });
+    fireEvent.pointerUp(marker, { ...start, clientX: 474 });
+    fireEvent.click(marker);
+    expect(onChange).toHaveBeenCalledWith(.4);
+    expect(setPointerCapture).not.toHaveBeenCalled();
+    expect(onBeatMove).not.toHaveBeenCalled();
+    onChange.mockClear();
+
+    fireEvent.pointerDown(marker, { ...start, shiftKey: true });
+    fireEvent.pointerMove(marker, { ...start, clientX: 474, shiftKey: true });
+    expect(marker).toHaveStyle({ left: '45%' });
+    expect(onBeatMove).not.toHaveBeenCalled();
+    fireEvent.pointerUp(marker, { ...start, clientX: 474, shiftKey: true });
+    fireEvent.click(marker);
+    expect(onBeatMove).toHaveBeenCalledExactlyOnceWith('groom', .45);
+    expect(onChange).not.toHaveBeenCalled();
+
+    fireEvent.pointerDown(marker, { ...start, shiftKey: true });
+    fireEvent.pointerMove(marker, { ...start, clientX: 500, shiftKey: true });
+    fireEvent.pointerCancel(marker, start);
+    expect(marker).toHaveStyle({ left: '40%' });
+    expect(onBeatMove).toHaveBeenCalledTimes(1);
   });
 
   it('moves camera beats with accessible keyboard steps while editing', () => {

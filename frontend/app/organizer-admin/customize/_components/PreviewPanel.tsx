@@ -4,6 +4,8 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Icon } from '@/components/ui/Icon';
 import type { Wedding } from '@/lib/api';
 import AssetKeyframeLane, { type AssetKeyframeLaneProps } from '@/components/templates/_shared/cinematic/AssetKeyframeLane';
+import type { CinematicScrollStop } from '@/components/templates/_shared/cinematic/direction';
+import type { ResolvedCinematicScrollStop } from '@/components/templates/_shared/cinematic/scrollStops';
 import CinematicTimeline, { type CinematicTimelineAsset } from '@/components/templates/_shared/cinematic/CinematicTimeline';
 import CinematicReferenceRail, { type CinematicReferenceControls } from './CinematicReferenceRail';
 import styles from './PreviewPanel.module.css';
@@ -67,6 +69,8 @@ interface PreviewPanelProps {
     progress: number;
     beats: CinematicResolvedBeat[];
     tracks: CinematicSequenceTrack[];
+    scrollStops?: ResolvedCinematicScrollStop[];
+    onScrollStopsChange?: (stops: CinematicScrollStop[]) => void;
     selectedAsset?: CinematicTimelineAsset;
     onAnimate?: () => void;
     assetKeyframes?: AssetKeyframeLaneProps;
@@ -578,6 +582,8 @@ export function PreviewPanel({
             progress={cinematicTimeline.progress}
             beats={cinematicTimeline.beats}
             tracks={cinematicTimeline.tracks}
+            scrollStops={cinematicTimeline.scrollStops}
+            onScrollStopsChange={cinematicTimeline.onScrollStopsChange}
             selectedAsset={cinematicTimeline.selectedAsset}
             selectedBeat={cinematicTimeline.selectedBeat}
             editableBeats={cinematicTimeline.editableBeats}

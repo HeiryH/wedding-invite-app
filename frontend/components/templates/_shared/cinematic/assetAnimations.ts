@@ -1,7 +1,7 @@
 import type { CinematicEffect, CinematicMotion } from './direction';
 import { assetClipPosition, assetPoseClip, keyframeTime, normalizeAssetPose, sampleAssetKeyframes, type AssetKeyframe } from './assetKeyframes';
 import type { CinematicWorldLayer } from './world';
-import { easeAmount, resolveCinematicLayerTiming, resolveCinematicTrackClip, type CinematicEasing, type CinematicSequenceClip, type CinematicSequenceTrack } from './sequence';
+import { easeAmount, resolveCinematicLayerTiming, resolveCinematicTrackClip, type CinematicEasing, type CinematicSequenceTrack } from './sequence';
 
 export interface CinematicAssetAnimation {
   id: string; label: string; enabled: boolean;
@@ -33,28 +33,6 @@ export function assetAnimationWindow(layer: CinematicWorldLayer, tracks: Cinemat
   const clip = track ? resolveCinematicTrackClip(track, tracks) : { start: 0, enterEnd: 0, exitStart: 1, end: 1 };
   return { start: clip.enterEnd, end: clip.exitStart, span: Math.max(0, clip.exitStart - clip.enterEnd), trackId: track?.id };
 }
-export const assetAnimationTrackId = (layerId: string, id: string) => `asset-motion:${layerId}:${id}`;
-export function compileAssetAnimationTracks(layers: CinematicWorldLayer[], tracks: CinematicSequenceTrack[]): CinematicSequenceTrack[] {
-  return layers.flatMap((layer) => {
-    const window = assetAnimationWindow(layer, tracks, layers);
-    if (window.span <= 0 || layer.hidden || layer.keyframes?.length) return [];
-    return normalizeAssetAnimations(layer.animations).filter((animation) => animation.enabled).map((animation) => {
-      const start = window.start + animation.start * window.span, end = window.start + animation.end * window.span;
-      return { id: assetAnimationTrackId(layer.id, animation.id), label: `${layer.label} · ${animation.label}`, kind: 'effect' as const,
-        target: { type: 'effect' as const, id: animation.id }, assetAnimation: { layerId: layer.id, animationId: animation.id, label: animation.label,
-          sourceTrackId: window.trackId, startLimit: window.start, endLimit: window.end },
-        clip: { start, enterEnd: end, exitStart: end, end }, timing: { mode: 'independent' as const },
-        enter: { kind: 'cut' as const, easing: animation.easing }, exit: { kind: 'cut' as const, easing: 'linear' as const }, ownership: { kind: 'shared' as const } };
-    });
-  });
-}
-export function retimeAssetAnimation(layer: CinematicWorldLayer, id: string, clip: CinematicSequenceClip, tracks: CinematicSequenceTrack[], layers?: CinematicWorldLayer[]): CinematicWorldLayer {
-  const window = assetAnimationWindow(layer, tracks, layers);
-  if (window.span <= 0) return layer;
-  const start = clamp((clip.start - window.start) / window.span), end = Math.max(start, clamp((clip.end - window.start) / window.span));
-  return { ...layer, animations: normalizeAssetAnimations(layer.animations).map((animation) => animation.id === id ? { ...animation, start, end } : animation) };
-}
-
 /** Stateless sampling is reversible. Each move starts from the preceding move's sampled position,
  * so gaps hold the last destination and overlapping moves redirect smoothly without a snap. */
 export function sampleAssetAnimations(layer: CinematicWorldLayer, tracks: CinematicSequenceTrack[], progress: number, layers?: CinematicWorldLayer[]): AssetMotion {
@@ -90,7 +68,7 @@ export function convertAssetAnimations(
   if (!window.span || clip.end <= clip.start) return;
   const timing = resolveCinematicLayerTiming(layer.id, layer.group, tracks, layer.timingTrackId, layers);
   const track = timing.exact ?? timing.inherited;
-  if ([track?.enter.kind, track?.exit.kind].some((kind) => kind && kind !== 'cut' && kind !== 'fade')) return;
+  if (layer.behavior !== 'programme-board' && [track?.enter.kind, track?.exit.kind].some((kind) => kind && kind !== 'cut' && kind !== 'fade')) return;
   const story = (local: number) => window.start + local * window.span;
   const points: AssetKeyframe[] = [];
   for (const move of moves) {

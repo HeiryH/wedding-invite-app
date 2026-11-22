@@ -69,8 +69,6 @@ export type CinematicTrackTarget =
 export type CinematicTrackKind = 'set' | 'asset' | 'text' | 'effect' | 'interaction';
 
 export interface CinematicSequenceTrack {
-  /** Editor-only projection of a layer's in-between animation; never stored in the sequence. */
-  assetAnimation?: { layerId: string; animationId: string; label?: string; sourceTrackId?: string; startLimit?: number; endLimit?: number };
   id: string;
   label: string;
   kind: CinematicTrackKind;

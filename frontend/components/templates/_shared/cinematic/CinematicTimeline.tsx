@@ -1,6 +1,8 @@
 'use client';
 
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent, type PointerEvent } from 'react';
+import { SCROLL_STOP_EASINGS, type CinematicScrollStop } from './direction';
+import type { ResolvedCinematicScrollStop } from './scrollStops';
 import { useWorkspacePreference, DEFAULT_TIMELINE_CONTROLS, decodeTimelineControls } from './workspacePreferences';
 import {
   cinematicClipBeatSpan,
@@ -30,6 +32,8 @@ interface Props {
   progress: number;
   beats: CinematicResolvedBeat[];
   tracks: CinematicSequenceTrack[];
+  scrollStops?: ResolvedCinematicScrollStop[];
+  onScrollStopsChange?: (stops: CinematicScrollStop[]) => void;
   selectedAsset?: CinematicTimelineAsset;
   selectedBeat?: string;
   editableBeats?: boolean;
@@ -50,7 +54,6 @@ interface Props {
 interface DisplayTrack {
   id: string;
   label: string;
-  displayLabel?: string;
   meta: string;
   kind: CinematicSequenceTrack['kind'] | 'selected-asset';
   clip: CinematicSequenceClip;
@@ -59,13 +62,9 @@ interface DisplayTrack {
   sourceTrackId?: string;
   editable?: boolean;
   interactionIcon?: string;
-  motion?: boolean;
-  parentTrackId?: string;
-  parentKind?: CinematicSequenceTrack['kind'];
-  bounds?: { start: number; end: number };
 }
 
-type TrackFilter = 'all' | 'motion' | CinematicSequenceTrack['kind'];
+type TrackFilter = 'all' | CinematicSequenceTrack['kind'];
 
 interface TrackMenu {
   id: string;
@@ -139,14 +138,13 @@ function effectiveClip(
   return effectiveClip(parent, byId, visited);
 }
 
-function trackKindLabel(kind: CinematicSequenceTrack['kind'] | 'motion') {
+function trackKindLabel(kind: CinematicSequenceTrack['kind']) {
   switch (kind) {
     case 'interaction': return 'Interaction availability';
     case 'set': return 'Scene set';
     case 'asset': return 'Asset timing';
     case 'text': return 'Text timing';
     case 'effect': return 'Effect timing';
-    case 'motion': return 'In-between animations';
   }
 }
 
@@ -169,26 +167,15 @@ function displayRows(
   const selectedSource = selectedAsset?.sourceTrackId
     ? byId.get(selectedAsset.sourceTrackId)
     : selectedTrack;
-  const motionRows: DisplayTrack[] = tracks.filter((track) => track.assetAnimation
-    ? (expanded || track.assetAnimation.layerId === selectedAsset?.id || track.id === selectedTrack?.id)
-    : !expanded && selectedAsset?.effectTrackIds?.includes(track.id)).map((track) => ({
-    id: track.id, label: track.label, displayLabel: track.assetAnimation?.label,
-    meta: track.assetAnimation?.label ? track.label.slice(0, -(track.assetAnimation.label.length + 3)) : track.assetAnimation ? 'In-between animation' : 'Layer effect', kind: track.kind, motion: Boolean(track.assetAnimation),
-    clip: effectiveClip(track, byId), selected: track.id === selectedTrack?.id, editable: true, sourceTrackId: track.id,
-    parentTrackId: track.assetAnimation?.sourceTrackId ?? selectedTrack?.id,
-    parentKind: byId.get(track.assetAnimation?.sourceTrackId ?? '')?.kind,
-    bounds: track.assetAnimation?.startLimit !== undefined && track.assetAnimation?.endLimit !== undefined
-      ? { start: track.assetAnimation.startLimit, end: track.assetAnimation.endLimit } : undefined,
-  }));
-  const withMoves = (rows: DisplayTrack[], includeOrphans = false) => {
-    const used = new Set(rows.map((row) => row.sourceTrackId));
-    const grouped = rows.flatMap((row) => [row, ...motionRows.filter((motion) => motion.parentTrackId === row.sourceTrackId && !used.has(motion.id))]);
-    return includeOrphans ? [...grouped, ...motionRows.filter((motion) => !grouped.some((row) => row.id === motion.id))] : grouped;
-  };
+  const effectRows: DisplayTrack[] = !expanded ? tracks.filter((track) =>
+    track.id !== selectedTrack?.id && track.id !== selectedSource?.id && selectedAsset?.effectTrackIds?.includes(track.id),
+  ).map((track) => ({
+    id: track.id, label: track.label, meta: 'Layer effect', kind: track.kind,
+    clip: effectiveClip(track, byId), editable: true, sourceTrackId: track.id,
+  })) : [];
   const assetRow: DisplayTrack | undefined = selectedAsset ? {
     id: `selected-${selectedAsset.id}`,
     label: selectedAsset.label,
-    displayLabel: selectedTrack?.assetAnimation?.label,
     meta: selectedTrack
       ? selectedAsset.timingStatus === 'independent'
         ? 'Independent timing'
@@ -202,18 +189,15 @@ function displayRows(
       : undefined,
     sourceTrackId: selectedTrack?.id,
     editable: selectedTrack?.id === selectedAsset.editableTrackId,
-    motion: Boolean(selectedTrack?.assetAnimation),
-    bounds: motionRows.find((row) => row.id === selectedTrack?.id)?.bounds,
     interactionIcon: selectedTrack?.kind === 'interaction'
       ? interactionIcon(selectedTrack) : undefined,
   } : undefined;
 
   if (expanded) {
-    const rows = tracks.filter((track) => !track.assetAnimation).map((track): DisplayTrack => ({
+    const rows = tracks.map((track): DisplayTrack => ({
       id: track.id,
       label: track.label,
-      meta: track.assetAnimation ? 'In-between animation' : trackKindLabel(track.kind),
-      motion: Boolean(track.assetAnimation),
+      meta: trackKindLabel(track.kind),
       kind: track.kind,
       clip: effectiveClip(track, byId),
       selected: track.id === selectedTrack?.id || track.id === selectedSource?.id,
@@ -223,13 +207,13 @@ function displayRows(
     }));
     // Selection must not reorder or remount a track under a scrolled playhead.
     // Only assets without a timing track need a separate diagnostic row.
-    return withMoves(assetRow && !selectedTrack ? [...rows, assetRow] : rows, true);
+    return assetRow && !selectedTrack ? [...rows, assetRow] : rows;
   }
 
   if (assetRow) {
-    if (!selectedTrack || !selectedSource) return withMoves([assetRow]);
-    if (selectedSource.id === selectedTrack.id) return withMoves([assetRow]);
-    return withMoves([assetRow, {
+    if (!selectedTrack || !selectedSource) return [assetRow, ...effectRows];
+    if (selectedSource.id === selectedTrack.id) return [assetRow, ...effectRows];
+    return [assetRow, {
       id: selectedSource.id,
       label: selectedSource.label,
       meta: trackKindLabel(selectedSource.kind),
@@ -239,7 +223,7 @@ function displayRows(
       sourceTrackId: selectedSource.id,
       interactionIcon: selectedSource.kind === 'interaction'
         ? interactionIcon(selectedSource) : undefined,
-    }]);
+    }, ...effectRows];
   }
 
   return [];
@@ -271,18 +255,8 @@ function Clip({ row, beats, onSelect, onClipChange, onEditStart, onEditCommit, o
   const [dragLabel, setDragLabel] = useState<string>();
   const span = Math.max(clip.end - clip.start, .0001);
   const isAvailability = Boolean(row.interactionIcon);
-  const simpleRange = isAvailability || row.motion;
   const enterWidth = ((clip.enterEnd - clip.start) / span) * 100;
   const exitWidth = ((clip.end - clip.exitStart) / span) * 100;
-  const boundedClip = (value: CinematicSequenceClip, moving = false): CinematicSequenceClip => {
-    if (!row.bounds) return constrainCinematicClip(value);
-    const { start: min, end: max } = row.bounds;
-    const duration = Math.min(Math.max(0, value.end - value.start), Math.max(0, max - min));
-    const start = Math.max(min, Math.min(moving ? max - duration : max, value.start));
-    const end = moving ? start + duration : Math.max(start, Math.min(max, value.end));
-    return { start, enterEnd: end, exitStart: end, end };
-  };
-
   const announce = (field: keyof CinematicSequenceClip | 'move', next: CinematicSequenceClip) => {
     if (field === 'move') {
       setDragLabel(`${describeCinematicStoryPosition(next.start, beats)} → ${describeCinematicStoryPosition(next.end, beats)}`);
@@ -339,12 +313,11 @@ function Clip({ row, beats, onSelect, onClipChange, onEditStart, onEditCommit, o
     } else {
       const snapped = snappedValue(clip[field] + delta, event.altKey);
       next = { ...clip };
-      if (field === 'start' && simpleRange) {
+      if (field === 'start' && isAvailability) {
         next.start = Math.min(snapped.value, next.end);
-        next.enterEnd = row.motion ? next.end : next.start;
-      } else if (field === 'end' && simpleRange) {
+        next.enterEnd = next.start;
+      } else if (field === 'end' && isAvailability) {
         next.end = Math.max(next.start, snapped.value);
-        if (row.motion) next.enterEnd = next.end;
         next.exitStart = next.end;
       } else if (field === 'start') next.start = Math.min(snapped.value, next.enterEnd);
       else if (field === 'enterEnd') next.enterEnd = Math.max(next.start, Math.min(snapped.value, next.exitStart));
@@ -353,7 +326,7 @@ function Clip({ row, beats, onSelect, onClipChange, onEditStart, onEditCommit, o
       next = constrainCinematicClip(next);
       guide = snapped.beat ? { value: snapped.value, label: snapped.beat.label } : undefined;
     }
-    next = boundedClip(next, field === 'move');
+    next = constrainCinematicClip(next);
     onSnapGuide(guide);
     onEditStart(row.sourceTrackId, clip);
     onClipChange(row.sourceTrackId, next);
@@ -377,10 +350,10 @@ function Clip({ row, beats, onSelect, onClipChange, onEditStart, onEditCommit, o
         if (row.sourceTrackId) onSelect?.(row.sourceTrackId);
       }}
     >
-      {!simpleRange && enterWidth > 0 && <span className={styles.enter} style={{ width: `${enterWidth}%` }} />}
-      {!simpleRange && exitWidth > 0 && <span className={styles.exit} style={{ width: `${exitWidth}%` }} />}
+      {!isAvailability && enterWidth > 0 && <span className={styles.enter} style={{ width: `${enterWidth}%` }} />}
+      {!isAvailability && exitWidth > 0 && <span className={styles.exit} style={{ width: `${exitWidth}%` }} />}
       {row.interactionIcon && <span className={styles.interactionMarker} aria-hidden="true">{row.interactionIcon}</span>}
-      <span className={styles.clipText}>{row.placeholder ?? (isAvailability ? 'Available' : row.displayLabel || row.label)}</span>
+      <span className={styles.clipText}>{row.placeholder ?? (isAvailability ? 'Available' : row.label)}</span>
       {row.editable && row.sourceTrackId && onClipChange && (
         <>
           <button
@@ -418,7 +391,7 @@ function Clip({ row, beats, onSelect, onClipChange, onEditStart, onEditCommit, o
                   guide = { value: chosen.value, label: chosen.beat.label };
                 }
               }
-              next = boundedClip(next, true);
+              next = constrainCinematicClip(next);
               current.latest = next;
               onSnapGuide(guide);
               announce('move', next);
@@ -432,7 +405,7 @@ function Clip({ row, beats, onSelect, onClipChange, onEditStart, onEditCommit, o
               } else keyboardChange(event, 'move');
             }}
           />
-          {(simpleRange
+          {(isAvailability
             ? (['start', 'end'] as const)
             : (['start', 'enterEnd', 'exitStart', 'end'] as const)).map((field) => (
             <button
@@ -462,18 +435,17 @@ function Clip({ row, beats, onSelect, onClipChange, onEditStart, onEditCommit, o
                 const raw = (event.clientX - current.rail.left) / current.rail.width;
                 const snapped = snappedValue(raw, event.altKey);
                 const next = { ...current.original };
-                if (field === 'start' && simpleRange) {
+                if (field === 'start' && isAvailability) {
                   next.start = Math.min(snapped.value, next.end);
-                  next.enterEnd = row.motion ? next.end : next.start;
-                } else if (field === 'end' && simpleRange) {
+                  next.enterEnd = next.start;
+                } else if (field === 'end' && isAvailability) {
                   next.end = Math.max(next.start, snapped.value);
-                  if (row.motion) next.enterEnd = next.end;
                   next.exitStart = next.end;
                 } else if (field === 'start') next.start = Math.min(snapped.value, next.enterEnd);
                 else if (field === 'enterEnd') next.enterEnd = Math.max(next.start, Math.min(snapped.value, next.exitStart));
                 else if (field === 'exitStart') next.exitStart = Math.max(next.enterEnd, Math.min(snapped.value, next.end));
                 else next.end = Math.max(next.exitStart, snapped.value);
-                current.latest = boundedClip(next);
+                current.latest = constrainCinematicClip(next);
                 onSnapGuide(snapped.beat ? { value: snapped.value, label: snapped.beat.label } : undefined);
                 announce(field, current.latest);
                 onClipChange(row.sourceTrackId!, current.latest);
@@ -497,34 +469,58 @@ function BeatMarker({ beat, selected, editable, onChange, onMove }: {
   onChange: (progress: number) => void;
   onMove?: (id: string, progress: number) => void;
 }) {
-  const moved = useRef(false);
-  const railRect = useRef<DOMRect | null>(null);
+  const suppressClick = useRef(false);
+  const drag = useRef<{ pointerId: number; startX: number; offset: number; latest?: number } | null>(null);
+  const [dragProgress, setDragProgress] = useState<number>();
+  const shownProgress = dragProgress ?? beat.progress;
+  const canShiftDrag = selected && Boolean(onMove);
+  const cancelDrag = (event: PointerEvent<HTMLButtonElement>) => {
+    if (drag.current?.pointerId !== event.pointerId) return;
+    drag.current = null;
+    setDragProgress(undefined);
+  };
   return (
     <button
       type="button"
-      className={`${styles.beat} ${selected ? styles.beatSelected : ''} ${editable ? styles.beatEditable : ''}`}
-      style={{ left: `${beat.progress * 100}%` }}
-      title={`${beat.label} · ${Math.round(beat.progress * 100)}%${editable ? ' · drag to move' : ''}`}
+      className={`${styles.beat} ${selected ? styles.beatSelected : ''} ${(editable && onMove) || dragProgress !== undefined ? styles.beatEditable : ''}`}
+      style={{ left: `${shownProgress * 100}%` }}
+      title={`${beat.label} · ${Math.round(shownProgress * 100)}%${editable && onMove ? ' · drag to move' : canShiftDrag ? ' · Shift-drag to move' : ''}`}
       aria-label={`${editable ? 'Move or go to' : 'Go to'} ${beat.label}`}
       onPointerDown={(event) => {
-        if (!editable || !onMove) return;
-        moved.current = false;
-        railRect.current = event.currentTarget.parentElement?.getBoundingClientRect() ?? null;
+        if (event.button !== 0 || drag.current) return;
+        suppressClick.current = false;
+        if (!onMove || (!editable && !(canShiftDrag && event.shiftKey))) return;
+        const rail = event.currentTarget.parentElement?.getBoundingClientRect();
+        if (!rail?.width) return;
+        drag.current = { pointerId: event.pointerId, startX: event.clientX,
+          offset: event.clientX - (rail.left + beat.progress * rail.width) };
         event.currentTarget.setPointerCapture(event.pointerId);
       }}
       onPointerMove={(event) => {
-        if (!editable || !onMove || !event.currentTarget.hasPointerCapture(event.pointerId) || !railRect.current) return;
-        const progress = Math.min(1, Math.max(0, (event.clientX - railRect.current.left) / railRect.current.width));
-        if (Math.abs(progress - beat.progress) > .002) moved.current = true;
-        onMove(beat.id, progress);
+        const current = drag.current;
+        if (!current || current.pointerId !== event.pointerId || !onMove) return;
+        if (current.latest === undefined && Math.abs(event.clientX - current.startX) < 2) return;
+        const rail = event.currentTarget.parentElement?.getBoundingClientRect();
+        if (!rail?.width) return;
+        const next = Math.min(1, Math.max(0, (event.clientX - rail.left - current.offset) / rail.width));
+        if (current.latest === next) return;
+        current.latest = next;
+        suppressClick.current = true;
+        if (editable) onMove(beat.id, next);
+        else setDragProgress(next);
       }}
       onPointerUp={(event) => {
+        const current = drag.current;
+        if (!current || current.pointerId !== event.pointerId) return;
+        cancelDrag(event);
         if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
-        railRect.current = null;
+        if (!editable && current.latest !== undefined && current.latest !== beat.progress) onMove?.(beat.id, current.latest);
       }}
+      onPointerCancel={cancelDrag}
+      onLostPointerCapture={cancelDrag}
       onClick={() => {
-        if (!moved.current) onChange(beat.progress);
-        moved.current = false;
+        if (!suppressClick.current) onChange(beat.progress);
+        suppressClick.current = false;
       }}
       onKeyDown={(event) => {
         if (!editable || !onMove || (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight')) return;
@@ -544,8 +540,20 @@ function BeatMarker({ beat, selected, editable, onChange, onMove }: {
 export default function CinematicTimeline({
   progress, beats, tracks, selectedAsset, selectedBeat, editableBeats = false,
   dirty = false, expanded, collapsed = false, onCollapsedChange, onExpandedChange, onChange, onBeatMove, onTrackClipChange, onFocusHeightChange,
-  onTrackSelect, onClearSelection, onResetTrack,
+  onTrackSelect, onClearSelection, onResetTrack, scrollStops = [], onScrollStopsChange,
 }: Props) {
+  const [selectedStopId, setSelectedStopId] = useState<string>();
+  const selectedStop = scrollStops.find(({ stop }) => stop.id === selectedStopId);
+  const updateStop = (patch: Partial<CinematicScrollStop>) => onScrollStopsChange?.(
+    scrollStops.map(({ stop }) => stop.id === selectedStopId ? { ...stop, ...patch } : stop),
+  );
+  const addStop = () => {
+    const id = crypto.randomUUID();
+    onScrollStopsChange?.([...scrollStops.map(({ stop }) => stop), {
+      id, at: progress, label: 'Scroll stop', easing: 'ease-out', durationMs: 280,
+    }]);
+    setSelectedStopId(id);
+  };
   const allRows = displayRows(tracks, selectedAsset, progress, expanded);
   const storyLabel = activeBeatLabel(progress, beats);
   const [preferences, setPreferences, preferencesReady] = useWorkspacePreference('einvite.cinematic.timeline-controls.v1', DEFAULT_TIMELINE_CONTROLS, decodeTimelineControls);
@@ -584,9 +592,8 @@ export default function CinematicTimeline({
     if (hiddenTracks.has(row.id)) return false;
     if (!expanded) return true;
     if (row.kind === 'selected-asset') return true;
-    if (filter === 'motion' && !row.motion) return false;
-    if (filter !== 'all' && filter !== 'motion' && row.kind !== filter && !(row.motion && row.parentKind === filter)) return false;
-    return !collapsedKinds.has(row.motion ? 'motion' : row.kind);
+    if (filter !== 'all' && row.kind !== filter) return false;
+    return !collapsedKinds.has(row.kind);
   }), [allRows, hiddenTracks, filter, collapsedKinds, expanded]);
   const editableRow = rows.find((row) => row.selected && row.editable && row.sourceTrackId && !lockedTracks.has(row.sourceTrackId));
   const hasEditableRow = Boolean(editableRow);
@@ -624,7 +631,7 @@ export default function CinematicTimeline({
 
   const focusSelection = () => {
     const selected = allRows.find((row) => row.selected);
-    const centre = selected ? (selected.clip.start + selected.clip.end) / 2 : progress;
+    const centre = selectedStop?.at ?? (selected ? (selected.clip.start + selected.clip.end) / 2 : progress);
     setZoom((current) => Math.max(2, current));
     requestAnimationFrame(() => focusProgress(centre, Math.max(2, zoom)));
   };
@@ -641,6 +648,7 @@ export default function CinematicTimeline({
   const handleTimelineKeyDown = (event: KeyboardEvent<HTMLElement>) => {
     if ((event.target as HTMLElement).matches('input, select, textarea')) return;
     if (event.key === 'Escape') {
+      if (selectedStop) { setSelectedStopId(undefined); return; }
       setTrackMenu(undefined);
       onClearSelection?.();
       return;
@@ -782,7 +790,7 @@ export default function CinematicTimeline({
             <button type="button" className={styles.toolButton} style={timelineToolStyle} onClick={focusSelection} title="Shortcut: F">Focus selection</button>
           </div>
           <div className={styles.trackFilters}>
-            {(['all', 'set', 'asset', 'motion', 'text', 'effect', 'interaction'] as TrackFilter[]).map((kind) => (
+            {(['all', 'set', 'asset', 'text', 'effect', 'interaction'] as TrackFilter[]).map((kind) => (
               <button type="button" className={styles.toolButton} style={timelineToolStyle} key={kind} aria-pressed={filter === kind}
                 onClick={() => setFilter(kind)}>{kind === 'all' ? 'All' : trackKindLabel(kind)}</button>
             ))}
@@ -794,7 +802,49 @@ export default function CinematicTimeline({
         </div>
       )}
 
-      {editableRow && (
+      {selectedStop && onScrollStopsChange && (
+        <div key={selectedStopId} data-focus-size className={styles.scrollStopEditor} aria-label="Scroll stop settings">
+          <label>Name <input value={selectedStop.stop.label} onChange={(event) => updateStop({ label: event.target.value })} /></label>
+          <label>Story %
+            <input key={selectedStop.at} type="number" min="0" max="100" step="any"
+              defaultValue={Number((selectedStop.at * 100).toFixed(3))}
+              onKeyDown={(event) => { if (event.key === 'Enter') event.currentTarget.blur(); }}
+              onBlur={(event) => {
+                const { valueAsNumber, defaultValue } = event.currentTarget;
+                if (!Number.isFinite(valueAsNumber)) { event.currentTarget.value = defaultValue; return; }
+                if (valueAsNumber === Number(defaultValue)) return;
+                const at = Math.min(100, Math.max(0, valueAsNumber)) / 100;
+                updateStop({ at, interactionId: undefined, visibilityLayerId: undefined });
+                onChange(at);
+              }} />
+          </label>
+          <label>Easing <select value={selectedStop.stop.easing}
+            onChange={(event) => updateStop({ easing: event.target.value as CinematicScrollStop['easing'] })}>
+            {SCROLL_STOP_EASINGS.map((easing) => <option key={easing} value={easing}>{easing}</option>)}
+          </select></label>
+          <label>Settle (ms)
+            <input key={selectedStop.stop.durationMs} type="number" min="0" max="1000" step="10"
+              defaultValue={selectedStop.stop.durationMs}
+              onKeyDown={(event) => { if (event.key === 'Enter') event.currentTarget.blur(); }}
+              onBlur={(event) => {
+                const durationMs = event.currentTarget.valueAsNumber;
+                if (Number.isFinite(durationMs)) updateStop({ durationMs: Math.round(Math.min(1000, Math.max(0, durationMs))) });
+                else event.currentTarget.value = event.currentTarget.defaultValue;
+              }} />
+          </label>
+          <button type="button" className={styles.toolButton} onClick={() => updateStop({ at: progress, interactionId: undefined, visibilityLayerId: undefined })}>Move to playhead</button>
+          <button type="button" className={styles.toolButton} onClick={() => {
+            onScrollStopsChange(scrollStops.flatMap(({ stop }) => stop.id === selectedStopId ? [] : [stop]));
+            setSelectedStopId(undefined);
+          }}>Remove</button>
+          <button type="button" className={styles.toolButton} onClick={() => setSelectedStopId(undefined)}>Done</button>
+          {selectedStop.stop.interactionId && <span className={styles.scrollStopStatus}>{selectedStop.active
+            ? 'Follows interaction timing until moved manually'
+            : 'Inactive · no tappable window'}</span>}
+        </div>
+      )}
+
+      {editableRow && !selectedStop && (
         <div data-focus-size className={`${styles.clipToolbar} ${expanded ? styles.clipToolbarExpanded : ''}`} aria-label={`Timeline controls for ${editableRow.label}`}>
           <div className={styles.clipSummary}>
             <strong>{editableRow.label}</strong>
@@ -851,9 +901,27 @@ export default function CinematicTimeline({
           </div>
         </div>
 
+        {onScrollStopsChange && <div className={styles.row} aria-label="Scroll stops">
+          <div className={styles.rowLabel}>
+            <strong>Scroll stops</strong>
+            <button type="button" className={`${styles.toolButton} ${styles.addScrollStop}`} onClick={addStop} aria-label="Add scroll stop at playhead">+ Add stop</button>
+          </div>
+          <div className={styles.rail}>
+            {scrollStops.map(({ stop, at, active }) => (
+              <button key={stop.id} type="button" style={{ left: `${at * 100}%` }} className={styles.scrollStopMarker}
+                aria-label={`Edit ${stop.label} scroll stop at ${(at * 100).toFixed(1)}%${active ? '' : ' (inactive)'}`}
+                title={`${stop.label} · ${(at * 100).toFixed(1)}%${active ? '' : ' · inactive'}`}
+                aria-pressed={selectedStopId === stop.id} data-inactive={!active || undefined} onClick={() => {
+                  setSelectedStopId(stop.id);
+                  onChange(at);
+                }} />
+            ))}
+          </div>
+        </div>}
+
         <div className={styles.trackRows}>
           {rows.map((row) => (
-            <div className={`${styles.row} ${row.motion ? styles.motionRow : ''}`} key={row.id}>
+            <div className={styles.row} key={row.id}>
               <div className={`${styles.rowLabel} ${onTrackSelect && row.sourceTrackId !== undefined ? styles.rowLabelSelectable : ''}`} title={row.label}
                 onContextMenu={(event) => {
                   if (!expanded || !row.sourceTrackId) return;
@@ -861,13 +929,13 @@ export default function CinematicTimeline({
                   setTrackMenu({ id: row.sourceTrackId, x: event.clientX, y: event.clientY });
                 }}>
                 {onTrackSelect && row.sourceTrackId !== undefined ? (
-                  <button type="button" onClick={() => onTrackSelect(row.sourceTrackId!)}
+                  <button type="button" onClick={() => { setSelectedStopId(undefined); onTrackSelect(row.sourceTrackId!); }}
                     aria-label={`Edit ${row.label} timing`}>
                     {row.interactionIcon && <span aria-hidden="true">{row.interactionIcon}</span>}
-                    <strong>{row.displayLabel || row.label}</strong>
+                    <strong>{row.label}</strong>
                   </button>
                 ) : (
-                  <strong>{row.interactionIcon && <span aria-hidden="true">{row.interactionIcon} </span>}{row.displayLabel || row.label}</strong>
+                  <strong>{row.interactionIcon && <span aria-hidden="true">{row.interactionIcon} </span>}{row.label}</strong>
                 )}
                 <span>{row.meta}</span>
                 {expanded && row.sourceTrackId && (
@@ -890,7 +958,7 @@ export default function CinematicTimeline({
                 <Clip
                   row={{ ...row, editable: row.editable && !lockedTracks.has(row.sourceTrackId ?? '') }}
                   beats={beats}
-                  onSelect={onTrackSelect}
+                  onSelect={onTrackSelect ? (id) => { setSelectedStopId(undefined); onTrackSelect(id); } : undefined}
                   onClipChange={onTrackClipChange ? changeClip : undefined}
                   onEditStart={startClipEdit}
                   onEditCommit={commitClipEdit}
@@ -935,7 +1003,7 @@ export default function CinematicTimeline({
       {expanded && (
         <div className={styles.kindCollapseBar} aria-label="Collapse track groups"
           style={{ padding: '10px 14px', display: 'flex', alignItems: 'center', gap: 10, overflowX: 'auto', flexShrink: 0 }}>
-          {(['set', 'asset', 'motion', 'text', 'effect', 'interaction'] as Exclude<TrackFilter, 'all'>[]).map((kind) => (
+          {(['set', 'asset', 'text', 'effect', 'interaction'] as Exclude<TrackFilter, 'all'>[]).map((kind) => (
             <button type="button" className={styles.collapseButton} style={{ ...timelineToolStyle, padding: '7px 12px', fontSize: 10, minHeight: 32, flexShrink: 0 }} key={kind} aria-pressed={collapsedKinds.has(kind)} onClick={() => {
               setCollapsedKinds((current) => {
                 const next = new Set(current);

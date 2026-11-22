@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { assetAnimationWindow, compileAssetAnimationTracks, convertAssetAnimations, convertAssetEffect, normalizeAssetAnimations, retimeAssetAnimation, sampleAssetAnimations, type CinematicAssetAnimation } from './assetAnimations';
+import { assetAnimationWindow, convertAssetAnimations, convertAssetEffect, normalizeAssetAnimations, sampleAssetAnimations, type CinematicAssetAnimation } from './assetAnimations';
 import { assetClipPosition, assetPoseClip, sampleAssetKeyframes } from './assetKeyframes';
 import { MOTION_DEFAULT, type CinematicEffect } from './direction';
 import type { CinematicWorldLayer } from './world';
@@ -41,21 +41,23 @@ describe('in-between asset animations', () => {
     }
     expect(sampleAssetAnimations({ ...layer, animations: [move('cut', .2, .2, 10)] }, [track], at(.3)).x).toBe(10);
   });
-  it('projects timing within the fully-visible interval and follows linked/source retiming', () => {
+  it('samples legacy moves within linked and retimed visibility windows', () => {
     const animated = { ...layer, animations: [move('left', 0, .5, -20)] };
     expect(assetAnimationWindow(animated, [track])).toMatchObject({ start: .2, end: .8 });
-    expect(compileAssetAnimationTracks([animated], [track])[0].clip).toEqual({ start: .2, enterEnd: .5, exitStart: .5, end: .5 });
     const linked = { ...track, id: 'layer-timing', target: { type: 'layer' as const, id: layer.id }, timing: { mode: 'linked' as const, trackId: track.id } };
     const retimed = { ...track, clip: { start: .2, enterEnd: .4, exitStart: .9, end: 1 } };
-    expect(compileAssetAnimationTracks([animated], [retimed, linked])[0].clip.end).toBe(.65);
-    expect(compileAssetAnimationTracks([animated], [{ ...track, clip: { start: .2, enterEnd: .5, exitStart: .5, end: .8 } }])).toEqual([]);
+    expect(sampleAssetAnimations(animated, [retimed, linked], .525).x).toBeCloseTo(-10);
+    expect(sampleAssetAnimations(animated, [retimed, linked], .65).x).toBeCloseTo(-20);
   });
-  it('edits projected timeline handles without changing entrance/exit or storing a second sequence', () => {
-    const animated = { ...layer, animations: [move('left', 0, .5, -20)] };
-    const next = retimeAssetAnimation(animated, 'left', { start: .35, enterEnd: .65, exitStart: .65, end: .65 }, [track]);
-    expect(next.animations?.[0].start).toBeCloseTo(.25); expect(next.animations?.[0].end).toBeCloseTo(.75);
-    expect(track.clip).toEqual({ start: .1, enterEnd: .2, exitStart: .8, end: .9 });
-    expect(compileAssetAnimationTracks([next], [track])[0].clip.end).toBeCloseTo(.65);
+  it('converts Programme board motion with a slide entrance', () => {
+    const engine = CINEMATIC_ENGINES[15];
+    const board = { ...engine.world.find(({ id }) => id === 'programme-board')!,
+      animations: [{ ...move('move', .21855580661005636, .46855958639267237, 50), easing: 'ease-in-out' as const }] };
+    const appearance = { ...engine.sequence.tracks.find(({ id }) => id === 'programme')!,
+      clip: { start: .63443, enterEnd: .685681, exitStart: .878778, end: .918978 },
+      enter: { kind: 'fade-slide' as const, easing: 'ease-in' as const } };
+    const points = convertAssetAnimations(board, [appearance], [board]);
+    expect(points?.map(({ pose }) => pose.x)).toEqual([0, 50]);
   });
   it('persists on the layer at the selected breakpoint and deletes the last move without resurrection', () => {
     const animated = { ...layer, animations: [move('left', 0, .5, -20)] };
@@ -138,7 +140,6 @@ describe('in-between asset animations', () => {
     const layers = resolveCinematicWorld('t15', engine.world, 'mobile', expanded);
     const copied = layers.find((layer) => layer.id === 'second-programme-programme-board')!;
     expect(copied.animations).toEqual(animations);
-    const projected = compileAssetAnimationTracks([copied], []);
-    expect(projected[0].id).toBe('asset-motion:second-programme-programme-board:left');
+    expect(sampleAssetAnimations(copied, [], .25).x).toBeCloseTo(-10);
   });
 });

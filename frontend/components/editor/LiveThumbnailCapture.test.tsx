@@ -2,18 +2,21 @@ import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/re
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { LiveThumbnailCapture } from './LiveThumbnailCapture';
 
-const mocks = vi.hoisted(() => ({ capture: vi.fn(), upload: vi.fn() }));
-vi.mock('./captureLivePreview', () => ({ captureLivePreview: mocks.capture }));
+const mocks = vi.hoisted(() => ({ capture: vi.fn(), convert: vi.fn(), upload: vi.fn() }));
+vi.mock('./captureLivePreview', () => ({ captureLivePreview: mocks.capture, convertThumbnailToWebP: mocks.convert }));
 vi.mock('@/lib/api', () => ({ templateService: { uploadThumbnail: mocks.upload } }));
 
 describe('live thumbnail review', () => {
   let target: HTMLDivElement;
   let blob: Blob;
+  let webp: Blob;
   beforeEach(() => {
     vi.resetAllMocks();
     target = document.createElement('div');
     blob = new Blob(['live pixels'], { type: 'image/png' });
+    webp = new Blob(['converted pixels'], { type: 'image/webp' });
     mocks.capture.mockResolvedValue({ blob, width: 400, height: 700 });
+    mocks.convert.mockResolvedValue(webp);
     mocks.upload.mockResolvedValue({ templateId: 7 });
     HTMLDialogElement.prototype.showModal = function () { this.setAttribute('open', ''); };
     HTMLDialogElement.prototype.close = function () { this.removeAttribute('open'); };
@@ -35,6 +38,7 @@ describe('live thumbnail review', () => {
     expect(mocks.capture).toHaveBeenCalledWith(target, expect.any(AbortSignal));
     await screen.findByRole('dialog');
     await screen.findByAltText('Live template preview capture');
+    expect(mocks.convert).not.toHaveBeenCalled();
     expect(mocks.upload).not.toHaveBeenCalled();
     expect(screen.getByText(/400 × 700 pixels/)).toBeInTheDocument();
   });
@@ -47,7 +51,8 @@ describe('live thumbnail review', () => {
     await screen.findByAltText('Live template preview capture');
     fireEvent.click(screen.getByRole('button', { name: 'Use as thumbnail' }));
     await waitFor(() => expect(applied).toHaveBeenCalledTimes(1));
-    expect(mocks.upload).toHaveBeenCalledWith(7, blob, 'studio-preview.png');
+    expect(mocks.convert).toHaveBeenCalledWith(blob);
+    expect(mocks.upload).toHaveBeenCalledWith(7, webp, 'studio-preview.webp');
     expect(URL.revokeObjectURL).toHaveBeenCalledWith('blob:live-preview');
   });
 

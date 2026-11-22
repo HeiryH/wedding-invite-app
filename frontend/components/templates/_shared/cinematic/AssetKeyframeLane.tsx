@@ -23,10 +23,12 @@ export interface AssetKeyframeLaneProps {
   baseAnchorLabel: string;
   pending: boolean;
   legacyMotion?: boolean;
+  hasLegacyMoves?: boolean;
   onConvert?: () => void;
   onSeek: (at: number) => void;
   onPatch: (patch: Partial<AssetPose>) => void;
   onAnchor: (anchor?: AssetAnchor) => void;
+  onFollowAnchorTransform?: (follow: boolean | undefined) => void;
   onCapture: () => void;
   onDiscard: () => void;
   onDone: () => void;
@@ -41,7 +43,7 @@ export interface AssetKeyframeLaneProps {
 }
 
 export default function AssetKeyframeLane({
-  label, breakpoint, at, points, selected, pose, poseReady, appearance, textMotion, frameCount, perspectiveArtwork, anchors, baseAnchorLabel, pending, legacyMotion, onConvert,
+  label, breakpoint, at, points, selected, pose, poseReady, appearance, textMotion, frameCount, perspectiveArtwork, anchors, baseAnchorLabel, pending, legacyMotion, hasLegacyMoves, onConvert, onFollowAnchorTransform,
   onSeek, onPatch, onAnchor, onCapture, onDiscard, onDone, onRetime, onEasing, onDelete, onCopyKeyframe, onPasteKeyframe, onDuplicate, onReset, onCopy,
 }: AssetKeyframeLaneProps) {
   const opacity = pose?.opacity ?? appearance?.opacity ?? 1;
@@ -143,6 +145,23 @@ export default function AssetKeyframeLane({
       </label>}
       {pose?.anchor?.startsWith('point:') && anchors?.some(({ id }) => id === pose.anchor) &&
         <button type="button" disabled={!poseReady} onClick={() => onPatch({ x: 0, y: 0 })}>Snap to anchor point</button>}
+      {pose?.anchor && anchors?.some(({ id }) => id === pose.anchor) && <details>
+        <summary>Anchor inheritance</summary>
+        <div className={styles.anchorInheritance}>
+          {onFollowAnchorTransform && <label>Follow anchor scale and rotation
+            <select value={pose.anchorTransform === undefined ? 'default' : pose.anchorTransform ? 'on' : 'off'} disabled={!poseReady}
+              onChange={(event) => onFollowAnchorTransform(event.target.value === 'default' ? undefined : event.target.value === 'on')}>
+              <option value="default">Template default</option><option value="on">On</option><option value="off">Off</option>
+            </select>
+          </label>}
+          <label>Inherit anchor blur
+            <select value={pose.anchorBlur === undefined ? 'default' : pose.anchorBlur ? 'on' : 'off'} disabled={!poseReady}
+              onChange={(event) => onPatch({ anchorBlur: event.target.value === 'default' ? undefined : Number(event.target.value === 'on') })}>
+              <option value="default">Template default</option><option value="on">On</option><option value="off">Off</option>
+            </select>
+          </label>
+        </div>
+      </details>}
       {!!points.length && <label>Easing
         <select disabled={pending || !selected} value={selected?.easing ?? ''} onChange={(event) => onEasing(event.target.value as AssetKeyframe['easing'])}>
           <option value="">Select a keyframe</option><option value="linear">Linear</option><option value="ease-in">Ease in</option><option value="ease-out">Ease out</option>
@@ -155,10 +174,12 @@ export default function AssetKeyframeLane({
       </>}
       {!!points.length && <><button type="button" disabled={!canInsertKeyframe || !selected} onClick={onDuplicate}>Duplicate</button>
         <button type="button" disabled={pending || !selected} onClick={onDelete}>Delete keyframe</button></>}
-      {!!points.length && !pending && <details><summary>Track actions</summary>
+      {(!!points.length || hasLegacyMoves) && !pending && <details><summary>Track actions</summary>
         <div className={styles.numeric}>
-          <ConfirmEditorAction label="Reset animation" description="Restore the template animation for this asset." onConfirm={onReset} />
-          {onCopy && <ConfirmEditorAction label={`Copy to ${otherBreakpoint}`} description={`Replace the asset’s keyframes on ${otherBreakpoint} with this track.`} onConfirm={onCopy} />}
+          <ConfirmEditorAction label={hasLegacyMoves ? 'Remove saved motion' : 'Reset animation'}
+            description={hasLegacyMoves ? 'Remove this asset’s keyframes and legacy moves on this breakpoint.' : 'Restore the template animation for this asset.'}
+            onConfirm={onReset} />
+          {!!points.length && onCopy && <ConfirmEditorAction label={`Copy to ${otherBreakpoint}`} description={`Replace the asset’s keyframes on ${otherBreakpoint} with this track.`} onConfirm={onCopy} />}
         </div>
       </details>}
       {pose && textMotion && <details className={styles.textMotion}><summary>Text effects</summary>
